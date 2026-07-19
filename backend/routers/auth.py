@@ -7,28 +7,26 @@ from models import Usuario, RolUsuario
 from schemas.auth import LoginRequest, TokenResponse, UserRead, ChangePasswordRequest
 from core.security import create_access_token, create_refresh_token, decode_token
 from core.deps import get_db, get_current_active_user
-import bcrypt
+from core.passwords import hash_password, verificar_y_migrar, verify_password  # noqa: F401
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
-
-
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.exec(select(Usuario).where(Usuario.username == payload.username)).first()
-    if not user or not verify_password(payload.password, user.hashed_password):
+    # `verificar_y_migrar` sube el hash al esquema vigente cuando toca. Es el
+    # único momento en que la contraseña está en claro, así que es aquí o nunca.
+    if not user or not verificar_y_migrar(payload.password, user):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales incorrectas")
     if not user.activo:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cuenta inactiva")
     if user.cuenta_bloqueada:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cuenta bloqueada")
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
     token_data = {"sub": str(user.id), "rol": user.rol.value, "institucion_id": user.institucion_id}
     access_token = create_access_token(token_data)

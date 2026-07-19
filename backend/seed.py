@@ -1,5 +1,4 @@
 import logging
-import bcrypt
 from datetime import date, datetime, timedelta
 from sqlmodel import Session, select
 from database import engine, init_db
@@ -11,13 +10,11 @@ from models import (
     Quirofano as QuirofanoModel, TurnoTrabajo, PerfilLaboratorio
 )
 from seguridad import GestorLicencias
+# Una sola implementación para todo el sistema: ver core/passwords.py.
+from core.passwords import hash_password as get_password_hash
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-def get_password_hash(password):
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 def seed_catalogos_profesionales(session: Session):
     """Crea especialidades y entidades base para IPS/Hospital completo"""

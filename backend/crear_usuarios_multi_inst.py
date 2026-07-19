@@ -10,14 +10,11 @@ IMPORTANTE: Este script es temporal mientras se desarrolla la UI
 completa para que SUPERADMIN cree usuarios desde el panel web.
 """
 
-import bcrypt
 from sqlmodel import Session, select
 from database import engine
 from models import Usuario, Institucion, RolUsuario
-
-def hash_password(password: str) -> str:
-    """Genera hash bcrypt de una contraseña"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+# Una sola implementación para todo el sistema: ver core/passwords.py.
+from core.passwords import hash_password
 
 def listar_instituciones():
     """Muestra todas las instituciones disponibles"""
