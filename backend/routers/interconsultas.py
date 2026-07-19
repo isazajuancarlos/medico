@@ -2,11 +2,13 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import Interconsulta, Paciente, Usuario, RolUsuario, PrioridadInterconsulta, EstadoInterconsulta
-from core.deps import get_db, get_current_active_user
+from models import Interconsulta, Paciente, Usuario, RolUsuario, PrioridadInterconsulta, EstadoInterconsulta, ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.interconsulta import InterconsultaCreate, InterconsultaResponder, InterconsultaRead
 
-router = APIRouter(prefix="/interconsultas", tags=["interconsultas"])
+router = APIRouter(prefix="/interconsultas", tags=["interconsultas"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.INTERCONSULTAS))],
+)
 
 
 def _enrich(ic: Interconsulta, db: Session) -> InterconsultaRead:

@@ -2,15 +2,17 @@ from typing import Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import Factura, DetalleFactura, Glosa, Contrato, Entidad, Paciente, Usuario
-from core.deps import get_db, get_current_active_user, filtrar_por_institucion
+from models import Factura, DetalleFactura, Glosa, Contrato, Entidad, Paciente, Usuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
 from schemas.facturacion import (
     FacturaRead, FacturaCreate, FacturaUpdate, DetalleRead, DetalleCreate,
     GlosaRead, GlosaCreate, GlosaResponder, ContratoRead, ContratoCreate,
     ContratoUpdate, EntidadRead, RadicarFactura, StatsFacturacion,
 )
 
-router = APIRouter(prefix="/facturacion", tags=["facturacion"])
+router = APIRouter(prefix="/facturacion", tags=["facturacion"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.FACTURACION))],
+)
 
 # Transiciones de estado permitidas
 _TRANSICIONES = {

@@ -92,19 +92,12 @@ from routers.epicrisis import router as epicrisis_router
 from routers.nutricion import router as nutricion_router
 from routers.rehabilitacion import router as rehabilitacion_router
 from routers.quirofano import router as quirofano_router
-from routers.stubs import (
-    consentimiento_router, incapacidades_router,
-    remisiones_router,
-    banco_sangre_router, nota_operatoria_router,
-    preanestesia_router, recuperacion_router,
-    contrarreferencia_router,
-    trabajo_social_router, telemedicina_router,
-    vacunacion_router, prenatal_router, crecimiento_desarrollo_router,
-    salud_reproductiva_router, cert_defuncion_router, registro_nacimiento_router,
-    turnos_router, comites_router, equipos_medicos_router, indicadores_router,
-    infecciones_router, mar_router, kardex_router, censo_router,
-    planes_cuidado_router, portal_paciente_router,
-)
+# Los módulos aún no implementados se montan desde UNA sola lista
+# (routers/stubs.py). Antes se importaban 26 nombres a mano y ocho de ellos
+# duplicaban routers reales: reordenar estos imports convertía módulos
+# funcionales en cascarones sin que nada fallara.
+from routers.stubs import ROUTERS_PENDIENTES
+from routers.modulos import router as modulos_router
 
 API_PREFIX = "/api"
 
@@ -114,22 +107,10 @@ core_routers = [
     hospitalizacion_router, admin_router, superadmin_router, rips_router,
     estadisticas_router, agenda_router, laboratorio_router, imagenes_router,
     evoluciones_router, interconsultas_router, epicrisis_router, nutricion_router,
-    rehabilitacion_router, quirofano_router,
+    rehabilitacion_router, quirofano_router, modulos_router,
 ]
 
-stub_routers = [
-    consentimiento_router, incapacidades_router,
-    remisiones_router,
-    banco_sangre_router, nota_operatoria_router,
-    preanestesia_router, recuperacion_router,
-    contrarreferencia_router,
-    trabajo_social_router, telemedicina_router,
-    vacunacion_router, prenatal_router, crecimiento_desarrollo_router,
-    salud_reproductiva_router, cert_defuncion_router, registro_nacimiento_router,
-    turnos_router, comites_router, equipos_medicos_router, indicadores_router,
-    infecciones_router, mar_router, kardex_router, censo_router,
-    planes_cuidado_router, portal_paciente_router,
-]
+stub_routers = ROUTERS_PENDIENTES
 
 for router in core_routers + stub_routers:
     app.include_router(router, prefix=API_PREFIX)

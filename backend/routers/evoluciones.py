@@ -2,11 +2,13 @@ from typing import Optional
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import EvolucionMedica, Paciente, Usuario, RolUsuario
-from core.deps import get_db, get_current_active_user
+from models import EvolucionMedica, Paciente, Usuario, RolUsuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.evolucion import EvolucionCreate, EvolucionUpdate, EvolucionRead
 
-router = APIRouter(prefix="/evoluciones", tags=["evoluciones"])
+router = APIRouter(prefix="/evoluciones", tags=["evoluciones"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.EVOLUCIONES))],
+)
 
 
 def _enrich(e: EvolucionMedica, db: Session) -> EvolucionRead:

@@ -2,12 +2,14 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import AtencionUrgencias, TipoTriage, DestinoSalidaUrgencias, Usuario
-from core.deps import get_db, get_current_active_user
+from models import AtencionUrgencias, TipoTriage, DestinoSalidaUrgencias, Usuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.common import PaginatedResponse
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/urgencias", tags=["urgencias"])
+router = APIRouter(prefix="/urgencias", tags=["urgencias"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.URGENCIAS))],
+)
 
 
 class TriageCreate(BaseModel):

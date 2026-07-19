@@ -2,13 +2,15 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import Hospitalizacion, Cama, Paciente, Usuario, RolUsuario
-from core.deps import get_db, get_current_active_user, filtrar_por_institucion
+from models import Hospitalizacion, Cama, Paciente, Usuario, RolUsuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
 from schemas.hospitalizacion import (
     HospitalizacionRead, CamaRead, IngresoCreate, EgresoUpdate, MedicoBasic,
 )
 
-router = APIRouter(prefix="/hospitalizacion", tags=["hospitalizacion"])
+router = APIRouter(prefix="/hospitalizacion", tags=["hospitalizacion"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.HOSPITALIZACION))],
+)
 
 
 def _enrich(hosp: Hospitalizacion, db: Session) -> HospitalizacionRead:

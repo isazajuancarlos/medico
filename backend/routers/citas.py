@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from sqlalchemy import cast
 from sqlalchemy.types import Date as SADate
-from models import Cita, Paciente, Usuario, EstadoCita, Historia
+from models import Cita, Paciente, Usuario, EstadoCita, Historia, ModuloSistema
 from schemas.cita import CitaCreate, CitaUpdate, CitaRead
 from schemas.common import PaginatedResponse
-from core.deps import get_db, get_current_active_user
+from core.deps import get_db, get_current_active_user, requiere_modulo
 
-router = APIRouter(prefix="/citas", tags=["citas"])
+router = APIRouter(prefix="/citas", tags=["citas"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.CITAS))],
+)
 
 
 def _cita_to_read(cita: Cita, db: Session) -> CitaRead:

@@ -7,9 +7,12 @@ from models import (
     Cita, Paciente, Historia, Usuario, AtencionUrgencias,
     Factura, Cama, Hospitalizacion, EstadoCita, TipoTriage,
 )
-from core.deps import get_db, get_current_active_user
+from models import ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 
-router = APIRouter(prefix="/estadisticas", tags=["estadisticas"])
+router = APIRouter(prefix="/estadisticas", tags=["estadisticas"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.ESTADISTICAS))],
+)
 
 
 def _pac_sub(db: Session, user: Usuario):

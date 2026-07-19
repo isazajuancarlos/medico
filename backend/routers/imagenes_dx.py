@@ -12,10 +12,13 @@ from schemas.imagenes import (
     OrdenImagenRead, EstadoOrdenUpdate,
     InformeCreate, InformeUpdate, InformeRead,
 )
-from core.deps import get_db, get_current_active_user
+from models import ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from core.config import UPLOAD_DIR
 
-router = APIRouter(prefix="/imagenes", tags=["imagenes"])
+router = APIRouter(prefix="/imagenes", tags=["imagenes"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.IMAGENES))],
+)
 
 
 def _enrich_orden(orden: Orden, db: Session) -> OrdenImagenRead:

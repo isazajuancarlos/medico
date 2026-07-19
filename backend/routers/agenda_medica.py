@@ -7,9 +7,12 @@ from models import (
     AgendaMedico, BloqueHorario, BloqueoAgenda, Cita, Usuario,
     TipoBloqueo, EstadoCita, RolUsuario,
 )
-from core.deps import get_db, get_current_active_user
+from models import ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 
-router = APIRouter(prefix="/agenda", tags=["agenda"])
+router = APIRouter(prefix="/agenda", tags=["agenda"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.CITAS))],
+)
 
 DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 DURACION_SLOT_MIN = 30  # minutes per slot

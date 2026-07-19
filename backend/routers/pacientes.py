@@ -2,14 +2,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from database import engine
-from models import Paciente, Historia, RolUsuario
+from models import Paciente, Historia, RolUsuario, ModuloSistema
 from schemas.paciente import PacienteCreate, PacienteUpdate, PacienteRead
 from schemas.common import PaginatedResponse
 from schemas.historia import AntecedentesUpdate
-from core.deps import get_db, get_current_active_user, filtrar_por_institucion
+from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
 from models import Usuario
 
-router = APIRouter(prefix="/pacientes", tags=["pacientes"])
+router = APIRouter(prefix="/pacientes", tags=["pacientes"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.PACIENTES))],
+)
 
 
 @router.get("/", response_model=PaginatedResponse[PacienteRead])

@@ -1,14 +1,16 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import ValoracionNutricional, PlanAlimentacion, Paciente, Usuario, RolUsuario
-from core.deps import get_db, get_current_active_user
+from models import ValoracionNutricional, PlanAlimentacion, Paciente, Usuario, RolUsuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.nutricion import (
     ValoracionCreate, ValoracionUpdate, ValoracionRead,
     PlanCreate, PlanUpdate, PlanRead,
 )
 
-router = APIRouter(prefix="/nutricion", tags=["nutricion"])
+router = APIRouter(prefix="/nutricion", tags=["nutricion"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.NUTRICION))],
+)
 
 
 def _enrich_val(v: ValoracionNutricional, db: Session) -> ValoracionRead:

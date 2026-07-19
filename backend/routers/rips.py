@@ -1,11 +1,13 @@
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
-from models import Usuario
-from core.deps import get_current_active_user, require_role
+from models import Usuario, ModuloSistema
+from core.deps import get_current_active_user, require_role, requiere_modulo
 from models import RolUsuario
 
-router = APIRouter(prefix="/rips", tags=["rips"])
+router = APIRouter(prefix="/rips", tags=["rips"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.RIPS))],
+)
 
 
 @router.get("/")

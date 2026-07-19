@@ -1,11 +1,13 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import Epicrisis, Paciente, Usuario, RolUsuario
-from core.deps import get_db, get_current_active_user
+from models import Epicrisis, Paciente, Usuario, RolUsuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.epicrisis import EpicrisisCreate, EpicrisisUpdate, EpicrisisRead
 
-router = APIRouter(prefix="/epicrisis", tags=["epicrisis"])
+router = APIRouter(prefix="/epicrisis", tags=["epicrisis"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.EPICRISIS))],
+)
 
 
 def _enrich(e: Epicrisis, db: Session) -> EpicrisisRead:

@@ -2,15 +2,17 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import Quirofano, ProgramacionQuirurgica, Paciente, Usuario, RolUsuario
-from core.deps import get_db, get_current_active_user
+from models import Quirofano, ProgramacionQuirurgica, Paciente, Usuario, RolUsuario, ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.quirofano import (
     QuirofanoRead, ProgramacionRead, ProgramacionCreate,
     ChecklistUpdate, IniciarCirugia, CompletarCirugia, CancelarCirugia,
     MedicoBasic,
 )
 
-router = APIRouter(prefix="/quirofano", tags=["quirofano"])
+router = APIRouter(prefix="/quirofano", tags=["quirofano"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.QUIROFANO))],
+)
 
 
 def _enrich(prog: ProgramacionQuirurgica, db: Session) -> ProgramacionRead:

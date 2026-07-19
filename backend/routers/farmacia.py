@@ -6,14 +6,17 @@ from models import (
     ItemInventario, MovimientoInventario, Formula, Historia,
     DispensacionMedicamento, Paciente, Usuario, RolUsuario,
 )
-from core.deps import get_db, get_current_active_user, filtrar_por_institucion
+from models import ModuloSistema
+from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
 from schemas.farmacia import (
     ItemInventarioRead, ItemInventarioCreate, ItemInventarioUpdate,
     EntradaStockCreate, FormulaPendienteRead, DispensarCreate,
     DispensacionRead, MovimientoRead, StatsInventario,
 )
 
-router = APIRouter(prefix="/farmacia", tags=["farmacia"])
+router = APIRouter(prefix="/farmacia", tags=["farmacia"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.FARMACIA))],
+)
 
 ALERTA_VENCIMIENTO_DIAS = 30
 

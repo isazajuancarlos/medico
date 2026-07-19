@@ -12,11 +12,14 @@ from schemas.historia import (
     OrdenCreate, OrdenUpdate, OrdenRead,
     ImagenDiagnosticaRead, EspecialidadInfo,
 )
-from core.deps import get_db, get_current_active_user
+from models import ModuloSistema
+from core.deps import get_db, get_current_active_user, requiere_modulo
 import os, uuid as _uuid
 from core.config import UPLOAD_DIR
 
-router = APIRouter(prefix="/historias", tags=["historias"])
+router = APIRouter(prefix="/historias", tags=["historias"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.HISTORIA))],
+)
 
 
 def _build_paciente_info(paciente: Paciente) -> PacienteInfo:

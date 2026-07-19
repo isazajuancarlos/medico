@@ -1,51 +1,82 @@
+"""Módulos declarados pero AÚN NO implementados.
+
+Antes devolvían `200 []`. Eso es mentir con cara de estar funcionando: quien
+abre "Vacunación" y ve una lista vacía no concluye "este módulo no existe",
+concluye "este paciente no tiene vacunas registradas". En un sistema clínico esa
+confusión es un dato falso, no una molestia de interfaz.
+
+Ahora devuelven **501 Not Implemented**, que es lo que el docstring de este
+archivo ya prometía y el código no cumplía.
+
+Cuando un módulo se implemente de verdad: se crea su router en este mismo
+paquete, se quita de la lista de abajo y se monta en `main.py` entre los reales.
+NO deben coexistir un stub y un router real con el mismo nombre — llegó a haber
+ocho (laboratorio, imagenes, quirofano, interconsultas, epicrisis, nutricion,
+rehabilitacion, evoluciones), y bastaba reordenar los imports de `main.py` para
+que los cascarones tumbaran módulos que sí funcionaban, sin que nada fallara.
 """
-Stub routers para módulos en desarrollo.
-Retornan listas vacías o mensaje 501 Not Implemented.
-"""
-from fastapi import APIRouter
-from schemas.common import MsgResponse
+from fastapi import APIRouter, HTTPException, status
+
+# Módulos del catálogo `ModuloSistema` que todavía no tienen implementación.
+# Mantener ordenado y SIN duplicados con los routers reales de `main.py`.
+PENDIENTES: dict[str, str] = {
+    "consentimiento": "consentimiento",
+    "incapacidades": "incapacidades",
+    "remisiones": "remisiones",
+    "banco-sangre": "banco_sangre",
+    "nota-operatoria": "nota_operatoria",
+    "preanestesia": "preanestesia",
+    "recuperacion": "recuperacion",
+    "contrarreferencia": "contrarreferencia",
+    "trabajo-social": "trabajo_social",
+    "telemedicina": "telemedicina",
+    "vacunacion": "vacunacion",
+    "prenatal": "prenatal",
+    "crecimiento-desarrollo": "crecimiento_desarrollo",
+    "salud-reproductiva": "salud_reproductiva",
+    "certificado-defuncion": "certificado_defuncion",
+    "registro-nacimiento": "registro_nacimiento",
+    "turnos": "turnos",
+    "comites": "comites",
+    "equipos-medicos": "equipos_medicos",
+    "indicadores": "indicadores",
+    "infecciones": "infecciones",
+    "mar": "mar",
+    "kardex": "kardex",
+    "censo": "censo_diario",
+    "planes-cuidado": "plan_cuidado",
+    "portal": "portal_paciente",
+}
+
 
 def make_stub_router(prefix: str, tag: str) -> APIRouter:
+    """Router que responde 501 a cualquier método y cualquier subruta."""
     router = APIRouter(prefix=f"/{prefix}", tags=[tag])
+    metodos = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
-    @router.get("/", response_model=list)
-    def list_items():
-        return []
+    def no_implementado():
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=(
+                f"El módulo '{tag}' está previsto pero aún no implementado. "
+                "No confunda esta respuesta con ausencia de registros."
+            ),
+        )
 
+    router.add_api_route("/", no_implementado, methods=metodos)
+    router.add_api_route("/{ruta:path}", no_implementado, methods=metodos,
+                         include_in_schema=False)
     return router
 
 
-evoluciones_router = make_stub_router("evoluciones", "evoluciones")
-consentimiento_router = make_stub_router("consentimiento", "consentimiento")
-incapacidades_router = make_stub_router("incapacidades", "incapacidades")
-remisiones_router = make_stub_router("remisiones", "remisiones")
-laboratorio_router = make_stub_router("laboratorio", "laboratorio")
-imagenes_router = make_stub_router("imagenes", "imagenes")
-banco_sangre_router = make_stub_router("banco-sangre", "banco_sangre")
-quirofano_router = make_stub_router("quirofano", "quirofano")
-nota_operatoria_router = make_stub_router("nota-operatoria", "nota_operatoria")
-preanestesia_router = make_stub_router("preanestesia", "preanestesia")
-recuperacion_router = make_stub_router("recuperacion", "recuperacion")
-interconsultas_router = make_stub_router("interconsultas", "interconsultas")
-epicrisis_router = make_stub_router("epicrisis", "epicrisis")
-contrarreferencia_router = make_stub_router("contrarreferencia", "contrarreferencia")
-nutricion_router = make_stub_router("nutricion", "nutricion")
-rehabilitacion_router = make_stub_router("rehabilitacion", "rehabilitacion")
-trabajo_social_router = make_stub_router("trabajo-social", "trabajo_social")
-telemedicina_router = make_stub_router("telemedicina", "telemedicina")
-vacunacion_router = make_stub_router("vacunacion", "vacunacion")
-prenatal_router = make_stub_router("prenatal", "prenatal")
-crecimiento_desarrollo_router = make_stub_router("crecimiento-desarrollo", "crecimiento_desarrollo")
-salud_reproductiva_router = make_stub_router("salud-reproductiva", "salud_reproductiva")
-cert_defuncion_router = make_stub_router("certificado-defuncion", "cert_defuncion")
-registro_nacimiento_router = make_stub_router("registro-nacimiento", "registro_nacimiento")
-turnos_router = make_stub_router("turnos", "turnos")
-comites_router = make_stub_router("comites", "comites")
-equipos_medicos_router = make_stub_router("equipos-medicos", "equipos_medicos")
-indicadores_router = make_stub_router("indicadores", "indicadores")
-infecciones_router = make_stub_router("infecciones", "infecciones")
-mar_router = make_stub_router("mar", "mar")
-kardex_router = make_stub_router("kardex", "kardex")
-censo_router = make_stub_router("censo", "censo")
-planes_cuidado_router = make_stub_router("planes-cuidado", "planes_cuidado")
-portal_paciente_router = make_stub_router("portal", "portal_paciente")
+# Se exportan con el mismo nombre de siempre (`<tag>_router`) para no romper
+# los imports existentes de main.py.
+_generados = {
+    f"{tag}_router": make_stub_router(prefix, tag)
+    for prefix, tag in PENDIENTES.items()
+}
+globals().update(_generados)
+
+ROUTERS_PENDIENTES = list(_generados.values())
+
+__all__ = ["make_stub_router", "PENDIENTES", "ROUTERS_PENDIENTES", *_generados]

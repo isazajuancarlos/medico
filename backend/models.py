@@ -1274,6 +1274,12 @@ class ModuloSistema(str, Enum):
     REHABILITACION = "REHABILITACION"
     TRABAJO_SOCIAL = "TRABAJO_SOCIAL"
     TELEMEDICINA = "TELEMEDICINA"
+    # Promoción y prevención (rutas de atención: sin esto una IPS no puede
+    # licenciar sus programas de PyP, que son obligatorios para habilitarse)
+    VACUNACION = "VACUNACION"
+    PRENATAL = "PRENATAL"
+    CRECIMIENTO_DESARROLLO = "CRECIMIENTO_DESARROLLO"
+    SALUD_REPRODUCTIVA = "SALUD_REPRODUCTIVA"
     # Registros civiles
     CERTIFICADO_DEFUNCION = "CERTIFICADO_DEFUNCION"
     REGISTRO_NACIMIENTO = "REGISTRO_NACIMIENTO"

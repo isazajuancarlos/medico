@@ -11,9 +11,12 @@ from schemas.laboratorio import (
     ResultadoCreate, ResultadoUpdate, ResultadoRead,
     PerfilCreate, PerfilRead,
 )
-from core.deps import get_db, get_current_active_user, filtrar_por_institucion
+from models import ModuloSistema
+from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
 
-router = APIRouter(prefix="/laboratorio", tags=["laboratorio"])
+router = APIRouter(prefix="/laboratorio", tags=["laboratorio"],
+    dependencies=[Depends(requiere_modulo(ModuloSistema.LABORATORIO))],
+)
 
 
 def _enrich_orden(orden: Orden, db: Session) -> OrdenLabRead:
