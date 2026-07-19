@@ -1,8 +1,9 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { CurrentUser, TokenResponse, LoginRequest, RolUsuario } from '../models/auth.models';
+import { ModulosService } from './modulos.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -13,8 +14,25 @@ export class AuthService {
   readonly currentUser = this._currentUser.asReadonly();
   readonly isLoggedIn = computed(() => this._currentUser() !== null);
 
+  // Los módulos contratados definen qué ve el usuario. Se cargan junto con la
+  // sesión: si se cargaran al pintar el menú, el primer render mostraría
+  // opciones que la institución no tiene.
+  private modulos = inject(ModulosService);
+
   constructor(private http: HttpClient, private router: Router) {
     this.loadFromStorage();
+    if (this._currentUser()) {
+      this.cargarModulos();
+    }
+  }
+
+  private cargarModulos(): void {
+    this.modulos.cargar().subscribe({
+      // Un fallo aquí NO debe dejar al usuario sin menú: el servicio trata
+      // "sin catálogo" como "todo visible", y el backend sigue respondiendo
+      // 403 en lo que no corresponda. Se pierde el filtro, no la seguridad.
+      error: () => console.warn('No se pudo cargar el catálogo de módulos'),
+    });
   }
 
   private loadFromStorage(): void {
@@ -37,6 +55,7 @@ export class AuthService {
         this._currentUser.set(response.user);
         localStorage.setItem('access_token', response.access_token);
         localStorage.setItem('current_user', JSON.stringify(response.user));
+        this.cargarModulos();
       })
     );
   }
@@ -66,6 +85,7 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    this.modulos.limpiar();
     this._accessToken.set(null);
     this._currentUser.set(null);
     localStorage.removeItem('access_token');

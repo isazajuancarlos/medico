@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './layout/main-layout.component';
 import { authGuard } from './core/auth.guard';
 import { roleGuard } from './core/role.guard';
+import { moduloGuard } from './core/modulo.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -15,42 +16,51 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'modulo-no-disponible',
+        loadComponent: () => import('./pages/modulo-no-disponible/modulo-no-disponible.component')
+          .then(m => m.ModuloNoDisponibleComponent),
+      },
+      {
         path: 'dashboard',
         loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
       {
         path: 'pacientes',
         loadComponent: () => import('./pages/pacientes/pacientes.component').then(m => m.PacientesComponent),
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, moduloGuard('PACIENTES')],
         data: { roles: ['admin', 'medico', 'superadmin', 'enfermeria', 'auxiliar_enfermeria', 'psicologo'] },
       },
       {
         path: 'citas',
         loadComponent: () => import('./pages/citas/citas.component').then(m => m.CitasComponent),
+        canActivate: [moduloGuard('CITAS')],
       },
       {
         path: 'historias',
         loadComponent: () => import('./pages/historias/historias.component').then(m => m.HistoriasComponent),
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, moduloGuard('HISTORIA')],
         data: { roles: ['admin', 'medico', 'superadmin'] },
       },
       {
         path: 'urgencias',
         loadComponent: () => import('./pages/urgencias/urgencias.component').then(m => m.UrgenciasComponent),
+        canActivate: [moduloGuard('URGENCIAS')],
       },
       {
         path: 'farmacia',
         loadComponent: () => import('./pages/farmacia/farmacia.component').then(m => m.FarmaciaComponent),
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, moduloGuard('FARMACIA')],
         data: { roles: ['regente_farmacia', 'admin', 'superadmin'] },
       },
       {
         path: 'facturacion',
         loadComponent: () => import('./pages/facturacion/facturacion.component').then(m => m.FacturacionComponent),
+        canActivate: [moduloGuard('FACTURACION')],
       },
       {
         path: 'hospitalizacion',
         loadComponent: () => import('./pages/hospitalizacion/hospitalizacion.component').then(m => m.HospitalizacionComponent),
+        canActivate: [moduloGuard('HOSPITALIZACION')],
       },
       {
         path: 'admin',
@@ -67,26 +77,26 @@ export const routes: Routes = [
       {
         path: 'rips',
         loadComponent: () => import('./pages/rips/rips.component').then(m => m.RipsComponent),
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, moduloGuard('RIPS')],
         data: { roles: ['admin', 'superadmin'] },
       },
       // Placeholder routes for all other modules
-      { path: 'evoluciones', loadComponent: () => import('./pages/evoluciones/evoluciones.component').then(m => m.EvolucionesComponent) },
+      { path: 'evoluciones', loadComponent: () => import('./pages/evoluciones/evoluciones.component').then(m => m.EvolucionesComponent), canActivate: [moduloGuard('EVOLUCIONES')] },
       { path: 'consentimiento', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Consentimiento Informado' } },
       { path: 'incapacidades', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Incapacidades' } },
       { path: 'remisiones', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Remisiones' } },
-      { path: 'laboratorio', loadComponent: () => import('./pages/laboratorio/laboratorio.component').then(m => m.LaboratorioComponent) },
-      { path: 'imagenes', loadComponent: () => import('./pages/imagenes/imagenes.component').then(m => m.ImagenesComponent) },
+      { path: 'laboratorio', loadComponent: () => import('./pages/laboratorio/laboratorio.component').then(m => m.LaboratorioComponent), canActivate: [moduloGuard('LABORATORIO')] },
+      { path: 'imagenes', loadComponent: () => import('./pages/imagenes/imagenes.component').then(m => m.ImagenesComponent), canActivate: [moduloGuard('IMAGENES')] },
       { path: 'banco-sangre', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Banco de Sangre' } },
-      { path: 'quirofano', loadComponent: () => import('./pages/quirofano/quirofano.component').then(m => m.QuirofanoComponent) },
+      { path: 'quirofano', loadComponent: () => import('./pages/quirofano/quirofano.component').then(m => m.QuirofanoComponent), canActivate: [moduloGuard('QUIROFANO')] },
       { path: 'nota-operatoria', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Nota Operatoria' } },
       { path: 'preanestesia', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Pre-Anestesia' } },
       { path: 'recuperacion', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Recuperación (UCPA)' } },
-      { path: 'interconsultas', loadComponent: () => import('./pages/interconsultas/interconsultas.component').then(m => m.InterconsultasComponent) },
-      { path: 'epicrisis', loadComponent: () => import('./pages/epicrisis/epicrisis.component').then(m => m.EpicrisisComponent) },
+      { path: 'interconsultas', loadComponent: () => import('./pages/interconsultas/interconsultas.component').then(m => m.InterconsultasComponent), canActivate: [moduloGuard('INTERCONSULTAS')] },
+      { path: 'epicrisis', loadComponent: () => import('./pages/epicrisis/epicrisis.component').then(m => m.EpicrisisComponent), canActivate: [moduloGuard('EPICRISIS')] },
       { path: 'contrarreferencia', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Contrarreferencia' } },
-      { path: 'nutricion', loadComponent: () => import('./pages/nutricion/nutricion.component').then(m => m.NutricionComponent) },
-      { path: 'rehabilitacion', loadComponent: () => import('./pages/rehabilitacion/rehabilitacion.component').then(m => m.RehabilitacionComponent) },
+      { path: 'nutricion', loadComponent: () => import('./pages/nutricion/nutricion.component').then(m => m.NutricionComponent), canActivate: [moduloGuard('NUTRICION')] },
+      { path: 'rehabilitacion', loadComponent: () => import('./pages/rehabilitacion/rehabilitacion.component').then(m => m.RehabilitacionComponent), canActivate: [moduloGuard('REHABILITACION')] },
       { path: 'trabajo-social', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Trabajo Social' } },
       { path: 'telemedicina', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Telemedicina' } },
       { path: 'vacunacion', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Vacunación PAI' } },
@@ -100,7 +110,7 @@ export const routes: Routes = [
       { path: 'equipos-medicos', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Equipos Médicos' } },
       { path: 'indicadores', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Indicadores de Calidad' } },
       { path: 'infecciones', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Control de Infecciones' } },
-      { path: 'estadisticas', loadComponent: () => import('./pages/estadisticas/estadisticas.component').then(m => m.EstadisticasComponent) },
+      { path: 'estadisticas', loadComponent: () => import('./pages/estadisticas/estadisticas.component').then(m => m.EstadisticasComponent), canActivate: [moduloGuard('ESTADISTICAS')] },
       { path: 'agenda-medica', loadComponent: () => import('./pages/agenda-medica/agenda-medica.component').then(m => m.AgendaMedicaComponent) },
       { path: 'portal-citas', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Portal Paciente - Citas' } },
       { path: 'terminos', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Términos y Condiciones' } },
