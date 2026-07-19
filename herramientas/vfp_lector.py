@@ -14,6 +14,7 @@ NO TOCA DATOS. Lee únicamente los contenedores de código y diseño. Los .dbf d
 datos del sistema quedan fuera a propósito: son historias clínicas.
 """
 import argparse
+from collections import Counter
 import glob
 import os
 import re
@@ -253,6 +254,169 @@ def clasificar(carpeta):
     print("  " + ", ".join(sorted(sin_uso)))
 
 
+# ==============================================================================
+# COMPORTAMIENTO
+# ==============================================================================
+#
+# Lo más difícil de migrar no es la estructura de datos —eso se lee de las
+# tablas— sino CÓMO SE COMPORTAN los formularios: qué hace cada tecla, qué se
+# habilita cuándo, qué se rellena solo. Son años de costumbre del usuario, no
+# están documentados en ninguna parte, y desaparecen sin ruido si uno migra
+# mirando solo los datos.
+#
+# Estos patrones se reconocieron leyendo el código del sistema. La lista se
+# amplía a medida que aparezcan más.
+
+PATRONES = [
+    ("zoom con clic derecho",
+     r"zoomx\s*\(",
+     "Clic derecho sobre una etiqueta o campo amplía su contenido. Está en CASI "
+     "TODOS los controles: es una decisión de accesibilidad, no un adorno."),
+
+    ("Esc cierra",
+     r"nkeycode\s*=\s*27",
+     "La tecla Esc cierra el formulario sin guardar."),
+
+    ("Enter baja de registro",
+     r"KEYBOARD\s*'\{DNARROW\}'",
+     "Enter NO confirma: baja al siguiente registro. Cambiarlo a «enviar» rompe "
+     "la digitación en serie, que es como se usa el sistema."),
+
+    ("Ctrl+Enter confirma",
+     r"nkeycode\s*=\s*10\s*\.AND\.\s*nshiftaltctrl\s*=\s*2",
+     "Ctrl+Enter equivale a pulsar el botón Aceptar."),
+
+    ("ordenar por encabezado",
+     r"column\d+\.header1\.click",
+     "Se ordena la grilla haciendo clic en el encabezado de la columna."),
+
+    ("fecha por defecto hoy",
+     r"this\.value\s*=\s*DATE\(\)",
+     "Un campo de fecha vacío se rellena solo con la fecha de hoy al salir."),
+
+    ("botón condicionado al resultado",
+     r"\.enabled\s*=\s*\.[tf]\.",
+     "Botones que nacen deshabilitados y solo se activan si la consulta trajo "
+     "filas. Evita imprimir informes vacíos."),
+
+    ("aviso de búsqueda sin resultados",
+     r"MESSAGEBOX\s*\(",
+     "Mensaje explícito al usuario, en vez de devolver un resultado vacío mudo."),
+
+    ("indicador de proceso",
+     r"WAIT\s+WINDOW",
+     "Aviso de «un momento por favor» durante una consulta lenta."),
+
+    ("validación al salir del campo",
+     r"PROCEDURE Valid",
+     "Reglas que se comprueban al abandonar el campo, no al enviar el formulario."),
+
+    ("campo condicionado",
+     r"PROCEDURE When",
+     "El campo decide si acepta el foco según el estado del formulario."),
+]
+
+
+def comportamiento(carpeta):
+    """Inventario de comportamientos de interfaz, formulario por formulario."""
+    import re as _re
+
+    hallazgos = {}
+    eventos = Counter()
+
+    for ruta in contenedores(carpeta):
+        nombre = os.path.basename(ruta)
+        try:
+            registros = list(abrir(ruta))
+        except Exception:
+            continue
+
+        codigo = "\n".join(codigo_de(r) for r in registros)
+        if not codigo.strip():
+            continue
+
+        for ev in _re.findall(r"^PROCEDURE\s+(\w+)", codigo, _re.M):
+            eventos[ev] += 1
+
+        for etiqueta, patron, _ in PATRONES:
+            n = len(_re.findall(patron, codigo, _re.I))
+            if n:
+                hallazgos.setdefault(etiqueta, {})[nombre] = n
+
+    print("=== EVENTOS POR TIPO ===")
+    for ev, n in eventos.most_common():
+        print(f"  {n:>4}  {ev}")
+
+    print("\n=== COMPORTAMIENTOS RECONOCIDOS ===")
+    print("(lo que hay que reproducir en la interfaz nueva, adaptado)\n")
+    for etiqueta, patron, explicacion in PATRONES:
+        donde = hallazgos.get(etiqueta)
+        if not donde:
+            continue
+        total = sum(donde.values())
+        print(f"▸ {etiqueta}  —  {total} usos en {len(donde)} formularios")
+        print(f"    {explicacion}")
+        top = sorted(donde.items(), key=lambda kv: -kv[1])[:6]
+        print(f"    {', '.join(f'{f}({n})' for f, n in top)}\n")
+
+    sin_reconocer = set(eventos) - {
+        "Init", "Load", "Unload", "Destroy", "BeforeOpenTables", "Refresh",
+    }
+    print("=== EVENTOS SIN PATRÓN RECONOCIDO — revisar a mano ===")
+    print("  " + ", ".join(sorted(sin_reconocer)))
+
+
+def interacciones(carpeta):
+    """Grafo de objetos: qué controla a qué dentro de cada formulario.
+
+    La migración no puede quedarse en «este formulario guarda en esta tabla».
+    Un formulario es una MÁQUINA: el botón habilita la grilla, la grilla refresca
+    la etiqueta, el campo dispara la búsqueda. Ese cableado es lo que hace que se
+    sienta el mismo sistema, y no está escrito en ningún lado salvo aquí.
+    """
+    import re as _re
+
+    # thisform.objeto.propiedad / thisform.objeto.metodo()
+    REF = _re.compile(r"thisform\.(\w+)\.(\w+)", _re.I)
+    # llamadas a otros formularios
+    OTRO = _re.compile(r"DO\s+FORM\s+\(?\s*[\"']?([\w\.]+)", _re.I)
+
+    for ruta in sorted(contenedores(carpeta)):
+        nombre = os.path.basename(ruta)
+        try:
+            registros = list(abrir(ruta))
+        except Exception:
+            continue
+
+        # Objeto que declara el código -> a quién toca
+        actual, arcos, abre = None, [], set()
+        for r in registros:
+            codigo = codigo_de(r)
+            nombre_obj = str(r.get("OBJNAME") or r.get("NAME") or "").strip()
+            if nombre_obj:
+                actual = nombre_obj
+            if not codigo.strip():
+                continue
+            for destino, miembro in REF.findall(codigo):
+                if actual and destino.lower() != actual.lower():
+                    arcos.append((actual, destino, miembro))
+            abre.update(OTRO.findall(codigo))
+
+        if not arcos and not abre:
+            continue
+
+        print(f"\n=== {nombre} ===")
+        vistos = set()
+        for origen, destino, miembro in arcos:
+            clave = (origen.lower(), destino.lower(), miembro.lower())
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+            print(f"  {origen} -> {destino}.{miembro}")
+        if abre:
+            print(f"  abre: {', '.join(sorted(abre))}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -261,9 +425,17 @@ if __name__ == "__main__":
     ap.add_argument("--resumen", action="store_true", help="solo contar, no extraer")
     ap.add_argument("--clasificar", action="store_true",
                     help="separa formularios en menú / sub-formulario / sin uso")
+    ap.add_argument("--comportamiento", action="store_true",
+                    help="inventario de comportamientos de interfaz a reproducir")
+    ap.add_argument("--interacciones", action="store_true",
+                    help="grafo de objetos: qué control acciona a cuál")
     args = ap.parse_args()
 
-    if args.clasificar:
+    if args.interacciones:
+        interacciones(args.carpeta)
+    elif args.comportamiento:
+        comportamiento(args.carpeta)
+    elif args.clasificar:
         clasificar(args.carpeta)
     elif args.resumen:
         resumen(args.carpeta)
