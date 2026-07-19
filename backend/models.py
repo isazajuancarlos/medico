@@ -435,13 +435,36 @@ class Historia(SQLModel, table=True):
     finalidad: FinalidadConsulta = Field(default=FinalidadConsulta.NO_APLICA)
     causa_externa: CausaExterna = Field(default=CausaExterna.ENFERMEDAD_GENERAL)
     tipo_diagnostico: TipoDiagnostico = Field(default=TipoDiagnostico.IMPRESION_DIAGNOSTICA)
-    cod_consulta_cups: Optional[str] = Field(default="890201") 
+    cod_consulta_cups: Optional[str] = Field(default="890201")
+
+    # RIPS — campos que ANTES IBAN QUEMADOS en rips_completo.py.
+    #
+    # El generador ponía la misma constante para todo paciente: modalidad "01",
+    # grupo "01", codServicio 328, vrServicio 0, conceptoRecaudo "05" y copago 0.
+    # Para un consultorio de consulta externa esas constantes son casi siempre
+    # correctas, y por eso el problema no se veía; para una IPS con urgencias u
+    # hospitalización son sencillamente FALSAS, y `vrServicio = 0` lo es en todos
+    # los casos: es el valor del servicio, y de él depende el pago.
+    #
+    # Van con valor por defecto —el que estaba quemado— para no romper lo que ya
+    # funciona en el consultorio, pero ahora SON DATO: se pueden capturar y
+    # `auditoria_rips.py` señala las atenciones que se quedaron con el valor
+    # supuesto, en vez de reportarlo en silencio.
+    modalidad_grupo_servicio: Optional[str] = Field(default="01")   # 01 intramural
+    grupo_servicios: Optional[str] = Field(default="01")            # 01 consulta externa
+    cod_servicio: Optional[int] = Field(default=None)
+    valor_servicio: Optional[int] = Field(default=None)
+    concepto_recaudo: Optional[str] = Field(default="05")
+    valor_pago_moderador: Optional[int] = Field(default=0)
+    num_fev_pago_moderador: Optional[str] = Field(default=None)
 
     datos_dinamicos: Dict = Field(default={}, sa_column=Column(JSON))
-    
+
     # DIAGNÓSTICOS (Separados para RIPS)
     diagnostico_principal: str
     diagnostico_relacionado1: Optional[str] = None
+    diagnostico_relacionado2: Optional[str] = None
+    diagnostico_relacionado3: Optional[str] = None
     impresion_diagnostica: Optional[str] = None  # Texto libre del diagnóstico en anamnesis
 
     # INCAPACIDAD

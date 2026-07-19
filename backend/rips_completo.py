@@ -146,27 +146,33 @@ def generar_archivo_ac(
             if h.cita and hasattr(h.cita, 'num_autorizacion') and h.cita.num_autorizacion:
                 num_autorizacion = h.cita.num_autorizacion
 
+            # Estos campos ANTES IBAN QUEMADOS: la misma constante para todo
+            # paciente. Ahora salen de la historia, y el valor por defecto es
+            # exactamente el que estaba quemado, para no romper lo que ya
+            # funcionaba en el consultorio. `auditoria_rips.py` señala qué
+            # atenciones se quedaron con el supuesto en vez de con un dato.
             consulta = {
                 "codPrestador": cod_habilitacion,
                 "fechaInicioAtencion": _fecha_dt(h.fecha),
                 "numAutorizacion": num_autorizacion,
-                "codConsulta": getattr(h, 'cod_consulta_cups', "890201"),
-                "modalidadGrupoServicioTecSal": "01",  # Intramural
-                "grupoServicios": "01",  # Consulta Externa
-                "codServicio": 328,
+                "codConsulta": getattr(h, 'cod_consulta_cups', None) or "890201",
+                "modalidadGrupoServicioTecSal": getattr(h, 'modalidad_grupo_servicio', None) or "01",
+                "grupoServicios": getattr(h, 'grupo_servicios', None) or "01",
+                "codServicio": getattr(h, 'cod_servicio', None) or 328,
                 "finalidadTecnologiaSalud": finalidad.value if hasattr(finalidad, 'value') else "10",
                 "causaMotivoAtencion": causa_externa.value if hasattr(causa_externa, 'value') else "13",
                 "codDiagnosticoPrincipal": h.diagnostico_principal,
                 "codDiagnosticoRelacionado1": h.diagnostico_relacionado1 or "",
-                "codDiagnosticoRelacionado2": "",
-                "codDiagnosticoRelacionado3": "",
+                "codDiagnosticoRelacionado2": getattr(h, 'diagnostico_relacionado2', None) or "",
+                "codDiagnosticoRelacionado3": getattr(h, 'diagnostico_relacionado3', None) or "",
                 "tipoDiagnosticoPrincipal": tipo_dx.value if hasattr(tipo_dx, 'value') else "01",
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
-                "vrServicio": 0,
-                "conceptoRecaudo": "05",
-                "valorPagoModerador": 0,
-                "numFEVPagoModerador": "",
+                # El valor del servicio: de él depende el pago. Iba en 0 SIEMPRE.
+                "vrServicio": getattr(h, 'valor_servicio', None) or 0,
+                "conceptoRecaudo": getattr(h, 'concepto_recaudo', None) or "05",
+                "valorPagoModerador": getattr(h, 'valor_pago_moderador', None) or 0,
+                "numFEVPagoModerador": getattr(h, 'num_fev_pago_moderador', None) or "",
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["consultas"]) + 1,
             }
             usuarios_map[p.id]["servicios"]["consultas"].append(consulta)
