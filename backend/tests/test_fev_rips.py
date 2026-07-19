@@ -44,17 +44,34 @@ def _usuario(documento, servicios, incapacidad="NO", consecutivo=1):
 
 
 def _consulta(codigo="890201", fecha="2026-06-26 11:28:00", **extra):
+    """Los VEINTIÚN campos que trae una consulta en un archivo real.
+
+    La primera versión de este ayudante solo tenía once, así que las pruebas
+    ejercitaban una forma simplificada y valían menos de lo que parecía. Se
+    corrigió contrastándolo contra un archivo del prestador producido por el
+    conversor oficial.
+    """
     base = {
         "codPrestador": "192030405001",
         "fechaInicioAtencion": fecha,
         "numAutorizacion": "",
         "codConsulta": codigo,
+        "modalidadGrupoServicioTecSal": "01",
+        "grupoServicios": "01",
+        "codServicio": 328,
+        "finalidadTecnologiaSalud": "10",
+        "causaMotivoAtencion": "13",
         "codDiagnosticoPrincipal": "J00",
         "codDiagnosticoRelacionado1": "",
         "codDiagnosticoRelacionado2": "",
         "codDiagnosticoRelacionado3": "",
-        "numFEVPagoModerador": "",
+        "tipoDiagnosticoPrincipal": "01",
+        "tipoDocumentoIdentificacion": "CC",
+        "numDocumentoIdentificacion": "1020304050",
         "vrServicio": 50000,
+        "conceptoRecaudo": "05",
+        "valorPagoModerador": 0,
+        "numFEVPagoModerador": "",
         "consecutivo": 1,
     }
     base.update(extra)
@@ -246,3 +263,81 @@ def test_el_paquete_es_json_serializable():
     paquete = sobre_rips_sin_factura("530520110", consolidar([ac]), num_nota="N1")
     texto = json.dumps(paquete, ensure_ascii=False)
     assert json.loads(texto) == paquete
+
+
+# --- Contrastado contra un archivo REAL del prestador -------------------------
+#
+# Se comparó la salida de este módulo contra rips.json, producido por el
+# conversor oficial de MinSalud con datos reales (jul-2026). Coincidieron el
+# sobre, los campos de usuario, los de consulta y la normalización. Lo que sigue
+# fija esas coincidencias para que no se pierdan.
+
+CLAVES_SOBRE_REAL = {
+    "numDocumentoIdObligado", "numFactura", "tipoNota", "numNota", "usuarios",
+}
+CLAVES_USUARIO_REAL = {
+    "tipoDocumentoIdentificacion", "numDocumentoIdentificacion", "tipoUsuario",
+    "fechaNacimiento", "codSexo", "codPaisResidencia", "codMunicipioResidencia",
+    "codZonaTerritorialResidencia", "incapacidad", "codPaisOrigen",
+    "consecutivo", "servicios",
+}
+CLAVES_CONSULTA_REAL = {
+    "codPrestador", "fechaInicioAtencion", "numAutorizacion", "codConsulta",
+    "modalidadGrupoServicioTecSal", "grupoServicios", "codServicio",
+    "finalidadTecnologiaSalud", "causaMotivoAtencion", "codDiagnosticoPrincipal",
+    "codDiagnosticoRelacionado1", "codDiagnosticoRelacionado2",
+    "codDiagnosticoRelacionado3", "tipoDiagnosticoPrincipal",
+    "tipoDocumentoIdentificacion", "numDocumentoIdentificacion", "vrServicio",
+    "conceptoRecaudo", "valorPagoModerador", "numFEVPagoModerador", "consecutivo",
+}
+
+
+def test_el_ARCHIVO_no_lleva_envoltorio():
+    """El archivo que se sube es el objeto pelado; el envoltorio es de la API.
+
+    Confundirlos cuesta un ciclo completo de validación.
+    """
+    from fev_rips import archivo_rips
+
+    paquete = sobre_rips_sin_factura("530520110", [], num_nota="13")
+    assert set(paquete) == {"rips", "xmlFevFile"}, "el cuerpo de API sí envuelve"
+    assert set(archivo_rips(paquete)) == CLAVES_SOBRE_REAL, "el archivo no"
+
+
+def test_el_sobre_tiene_exactamente_las_claves_del_archivo_real():
+    from fev_rips import archivo_rips
+
+    paquete = sobre_rips_sin_factura("530520110", [], num_nota="13")
+    assert set(archivo_rips(paquete)) == CLAVES_SOBRE_REAL
+
+
+def test_usuario_y_consulta_tienen_las_claves_del_archivo_real():
+    from fev_rips import archivo_rips
+
+    ac = _doc([_usuario("111", {"consultas": [_consulta()]})])
+    paquete = sobre_rips_sin_factura("530520110", consolidar([ac]), num_nota="13")
+    usuario = archivo_rips(paquete)["usuarios"][0]
+
+    assert set(usuario) == CLAVES_USUARIO_REAL
+    assert set(usuario["servicios"]["consultas"][0]) == CLAVES_CONSULTA_REAL
+
+
+def test_el_archivo_se_escribe_con_BOM_como_el_del_conversor():
+    """El conversor oficial escribe UTF-8 CON BOM y el archivo real lo trae.
+    Parecerse al que ya le funciona es la apuesta segura."""
+    import tempfile
+    from fev_rips import escribir_archivo
+
+    paquete = sobre_rips_sin_factura("530520110", [], num_nota="13")
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        ruta = f.name
+
+    escribir_archivo(paquete, ruta)
+    with open(ruta, "rb") as f:
+        assert f.read(3) == b"\xef\xbb\xbf", "debe llevar BOM"
+
+    escribir_archivo(paquete, ruta, con_bom=False)
+    with open(ruta, "rb") as f:
+        assert f.read(3) != b"\xef\xbb\xbf", "y debe poder no llevarlo"
+
+    os.unlink(ruta)

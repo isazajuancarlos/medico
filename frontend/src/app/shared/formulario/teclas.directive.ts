@@ -36,6 +36,10 @@ export class TeclasDirective {
   alPulsar(evento: KeyboardEvent): void {
     if (evento.key === 'Escape') {
       evento.preventDefault();
+      // El original PREGUNTA antes de cerrar («¿Está seguro de cerrar el
+      // formulario?»), y solo entonces deshace y sale. No es un adorno: Esc
+      // está al lado de las teclas de uso normal y sin confirmación se pierde
+      // una historia a medio escribir. Quien escuche `cancelar` debe confirmar.
       this.cancelar.emit();
       return;
     }

@@ -136,15 +136,77 @@ Enter— va a guardar a medio llenar una y otra vez si no se intercepta.
 
 ---
 
-## Lo que falta por decidir con el prestador
+## Lo que ya se leyó del sistema (no hay que preguntarlo)
 
-1. **`mousemovex`** (108 usos): se sabe que hay realce al pasar el ratón, pero no
-   qué hace exactamente. Hay que verlo funcionando o preguntar.
-2. **`calcularpesoideal` y `calculartallaideal`**: fórmulas clínicas propias del
-   sistema. Hay que leer su código y confirmar cuál se usa, porque hay varias
-   convenciones.
-3. **Los `Page1`…`Page8`**: `historia` tiene ocho pestañas. Confirmar el orden y
-   qué va en cada una; el orden es memoria muscular.
-4. **El evento de vigilancia** (`cve1`): en el sistema nuevo se deriva del
-   diagnóstico. Preguntar si alguna vez registró uno distinto del diagnóstico,
-   porque entonces los informes darían números diferentes.
+Estaba todo en los `.scx` y en `clases/medico.vcx`. Se había dado por
+inaccesible sin comprobarlo.
+
+### Las pestañas
+
+Vienen en la columna `PROPERTIES` del pageframe, con su `Caption` y su orden.
+
+| Formulario | Pestañas |
+|---|---|
+| `historia` | GRAL · AF · AP · AGO · API · MVTO |
+| `historia3` | las anteriores + MEDICA · R.PARACLINICOS |
+| `historia`/`historia3`, dentro de MVTO | MOTIVO · ENFER. · R.SISTE. · DIAG. · OTROS |
+| `pacientes` | NOMBRES · TELS · DIRECCION · OTROS · PERSONALES |
+| `exa_fisico_gen` | 9 pestañas (ver el `.scx`) |
+
+### Los métodos compartidos, tal como son
+
+```
+zoomx(obj)              -> DO FORM zoomx WITH obj      ES UN MODAL, no un tooltip
+
+activar_objetos(bool)   -> setall("readonly", b, "textbox" | "checkbox"
+                                              | "editbox" | "spinner")
+                           setall("enabled", NOT b, "combobox")
+
+teclas_calientes(k, s)  -> Esc PREGUNTA («¿Está seguro de cerrar…?», con
+                           tiempo de espera de 5 s) y solo entonces wzundo+wzexit
+                           Alt+1/2/3 -> wznew / wzedit / wzdelete
+
+mousemovex(obj, n)      -> obj.fontsize = 18 si entra, 14 si sale
+```
+
+### Las fórmulas clínicas
+
+```
+peso ideal   (>12 años)  talla² × 0.23  hombres    (IMC objetivo 23)
+                         talla² × 0.22  mujeres    (IMC objetivo 22)
+             (≤12 años)  la rama de la tabla `pesotalla` está COMENTADA:
+                         hoy devuelve 0. Preguntar si eso es intencional.
+
+talla ideal              no es fórmula: se busca en la tabla `pesotalla`
+                         por edad + unidad + sexo
+```
+
+---
+
+## Diferido a la etapa de mejoras
+
+Decisión de Juan: los EFECTOS VISUALES no entran en la migración. Se anotan aquí
+para que "después" no se vuelva "nunca".
+
+- **`mousemovex`**: la fuente del control crece de 14 a 18 puntos al pasar el
+  ratón. 108 usos.
+- **La presentación del zoom**: se conserva la función —ver el contenido
+  ampliado— pero su apariencia se resuelve luego.
+- Tipografías, colores y `Arial Black` de las pestañas.
+
+La línea trazada: **efecto visual → mejoras; comportamiento que cambia lo que el
+usuario puede hacer o perder → migración**. Por eso la confirmación de Esc sí se
+migra: sin ella se pierde una historia a medio escribir.
+
+---
+
+## Lo que sigue necesitando al prestador
+
+Solo dos, y las dos dependen de datos históricos o del estado del mundo, no del
+código:
+
+1. **El evento de vigilancia** (`cve1`): en el sistema nuevo se DERIVA del
+   diagnóstico. ¿Alguna vez registró uno distinto del diagnóstico principal? Si
+   sí, los informes darán números diferentes de los que ha venido enviando.
+2. **El validador 1.4.8.0**: ¿el archivo RIPS que produce hoy pasa limpio? Desde
+   el 1-jun-2026 trece reglas que solo avisaban son causal de rechazo.

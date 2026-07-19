@@ -52,6 +52,7 @@ estructura general y la numeración.
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any, Dict, List, Optional
 
@@ -281,6 +282,35 @@ def generar_paquete(
     if num_factura:
         return sobre_fev(obligado, usuarios, num_factura, xml_fev_base64 or "")
     return sobre_rips_sin_factura(obligado, usuarios, num_nota)
+
+
+def archivo_rips(paquete: Dict[str, Any]) -> Dict[str, Any]:
+    """El objeto RIPS SIN el envoltorio, que es lo que va en el archivo.
+
+    Hay DOS formas y confundirlas cuesta un ciclo de validación:
+
+      - EL ARCHIVO que se sube a la aplicación de escritorio, y el que produce el
+        conversor web, es el objeto pelado: `{numDocumentoIdObligado, numFactura,
+        tipoNota, numNota, usuarios}`.
+      - EL CUERPO DE LA API lo envuelve: `{"rips": {...}, "xmlFevFile": "..."}`.
+
+    Verificado contra un archivo real del prestador (jul-2026): sus claves raíz
+    son las cinco del objeto pelado, sin `rips` ni `xmlFevFile`.
+    """
+    return paquete["rips"]
+
+
+def escribir_archivo(paquete: Dict[str, Any], ruta: str, *, con_bom: bool = True) -> None:
+    """Guarda el archivo tal como lo espera la aplicación de escritorio.
+
+    `con_bom` por defecto porque el conversor oficial escribe UTF-8 CON BOM, y
+    un archivo real del prestador lo trae. No está confirmado que el validador
+    lo exija, pero parecerse al que ya le funciona es la apuesta segura; se deja
+    conmutable para poder comprobarlo.
+    """
+    codificacion = "utf-8-sig" if con_bom else "utf-8"
+    with open(ruta, "w", encoding=codificacion) as f:
+        json.dump(archivo_rips(paquete), f, ensure_ascii=False, indent=1)
 
 
 def contar_atenciones(paquete: Dict[str, Any]) -> Dict[str, int]:
