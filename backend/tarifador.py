@@ -67,14 +67,45 @@ def _contratos_vigentes(db, entidad_id: Optional[int], cuando: date):
     return list(db.exec(consulta).all())
 
 
+def _tarifa_propia(db, institucion_id: Optional[int], cups: str, cuando: date):
+    """La lista de precios de la institución, vigente ese día."""
+    from sqlmodel import select, or_
+
+    from models import TarifaInstitucion
+
+    if institucion_id is None:
+        return None
+    return db.exec(
+        select(TarifaInstitucion).where(
+            TarifaInstitucion.institucion_id == institucion_id,
+            TarifaInstitucion.codigo_servicio == cups,
+            TarifaInstitucion.vigente_desde <= cuando,
+            or_(TarifaInstitucion.vigente_hasta == None,  # noqa: E711
+                TarifaInstitucion.vigente_hasta >= cuando),
+        )
+    ).first()
+
+
 def resolver(
     db,
     *,
     cups: Optional[str],
-    entidad_id: Optional[int],
+    entidad_id: Optional[int] = None,
+    institucion_id: Optional[int] = None,
     fecha: Optional[date] = None,
 ) -> ValorServicio:
-    """Valor del servicio según el contrato vigente el día de la atención.
+    """Valor del servicio vigente el día de la atención.
+
+    Busca en este orden, del acuerdo más específico al más general:
+
+      1. El CONTRATO de la entidad del paciente, si lo hay. Es lo que aplica en
+         una IPS que negocia con EPS.
+      2. La LISTA DE PRECIOS DE LA INSTITUCIÓN. Es lo que aplica en un
+         consultorio pequeño, que no negocia contratos y tiene tarifa única.
+      3. Nada: devuelve el motivo y deja que la auditoría lo señale.
+
+    El orden importa: si hay contrato, manda el contrato, porque es lo pactado.
+    La tarifa propia entra cuando no hay contrato o cuando el CUPS no está en él.
 
     `fecha` es la de la ATENCIÓN, no la de hoy: un informe rehecho el año que
     viene debe dar el mismo número.
@@ -89,11 +120,6 @@ def resolver(
         return ValorServicio(None, motivo="la atención no tiene código CUPS")
 
     contratos = _contratos_vigentes(db, entidad_id, cuando)
-    if not contratos:
-        return ValorServicio(
-            None,
-            motivo=f"no hay contrato vigente al {cuando.isoformat()} para esa entidad",
-        )
 
     for contrato in contratos:
         tarifa = db.exec(
@@ -118,10 +144,27 @@ def resolver(
             contrato=contrato.numero_contrato,
         )
 
-    return ValorServicio(
-        None,
-        motivo=f"el CUPS {cups} no está en ningún contrato vigente",
-    )
+    # Sin contrato aplicable: la tarifa propia de la institución.
+    propia = _tarifa_propia(db, institucion_id, cups, cuando)
+    if propia is not None:
+        valor = int(round(float(propia.valor_tarifa)))
+        return ValorServicio(
+            valor=valor,
+            pago_moderador=int(round(valor * (propia.copago_porcentaje or 0) / 100.0)),
+            contrato="tarifa propia",
+        )
+
+    if contratos:
+        motivo = (
+            f"el CUPS {cups} no está en ningún contrato vigente "
+            f"ni en la tarifa propia de la institución"
+        )
+    else:
+        motivo = (
+            f"no hay tarifa para el CUPS {cups} al {cuando.isoformat()}: "
+            f"ni contrato de la entidad, ni lista de precios de la institución"
+        )
+    return ValorServicio(None, motivo=motivo)
 
 
 def aplicar_a_historia(db, historia: Any, *, forzar: bool = False) -> ValorServicio:
@@ -142,6 +185,7 @@ def aplicar_a_historia(db, historia: Any, *, forzar: bool = False) -> ValorServi
 
     paciente = getattr(historia, "paciente", None)
     entidad_id = getattr(paciente, "entidad_id", None) if paciente else None
+    institucion_id = getattr(paciente, "institucion_id", None) if paciente else None
     fecha = getattr(historia, "fecha", None)
     if hasattr(fecha, "date"):
         fecha = fecha.date()
@@ -150,6 +194,7 @@ def aplicar_a_historia(db, historia: Any, *, forzar: bool = False) -> ValorServi
         db,
         cups=getattr(historia, "cod_consulta_cups", None),
         entidad_id=entidad_id,
+        institucion_id=institucion_id,
         fecha=fecha,
     )
 

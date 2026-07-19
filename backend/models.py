@@ -860,6 +860,41 @@ class TarifaContrato(SQLModel, table=True):
     requiere_autorizacion: bool = Field(default=False)
     copago_porcentaje: float = Field(default=0)
 
+
+class TarifaInstitucion(SQLModel, table=True):
+    """La lista de precios PROPIA de la institución, sin contrato de por medio.
+
+    Un consultorio pequeño no negocia contratos con EPS: cobra su tarifa y ya.
+    Sin esto, el tarifador exigiría un `Contrato` que nunca va a existir y
+    devolvería vacío siempre — que es como quedó al construirlo pensando solo en
+    la IPS.
+
+    Es la tarifa de referencia y también el respaldo cuando hay contratos pero
+    el CUPS no aparece en ninguno.
+
+    LLEVA VIGENCIA aunque no haya contrato. El principio de congelar el valor no
+    depende de que exista un contrato: una consulta del año pasado valía lo que
+    valía entonces, y un informe rehecho debe dar el mismo número.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    institucion_id: int = Field(foreign_key="institucion.id", index=True)
+
+    codigo_servicio: str = Field(index=True)  # CUPS
+    valor_tarifa: float
+
+    #: Desde cuándo rige. La primera carga puede ir muy atrás para cubrir el
+    #: histórico que se vaya a reportar.
+    vigente_desde: date = Field(default_factory=date.today)
+    #: Hasta cuándo. Vacío = sigue vigente.
+    vigente_hasta: Optional[date] = Field(default=None)
+
+    #: Cuota moderadora, si aplica. En consulta particular suele ser cero.
+    copago_porcentaje: float = Field(default=0)
+
+    descripcion: Optional[str] = None
+
+
 class Factura(SQLModel, table=True):
     """
     Factura para radicación a entidades.

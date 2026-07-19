@@ -121,7 +121,7 @@ def test_sin_contrato_vigente_devuelve_None_y_dice_por_que(db):
 
     assert not r.resuelto
     assert r.valor is None
-    assert "no hay contrato vigente" in r.motivo
+    assert "ni contrato de la entidad" in r.motivo
 
 
 def test_un_contrato_vencido_no_sirve(db):
@@ -235,3 +235,112 @@ def test_acepta_datetime_ademas_de_date(db):
 
     h = Historia(PacienteFalso(e.id), fecha=datetime(2026, 6, 15, 14, 30))
     assert aplicar_a_historia(db, h).valor == 45000
+
+
+# --- La universalidad: cada tipo de prestador usa lo que tiene ---------------
+#
+# La cascada es contrato -> tarifa propia -> nada. Una IPS que negocia con EPS
+# usa la primera; un consultorio pequeño, que no tiene contratos, la segunda; un
+# hospital con contratos que atiende a un particular, las dos. Ninguno queda
+# fuera y ninguno tiene que configurar lo que no usa.
+
+from models import Institucion, TarifaInstitucion  # noqa: E402
+
+
+def _institucion(db, nombre="Consultorio Prueba"):
+    i = Institucion(
+        razon_social=nombre, nombre_comercial=nombre, nit="800123456",
+        codigo_habilitacion="700010000101", direccion="Calle 1", ciudad="Sincelejo",
+        departamento="Sucre", telefono="6000000", email="p@x.co",
+        representante_legal="Prueba", identificacion_representante="1",
+        codigo_prestador="700010000101",
+    )
+    db.add(i)
+    db.commit()
+    db.refresh(i)
+    return i
+
+
+def _tarifa_propia(db, institucion, cups="890301", valor=40000, copago=0,
+                   desde=date(2020, 1, 1), hasta=None):
+    t = TarifaInstitucion(
+        institucion_id=institucion.id, codigo_servicio=cups, valor_tarifa=valor,
+        copago_porcentaje=copago, vigente_desde=desde, vigente_hasta=hasta,
+    )
+    db.add(t)
+    db.commit()
+    return t
+
+
+def test_un_CONSULTORIO_sin_contratos_cobra_su_tarifa(db):
+    """El caso del primer cliente: no negocia con EPS, tiene tarifa única.
+    Antes de esto el tarifador le devolvía vacío SIEMPRE."""
+    inst = _institucion(db)
+    _tarifa_propia(db, inst, "890301", 40000)
+
+    r = resolver(db, cups="890301", institucion_id=inst.id, fecha=date(2026, 6, 15))
+
+    assert r.resuelto
+    assert r.valor == 40000
+    assert r.contrato == "tarifa propia"
+
+
+def test_una_IPS_con_contrato_usa_el_CONTRATO_aunque_tenga_tarifa_propia(db):
+    """Lo pactado manda sobre la lista de precios interna."""
+    inst = _institucion(db)
+    e = _entidad(db)
+    c = _contrato(db, e)
+    _tarifa(db, c, "890301", 45000)
+    _tarifa_propia(db, inst, "890301", 40000)
+
+    r = resolver(db, cups="890301", entidad_id=e.id, institucion_id=inst.id,
+                 fecha=date(2026, 6, 15))
+
+    assert r.valor == 45000
+    assert r.contrato == "C-1"
+
+
+def test_un_CUPS_fuera_del_contrato_cae_a_la_tarifa_propia(db):
+    """Un hospital con contrato que presta un servicio no pactado: no se queda
+    sin valor, usa su lista de precios."""
+    inst = _institucion(db)
+    e = _entidad(db)
+    c = _contrato(db, e)
+    _tarifa(db, c, "890301", 45000)
+    _tarifa_propia(db, inst, "890201", 60000)
+
+    r = resolver(db, cups="890201", entidad_id=e.id, institucion_id=inst.id,
+                 fecha=date(2026, 6, 15))
+
+    assert r.valor == 60000
+    assert r.contrato == "tarifa propia"
+
+
+def test_la_tarifa_propia_TAMBIEN_se_congela(db):
+    """El principio no depende de que haya contrato: una consulta del año pasado
+    valía lo que valía entonces."""
+    inst = _institucion(db)
+    _tarifa_propia(db, inst, "890301", 30000,
+                   desde=date(2025, 1, 1), hasta=date(2025, 12, 31))
+    _tarifa_propia(db, inst, "890301", 40000, desde=date(2026, 1, 1))
+
+    assert resolver(db, cups="890301", institucion_id=inst.id,
+                    fecha=date(2025, 6, 15)).valor == 30000
+    assert resolver(db, cups="890301", institucion_id=inst.id,
+                    fecha=date(2026, 6, 15)).valor == 40000
+
+
+def test_una_tarifa_sin_fecha_de_fin_sigue_vigente(db):
+    inst = _institucion(db)
+    _tarifa_propia(db, inst, "890301", 40000, desde=date(2026, 1, 1), hasta=None)
+
+    assert resolver(db, cups="890301", institucion_id=inst.id,
+                    fecha=date(2030, 1, 1)).resuelto
+
+
+def test_sin_contrato_NI_tarifa_propia_lo_dice_claro(db):
+    inst = _institucion(db)
+    r = resolver(db, cups="890301", institucion_id=inst.id, fecha=date(2026, 6, 15))
+
+    assert not r.resuelto
+    assert "ni contrato" in r.motivo and "ni lista de precios" in r.motivo
