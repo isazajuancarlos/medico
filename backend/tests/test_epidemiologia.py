@@ -3,8 +3,8 @@
 Lo que más importa aquí es la FIDELIDAD: si los números no coinciden con los que
 el prestador viene reportando a la Secretaría de Salud, el informe nuevo no
 sirve. Por eso hay pruebas que fijan comportamientos del original que a primera
-vista parecen defectos —la edad en años de 365 días— y que se conservan a
-propósito.
+vista parecen defectos y que se conservan a propósito. La excepción es el
+cálculo de la edad, que SÍ se corrigió: ver la sección correspondiente.
 
 Todo con datos sintéticos.
 """
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from epidemiologia import (  # noqa: E402
     CONJUNTO_COBERTURA, CONJUNTO_CVE, CONJUNTO_IRA, EVENTO_IRA, catalogos,
-    clasificar_edad, cobertura, edad_calendario, edad_vfp, es_its,
+    clasificar_edad, cobertura, edad, edad_calendario, edad_vfp, es_its,
     eventos_vigilancia, evento_de, ira, its, morbilidad, rangos, resumen,
 )
 
@@ -86,7 +86,7 @@ def test_el_catalogo_de_ITS_reconoce_sus_codigos():
     assert not es_its(None)
 
 
-# --- Fidelidad de la edad ----------------------------------------------------
+# --- El cálculo del original, conservado solo para comparar ----------------------------------------------------
 
 def test_la_edad_se_calcula_como_el_original_en_anos_de_365_dias():
     """Fidelidad deliberada: el VFP hacía INT(días/365) e ignoraba bisiestos."""
@@ -116,9 +116,9 @@ def test_el_desfase_de_edad_afecta_POCAS_clasificaciones_de_rango():
 
     Medido sobre nacimientos de 1930 a 2024 y eventos de todo 2026: la edad
     difiere en ~5 % de los casos, pero el rango solo cambia en menos del 1 %.
-    Se conserva el cálculo original de todos modos —esa fracción es real y
-    quien compare contra sus reportes históricos la vería—, pero conviene tener
-    la magnitud medida y no exagerarla.
+    Esta medición fue la que permitió decidir con datos: al ser tan pequeña, se
+    adoptó el cálculo CORRECTO. La prueba se conserva para poder explicarle al
+    prestador el tamaño de la diferencia si compara contra sus reportes viejos.
     """
     from datetime import timedelta
 
@@ -163,11 +163,87 @@ def test_los_limites_de_cada_rango_son_inclusivos():
     assert con_edad(60) == "rango7"
 
 
-def test_una_edad_fuera_de_todo_rango_no_se_pierde():
-    """Devuelve None para poder contarla aparte, en vez de meterla callada en un
-    grupo cualquiera."""
+def test_nacer_despues_del_evento_es_un_error_de_datos_y_se_dice():
+    """Antes producía una edad negativa que caía callada fuera de todo rango.
+    Es un dato imposible: mejor que reviente donde se puede corregir."""
     futuro = date(2030, 1, 1)
-    assert clasificar_edad(HOY, futuro, CONJUNTO_IRA) is None
+    with pytest.raises(ValueError, match="anterior al nacimiento"):
+        clasificar_edad(HOY, futuro, CONJUNTO_IRA)
+
+
+# --- El cálculo correcto de edad: años, meses y días -------------------------
+
+def test_la_edad_trae_los_tres_componentes():
+    e = edad(date(2026, 7, 19), date(1980, 3, 15))
+    assert (e.años, e.meses, e.días) == (46, 4, 4)
+    assert e.total_días == (date(2026, 7, 19) - date(1980, 3, 15)).days
+
+
+def test_el_aniversario_mensual_se_RECORTA_al_mes_corto():
+    """Un mes después del 31 de enero es el 29 de febrero en año bisiesto.
+
+    Restar campo a campo y pedir prestado al mes anterior producía días
+    NEGATIVOS en este caso, porque febrero es más corto que el día 31.
+    """
+    nacimiento = date(2000, 1, 31)
+    assert str(edad(date(2000, 2, 29), nacimiento)) == "0a 1m 0d"
+    assert str(edad(date(2000, 3, 1), nacimiento)) == "0a 1m 1d"
+
+
+def test_quien_nace_un_29_de_febrero_cumple_el_28():
+    """En año no bisiesto el aniversario se recorta al último día existente."""
+    assert str(edad(date(2025, 2, 28), date(2024, 2, 29))) == "1a 0m 0d"
+
+
+def test_ningun_componente_puede_ser_negativo_jamas():
+    """Barrido: cuatro fechas de nacimiento difíciles —día 31, 29 de febrero,
+    fin de año— por 4.000 días cada una."""
+    from datetime import timedelta
+
+    for base in (date(2000, 1, 31), date(2024, 2, 29), date(1999, 12, 31), date(2001, 3, 15)):
+        d = base
+        for _ in range(4000):
+            d += timedelta(days=1)
+            e = edad(d, base)
+            assert e.años >= 0 and 0 <= e.meses <= 11 and e.días >= 0, f"{base} -> {d}: {e}"
+
+
+def test_la_unidad_RIPS_cambia_con_la_edad():
+    """RIPS y las fichas de notificación piden la unidad de medida: un menor de
+    un año se reporta en meses, y un recién nacido en días."""
+    nacimiento = date(2026, 7, 10)
+    assert edad(date(2026, 7, 19), nacimiento).unidad_rips == "días"
+    assert edad(date(2026, 7, 19), nacimiento).valor_rips == 9
+
+    assert edad(date(2026, 9, 19), nacimiento).unidad_rips == "meses"
+    assert edad(date(2026, 9, 19), nacimiento).valor_rips == 2
+
+    assert edad(date(2028, 9, 19), nacimiento).unidad_rips == "años"
+    assert edad(date(2028, 9, 19), nacimiento).valor_rips == 2
+
+
+def test_el_mismo_dia_es_cero_dias_no_un_error():
+    e = edad(date(2026, 7, 19), date(2026, 7, 19))
+    assert (e.años, e.meses, e.días, e.total_días) == (0, 0, 0, 0)
+    assert e.unidad_rips == "días"
+
+
+def test_total_meses_acumula_los_anios():
+    e = edad(date(2028, 9, 19), date(2026, 7, 10))
+    assert e.años == 2 and e.meses == 2
+    assert e.total_meses == 26
+
+
+def test_los_informes_ya_usan_la_edad_correcta():
+    """`clasificar_edad` dejó de usar el cálculo del original."""
+    nacimiento = date(1950, 1, 1)
+    evento = date(2020, 12, 14)
+    assert edad_vfp(evento, nacimiento) == 71, "el original lo envejecía"
+    assert edad(evento, nacimiento).años == 70
+
+    # rango1: ...40-59 | 60+ — aquí ambos caen en el mismo tramo, pero la
+    # clasificación debe seguir la edad REAL.
+    assert clasificar_edad(evento, nacimiento, CONJUNTO_IRA) == "rango7"
 
 
 # --- Morbilidad --------------------------------------------------------------

@@ -8,17 +8,25 @@ Salud. Por eso el criterio aquí es FIDELIDAD, aunque algo del original parezca
 mejorable — si los números no coinciden con los que el prestador viene
 reportando, el informe nuevo no sirve para nada.
 
-=== LAS DOS DECISIONES DE FIDELIDAD QUE HAY QUE CONOCER ===
+=== LAS DOS DECISIONES QUE HAY QUE CONOCER ===
 
-**1. La edad se calcula como el original: `int(días / 365)`.**
+**1. La edad se calcula BIEN, apartándose del original a propósito.**
 
-No es la edad calendario. El VFP hacía `lnanos = INT((fechaEvento - fechaNac)/365)`
-y eso ignora los bisiestos: quien tenga 20 años cumplidos puede clasificarse como
-de 19 si acumuló suficientes 29 de febrero. Se conserva A PROPÓSITO, porque los
-rangos etarios son la variable de corte de todos estos informes y "corregirlo"
-movería personas de casilla y rompería la serie histórica del prestador.
-`edad_calendario()` queda disponible para cuando se decida cambiar, y el cambio
-debe ser una decisión explícita, no un arreglo silencioso.
+El VFP hacía `lnanos = INT(días/365)` y `lnmeses = INT(resto/30)`: años de 365
+días y meses de 30. Eso ENVEJECE a la gente — alguien nacido en 1950 aparecía
+con 71 dos semanas antes de cumplirlos —, y el desfase crece con la edad.
+
+Aquí `edad()` usa aritmética de calendario real y devuelve años, meses y días.
+Los tres importan: en pediatría el tramo «0 años» va del recién nacido al de
+once meses, y para vigilancia de IRA no es lo mismo; RIPS y las fichas de
+notificación además exigen la unidad de medida cuando el paciente es menor de un
+año.
+
+Medido antes de cambiarlo: la edad en años difiere del original en ~5 % de los
+casos, pero solo el 0,16 %–0,47 % de las clasificaciones cambia de RANGO, y 0 %
+en los tramos de cobertura. Es decir, la corrección mueve muy pocos números.
+`edad_vfp()` se conserva para poder EXPLICAR una diferencia contra los reportes
+históricos del prestador, no para producirla.
 
 **2. El evento de vigilancia se DERIVA del diagnóstico.**
 
@@ -37,7 +45,8 @@ no por la del examen. Aquí equivale a `Historia.fecha`.
 from __future__ import annotations
 
 import json
-from collections import Counter, defaultdict
+from collections import Counter
+from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -104,24 +113,114 @@ def es_its(cie: Optional[str]) -> bool:
 # EDAD Y RANGOS
 # ==============================================================================
 
-def edad_vfp(fecha_evento: date, fecha_nacimiento: date) -> int:
-    """Edad como la calculaba el original: años de 365 días exactos.
+@dataclass(frozen=True)
+class Edad:
+    """Edad exacta en años, meses y días de calendario.
 
-    Se conserva por fidelidad. Ver la nota del encabezado del módulo.
+    Los tres importan. En pediatría, «0 años» va del recién nacido al de once
+    meses, y para vigilancia de IRA no es lo mismo: sin meses y días ese tramo
+    es ciego. RIPS y las fichas de notificación también piden la unidad de
+    medida cuando el paciente es menor de un año.
     """
-    return int((fecha_evento - fecha_nacimiento).days / 365)
+
+    años: int
+    meses: int
+    días: int
+    total_días: int
+
+    @property
+    def total_meses(self) -> int:
+        return self.años * 12 + self.meses
+
+    @property
+    def unidad_rips(self) -> str:
+        """Unidad con que se reporta la edad: años, meses o días."""
+        if self.años >= 1:
+            return "años"
+        if self.total_meses >= 1:
+            return "meses"
+        return "días"
+
+    @property
+    def valor_rips(self) -> int:
+        if self.años >= 1:
+            return self.años
+        if self.total_meses >= 1:
+            return self.total_meses
+        return self.total_días
+
+    def __str__(self) -> str:
+        return f"{self.años}a {self.meses}m {self.días}d"
+
+
+def _días_del_mes(año: int, mes: int) -> int:
+    if mes == 2:
+        bisiesto = (año % 4 == 0 and año % 100 != 0) or año % 400 == 0
+        return 29 if bisiesto else 28
+    return 30 if mes in (4, 6, 9, 11) else 31
+
+
+def _sumar_meses(f: date, n: int) -> date:
+    """`f` más `n` meses, RECORTANDO al último día si el mes es más corto.
+
+    Es la convención habitual (la misma de `relativedelta`): un mes después del
+    31 de enero es el 29 de febrero en año bisiesto, no el 2 ó 3 de marzo.
+    """
+    indice = f.month - 1 + n
+    año = f.year + indice // 12
+    mes = indice % 12 + 1
+    return date(año, mes, min(f.day, _días_del_mes(año, mes)))
+
+
+def edad(fecha_evento: date, fecha_nacimiento: date) -> Edad:
+    """Edad exacta, con aritmética de calendario real.
+
+    Reemplaza el cálculo del original, que usaba años de 365 días y meses de 30
+    —`INT(días/365)` y `INT(resto/30)`—, y por eso envejecía a la gente: alguien
+    nacido en 1950 aparecía con 71 años dos semanas antes de cumplirlos.
+
+    Se calcula buscando el ÚLTIMO ANIVERSARIO MENSUAL cumplido y contando los
+    días desde ahí. Restar campo a campo y «pedir prestado» al mes anterior no
+    basta: quien nace un día 31 produce días negativos, porque el mes prestado
+    puede ser más corto que su día de nacimiento.
+    """
+    if fecha_evento < fecha_nacimiento:
+        raise ValueError(
+            f"la fecha del evento ({fecha_evento}) es anterior al nacimiento "
+            f"({fecha_nacimiento})"
+        )
+
+    meses_totales = (
+        (fecha_evento.year - fecha_nacimiento.year) * 12
+        + fecha_evento.month - fecha_nacimiento.month
+    )
+    if _sumar_meses(fecha_nacimiento, meses_totales) > fecha_evento:
+        meses_totales -= 1
+
+    aniversario = _sumar_meses(fecha_nacimiento, meses_totales)
+    años, meses = divmod(meses_totales, 12)
+
+    return Edad(
+        años=años,
+        meses=meses,
+        días=(fecha_evento - aniversario).days,
+        total_días=(fecha_evento - fecha_nacimiento).days,
+    )
 
 
 def edad_calendario(fecha_evento: date, fecha_nacimiento: date) -> int:
-    """Edad real, contando bisiestos. NO se usa todavía en los informes.
+    """Años cumplidos, sin más. Atajo sobre `edad`."""
+    return edad(fecha_evento, fecha_nacimiento).años
 
-    Existe para poder medir la diferencia contra `edad_vfp` antes de decidir
-    si se cambia, en vez de cambiarlo a ciegas.
+
+def edad_vfp(fecha_evento: date, fecha_nacimiento: date) -> int:
+    """Años como los calculaba el original: `INT(días/365)`.
+
+    YA NO SE USA EN LOS INFORMES. Se conserva únicamente para poder comparar
+    contra los reportes históricos del prestador y explicar una diferencia si
+    aparece — no para producirla.
     """
-    años = fecha_evento.year - fecha_nacimiento.year
-    if (fecha_evento.month, fecha_evento.day) < (fecha_nacimiento.month, fecha_nacimiento.day):
-        años -= 1
-    return años
+    return int((fecha_evento - fecha_nacimiento).days / 365)
 
 
 def rangos(conjunto: str) -> List[Dict[str, Any]]:
@@ -139,12 +238,15 @@ def clasificar_edad(
     fecha_nacimiento: date,
     conjunto: str = CONJUNTO_CVE,
 ) -> Optional[str]:
-    """Devuelve el nombre del rango etario, como `Clasificaredad` del original.
+    """Rango etario del paciente, con la edad CALCULADA CORRECTAMENTE.
+
+    Equivale a `Clasificaredad` del original salvo en la aritmética: aquí los
+    años son de calendario, no de 365 días. Ver la nota del encabezado.
 
     Fuera de todo rango devuelve None en vez de una cadena vacía: así el
     llamante puede contarlos aparte en lugar de perderlos en un grupo mudo.
     """
-    años = edad_vfp(fecha_evento, fecha_nacimiento)
+    años = edad(fecha_evento, fecha_nacimiento).años
     for r in rangos(conjunto):
         if r["inicial"] <= años <= r["final"]:
             return r["nombre"]
