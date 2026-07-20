@@ -98,6 +98,7 @@ from routers.quirofano import router as quirofano_router
 # funcionales en cascarones sin que nada fallara.
 from routers.stubs import ROUTERS_PENDIENTES
 from routers.modulos import router as modulos_router
+from routers.incapacidades import router as incapacidades_router
 
 API_PREFIX = "/api"
 
@@ -108,6 +109,7 @@ core_routers = [
     estadisticas_router, agenda_router, laboratorio_router, imagenes_router,
     evoluciones_router, interconsultas_router, epicrisis_router, nutricion_router,
     rehabilitacion_router, quirofano_router, modulos_router,
+    incapacidades_router,
 ]
 
 stub_routers = ROUTERS_PENDIENTES
