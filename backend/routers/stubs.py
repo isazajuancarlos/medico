@@ -21,10 +21,8 @@ from fastapi import APIRouter, HTTPException, status
 # Mantener ordenado y SIN duplicados con los routers reales de `main.py`.
 PENDIENTES: dict[str, str] = {
     "banco-sangre": "banco_sangre",
-    "nota-operatoria": "nota_operatoria",
     "preanestesia": "preanestesia",
     "recuperacion": "recuperacion",
-    "contrarreferencia": "contrarreferencia",
     "trabajo-social": "trabajo_social",
     "telemedicina": "telemedicina",
     "vacunacion": "vacunacion",

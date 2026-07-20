@@ -44,7 +44,7 @@ os.environ.setdefault("SECRET_KEY", "clave-de-prueba-con-mas-de-32-caracteres-ok
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auditoria_rips import CAMPOS, auditar  # noqa: E402
-from models import Historia, Paciente  # noqa: E402
+from models import Historia, Paciente, ProtocoloQuirurgico  # noqa: E402
 
 #: Campos que describen una observación concreta. Si tienen defecto, el sistema
 #: reporta una constante como si fuera un dato.
@@ -59,6 +59,9 @@ SIN_DEFECTO = {
     ],
     Paciente: [
         "cod_municipio",              # dónde vive
+    ],
+    ProtocoloQuirurgico: [
+        "estado_paciente_salida",     # cómo salió de quirófano
     ],
 }
 

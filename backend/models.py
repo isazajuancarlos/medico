@@ -1775,7 +1775,10 @@ class ProtocoloQuirurgico(SQLModel, table=True):
     especimenes_patologia: Optional[str] = None
     complicaciones: Optional[str] = None
     plan_postoperatorio: str
-    estado_paciente_salida: str = Field(default="ESTABLE")
+    # SIN defecto. Tenía "ESTABLE": es una afirmación clínica sobre cómo salió
+    # el paciente de quirófano y estaba puesta de antemano, así que si nadie la
+    # registraba la nota decía que salió estable. Nadie firmó eso.
+    estado_paciente_salida: Optional[str] = Field(default=None)
     firma_cirujano_path: Optional[str] = None
     fecha_creacion: datetime = Field(default_factory=datetime.now)
     institucion_id: Optional[int] = Field(default=None, foreign_key="institucion.id")
