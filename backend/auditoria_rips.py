@@ -29,6 +29,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Sequence
 
+import procedencia as proc
+
 #: Campos exigidos por el RIPS, con el valor que el generador supone si faltan.
 #: `critico` marca aquellos cuyo supuesto tiene consecuencia económica o
 #: clínica, no solo de forma.
@@ -61,6 +63,10 @@ class Auditoria:
     total: int = 0
     completas: int = 0
     huecos: List[Hueco] = field(default_factory=list)
+    #: Campos que SÍ traen valor pero que nadie afirmó: no tienen procedencia
+    #: registrada. Son los defectos heredados —el `"890201"` de toda consulta—
+    #: y no se veían, porque la columna nunca estaba vacía.
+    sin_respaldo: List[Hueco] = field(default_factory=list)
 
     @property
     def incompletas(self) -> int:
@@ -72,7 +78,7 @@ class Auditoria:
 
     @property
     def reportable_sin_supuestos(self) -> bool:
-        return self.total > 0 and not self.huecos
+        return self.total > 0 and not self.huecos and not self.sin_respaldo
 
     def por_campo(self) -> Dict[str, int]:
         conteo: Dict[str, int] = {}
@@ -92,6 +98,11 @@ class Auditoria:
             for etiqueta, n in self.por_campo().items():
                 critico = any(h.critico for h in self.huecos if h.etiqueta == etiqueta)
                 lineas.append(f"  {'⚠ ' if critico else '  '}{etiqueta}: {n}")
+        if self.sin_respaldo:
+            lineas.append(
+                f"{len(self.sin_respaldo)} dato(s) tienen valor pero nadie los "
+                f"afirmó: vienen de un valor por defecto, no de la atención."
+            )
         if self.criticos:
             lineas.append(
                 "Los marcados afectan el pago o la clasificación clínica: "
@@ -116,6 +127,25 @@ def auditar(atenciones: Sequence[Any]) -> Auditoria:
         completa = True
 
         for atributo, etiqueta, supuesto, critico in CAMPOS:
+            def _hueco():
+                return Hueco(
+                    historia_id=getattr(a, "id", None),
+                    fecha=getattr(a, "fecha", None),
+                    paciente=identificacion,
+                    campo=atributo,
+                    etiqueta=etiqueta,
+                    supuesto=supuesto,
+                    critico=critico,
+                )
+
+            if atributo in proc.sin_respaldo(a, [atributo]):
+                # Hay dato, pero nadie dice de dónde salió. Es la firma de un
+                # valor por defecto, y antes era invisible: la columna estaba
+                # llena y la auditoría solo buscaba columnas vacías.
+                completa = False
+                resultado.sin_respaldo.append(_hueco())
+                continue
+
             valor = getattr(a, atributo, None)
             if valor in (None, "", 0):
                 completa = False

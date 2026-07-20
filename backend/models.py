@@ -320,6 +320,9 @@ class Paciente(SQLModel, table=True):
     ant_ginecologicos_struct: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     ant_obstetricos_struct: Optional[dict] = Field(default=None, sa_column=Column(JSON))
 
+    #: Ver `Historia.procedencias`.
+    procedencias: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+
     entidad_id: Optional[int] = Field(default=None, foreign_key="entidad.id")
     entidad: Optional[Entidad] = Relationship(back_populates="pacientes")
 
@@ -473,6 +476,13 @@ class Historia(SQLModel, table=True):
     impresion_diagnostica: Optional[str] = None  # Texto libre del diagnóstico en anamnesis
 
     # INCAPACIDAD
+
+    #: De dónde salió cada dato clínico: {campo: "confirmado"|"derivado"|
+    #: "propuesto"|"no_aplica"}. Ver `procedencia.py`. Un valor SIN entrada aquí
+    #: es un valor que nadie afirmó, y es así como se cazan los defectos de
+    #: cualquier campo sin tener que listarlos uno por uno.
+    procedencias: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+
     genera_incapacidad: bool = Field(default=False)
     dias_incapacidad: int = Field(default=0)
 
@@ -1779,6 +1789,9 @@ class ProtocoloQuirurgico(SQLModel, table=True):
     # el paciente de quirófano y estaba puesta de antemano, así que si nadie la
     # registraba la nota decía que salió estable. Nadie firmó eso.
     estado_paciente_salida: Optional[str] = Field(default=None)
+    #: Ver `Historia.procedencias`.
+    procedencias: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+
     firma_cirujano_path: Optional[str] = None
     fecha_creacion: datetime = Field(default_factory=datetime.now)
     institucion_id: Optional[int] = Field(default=None, foreign_key="institucion.id")

@@ -11,6 +11,7 @@ from datetime import date
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auditoria_rips import CAMPOS, auditar  # noqa: E402
+from procedencia import Procedencia, marcar  # noqa: E402
 
 
 class Paciente:
@@ -19,9 +20,14 @@ class Paciente:
 
 
 class Atencion:
-    """Atención completa por defecto; las pruebas le quitan lo que quieren probar."""
+    """Atención completa por defecto; las pruebas le quitan lo que quieren probar.
 
-    def __init__(self, **faltantes):
+    Los campos se marcan como CONFIRMADOS porque eso es lo que significa
+    «completa»: alguien los puso. Una atención con los mismos valores pero sin
+    procedencia NO está completa, y esa es justamente la distinción nueva.
+    """
+
+    def __init__(self, sin_procedencia=False, **faltantes):
         self.id = 1
         self.fecha = date(2026, 7, 19)
         self.paciente = Paciente()
@@ -31,8 +37,13 @@ class Atencion:
         self.modalidad_grupo_servicio = "01"
         self.grupo_servicios = "01"
         self.concepto_recaudo = "05"
+        self.procedencias = None
         for k, v in faltantes.items():
             setattr(self, k, v)
+        if not sin_procedencia:
+            for atributo, _, _, _ in CAMPOS:
+                if getattr(self, atributo, None) not in (None, "", 0):
+                    marcar(self, atributo, Procedencia.CONFIRMADO)
 
 
 def test_una_atencion_completa_no_produce_huecos():
@@ -122,3 +133,54 @@ def test_todos_los_campos_auditados_tienen_su_supuesto_declarado():
         assert atributo and etiqueta
         assert supuesto is not None
         assert isinstance(critico, bool)
+
+
+# --- Lo que la procedencia añade -----------------------------------------
+
+def test_un_valor_SIN_procedencia_ya_no_pasa_por_bueno():
+    """El fallo original: `cod_consulta_cups="890201"` en toda consulta. La
+    columna nunca estaba vacía, así que la auditoría no lo veía."""
+    a = auditar([Atencion(sin_procedencia=True)])
+
+    assert a.completas == 0
+    assert len(a.sin_respaldo) == len(CAMPOS)
+    assert a.huecos == [], "no faltan datos: falta saber quién los puso"
+    assert not a.reportable_sin_supuestos
+
+
+def test_los_mismos_valores_CON_procedencia_si_pasan():
+    """El control: lo que se rechaza es la falta de respaldo, no el valor."""
+    a = auditar([Atencion()])
+    assert a.completas == 1
+    assert a.sin_respaldo == []
+    assert a.reportable_sin_supuestos
+
+
+def test_derivado_y_propuesto_tambien_cuentan_como_respaldo():
+    """Un tiempo calculado de las horas es cierto y no cuesta tiempo al
+    clínico; un CUPS sugerido y aceptado cuesta una tecla. Los dos son mejores
+    que un defecto, y los dos dejan rastro."""
+    for como in (Procedencia.DERIVADO, Procedencia.PROPUESTO):
+        at = Atencion(sin_procedencia=True)
+        for atributo, _, _, _ in CAMPOS:
+            marcar(at, atributo, como)
+        assert auditar([at]).sin_respaldo == []
+
+
+def test_falta_de_dato_y_falta_de_respaldo_se_distinguen():
+    """Son problemas distintos y se corrigen distinto: uno se captura, el otro
+    se verifica."""
+    a = auditar([Atencion(sin_procedencia=True, valor_servicio=0)])
+
+    campos_huecos = {h.campo for h in a.huecos}
+    campos_sin_respaldo = {h.campo for h in a.sin_respaldo}
+
+    assert campos_huecos == {"valor_servicio"}
+    assert "valor_servicio" not in campos_sin_respaldo
+    assert "cod_consulta_cups" in campos_sin_respaldo
+
+
+def test_el_informe_menciona_los_que_nadie_afirmo():
+    texto = str(auditar([Atencion(sin_procedencia=True)]))
+    assert "nadie los afirmó" in texto
+    assert "por defecto" in texto
