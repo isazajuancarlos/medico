@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
+    "test": "ng test --watch=false",
     "watch": "ng build --watch --configuration development"
   },
   "private": true,
@@ -29,6 +30,8 @@
     "@angular-devkit/build-angular": "*",
     "@angular/cli": "*",
     "@angular/compiler-cli": "*",
-    "typescript": "*"
+    "jsdom": "^29.1.1",
+    "typescript": "*",
+    "vitest": "^4.1.10"
   }
 }

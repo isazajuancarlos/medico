@@ -21,6 +21,22 @@ import { Directive, EventEmitter, HostListener, Input, Output } from '@angular/c
  *
  *     <form appTeclas (confirmar)="guardar()" (cancelar)="cerrar()">
  */
+/**
+ * Un campo oculto no debe recibir el foco al avanzar con Enter.
+ *
+ * Se mira el estilo y no `offsetParent`, que además de ser nulo en cualquier
+ * entorno sin maquetación —y por tanto imposible de probar— también lo es para
+ * los elementos `position: fixed`, que sí son visibles. Ese descarte habría
+ * saltado campos legítimos en cualquier formulario con una columna fija.
+ */
+function esVisible(e: HTMLElement): boolean {
+  if (e.hasAttribute('hidden')) {
+    return false;
+  }
+  const estilo = getComputedStyle(e);
+  return estilo.display !== 'none' && estilo.visibility !== 'hidden';
+}
+
 @Directive({
   selector: '[appTeclas]',
   standalone: true,
@@ -72,7 +88,7 @@ export class TeclasDirective {
       formulario.querySelectorAll<HTMLElement>(
         'input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       ),
-    ).filter((e) => e.offsetParent !== null);
+    ).filter(esVisible);
 
     const i = enfocables.indexOf(desde);
     if (i >= 0 && i < enfocables.length - 1) {
