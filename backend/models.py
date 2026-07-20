@@ -475,6 +475,15 @@ class Historia(SQLModel, table=True):
     diagnostico_relacionado3: Optional[str] = None
     impresion_diagnostica: Optional[str] = None  # Texto libre del diagnóstico en anamnesis
 
+    # CIE-11 (Resolución 948 de 2026: periodo paralelo, van los DOS códigos).
+    # Se derivan del CIE-10 cuando la equivalencia es exacta y única; si no, se
+    # proponen y quedan vacíos hasta que alguien confirme. Ver `cie11.py`.
+    diagnostico_principal_cie11: Optional[str] = None
+    #: La FoundationURI de la OMS, que NO cambia entre versiones de la
+    #: clasificación —el código sí—. Sin ella, el registro deja de ser
+    #: interpretable cuando la OMS publique la siguiente revisión.
+    diagnostico_principal_uri: Optional[str] = None
+
     # INCAPACIDAD
 
     #: De dónde salió cada dato clínico: {campo: "confirmado"|"derivado"|
