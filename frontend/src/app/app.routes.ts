@@ -82,9 +82,9 @@ export const routes: Routes = [
       },
       // Placeholder routes for all other modules
       { path: 'evoluciones', loadComponent: () => import('./pages/evoluciones/evoluciones.component').then(m => m.EvolucionesComponent), canActivate: [moduloGuard('EVOLUCIONES')] },
-      { path: 'consentimiento', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Consentimiento Informado' } },
+      { path: 'consentimiento', loadComponent: () => import('./pages/consentimiento/consentimiento.component').then(m => m.ConsentimientoComponent), canActivate: [moduloGuard('CONSENTIMIENTO')] },
       { path: 'incapacidades', loadComponent: () => import('./pages/incapacidades/incapacidades.component').then(m => m.IncapacidadesComponent), canActivate: [moduloGuard('INCAPACIDADES')] },
-      { path: 'remisiones', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Remisiones' } },
+      { path: 'remisiones', loadComponent: () => import('./pages/remisiones/remisiones.component').then(m => m.RemisionesComponent), canActivate: [moduloGuard('REMISIONES')] },
       { path: 'laboratorio', loadComponent: () => import('./pages/laboratorio/laboratorio.component').then(m => m.LaboratorioComponent), canActivate: [moduloGuard('LABORATORIO')] },
       { path: 'imagenes', loadComponent: () => import('./pages/imagenes/imagenes.component').then(m => m.ImagenesComponent), canActivate: [moduloGuard('IMAGENES')] },
       { path: 'banco-sangre', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Banco de Sangre' } },

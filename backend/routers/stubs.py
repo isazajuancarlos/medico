@@ -20,8 +20,6 @@ from fastapi import APIRouter, HTTPException, status
 # Módulos del catálogo `ModuloSistema` que todavía no tienen implementación.
 # Mantener ordenado y SIN duplicados con los routers reales de `main.py`.
 PENDIENTES: dict[str, str] = {
-    "consentimiento": "consentimiento",
-    "remisiones": "remisiones",
     "banco-sangre": "banco_sangre",
     "nota-operatoria": "nota_operatoria",
     "preanestesia": "preanestesia",

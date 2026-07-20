@@ -99,6 +99,8 @@ from routers.quirofano import router as quirofano_router
 from routers.stubs import ROUTERS_PENDIENTES
 from routers.modulos import router as modulos_router
 from routers.incapacidades import router as incapacidades_router
+from routers.remisiones import router as remisiones_router
+from routers.consentimiento import router as consentimiento_router
 
 API_PREFIX = "/api"
 
@@ -109,7 +111,7 @@ core_routers = [
     estadisticas_router, agenda_router, laboratorio_router, imagenes_router,
     evoluciones_router, interconsultas_router, epicrisis_router, nutricion_router,
     rehabilitacion_router, quirofano_router, modulos_router,
-    incapacidades_router,
+    incapacidades_router, remisiones_router, consentimiento_router,
 ]
 
 stub_routers = ROUTERS_PENDIENTES
