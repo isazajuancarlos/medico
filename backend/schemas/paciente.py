@@ -94,7 +94,10 @@ class PacienteRead(PacienteBase):
     `auditoria_rips` es quien los señala antes de generar el archivo.
     """
 
-    cod_municipio: str = ""
+    # Optional a propósito: en la base ya hay pacientes con el municipio en
+    # NULL, y `str` haría que LEERLOS reventara con un 500. El dato malo
+    # quedaría encerrado, sin forma de abrirlo para corregirlo.
+    cod_municipio: Optional[str] = None
 
     @field_validator("cod_municipio")
     @classmethod

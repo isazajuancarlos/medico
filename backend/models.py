@@ -272,7 +272,10 @@ class Paciente(SQLModel, table=True):
     # RIPS
     tipo_usuario: TipoUsuario = Field(default=TipoUsuario.CONTRIBUTIVO)
     cod_pais: str = Field(default="170")
-    cod_municipio: str = Field(default="05001")
+    # SIN defecto. Tenía "05001": reportaba a todo paciente del país como
+    # residente de Medellín, y como la columna nunca quedaba vacía, no había
+    # forma de notar que el dato jamás se capturó.
+    cod_municipio: Optional[str] = Field(default=None)
     zona: ZonaResidencia = Field(default=ZonaResidencia.URBANA)
     cod_pais_origen: str = Field(default="170")
 
@@ -435,7 +438,9 @@ class Historia(SQLModel, table=True):
     finalidad: FinalidadConsulta = Field(default=FinalidadConsulta.NO_APLICA)
     causa_externa: CausaExterna = Field(default=CausaExterna.ENFERMEDAD_GENERAL)
     tipo_diagnostico: TipoDiagnostico = Field(default=TipoDiagnostico.IMPRESION_DIAGNOSTICA)
-    cod_consulta_cups: Optional[str] = Field(default="890201")
+    # SIN defecto. Tenía "890201", así que TODA consulta se reportaba con el
+    # mismo procedimiento, se hubiera hecho el que se hubiera hecho.
+    cod_consulta_cups: Optional[str] = Field(default=None)
 
     # RIPS — campos que ANTES IBAN QUEMADOS en rips_completo.py.
     #
@@ -450,11 +455,11 @@ class Historia(SQLModel, table=True):
     # funciona en el consultorio, pero ahora SON DATO: se pueden capturar y
     # `auditoria_rips.py` señala las atenciones que se quedaron con el valor
     # supuesto, en vez de reportarlo en silencio.
-    modalidad_grupo_servicio: Optional[str] = Field(default="01")   # 01 intramural
-    grupo_servicios: Optional[str] = Field(default="01")            # 01 consulta externa
+    modalidad_grupo_servicio: Optional[str] = Field(default=None)  # 01 intramural
+    grupo_servicios: Optional[str] = Field(default=None)           # 01 consulta externa
     cod_servicio: Optional[int] = Field(default=None)
     valor_servicio: Optional[int] = Field(default=None)
-    concepto_recaudo: Optional[str] = Field(default="05")
+    concepto_recaudo: Optional[str] = Field(default=None)
     valor_pago_moderador: Optional[int] = Field(default=0)
     num_fev_pago_moderador: Optional[str] = Field(default=None)
 
