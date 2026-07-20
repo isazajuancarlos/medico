@@ -109,8 +109,13 @@ class Falta:
                 f"({self.campo})")
 
 
-class _Recolector:
+class Recolector:
     """Reúne TODO lo que falta antes de decidir si se puede generar.
+
+    Es público porque forma parte del contrato: quien fuerza la generación con
+    `permitir_supuestos` tiene que poder ver DESPUÉS qué se supuso, para
+    dejarlo en auditoría y mostrárselo a quien firmó. Se crea fuera, se pasa, y
+    se inspecciona `.faltantes` al terminar.
 
     Falla al final y no en el primer hueco a propósito: quien cierra el mes
     necesita la lista completa para corregirla de una vez. Reventar en la
@@ -147,8 +152,8 @@ class _Recolector:
 
 
 def _resolver_recolector(
-    recibido: Optional[_Recolector], permitir_supuestos: bool
-) -> tuple[_Recolector, bool]:
+    recibido: Optional[Recolector], permitir_supuestos: bool
+) -> tuple[Recolector, bool]:
     """El recolector propio del generador, o el compartido del paquete.
 
     Cuando se generan los seis archivos de una, uno solo los recorre todos: así
@@ -157,7 +162,7 @@ def _resolver_recolector(
     """
     if recibido is not None:
         return recibido, False
-    return _Recolector(permitir_supuestos), True
+    return Recolector(permitir_supuestos), True
 
 
 def _get_institucion(session: Session, institucion_id: Optional[int]) -> Institucion:
@@ -181,7 +186,7 @@ def _get_institucion(session: Session, institucion_id: Optional[int]) -> Institu
     return institucion
 
 
-def _bloque_economico(obj: Any, rec: "_Recolector", archivo: str) -> Dict:
+def _bloque_economico(obj: Any, rec: "Recolector", archivo: str) -> Dict:
     """Los campos de plata, que son los mismos en los cinco archivos.
 
     Iban quemados en cada generador —`vrServicio: 0`, `conceptoRecaudo: "05"`—
@@ -207,7 +212,7 @@ def _valor_enum(v: Any) -> Any:
     return v.value if hasattr(v, "value") else v
 
 
-def _usuario_base(p: Paciente, consecutivo: int, rec: "_Recolector") -> Dict:
+def _usuario_base(p: Paciente, consecutivo: int, rec: "Recolector") -> Dict:
     """Identificación del usuario en el RIPS.
 
     `codMunicipioResidencia` traía `"05001"` de supuesto: reportaba como
@@ -259,7 +264,7 @@ def generar_archivo_ac(
     institucion_id: int,
     *,
     permitir_supuestos: bool = False,
-    _recolector: Optional["_Recolector"] = None,
+    recolector: Optional["Recolector"] = None,
 ) -> Dict:
     """
     AC - Archivo de Consultas (Obligatorio)
@@ -268,7 +273,7 @@ def generar_archivo_ac(
     Levanta `DatosIncompletos` si alguna atención no tiene los datos que el
     RIPS exige, salvo que se pida `permitir_supuestos=True`.
     """
-    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
+    rec, propio = _resolver_recolector(recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
         nit_institucion = institucion.nit
@@ -393,13 +398,13 @@ def generar_archivo_ap(
     institucion_id: int,
     *,
     permitir_supuestos: bool = False,
-    _recolector: Optional["_Recolector"] = None,
+    recolector: Optional["Recolector"] = None,
 ) -> Dict:
     """
     AP - Archivo de Procedimientos
     Incluye laboratorios, imágenes diagnósticas, terapias, cirugías.
     """
-    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
+    rec, propio = _resolver_recolector(recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
         nit_institucion = institucion.nit
@@ -511,13 +516,13 @@ def generar_archivo_am(
     institucion_id: int,
     *,
     permitir_supuestos: bool = False,
-    _recolector: Optional["_Recolector"] = None,
+    recolector: Optional["Recolector"] = None,
 ) -> Dict:
     """
     AM - Archivo de Medicamentos
     Incluye todas las fórmulas dispensadas en el período.
     """
-    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
+    rec, propio = _resolver_recolector(recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
         nit_institucion = institucion.nit
@@ -609,7 +614,7 @@ def generar_archivo_au(
     institucion_id: int,
     *,
     permitir_supuestos: bool = False,
-    _recolector: Optional["_Recolector"] = None,
+    recolector: Optional["Recolector"] = None,
 ) -> Dict:
     """
     AU - Archivo de Urgencias
@@ -621,7 +626,7 @@ def generar_archivo_au(
     paciente todavía en urgencias se reportaba como dado de alta en el instante
     en que alguien generó el archivo.
     """
-    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
+    rec, propio = _resolver_recolector(recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
         nit_institucion = institucion.nit
@@ -727,7 +732,7 @@ def generar_archivo_ah(
     institucion_id: int,
     *,
     permitir_supuestos: bool = False,
-    _recolector: Optional["_Recolector"] = None,
+    recolector: Optional["Recolector"] = None,
 ) -> Dict:
     """
     AH - Archivo de Hospitalización
@@ -738,7 +743,7 @@ def generar_archivo_ah(
     estados decía «no debería reportarse»— y las reportaba igual, con egreso
     en `datetime.now()` y estancia calculada hasta ese instante.
     """
-    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
+    rec, propio = _resolver_recolector(recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
         nit_institucion = institucion.nit
@@ -857,7 +862,7 @@ def generar_archivo_ct(
     conteos: Optional[Dict[str, int]] = None,
     *,
     permitir_supuestos: bool = False,
-    _recolector: Optional["_Recolector"] = None,
+    recolector: Optional["Recolector"] = None,
 ) -> Dict:
     """
     CT - Archivo de Control
@@ -969,6 +974,7 @@ def exportar_rips_completo(
     institucion_id: int,
     *,
     permitir_supuestos: bool = False,
+    recolector: Optional[Recolector] = None,
 ) -> Dict[str, Dict]:
     """
     Genera todos los archivos RIPS en un solo llamado.
@@ -978,12 +984,12 @@ def exportar_rips_completo(
     """
     # Un solo recolector para los cinco: quien cierra el mes recibe la lista
     # COMPLETA de lo que falta, no la del primer archivo que reventó.
-    rec = _Recolector(permitir_supuestos)
-    ac = generar_archivo_ac(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
-    ap = generar_archivo_ap(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
-    am = generar_archivo_am(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
-    au = generar_archivo_au(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
-    ah = generar_archivo_ah(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
+    rec = recolector if recolector is not None else Recolector(permitir_supuestos)
+    ac = generar_archivo_ac(fecha_inicio, fecha_fin, institucion_id, recolector=rec)
+    ap = generar_archivo_ap(fecha_inicio, fecha_fin, institucion_id, recolector=rec)
+    am = generar_archivo_am(fecha_inicio, fecha_fin, institucion_id, recolector=rec)
+    au = generar_archivo_au(fecha_inicio, fecha_fin, institucion_id, recolector=rec)
+    ah = generar_archivo_ah(fecha_inicio, fecha_fin, institucion_id, recolector=rec)
     rec.cerrar()
 
     # Conteos reales desde los archivos ya generados
