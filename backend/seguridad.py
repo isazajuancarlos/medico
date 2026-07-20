@@ -33,7 +33,12 @@ class EncriptadorAES:
     @staticmethod
     def _get_master_key() -> bytes:
         """Obtiene la clave maestra de 32 bytes desde env"""
-        secret = os.getenv("ENCRYPTION_KEY", os.getenv("SECRET_KEY", "default_insecure_key_change_in_production"))
+        # Sin defecto: `core.config` ya comprobó al arrancar que hay un
+        # secreto de verdad. El valor que había aquí —"default_insecure_key_
+        # change_in_production"— cifraba los datos sensibles con una cadena
+        # publicada en este repositorio, y el sistema no se quejaba.
+        from core.config import ENCRYPTION_KEY
+        secret = ENCRYPTION_KEY
         # Derivar 32 bytes usando SHA-256
         return hashlib.sha256(secret.encode()).digest()
 
