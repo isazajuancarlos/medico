@@ -13,6 +13,7 @@ from schemas.historia import (
     ImagenDiagnosticaRead, EspecialidadInfo,
 )
 from models import ModuloSistema
+from core.aislamiento import obtener
 from core.deps import get_db, get_current_active_user, requiere_modulo
 import os, uuid as _uuid
 from core.config import UPLOAD_DIR
@@ -62,18 +63,18 @@ def _enrich_historia(historia: Historia, db: Session) -> HistoriaRead:
         historia.model_dump(exclude=_HISTORIA_RELATIONS)
     )
 
-    paciente = db.get(Paciente, historia.paciente_id)
+    paciente = db.get(Paciente, historia.paciente_id)  # aislamiento: ya autorizado por el padre
     if paciente:
         data.paciente = _build_paciente_info(paciente)
 
     # Use medico from the associated cita if available, else from historia.medico_id
     medico_id = historia.medico_id
     if historia.cita_id:
-        cita = db.get(Cita, historia.cita_id)
+        cita = db.get(Cita, historia.cita_id)  # aislamiento: ya autorizado por el padre
         if cita:
             medico_id = cita.medico_id
 
-    medico = db.get(Usuario, medico_id)
+    medico = db.get(Usuario, medico_id)  # aislamiento: ya autorizado por el padre
     if medico:
         data.medico = _build_medico_info(medico)
 
@@ -120,9 +121,7 @@ def get_paciente_contexto(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Carga datos del paciente + antecedentes para iniciar una nueva historia."""
-    paciente = db.get(Paciente, paciente_id)
-    if not paciente:
-        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    paciente = obtener(db, Paciente, paciente_id, current_user, que="paciente")
     return PacienteContexto(
         paciente=_build_paciente_info(paciente),
         medico=_build_medico_info(current_user),
@@ -147,9 +146,7 @@ def get_historia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     return _enrich_historia(historia, db)
 
 
@@ -160,9 +157,7 @@ def update_historia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(historia, field, value)
     db.add(historia)
@@ -177,9 +172,7 @@ def firmar_historia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     import hashlib, json
     data = {"id": historia.id, "paciente_id": historia.paciente_id, "medico_id": historia.medico_id}
     hash_val = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
@@ -199,9 +192,7 @@ def delete_historia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     firma = db.exec(select(FirmaDigital).where(FirmaDigital.historia_id == historia_id)).first()
     if firma:
         raise HTTPException(status_code=400, detail="No se puede eliminar una historia firmada digitalmente")
@@ -215,9 +206,7 @@ def list_imagenes(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     return db.exec(
         select(ImagenDiagnostica)
         .where(ImagenDiagnostica.historia_id == historia_id)
@@ -233,9 +222,7 @@ async def upload_imagen(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     ext = os.path.splitext(file.filename or "")[1]
     filename = f"{_uuid.uuid4()}{ext}"
     filepath = os.path.join(UPLOAD_DIR, "imagenes", filename)
@@ -307,9 +294,7 @@ def list_formulas(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     return db.exec(select(Formula).where(Formula.historia_id == historia_id).order_by(Formula.fecha_formula)).all()
 
 
@@ -320,9 +305,7 @@ def create_formula(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     firma = db.exec(select(FirmaDigital).where(FirmaDigital.historia_id == historia_id)).first()
     if firma:
         raise HTTPException(status_code=400, detail="No se puede modificar una historia firmada")
@@ -389,9 +372,7 @@ def list_ordenes(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     ordenes = db.exec(
         select(Orden).where(Orden.historia_id == historia_id).order_by(Orden.fecha_orden)
     ).all()
@@ -405,9 +386,7 @@ def create_orden(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    historia = db.get(Historia, historia_id)
-    if not historia:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
+    historia = obtener(db, Historia, historia_id, current_user, que="historia")
     firma = db.exec(select(FirmaDigital).where(FirmaDigital.historia_id == historia_id)).first()
     if firma:
         raise HTTPException(status_code=400, detail="No se puede modificar una historia firmada")

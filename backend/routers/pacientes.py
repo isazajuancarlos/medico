@@ -7,6 +7,7 @@ from schemas.paciente import PacienteCreate, PacienteUpdate, PacienteRead
 from schemas.common import PaginatedResponse
 from schemas.historia import AntecedentesUpdate
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from core.aislamiento import obtener
 from models import Usuario
 
 router = APIRouter(prefix="/pacientes", tags=["pacientes"],
@@ -72,9 +73,7 @@ def get_paciente(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    paciente = db.get(Paciente, paciente_id)
-    if not paciente:
-        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    paciente = obtener(db, Paciente, paciente_id, current_user, que="paciente")
     return paciente
 
 
@@ -85,9 +84,7 @@ def update_paciente(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    paciente = db.get(Paciente, paciente_id)
-    if not paciente:
-        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    paciente = obtener(db, Paciente, paciente_id, current_user, que="paciente")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(paciente, field, value)
     db.add(paciente)
@@ -103,9 +100,7 @@ def update_antecedentes(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    paciente = db.get(Paciente, paciente_id)
-    if not paciente:
-        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    paciente = obtener(db, Paciente, paciente_id, current_user, que="paciente")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(paciente, field, value)
     db.add(paciente)
@@ -121,5 +116,8 @@ def get_historias_paciente(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     from models import Historia
+    # Primero el paciente: si es de otra institución, ni se consultan sus
+    # historias. Filtrar después no sirve — la lista saldría igual de completa.
+    obtener(db, Paciente, paciente_id, current_user, que="paciente")
     historias = db.exec(select(Historia).where(Historia.paciente_id == paciente_id)).all()
     return historias
