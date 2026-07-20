@@ -33,8 +33,13 @@ RUTA_BD = "./test_cobertura_aislamiento.db"
 def modelos_con_tabla():
     for nombre in dir(m):
         objeto = getattr(m, nombre)
+        # `__table__` y no `__tablename__`: SQLModel le pone nombre de tabla a
+        # TODA subclase, tenga tabla o no, así que un mixin como `CamposRips`
+        # —que solo declara campos compartidos— pasaba por modelo y se le exigía
+        # decir de quién es. Lo que distingue a una tabla real es `__table__`,
+        # que solo aparece con `table=True`.
         if (isinstance(objeto, type) and issubclass(objeto, SQLModel)
-                and getattr(objeto, "__tablename__", None)
+                and getattr(objeto, "__table__", None) is not None
                 and objeto is not SQLModel):
             yield nombre, objeto
 

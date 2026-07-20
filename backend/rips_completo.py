@@ -29,7 +29,7 @@ import io
 import json
 import zipfile
 from datetime import datetime, date
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
@@ -46,36 +46,197 @@ from models import (
 # UTILIDADES INTERNAS
 # ==============================================================================
 
-def _get_institucion(session: Session, institucion_id: Optional[int]) -> Optional[Institucion]:
-    """Obtiene institución por ID o la primera disponible (fallback single-tenant)."""
-    if institucion_id:
-        return session.get(Institucion, institucion_id)
-    return session.exec(select(Institucion).limit(1)).first()
+class InstitucionRequerida(ValueError):
+    """No se puede generar un RIPS sin saber de qué institución es.
+
+    Antes `institucion_id` era opcional y, al omitirlo, cada generador dejaba de
+    filtrar: el archivo salía con las atenciones de TODAS las instituciones,
+    etiquetado con el NIT de la primera fila de la tabla. Dos daños a la vez:
+    datos clínicos de terceros fuera del sistema, y una factura que no
+    corresponde a lo que nadie prestó.
+
+    El parámetro opcional era la fuga. Un filtro que por omisión abre todo
+    espera a que alguien olvide pasarlo, y alguien siempre lo olvida:
+    `routers/rips.py` lo llevaba olvidado desde el principio.
+    """
 
 
-def _cod_zona(p: Paciente) -> str:
-    """Extrae código de zona territorial del paciente."""
-    zona = getattr(p, 'zona', None)
-    if zona is None:
-        return "01"
-    if hasattr(zona, 'value'):
-        return zona.value
-    return str(zona) or "01"
+class DatosIncompletos(ValueError):
+    """Falta un dato que el RIPS exige y que no se puede deducir.
+
+    Antes cada hueco se rellenaba con una constante: el CUPS `"890201"`, el CUM
+    `"00000000"`, el diagnóstico `"R69"`, el valor del servicio en `0`. El
+    archivo salía siempre, pasaba la validación de estructura, y el problema
+    aparecía después —como glosa, como rechazo del MUV, o como un pago que
+    nunca llega porque el valor iba en cero.
+
+    Un RIPS que no sale se arregla en una tarde. Uno que sale con datos
+    inventados no se nota nunca.
+    """
+
+    def __init__(self, faltantes: List["Falta"]):
+        self.faltantes = faltantes
+        super().__init__(self.resumen())
+
+    def resumen(self) -> str:
+        por_campo: Dict[str, int] = {}
+        for f in self.faltantes:
+            por_campo[f.etiqueta] = por_campo.get(f.etiqueta, 0) + 1
+        detalle = "; ".join(f"{e}: {n}" for e, n in
+                            sorted(por_campo.items(), key=lambda kv: -kv[1]))
+        return (
+            f"No se puede generar el RIPS: {len(self.faltantes)} dato(s) "
+            f"obligatorios no están registrados ({detalle}). "
+            f"Corrígelos y vuelve a generar, o pide explícitamente "
+            f"`permitir_supuestos=True` si aceptas reportarlos por defecto."
+        )
 
 
-def _usuario_base(p: Paciente, consecutivo: int) -> Dict:
-    """Construye estructura de identificación de usuario RIPS."""
-    tipo_usuario = getattr(p, 'tipo_usuario', None)
+class Falta:
+    """Un dato obligatorio que no está, con dónde buscarlo."""
+
+    __slots__ = ("archivo", "registro_id", "campo", "etiqueta", "supuesto")
+
+    def __init__(self, archivo, registro_id, campo, etiqueta, supuesto):
+        self.archivo = archivo
+        self.registro_id = registro_id
+        self.campo = campo
+        self.etiqueta = etiqueta
+        self.supuesto = supuesto
+
+    def __repr__(self) -> str:
+        return (f"{self.archivo} #{self.registro_id}: falta {self.etiqueta} "
+                f"({self.campo})")
+
+
+class _Recolector:
+    """Reúne TODO lo que falta antes de decidir si se puede generar.
+
+    Falla al final y no en el primer hueco a propósito: quien cierra el mes
+    necesita la lista completa para corregirla de una vez. Reventar en la
+    primera consulta de mil convierte el cierre en mil intentos.
+
+    `permitir_supuestos` es el camino permisivo que exige
+    [[directiva-fallar-en-vez-de-suponer]]: existe, pero lo pide el llamante,
+    nunca se activa solo, y lo supuesto queda registrado igual.
+    """
+
+    def __init__(self, permitir_supuestos: bool = False):
+        self.permitir_supuestos = permitir_supuestos
+        self.faltantes: List[Falta] = []
+
+    @staticmethod
+    def _vacio(valor: Any) -> bool:
+        """Ausente es `None` o cadena en blanco. **`0` no es ausente**: un
+        servicio puede valer cero de verdad, y confundir «no se registró» con
+        «vale cero» es el error que este módulo existe para no cometer."""
+        if valor is None:
+            return True
+        return isinstance(valor, str) and not valor.strip()
+
+    def dato(self, valor: Any, *, archivo: str, registro_id: Any, campo: str,
+             etiqueta: str, supuesto: Any = None) -> Any:
+        if not self._vacio(valor):
+            return valor
+        self.faltantes.append(Falta(archivo, registro_id, campo, etiqueta, supuesto))
+        return supuesto if self.permitir_supuestos else None
+
+    def cerrar(self) -> None:
+        if self.faltantes and not self.permitir_supuestos:
+            raise DatosIncompletos(self.faltantes)
+
+
+def _resolver_recolector(
+    recibido: Optional[_Recolector], permitir_supuestos: bool
+) -> tuple[_Recolector, bool]:
+    """El recolector propio del generador, o el compartido del paquete.
+
+    Cuando se generan los seis archivos de una, uno solo los recorre todos: así
+    el cierre de mes ve la lista COMPLETA de lo que falta, y no la del primer
+    archivo que reventó. El booleano dice si toca cerrarlo aquí.
+    """
+    if recibido is not None:
+        return recibido, False
+    return _Recolector(permitir_supuestos), True
+
+
+def _get_institucion(session: Session, institucion_id: Optional[int]) -> Institucion:
+    """La institución del reporte. No hay respaldo ni «la primera disponible».
+
+    El respaldo anterior era lo que convertía un id ausente en un archivo con el
+    NIT de otro. Ver [[directiva-fallar-en-vez-de-suponer]]: ante la ausencia del
+    dato, excepción; nunca un sustituto con la forma correcta.
+    """
+    if not institucion_id:
+        raise InstitucionRequerida(
+            "Falta la institución del reporte. Sin ella el RIPS saldría con las "
+            "atenciones de todas las instituciones del sistema."
+        )
+    institucion = session.get(Institucion, institucion_id)
+    if institucion is None:
+        raise InstitucionRequerida(
+            f"La institución {institucion_id} no existe. Generar el reporte "
+            f"igualmente produciría un archivo vacío a nombre de otra."
+        )
+    return institucion
+
+
+def _bloque_economico(obj: Any, rec: "_Recolector", archivo: str) -> Dict:
+    """Los campos de plata, que son los mismos en los cinco archivos.
+
+    Iban quemados en cada generador —`vrServicio: 0`, `conceptoRecaudo: "05"`—
+    y no salían de ningún sitio porque el modelo no tenía dónde guardarlos. Ver
+    `models.CamposRips`, que ahora los declara una vez para los cinco.
+    """
+    def exigir(campo, etiqueta, supuesto):
+        return rec.dato(getattr(obj, campo, None), archivo=archivo,
+                        registro_id=getattr(obj, "id", None), campo=campo,
+                        etiqueta=etiqueta, supuesto=supuesto)
+
+    return {
+        "vrServicio": exigir("valor_servicio", "valor del servicio", 0),
+        "conceptoRecaudo": exigir("concepto_recaudo", "concepto de recaudo", "05"),
+        # El copago SÍ admite cero de verdad: la mayoría de atenciones no llevan.
+        "valorPagoModerador": getattr(obj, "valor_pago_moderador", None) or 0,
+        "numFEVPagoModerador": getattr(obj, "num_fev_pago_moderador", None) or "",
+    }
+
+
+def _valor_enum(v: Any) -> Any:
+    """El `.value` de un Enum, o el valor tal cual. No sustituye ausencias."""
+    return v.value if hasattr(v, "value") else v
+
+
+def _usuario_base(p: Paciente, consecutivo: int, rec: "_Recolector") -> Dict:
+    """Identificación del usuario en el RIPS.
+
+    `codMunicipioResidencia` traía `"05001"` de supuesto: reportaba como
+    residente de Medellín a todo paciente sin municipio, en el país entero. El
+    campo tiene la forma correcta, así que el validador lo acepta y el dato
+    falso entra en la estadística de residencia sin que nadie lo note. Ver
+    `divipola.py`, que ya lo valida al capturar.
+    """
+    def exigir(valor, campo, etiqueta, supuesto=None):
+        return rec.dato(valor, archivo="usuarios", registro_id=p.identificacion,
+                        campo=campo, etiqueta=etiqueta, supuesto=supuesto)
+
     return {
         "tipoDocumentoIdentificacion": p.tipo_id,
         "numDocumentoIdentificacion": p.identificacion,
-        "tipoUsuario": tipo_usuario.value if hasattr(tipo_usuario, 'value') else "01",
+        "tipoUsuario": exigir(_valor_enum(getattr(p, "tipo_usuario", None)),
+                              "tipo_usuario", "tipo de usuario", "01"),
         "fechaNacimiento": p.fecha_nacimiento.strftime('%Y-%m-%d'),
         "codSexo": p.sexo,
-        "codPaisResidencia": getattr(p, 'cod_pais', "170"),
-        "codMunicipioResidencia": getattr(p, 'cod_municipio', "05001"),
-        "codZonaTerritorialResidencia": _cod_zona(p),
-        "codPaisOrigen": getattr(p, 'cod_pais_origen', "170"),
+        "codPaisResidencia": exigir(getattr(p, "cod_pais", None),
+                                    "cod_pais", "país de residencia", "170"),
+        "codMunicipioResidencia": exigir(getattr(p, "cod_municipio", None),
+                                         "cod_municipio",
+                                         "municipio de residencia", "05001"),
+        "codZonaTerritorialResidencia": exigir(
+            _valor_enum(getattr(p, "zona", None)),
+            "zona", "zona territorial", "01"),
+        "codPaisOrigen": exigir(getattr(p, "cod_pais_origen", None),
+                                "cod_pais_origen", "país de origen", "170"),
         "consecutivo": consecutivo,
     }
 
@@ -95,16 +256,23 @@ def _fecha_d(f: date) -> str:
 def generar_archivo_ac(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
+    _recolector: Optional["_Recolector"] = None,
 ) -> Dict:
     """
     AC - Archivo de Consultas (Obligatorio)
     Incluye todas las atenciones ambulatorias y consultas de control.
+
+    Levanta `DatosIncompletos` si alguna atención no tiene los datos que el
+    RIPS exige, salvo que se pida `permitir_supuestos=True`.
     """
+    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
-        nit_institucion = institucion.nit if institucion else "000000000"
-        cod_habilitacion = institucion.codigo_habilitacion if institucion else "000000000000"
+        nit_institucion = institucion.nit
+        cod_habilitacion = institucion.codigo_habilitacion
 
         q = (
             select(Historia)
@@ -119,8 +287,7 @@ def generar_archivo_ac(
                 Historia.fecha <= datetime.combine(fecha_fin, datetime.max.time()),
             )
         )
-        if institucion_id:
-            q = q.where(Paciente.institucion_id == institucion_id)
+        q = q.where(Paciente.institucion_id == institucion_id)
 
         historias = session.exec(q).all()
 
@@ -133,50 +300,80 @@ def generar_archivo_ac(
                 continue
 
             if p.id not in usuarios_map:
-                base = _usuario_base(p, consecutivo_usuario)
+                base = _usuario_base(p, consecutivo_usuario, rec)
                 base["incapacidad"] = "SI" if h.genera_incapacidad else "NO"
                 base["servicios"] = {"consultas": []}
                 usuarios_map[p.id] = base
                 consecutivo_usuario += 1
 
-            finalidad = getattr(h, 'finalidad', None)
-            causa_externa = getattr(h, 'causa_externa', None)
-            tipo_dx = getattr(h, 'tipo_diagnostico', None)
             num_autorizacion = ""
             if h.cita and hasattr(h.cita, 'num_autorizacion') and h.cita.num_autorizacion:
                 num_autorizacion = h.cita.num_autorizacion
 
-            # Estos campos ANTES IBAN QUEMADOS: la misma constante para todo
-            # paciente. Ahora salen de la historia, y el valor por defecto es
-            # exactamente el que estaba quemado, para no romper lo que ya
-            # funcionaba en el consultorio. `auditoria_rips.py` señala qué
-            # atenciones se quedaron con el supuesto en vez de con un dato.
+            def exigir(valor, campo, etiqueta, supuesto=None):
+                return rec.dato(valor, archivo="AC", registro_id=h.id,
+                                campo=campo, etiqueta=etiqueta, supuesto=supuesto)
+
+            # Estos campos IBAN QUEMADOS: la misma constante para todo paciente.
+            # Después salieron de la historia, pero conservando el quemado como
+            # valor por defecto «para no romper lo que ya funcionaba». Eso deja
+            # el archivo igual de falso, solo que con la falsedad más repartida:
+            # `auditoria_rips` sabía cuáles eran supuestos y se enviaban igual.
+            #
+            # Ahora el supuesto se declara pero NO se usa salvo que el llamante
+            # pida `permitir_supuestos`. Saber que un dato es inventado y
+            # mandarlo de todos modos no es auditar: es documentar la mentira.
             consulta = {
                 "codPrestador": cod_habilitacion,
                 "fechaInicioAtencion": _fecha_dt(h.fecha),
                 "numAutorizacion": num_autorizacion,
-                "codConsulta": getattr(h, 'cod_consulta_cups', None) or "890201",
-                "modalidadGrupoServicioTecSal": getattr(h, 'modalidad_grupo_servicio', None) or "01",
-                "grupoServicios": getattr(h, 'grupo_servicios', None) or "01",
-                "codServicio": getattr(h, 'cod_servicio', None) or 328,
-                "finalidadTecnologiaSalud": finalidad.value if hasattr(finalidad, 'value') else "10",
-                "causaMotivoAtencion": causa_externa.value if hasattr(causa_externa, 'value') else "13",
-                "codDiagnosticoPrincipal": h.diagnostico_principal,
+                "codConsulta": exigir(getattr(h, 'cod_consulta_cups', None),
+                                      "cod_consulta_cups", "CUPS de la consulta",
+                                      "890201"),
+                "modalidadGrupoServicioTecSal": exigir(
+                    getattr(h, 'modalidad_grupo_servicio', None),
+                    "modalidad_grupo_servicio", "modalidad del servicio", "01"),
+                "grupoServicios": exigir(getattr(h, 'grupo_servicios', None),
+                                         "grupo_servicios", "grupo de servicios", "01"),
+                "codServicio": exigir(getattr(h, 'cod_servicio', None),
+                                      "cod_servicio", "código de servicio", 328),
+                "finalidadTecnologiaSalud": exigir(
+                    _valor_enum(getattr(h, 'finalidad', None)),
+                    "finalidad", "finalidad de la consulta", "10"),
+                "causaMotivoAtencion": exigir(
+                    _valor_enum(getattr(h, 'causa_externa', None)),
+                    "causa_externa", "causa o motivo de la atención", "13"),
+                "codDiagnosticoPrincipal": exigir(
+                    h.diagnostico_principal, "diagnostico_principal",
+                    "diagnóstico principal"),
+                # Los relacionados SÍ pueden ir vacíos: son opcionales, y una
+                # cadena vacía aquí significa «no hay», no «no se registró».
                 "codDiagnosticoRelacionado1": h.diagnostico_relacionado1 or "",
                 "codDiagnosticoRelacionado2": getattr(h, 'diagnostico_relacionado2', None) or "",
                 "codDiagnosticoRelacionado3": getattr(h, 'diagnostico_relacionado3', None) or "",
-                "tipoDiagnosticoPrincipal": tipo_dx.value if hasattr(tipo_dx, 'value') else "01",
+                "tipoDiagnosticoPrincipal": exigir(
+                    _valor_enum(getattr(h, 'tipo_diagnostico', None)),
+                    "tipo_diagnostico", "tipo de diagnóstico principal", "01"),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
                 # El valor del servicio: de él depende el pago. Iba en 0 SIEMPRE.
-                "vrServicio": getattr(h, 'valor_servicio', None) or 0,
-                "conceptoRecaudo": getattr(h, 'concepto_recaudo', None) or "05",
+                # Ojo: `0` es un valor legítimo —un servicio puede ser gratuito—
+                # y por eso el recolector solo considera ausente el `None`.
+                "vrServicio": exigir(getattr(h, 'valor_servicio', None),
+                                     "valor_servicio", "valor del servicio", 0),
+                "conceptoRecaudo": exigir(getattr(h, 'concepto_recaudo', None),
+                                          "concepto_recaudo",
+                                          "concepto de recaudo", "05"),
+                # El pago moderador SÍ admite cero de verdad: la mayoría de las
+                # atenciones no lo llevan. Cero aquí es un dato, no un hueco.
                 "valorPagoModerador": getattr(h, 'valor_pago_moderador', None) or 0,
                 "numFEVPagoModerador": getattr(h, 'num_fev_pago_moderador', None) or "",
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["consultas"]) + 1,
             }
             usuarios_map[p.id]["servicios"]["consultas"].append(consulta)
 
+        if propio:
+            rec.cerrar()
         return {
             "numDocumentoIdObligado": nit_institucion,
             "numFactura": "",
@@ -193,16 +390,20 @@ def generar_archivo_ac(
 def generar_archivo_ap(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
+    _recolector: Optional["_Recolector"] = None,
 ) -> Dict:
     """
     AP - Archivo de Procedimientos
     Incluye laboratorios, imágenes diagnósticas, terapias, cirugías.
     """
+    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
-        nit_institucion = institucion.nit if institucion else "000000000"
-        cod_habilitacion = institucion.codigo_habilitacion if institucion else "000000000000"
+        nit_institucion = institucion.nit
+        cod_habilitacion = institucion.codigo_habilitacion
 
         q = (
             select(Orden)
@@ -217,8 +418,7 @@ def generar_archivo_ap(
                 Historia.fecha <= datetime.combine(fecha_fin, datetime.max.time()),
             )
         )
-        if institucion_id:
-            q = q.where(Paciente.institucion_id == institucion_id)
+        q = q.where(Paciente.institucion_id == institucion_id)
 
         ordenes = session.exec(q).all()
 
@@ -242,38 +442,56 @@ def generar_archivo_ap(
             p = h.paciente
 
             if p.id not in usuarios_map:
-                base = _usuario_base(p, consecutivo_usuario)
+                base = _usuario_base(p, consecutivo_usuario, rec)
                 base["servicios"] = {"procedimientos": []}
                 usuarios_map[p.id] = base
                 consecutivo_usuario += 1
 
-            finalidad = getattr(h, 'finalidad', None)
-            tipo_orden_val = orden.tipo.value if hasattr(orden.tipo, 'value') else str(orden.tipo)
+            tipo_orden_val = _valor_enum(orden.tipo) or str(orden.tipo)
+
+            def exigir(valor, campo, etiqueta, supuesto=None):
+                return rec.dato(valor, archivo="AP", registro_id=orden.id,
+                                campo=campo, etiqueta=etiqueta, supuesto=supuesto)
 
             procedimiento = {
                 "codPrestador": cod_habilitacion,
                 "fechaInicioAtencion": _fecha_dt(h.fecha),
                 "idMIPRES": "",
                 "numAutorizacion": "",
-                "codProcedimiento": orden.codigo_cups or "999999",
-                "viaIngresoServicioSalud": "01",
-                "modalidadGrupoServicioTecSal": modalidad_map.get(tipo_orden_val, "02"),
-                "grupoServicios": "02",
-                "codServicio": 0,
-                "finalidadTecnologiaSalud": finalidad.value if hasattr(finalidad, 'value') else "10",
+                # `"999999"` no es un CUPS: es un procedimiento que no existe.
+                # El validador lo rechaza y, si no lo rechazara, sería peor.
+                "codProcedimiento": exigir(orden.codigo_cups, "codigo_cups",
+                                           "CUPS del procedimiento", "999999"),
+                "viaIngresoServicioSalud": exigir(
+                    getattr(orden, 'via_ingreso_servicio', None),
+                    "via_ingreso_servicio", "vía de ingreso al servicio", "01"),
+                # La modalidad SÍ se deduce del tipo de orden, y eso es legítimo:
+                # un laboratorio es apoyo diagnóstico por definición. Se deriva,
+                # no se supone. Lo que no se puede es rellenar el que no encaje.
+                "modalidadGrupoServicioTecSal": exigir(
+                    modalidad_map.get(tipo_orden_val),
+                    "tipo", f"modalidad del procedimiento ({tipo_orden_val})", "02"),
+                "grupoServicios": exigir(getattr(orden, 'grupo_servicios', None),
+                                         "grupo_servicios", "grupo de servicios", "02"),
+                "codServicio": exigir(getattr(orden, 'cod_servicio', None),
+                                      "cod_servicio", "código de servicio", 0),
+                "finalidadTecnologiaSalud": exigir(
+                    _valor_enum(getattr(h, 'finalidad', None)),
+                    "finalidad", "finalidad del procedimiento", "10"),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
-                "codDiagnosticoPrincipal": h.diagnostico_principal,
+                "codDiagnosticoPrincipal": exigir(
+                    h.diagnostico_principal, "diagnostico_principal",
+                    "diagnóstico principal"),
                 "codDiagnosticoRelacionado": h.diagnostico_relacionado1 or "",
                 "codComplicacion": "",
-                "vrServicio": 0,
-                "conceptoRecaudo": "05",
-                "valorPagoModerador": 0,
-                "numFEVPagoModerador": "",
+                **_bloque_economico(orden, rec, "AP"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["procedimientos"]) + 1,
             }
             usuarios_map[p.id]["servicios"]["procedimientos"].append(procedimiento)
 
+        if propio:
+            rec.cerrar()
         return {
             "numDocumentoIdObligado": nit_institucion,
             "numFactura": "",
@@ -290,16 +508,20 @@ def generar_archivo_ap(
 def generar_archivo_am(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
+    _recolector: Optional["_Recolector"] = None,
 ) -> Dict:
     """
     AM - Archivo de Medicamentos
     Incluye todas las fórmulas dispensadas en el período.
     """
+    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
-        nit_institucion = institucion.nit if institucion else "000000000"
-        cod_habilitacion = institucion.codigo_habilitacion if institucion else "000000000000"
+        nit_institucion = institucion.nit
+        cod_habilitacion = institucion.codigo_habilitacion
 
         q = (
             select(Formula)
@@ -314,8 +536,7 @@ def generar_archivo_am(
                 Historia.fecha <= datetime.combine(fecha_fin, datetime.max.time()),
             )
         )
-        if institucion_id:
-            q = q.where(Paciente.institucion_id == institucion_id)
+        q = q.where(Paciente.institucion_id == institucion_id)
 
         formulas = session.exec(q).all()
 
@@ -330,37 +551,45 @@ def generar_archivo_am(
             p = h.paciente
 
             if p.id not in usuarios_map:
-                base = _usuario_base(p, consecutivo_usuario)
+                base = _usuario_base(p, consecutivo_usuario, rec)
                 base["servicios"] = {"medicamentos": []}
                 usuarios_map[p.id] = base
                 consecutivo_usuario += 1
 
-            # Tipo medicamento según si es controlado (INVIMA clasificación básica)
-            # 01=Medicamento, 02=Biológico, 03=Magistral, 04=Fitoterapéutico
-            tipo_med = "01"
-            if hasattr(formula, 'es_controlado') and formula.es_controlado:
-                tipo_med = "01"  # Controlados siguen siendo "01" (medicamento)
+            def exigir(valor, campo, etiqueta, supuesto=None):
+                return rec.dato(valor, archivo="AM", registro_id=formula.id,
+                                campo=campo, etiqueta=etiqueta, supuesto=supuesto)
 
             medicamento = {
                 "codPrestador": cod_habilitacion,
                 "fechaDispensacion": _fecha_d(h.fecha.date() if isinstance(h.fecha, datetime) else h.fecha),
                 "idMIPRES": "",
                 "numAutorizacion": "",
-                "codMedicamento": formula.codigo_cum or "00000000",
-                "tipoMedicamento": tipo_med,
+                # `"00000000"` no es un CUM. Es el campo que la Resolución 948
+                # valida contra el listado del INVIMA, así que un CUM inventado
+                # no solo miente: hace rechazar la factura entera.
+                "codMedicamento": exigir(formula.codigo_cum, "codigo_cum",
+                                         "CUM del medicamento", "00000000"),
+                # 01 medicamento, 02 biológico, 03 magistral, 04 fitoterapéutico.
+                # El `if` que había aquí devolvía "01" en las dos ramas: parecía
+                # que clasificaba y no clasificaba nada.
+                "tipoMedicamento": exigir(getattr(formula, 'tipo_medicamento', None),
+                                          "tipo_medicamento",
+                                          "tipo de medicamento", "01"),
                 "nombreMedicamento": formula.medicamento,
                 "cantidadMedicamento": float(formula.cantidad),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
-                "vrUnitMedicamento": 0,
-                "vrServicio": 0,
-                "conceptoRecaudo": "05",
-                "valorPagoModerador": 0,
-                "numFEVPagoModerador": "",
+                "vrUnitMedicamento": exigir(getattr(formula, 'valor_unitario', None),
+                                            "valor_unitario",
+                                            "valor unitario del medicamento", 0),
+                **_bloque_economico(formula, rec, "AM"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["medicamentos"]) + 1,
             }
             usuarios_map[p.id]["servicios"]["medicamentos"].append(medicamento)
 
+        if propio:
+            rec.cerrar()
         return {
             "numDocumentoIdObligado": nit_institucion,
             "numFactura": "",
@@ -377,17 +606,26 @@ def generar_archivo_am(
 def generar_archivo_au(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
+    _recolector: Optional["_Recolector"] = None,
 ) -> Dict:
     """
     AU - Archivo de Urgencias
     Incluye todas las atenciones en el servicio de urgencias.
     Res. 2275/2023 - obligatorio para IPS con servicio de urgencias habilitado.
+
+    Las atenciones SIN egreso no entran: no han terminado y no se pueden
+    facturar. Antes se les ponía `fecha_egreso = datetime.now()`, o sea que un
+    paciente todavía en urgencias se reportaba como dado de alta en el instante
+    en que alguien generó el archivo.
     """
+    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
-        nit_institucion = institucion.nit if institucion else "000000000"
-        cod_habilitacion = institucion.codigo_habilitacion if institucion else "000000000000"
+        nit_institucion = institucion.nit
+        cod_habilitacion = institucion.codigo_habilitacion
 
         q = (
             select(AtencionUrgencias)
@@ -398,8 +636,7 @@ def generar_archivo_au(
                 AtencionUrgencias.fecha_ingreso <= datetime.combine(fecha_fin, datetime.max.time()),
             )
         )
-        if institucion_id:
-            q = q.where(Paciente.institucion_id == institucion_id)
+        q = q.where(Paciente.institucion_id == institucion_id)
 
         atenciones = session.exec(q).all()
 
@@ -420,41 +657,57 @@ def generar_archivo_au(
             p = au.paciente
             if not p:
                 continue
+            if au.fecha_egreso is None:
+                # Sigue en urgencias: se factura cuando termine, en el RIPS del
+                # periodo que corresponda.
+                continue
 
             if p.id not in usuarios_map:
-                base = _usuario_base(p, consecutivo_usuario)
+                base = _usuario_base(p, consecutivo_usuario, rec)
                 base["servicios"] = {"urgencias": []}
                 usuarios_map[p.id] = base
                 consecutivo_usuario += 1
 
-            destino = au.destino_salida
-            destino_val = destino.value if hasattr(destino, 'value') else str(destino or "")
-            cod_destino = destino_map.get(destino_val.upper(), "01")
+            def exigir(valor, campo, etiqueta, supuesto=None):
+                return rec.dato(valor, archivo="AU", registro_id=au.id,
+                                campo=campo, etiqueta=etiqueta, supuesto=supuesto)
 
-            fecha_egreso = au.fecha_egreso or datetime.now()
+            destino_val = str(_valor_enum(au.destino_salida) or "").upper()
 
             urgencia = {
                 "codPrestador": cod_habilitacion,
-                "viaIngresoServicioSalud": "02",  # 02 = Urgencias
+                # Esta sí es constante legítima: es el archivo de urgencias, la
+                # vía de ingreso ES urgencias. No se supone nada.
+                "viaIngresoServicioSalud": "02",
                 "fechaInicioAtencion": _fecha_dt(au.fecha_ingreso),
                 "numAutorizacion": "",
-                "causaMotivo": "17",  # 17 = Urgencia (causa externa genérica)
-                "codDiagnosticoPrincipal": au.diagnostico_ingreso or "R69",
+                # Iba quemada en "17". Un accidente de trabajo, uno de tránsito
+                # y una lesión por agresión llegan todos por urgencias y son
+                # causas DISTINTAS, con responsables de pago distintos.
+                "causaMotivo": exigir(getattr(au, 'causa_motivo', None),
+                                      "causa_motivo", "causa o motivo de la atención",
+                                      "17"),
+                # `"R69"` es «causas de morbilidad desconocidas»: un diagnóstico
+                # de verdad, inventado para un paciente real.
+                "codDiagnosticoPrincipal": exigir(
+                    au.diagnostico_ingreso, "diagnostico_ingreso",
+                    "diagnóstico de ingreso", "R69"),
                 "codDiagnosticoRelacionado": au.diagnostico_egreso or "",
                 "codComplicacion": "",
-                "condicionDestinoUsuarioEgreso": cod_destino,
+                "condicionDestinoUsuarioEgreso": exigir(
+                    destino_map.get(destino_val), "destino_salida",
+                    "destino de salida", "01"),
                 "codDiagnosticoCausaMuerte": "",
-                "fechaEgresoAtencion": _fecha_dt(fecha_egreso),
+                "fechaEgresoAtencion": _fecha_dt(au.fecha_egreso),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
-                "vrServicio": 0,
-                "conceptoRecaudo": "05",
-                "valorPagoModerador": 0,
-                "numFEVPagoModerador": "",
+                **_bloque_economico(au, rec, "AU"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["urgencias"]) + 1,
             }
             usuarios_map[p.id]["servicios"]["urgencias"].append(urgencia)
 
+        if propio:
+            rec.cerrar()
         return {
             "numDocumentoIdObligado": nit_institucion,
             "numFactura": "",
@@ -471,17 +724,25 @@ def generar_archivo_au(
 def generar_archivo_ah(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
+    _recolector: Optional["_Recolector"] = None,
 ) -> Dict:
     """
     AH - Archivo de Hospitalización
     Incluye todos los ingresos hospitalarios en el período.
     Res. 2275/2023 - obligatorio para IPS con servicio de hospitalización.
+
+    Las hospitalizaciones ACTIVAS no entran. El código ya lo sabía —el mapa de
+    estados decía «no debería reportarse»— y las reportaba igual, con egreso
+    en `datetime.now()` y estancia calculada hasta ese instante.
     """
+    rec, propio = _resolver_recolector(_recolector, permitir_supuestos)
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
-        nit_institucion = institucion.nit if institucion else "000000000"
-        cod_habilitacion = institucion.codigo_habilitacion if institucion else "000000000000"
+        nit_institucion = institucion.nit
+        cod_habilitacion = institucion.codigo_habilitacion
 
         q = (
             select(Hospitalizacion)
@@ -495,8 +756,7 @@ def generar_archivo_ah(
                 Hospitalizacion.fecha_ingreso <= datetime.combine(fecha_fin, datetime.max.time()),
             )
         )
-        if institucion_id:
-            q = q.where(Paciente.institucion_id == institucion_id)
+        q = q.where(Paciente.institucion_id == institucion_id)
 
         hospitalizaciones = session.exec(q).all()
 
@@ -523,40 +783,59 @@ def generar_archivo_ah(
             p = h.paciente
             if not p:
                 continue
+            if h.fecha_egreso is None or (h.estado or "").upper() == "ACTIVA":
+                # Sigue hospitalizado: no hay estancia que facturar todavía.
+                continue
 
             if p.id not in usuarios_map:
-                base = _usuario_base(p, consecutivo_usuario)
+                base = _usuario_base(p, consecutivo_usuario, rec)
                 base["servicios"] = {"hospitalizacion": []}
                 usuarios_map[p.id] = base
                 consecutivo_usuario += 1
 
-            fecha_egreso = h.fecha_egreso or datetime.now()
-            dias_estancia = max(1, (fecha_egreso - h.fecha_ingreso).days)
-            via_ingreso = (h.via_ingreso or "PROGRAMADA").upper()
-            estado = (h.estado or "ALTA_MEDICA").upper()
+            def exigir(valor, campo, etiqueta, supuesto=None):
+                return rec.dato(valor, archivo="AH", registro_id=h.id,
+                                campo=campo, etiqueta=etiqueta, supuesto=supuesto)
+
+            dias_estancia = max(1, (h.fecha_egreso - h.fecha_ingreso).days)
+            via_ingreso = (h.via_ingreso or "").upper()
+            estado = (h.estado or "").upper()
 
             hospitalizacion_rec = {
                 "codPrestador": cod_habilitacion,
-                "viaIngresoServicioSalud": via_map.get(via_ingreso, "03"),
+                "viaIngresoServicioSalud": exigir(
+                    via_map.get(via_ingreso), "via_ingreso",
+                    "vía de ingreso a la hospitalización", "03"),
                 "fechaInicioAtencion": _fecha_dt(h.fecha_ingreso),
                 "numAutorizacion": "",
-                "causaMotivo": "13",  # Enfermedad general
-                "codDiagnosticoPrincipal": h.diagnostico_ingreso or "Z00",
+                # Iba quemada en "13", enfermedad general. Con eso, ninguna
+                # hospitalización por accidente de tránsito se cobraba al SOAT.
+                "causaMotivo": exigir(getattr(h, 'causa_motivo', None),
+                                      "causa_motivo",
+                                      "causa o motivo de la atención", "13"),
+                # `"Z00"` es «examen general»; además no es un código válido del
+                # RIPS, que exige cuatro caracteres. Un ingreso hospitalario por
+                # examen general no existe.
+                "codDiagnosticoPrincipal": exigir(
+                    h.diagnostico_ingreso, "diagnostico_ingreso",
+                    "diagnóstico de ingreso", "Z00"),
                 "codDiagnosticoRelacionado": h.diagnostico_egreso or "",
                 "codComplicacion": "",
-                "condicionDestinoUsuarioEgreso": estado_egreso_map.get(estado, "01"),
+                "condicionDestinoUsuarioEgreso": exigir(
+                    estado_egreso_map.get(estado), "estado",
+                    "condición de egreso", "01"),
                 "codDiagnosticoCausaMuerte": "",
-                "fechaEgresoAtencion": _fecha_dt(fecha_egreso),
+                "fechaEgresoAtencion": _fecha_dt(h.fecha_egreso),
                 "diasEstancia": dias_estancia,
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
-                "vrServicio": 0,
-                "conceptoRecaudo": "05",
-                "valorPagoModerador": 0,
-                "numFEVPagoModerador": "",
+                **_bloque_economico(h, rec, "AH"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["hospitalizacion"]) + 1,
             }
             usuarios_map[p.id]["servicios"]["hospitalizacion"].append(hospitalizacion_rec)
+
+        if propio:
+            rec.cerrar()
 
         return {
             "numDocumentoIdObligado": nit_institucion,
@@ -574,8 +853,11 @@ def generar_archivo_ah(
 def generar_archivo_ct(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None,
-    conteos: Optional[Dict[str, int]] = None
+    institucion_id: int,
+    conteos: Optional[Dict[str, int]] = None,
+    *,
+    permitir_supuestos: bool = False,
+    _recolector: Optional["_Recolector"] = None,
 ) -> Dict:
     """
     CT - Archivo de Control
@@ -587,8 +869,8 @@ def generar_archivo_ct(
     """
     with Session(engine) as session:
         institucion = _get_institucion(session, institucion_id)
-        nit_institucion = institucion.nit if institucion else "000000000"
-        cod_habilitacion = institucion.codigo_habilitacion if institucion else "000000000000"
+        nit_institucion = institucion.nit
+        cod_habilitacion = institucion.codigo_habilitacion
 
         if conteos is None:
             from sqlalchemy import func
@@ -624,22 +906,24 @@ def generar_archivo_ct(
                 Hospitalizacion.fecha_ingreso <= dt_fin,
             )
 
-            if institucion_id:
-                q_ac = q_ac.join(Paciente, Historia.paciente_id == Paciente.id).where(
-                    Paciente.institucion_id == institucion_id
-                )
-                q_ap = q_ap.join(Paciente, Historia.paciente_id == Paciente.id).where(
-                    Paciente.institucion_id == institucion_id
-                )
-                q_am = q_am.join(Paciente, Historia.paciente_id == Paciente.id).where(
-                    Paciente.institucion_id == institucion_id
-                )
-                q_au = q_au.join(Paciente, AtencionUrgencias.paciente_id == Paciente.id).where(
-                    Paciente.institucion_id == institucion_id
-                )
-                q_ah = q_ah.join(Paciente, Hospitalizacion.paciente_id == Paciente.id).where(
-                    Paciente.institucion_id == institucion_id
-                )
+            # El CT declara CUÁNTOS registros lleva el envío. Si contara sin
+            # filtrar mientras los otros cinco archivos sí filtran, el conteo no
+            # cuadraría con el contenido y el MUV rechaza el paquete entero.
+            q_ac = q_ac.join(Paciente, Historia.paciente_id == Paciente.id).where(
+                Paciente.institucion_id == institucion_id
+            )
+            q_ap = q_ap.join(Paciente, Historia.paciente_id == Paciente.id).where(
+                Paciente.institucion_id == institucion_id
+            )
+            q_am = q_am.join(Paciente, Historia.paciente_id == Paciente.id).where(
+                Paciente.institucion_id == institucion_id
+            )
+            q_au = q_au.join(Paciente, AtencionUrgencias.paciente_id == Paciente.id).where(
+                Paciente.institucion_id == institucion_id
+            )
+            q_ah = q_ah.join(Paciente, Hospitalizacion.paciente_id == Paciente.id).where(
+                Paciente.institucion_id == institucion_id
+            )
 
             num_ac = session.exec(q_ac).one() or 0
             num_ap = session.exec(q_ap).one() or 0
@@ -682,7 +966,9 @@ def generar_archivo_ct(
 def exportar_rips_completo(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
 ) -> Dict[str, Dict]:
     """
     Genera todos los archivos RIPS en un solo llamado.
@@ -690,11 +976,15 @@ def exportar_rips_completo(
     Returns:
         {"AC": {...}, "AP": {...}, "AM": {...}, "AU": {...}, "AH": {...}, "CT": {...}}
     """
-    ac = generar_archivo_ac(fecha_inicio, fecha_fin, institucion_id)
-    ap = generar_archivo_ap(fecha_inicio, fecha_fin, institucion_id)
-    am = generar_archivo_am(fecha_inicio, fecha_fin, institucion_id)
-    au = generar_archivo_au(fecha_inicio, fecha_fin, institucion_id)
-    ah = generar_archivo_ah(fecha_inicio, fecha_fin, institucion_id)
+    # Un solo recolector para los cinco: quien cierra el mes recibe la lista
+    # COMPLETA de lo que falta, no la del primer archivo que reventó.
+    rec = _Recolector(permitir_supuestos)
+    ac = generar_archivo_ac(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
+    ap = generar_archivo_ap(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
+    am = generar_archivo_am(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
+    au = generar_archivo_au(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
+    ah = generar_archivo_ah(fecha_inicio, fecha_fin, institucion_id, _recolector=rec)
+    rec.cerrar()
 
     # Conteos reales desde los archivos ya generados
     conteos = {
@@ -713,7 +1003,9 @@ def exportar_rips_completo(
 def exportar_rips_zip(
     fecha_inicio: date,
     fecha_fin: date,
-    institucion_id: Optional[int] = None
+    institucion_id: int,
+    *,
+    permitir_supuestos: bool = False,
 ) -> bytes:
     """
     Genera todos los archivos RIPS y los empaqueta en un ZIP en memoria.
@@ -725,7 +1017,8 @@ def exportar_rips_zip(
         zip_bytes = exportar_rips_zip(f_ini, f_fin, inst_id)
         ui.download(zip_bytes, f'RIPS_{f_ini}_{f_fin}.zip')
     """
-    archivos = exportar_rips_completo(fecha_inicio, fecha_fin, institucion_id)
+    archivos = exportar_rips_completo(fecha_inicio, fecha_fin, institucion_id,
+                                      permitir_supuestos=permitir_supuestos)
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:

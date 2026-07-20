@@ -379,7 +379,45 @@ class AutorizacionAcceso(SQLModel, table=True):
     activo: bool = True
     paciente: Paciente = Relationship(back_populates="autorizaciones")
 
-class Historia(SQLModel, table=True):
+class CamposRips(SQLModel):
+    """Lo que el RIPS exige de CUALQUIER servicio prestado.
+
+    Los seis archivos del RIPS —consultas, procedimientos, medicamentos,
+    urgencias, hospitalización— piden el mismo bloque: qué modalidad, qué grupo,
+    cuánto valió y bajo qué concepto se recaudó. Solo `Historia` lo tenía; los
+    demás generadores emitían constantes porque el dato no existía en ninguna
+    parte donde guardarlo, y una constante en el generador es indistinguible de
+    un dato real cuando se mira el archivo.
+
+    Va aquí, en un mixin, y no copiado en cada modelo, para que la lista de lo
+    que el RIPS necesita se declare UNA vez. Si mañana la resolución añade un
+    campo, se añade aquí y aparece en los cinco.
+
+    Todos nacen en `None` a propósito: `None` significa «no se registró» y el
+    generador se niega a inventarlo. Ver `rips_completo._Recolector`.
+    """
+
+    #: 01 intramural, 02 extramural…
+    modalidad_grupo_servicio: Optional[str] = Field(default=None)
+    #: 01 consulta externa, 02 apoyo diagnóstico…
+    grupo_servicios: Optional[str] = Field(default=None)
+    cod_servicio: Optional[int] = Field(default=None)
+    #: 01 ambulatorio, 02 urgencias, 03 hospitalización… Iba quemado en cada
+    #: generador según el archivo, lo que hacía imposible un procedimiento
+    #: ambulatorio dentro de una hospitalización, que es de lo más corriente.
+    via_ingreso_servicio: Optional[str] = Field(default=None)
+    #: 13 enfermedad general, 17 urgencia… El AU lo quemaba en "17" y el AH en
+    #: "13", así que un accidente de trabajo se reportaba como enfermedad.
+    causa_motivo: Optional[str] = Field(default=None)
+    #: El valor de lo prestado. De él depende el pago, e iba QUEMADO EN CERO.
+    #: `0` es un valor legítimo —hay servicios gratuitos—; `None` no lo es.
+    valor_servicio: Optional[int] = Field(default=None)
+    concepto_recaudo: Optional[str] = Field(default=None)
+    valor_pago_moderador: Optional[int] = Field(default=0)
+    num_fev_pago_moderador: Optional[str] = Field(default=None)
+
+
+class Historia(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     fecha: datetime = Field(default_factory=datetime.now)
     codigo_historia: str
@@ -458,13 +496,8 @@ class Historia(SQLModel, table=True):
     # funciona en el consultorio, pero ahora SON DATO: se pueden capturar y
     # `auditoria_rips.py` señala las atenciones que se quedaron con el valor
     # supuesto, en vez de reportarlo en silencio.
-    modalidad_grupo_servicio: Optional[str] = Field(default=None)  # 01 intramural
-    grupo_servicios: Optional[str] = Field(default=None)           # 01 consulta externa
-    cod_servicio: Optional[int] = Field(default=None)
-    valor_servicio: Optional[int] = Field(default=None)
-    concepto_recaudo: Optional[str] = Field(default=None)
-    valor_pago_moderador: Optional[int] = Field(default=0)
-    num_fev_pago_moderador: Optional[str] = Field(default=None)
+    # (Los siete campos que iban aquí viven ahora en `CamposRips`, del que
+    #  hereda esta clase, para no repetirlos en los otros cuatro modelos.)
 
     datos_dinamicos: Dict = Field(default={}, sa_column=Column(JSON))
 
@@ -510,7 +543,7 @@ class ImagenDiagnostica(SQLModel, table=True):
     descripcion: str
     fecha_subida: datetime = Field(default_factory=datetime.now)
 
-class Formula(SQLModel, table=True):
+class Formula(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     historia_id: int = Field(foreign_key="historia.id")
     historia: Optional["Historia"] = Relationship(back_populates="formulas")
@@ -522,8 +555,14 @@ class Formula(SQLModel, table=True):
     observaciones: Optional[str] = None
     fecha_formula: datetime = Field(default_factory=datetime.now)
     dispensada: bool = Field(default=False)
+    #: 01 medicamento, 02 biológico, 03 magistral, 04 fitoterapéutico. El
+    #: generador lo quemaba en "01" con un `if` que devolvía "01" en las dos
+    #: ramas: parecía clasificar y no clasificaba.
+    tipo_medicamento: Optional[str] = Field(default=None)
+    #: El precio de UNA unidad. `vrServicio` es el de la dispensación completa.
+    valor_unitario: Optional[int] = Field(default=None)
 
-class Orden(SQLModel, table=True):
+class Orden(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     historia_id: int = Field(foreign_key="historia.id")
     historia: Historia = Relationship(back_populates="ordenes")
@@ -736,7 +775,7 @@ class Epicrisis(SQLModel, table=True):
 # MÓDULO DE URGENCIAS (Obligatorio para IPS con servicio de urgencias)
 # ==============================================================================
 
-class AtencionUrgencias(SQLModel, table=True):
+class AtencionUrgencias(CamposRips, table=True):
     """
     Registro de atención en servicio de urgencias.
     Incluye triage, atención médica y destino de salida.
@@ -1036,7 +1075,7 @@ class Cama(SQLModel, table=True):
     tiene_monitor: bool = Field(default=False)
     es_aislamiento: bool = Field(default=False)
 
-class Hospitalizacion(SQLModel, table=True):
+class Hospitalizacion(CamposRips, table=True):
     """
     Registro de hospitalización de pacientes.
     """
