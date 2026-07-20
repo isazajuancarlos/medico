@@ -132,3 +132,41 @@ def test_lo_que_no_se_manda_no_se_toca(cliente):
     assert cuerpo["celular"] == "305"
     assert cuerpo["email"] == "viejo@x.co", "un campo ausente no debe borrarse"
     assert cuerpo["nombre1"] == "Ana"
+
+
+# --- Municipio: la validación contra DIVIPOLA en el camino real ------------
+
+def test_crear_con_municipio_sin_el_cero_lo_normaliza(cliente):
+    """Es lo que llega de una hoja de cálculo o de un sistema viejo."""
+    r = cliente.post("/api/pacientes/", json={
+        "identificacion": "3333", "nombre1": "Nuevo", "apellido1": "Paciente",
+        "fecha_nacimiento": "1990-01-01", "sexo": "M", "celular": "300",
+        "cod_municipio": "5001",
+    })
+    assert r.status_code == 201, r.text
+    assert r.json()["cod_municipio"] == "05001"
+
+
+def test_crear_con_un_municipio_inventado_se_rechaza(cliente):
+    r = cliente.post("/api/pacientes/", json={
+        "identificacion": "4444", "nombre1": "Nuevo", "apellido1": "Paciente",
+        "fecha_nacimiento": "1990-01-01", "sexo": "M", "celular": "300",
+        "cod_municipio": "99999",
+    })
+    assert r.status_code == 422
+    assert "DIVIPOLA" in r.text
+
+
+def test_crear_sin_municipio_se_rechaza(cliente):
+    """Antes se colaba con el defecto "05001" y salía en el RIPS como Medellín."""
+    r = cliente.post("/api/pacientes/", json={
+        "identificacion": "5555", "nombre1": "Nuevo", "apellido1": "Paciente",
+        "fecha_nacimiento": "1990-01-01", "sexo": "M", "celular": "300",
+    })
+    assert r.status_code == 422
+
+
+def test_leer_un_paciente_viejo_con_municipio_malo_NO_falla(cliente):
+    """Si leerlo fallara, no habría forma de abrirlo para corregirlo."""
+    r = cliente.get("/api/pacientes/10")
+    assert r.status_code == 200

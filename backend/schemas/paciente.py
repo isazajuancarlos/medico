@@ -1,6 +1,8 @@
 from typing import Optional
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from divipola import MunicipioNoValido, validar as validar_municipio
 from models import TipoUsuario, ZonaResidencia
 
 
@@ -17,10 +19,28 @@ class PacienteBase(BaseModel):
     email: Optional[str] = None
     direccion: Optional[str] = None
     tipo_usuario: TipoUsuario = TipoUsuario.CONTRIBUTIVO
-    cod_municipio: str = "05001"
+    # Sin defecto. Tenía "05001", que reportaba a TODO paciente del país como
+    # residente de Medellín: el archivo pasaba la validación de estructura y la
+    # estadística de residencia salía falsa.
+    cod_municipio: str
     cod_pais: str = "170"
     zona: ZonaResidencia = ZonaResidencia.URBANA
     entidad_id: Optional[int] = None
+
+
+    @field_validator("cod_municipio")
+    @classmethod
+    def _municipio_existe(cls, v: str) -> str:
+        """Normaliza a cinco dígitos y comprueba contra DIVIPOLA.
+
+        Lo de normalizar no es cosmética: Antioquia es el departamento 05, así
+        que un `5001` llegado de una hoja de cálculo tiene que volverse
+        `05001` o el RIPS sale mal para el 13 % de los municipios del país.
+        """
+        try:
+            return validar_municipio(v)
+        except MunicipioNoValido as e:
+            raise ValueError(str(e)) from None
 
 
 class PacienteCreate(PacienteBase):
@@ -52,11 +72,35 @@ class PacienteUpdate(BaseModel):
     tipo_usuario: Optional[TipoUsuario] = None
     cod_municipio: Optional[str] = None
     cod_pais: Optional[str] = None
+
     zona: Optional[ZonaResidencia] = None
     entidad_id: Optional[int] = None
 
+    @field_validator("cod_municipio")
+    @classmethod
+    def _municipio_existe(cls, v):
+        # Al corregir sí puede venir ausente —significa "no lo toques"—, pero
+        # si viene, tiene que ser uno real.
+        return validar_municipio(v) if v is not None else v
+
 
 class PacienteRead(PacienteBase):
+    """Lo que sale hacia el cliente.
+
+    NO revalida el municipio a propósito. Los pacientes creados antes de esta
+    comprobación pueden tener un código vacío o heredado del defecto viejo, y
+    si leerlos fallara no habría forma de ABRIRLOS PARA CORREGIRLOS: el dato
+    malo quedaría encerrado. La exigencia va en la escritura; en la lectura,
+    `auditoria_rips` es quien los señala antes de generar el archivo.
+    """
+
+    cod_municipio: str = ""
+
+    @field_validator("cod_municipio")
+    @classmethod
+    def _municipio_existe(cls, v):
+        return v
+
     id: int
     edad: Optional[int] = None
     institucion_id: Optional[int] = None
