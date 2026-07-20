@@ -6,6 +6,8 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { Router } from '@angular/router';
+import { PacienteFormComponent } from './paciente-form.component';
 import { PacienteService } from '../../services/paciente.service';
 import { Patient } from '../../models/patient.models';
 import { PaginatedResponse } from '../../models/common.models';
@@ -13,12 +15,12 @@ import { PaginatedResponse } from '../../models/common.models';
 @Component({
   selector: 'app-pacientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule, TagModule, TooltipModule],
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule, TagModule, TooltipModule, PacienteFormComponent],
   template: `
     <div class="page-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2 class="page-title" style="margin-bottom: 0">Pacientes</h2>
-        <p-button label="Nuevo Paciente" icon="pi pi-plus" size="small" />
+        <p-button label="Nuevo Paciente" icon="pi pi-plus" size="small" (onClick)="nuevo()" />
       </div>
 
       <div style="margin-bottom: 1rem;">
@@ -64,8 +66,10 @@ import { PaginatedResponse } from '../../models/common.models';
               </span>
             </td>
             <td>
-              <p-button icon="pi pi-eye" [text]="true" size="small" pTooltip="Ver Historia" />
-              <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Editar" severity="secondary" />
+              <p-button icon="pi pi-eye" [text]="true" size="small" pTooltip="Ver Historia"
+                (onClick)="verHistoria(p)" />
+              <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Editar"
+                severity="secondary" (onClick)="editar(p)" />
             </td>
           </tr>
         </ng-template>
@@ -76,15 +80,24 @@ import { PaginatedResponse } from '../../models/common.models';
         </ng-template>
       </p-table>
     </div>
+
+    <app-paciente-form
+      [abierto]="formularioAbierto()"
+      [paciente]="enEdicion()"
+      (abiertoChange)="formularioAbierto.set($event)"
+      (guardado)="alGuardar()"
+    />
   `,
 })
 export class PacientesComponent implements OnInit {
   private svc = inject(PacienteService);
+  private router = inject(Router);
 
   pacientes = signal<Patient[]>([]);
   loading = signal(true);
   total = signal(0);
   pageSize = 20;
+  private primerVisible = 0;
   searchQuery = '';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -96,6 +109,7 @@ export class PacientesComponent implements OnInit {
     this.loading.set(true);
     const first = event.first ?? 0;
     const rows = event.rows ?? this.pageSize;
+    this.primerVisible = first;
     const page = Math.floor(first / rows) + 1;
     this.svc.list(page, rows, this.searchQuery || undefined).subscribe({
       next: (r: PaginatedResponse<Patient>) => {
@@ -110,6 +124,29 @@ export class PacientesComponent implements OnInit {
   onSearch(_q: string): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.loadPacientes({ first: 0, rows: this.pageSize, filters: {} }), 400);
+  }
+
+  formularioAbierto = signal(false);
+  enEdicion = signal<Patient | null>(null);
+
+  nuevo(): void {
+    this.enEdicion.set(null);
+    this.formularioAbierto.set(true);
+  }
+
+  editar(p: Patient): void {
+    this.enEdicion.set(p);
+    this.formularioAbierto.set(true);
+  }
+
+  verHistoria(p: Patient): void {
+    this.router.navigate(['/historias'], { queryParams: { paciente: p.id } });
+  }
+
+  /** Tras guardar se recarga la página actual, no la primera: perder el sitio
+   *  en una lista de miles obliga a volver a buscar. */
+  alGuardar(): void {
+    this.loadPacientes({ first: this.primerVisible, rows: this.pageSize });
   }
 
   getTipoLabel(tipo: string): string {

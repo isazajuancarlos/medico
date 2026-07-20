@@ -85,7 +85,23 @@ def update_paciente(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     paciente = obtener(db, Paciente, paciente_id, current_user, que="paciente")
-    for field, value in payload.model_dump(exclude_none=True).items():
+    # `exclude_unset` y no `exclude_none`: así se distingue "no lo mando" de
+    # "quiero borrarlo". Con `exclude_none` no había forma de quitar un correo
+    # mal escrito, porque mandar null se leía como no tocarlo.
+    cambios = payload.model_dump(exclude_unset=True)
+
+    nueva_id = cambios.get("identificacion")
+    if nueva_id and nueva_id != paciente.identificacion:
+        repetida = db.exec(
+            select(Paciente).where(Paciente.identificacion == nueva_id)
+        ).first()
+        if repetida:
+            raise HTTPException(
+                status_code=400,
+                detail="Ya existe un paciente con esta identificación",
+            )
+
+    for field, value in cambios.items():
         setattr(paciente, field, value)
     db.add(paciente)
     db.commit()
