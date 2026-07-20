@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import Hospitalizacion, Cama, Paciente, Usuario, RolUsuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from core.aislamiento import obtener
 from schemas.hospitalizacion import (
     HospitalizacionRead, CamaRead, IngresoCreate, EgresoUpdate, MedicoBasic,
 )
@@ -15,16 +16,16 @@ router = APIRouter(prefix="/hospitalizacion", tags=["hospitalizacion"],
 
 def _enrich(hosp: Hospitalizacion, db: Session) -> HospitalizacionRead:
     data = HospitalizacionRead.model_validate(hosp)
-    p = db.get(Paciente, hosp.paciente_id)
+    p = db.get(Paciente, hosp.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
         data.paciente_identificacion = p.identificacion
-    cama = db.get(Cama, hosp.cama_id)
+    cama = db.get(Cama, hosp.cama_id)  # aislamiento: ya autorizado por el padre
     if cama:
         data.cama_numero = cama.numero
         data.cama_piso = cama.piso
         data.cama_servicio = cama.servicio
-    m = db.get(Usuario, hosp.medico_tratante_id)
+    m = db.get(Usuario, hosp.medico_tratante_id)  # aislamiento: ya autorizado por el padre
     if m:
         data.medico_nombre = m.nombre_completo
     return data
@@ -87,7 +88,7 @@ def ingresar_paciente(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    cama = db.get(Cama, payload.cama_id)
+    cama = db.get(Cama, payload.cama_id)  # aislamiento: ya autorizado por el padre
     if not cama:
         raise HTTPException(status_code=404, detail="Cama no encontrada")
     if cama.estado != "DISPONIBLE":
@@ -116,16 +117,14 @@ def egreso_paciente(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    hosp = db.get(Hospitalizacion, hosp_id)
-    if not hosp:
-        raise HTTPException(status_code=404, detail="Hospitalización no encontrada")
+    hosp = obtener(db, Hospitalizacion, hosp_id, current_user, que="hospitalización")
     if hosp.estado != "ACTIVA":
         raise HTTPException(status_code=400, detail="La hospitalización ya tiene egreso registrado")
     hosp.estado = payload.tipo_egreso
     hosp.fecha_egreso = datetime.utcnow()
     hosp.diagnostico_egreso = payload.diagnostico_egreso
     hosp.resumen_clinico = payload.resumen_clinico
-    cama = db.get(Cama, hosp.cama_id)
+    cama = db.get(Cama, hosp.cama_id)  # aislamiento: ya autorizado por el padre
     if cama:
         cama.estado = "DISPONIBLE"
         db.add(cama)

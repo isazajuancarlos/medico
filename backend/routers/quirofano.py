@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import Quirofano, ProgramacionQuirurgica, Paciente, Usuario, RolUsuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
+from core.aislamiento import obtener
 from schemas.quirofano import (
     QuirofanoRead, ProgramacionRead, ProgramacionCreate,
     ChecklistUpdate, IniciarCirugia, CompletarCirugia, CancelarCirugia,
@@ -17,18 +18,18 @@ router = APIRouter(prefix="/quirofano", tags=["quirofano"],
 
 def _enrich(prog: ProgramacionQuirurgica, db: Session) -> ProgramacionRead:
     data = ProgramacionRead.model_validate(prog)
-    p = db.get(Paciente, prog.paciente_id)
+    p = db.get(Paciente, prog.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
         data.paciente_identificacion = p.identificacion
-    q = db.get(Quirofano, prog.quirofano_id)
+    q = db.get(Quirofano, prog.quirofano_id)  # aislamiento: ya autorizado por el padre
     if q:
         data.quirofano_nombre = q.nombre
-    c = db.get(Usuario, prog.cirujano_id)
+    c = db.get(Usuario, prog.cirujano_id)  # aislamiento: ya autorizado por el padre
     if c:
         data.cirujano_nombre = c.nombre_completo
     if prog.anestesiologo_id:
-        a = db.get(Usuario, prog.anestesiologo_id)
+        a = db.get(Usuario, prog.anestesiologo_id)  # aislamiento: ya autorizado por el padre
         if a:
             data.anestesiologo_nombre = a.nombre_completo
     return data
@@ -70,9 +71,7 @@ def get_programacion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    prog = db.get(ProgramacionQuirurgica, prog_id)
-    if not prog:
-        raise HTTPException(status_code=404, detail="Programación no encontrada")
+    prog = obtener(db, ProgramacionQuirurgica, prog_id, current_user, que="programación quirúrgica")
     return _enrich(prog, db)
 
 
@@ -94,7 +93,7 @@ def crear_programacion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    sala = db.get(Quirofano, payload.quirofano_id)
+    sala = db.get(Quirofano, payload.quirofano_id)  # aislamiento: ya autorizado por el padre
     if not sala:
         raise HTTPException(status_code=404, detail="Sala de quirófano no encontrada")
     if sala.estado in ("MANTENIMIENTO", "BLOQUEADO"):
@@ -126,9 +125,7 @@ def update_checklist(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    prog = db.get(ProgramacionQuirurgica, prog_id)
-    if not prog:
-        raise HTTPException(status_code=404, detail="Programación no encontrada")
+    prog = obtener(db, ProgramacionQuirurgica, prog_id, current_user, que="programación quirúrgica")
     if payload.ayuno_verificado is not None:
         prog.ayuno_verificado = payload.ayuno_verificado
     if payload.labs_prequirurgicos is not None:
@@ -152,9 +149,7 @@ def iniciar_cirugia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    prog = db.get(ProgramacionQuirurgica, prog_id)
-    if not prog:
-        raise HTTPException(status_code=404, detail="Programación no encontrada")
+    prog = obtener(db, ProgramacionQuirurgica, prog_id, current_user, que="programación quirúrgica")
     if prog.estado != "PROGRAMADA":
         raise HTTPException(
             status_code=400,
@@ -162,7 +157,7 @@ def iniciar_cirugia(
         )
     prog.estado = "EN_CURSO"
     prog.hora_inicio_real = payload.hora_inicio or datetime.utcnow()
-    sala = db.get(Quirofano, prog.quirofano_id)
+    sala = db.get(Quirofano, prog.quirofano_id)  # aislamiento: ya autorizado por el padre
     if sala:
         sala.estado = "EN_USO"
         db.add(sala)
@@ -179,9 +174,7 @@ def completar_cirugia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    prog = db.get(ProgramacionQuirurgica, prog_id)
-    if not prog:
-        raise HTTPException(status_code=404, detail="Programación no encontrada")
+    prog = obtener(db, ProgramacionQuirurgica, prog_id, current_user, que="programación quirúrgica")
     if prog.estado != "EN_CURSO":
         raise HTTPException(
             status_code=400,
@@ -199,7 +192,7 @@ def completar_cirugia(
         prog.especimenes_patologia = payload.especimenes_patologia
     if payload.complicaciones is not None:
         prog.complicaciones = payload.complicaciones
-    sala = db.get(Quirofano, prog.quirofano_id)
+    sala = db.get(Quirofano, prog.quirofano_id)  # aislamiento: ya autorizado por el padre
     if sala and sala.estado == "EN_USO":
         sala.estado = "DISPONIBLE"
         db.add(sala)
@@ -216,9 +209,7 @@ def cancelar_cirugia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    prog = db.get(ProgramacionQuirurgica, prog_id)
-    if not prog:
-        raise HTTPException(status_code=404, detail="Programación no encontrada")
+    prog = obtener(db, ProgramacionQuirurgica, prog_id, current_user, que="programación quirúrgica")
     if prog.estado in ("COMPLETADA", "CANCELADA"):
         raise HTTPException(
             status_code=400,
@@ -228,7 +219,7 @@ def cancelar_cirugia(
     if payload.motivo:
         prog.complicaciones = f"Cancelada: {payload.motivo}"
     if prog.hora_inicio_real:
-        sala = db.get(Quirofano, prog.quirofano_id)
+        sala = db.get(Quirofano, prog.quirofano_id)  # aislamiento: ya autorizado por el padre
         if sala and sala.estado == "EN_USO":
             sala.estado = "DISPONIBLE"
             db.add(sala)

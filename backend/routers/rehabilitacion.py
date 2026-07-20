@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import PlanRehabilitacion, SesionTerapia, Paciente, Usuario, RolUsuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
+from core.aislamiento import obtener
 from schemas.rehabilitacion import (
     PlanCreate, PlanUpdate, PlanRead,
     SesionCreate, SesionUpdate, SesionRead,
@@ -15,11 +16,11 @@ router = APIRouter(prefix="/rehabilitacion", tags=["rehabilitacion"],
 
 def _enrich_plan(p: PlanRehabilitacion, db: Session) -> PlanRead:
     data = PlanRead.model_validate(p)
-    pac = db.get(Paciente, p.paciente_id)
+    pac = db.get(Paciente, p.paciente_id)  # aislamiento: ya autorizado por el padre
     if pac:
         data.paciente_nombre = pac.nombre_completo.strip()
         data.paciente_identificacion = pac.identificacion
-    ter = db.get(Usuario, p.terapeuta_id)
+    ter = db.get(Usuario, p.terapeuta_id)  # aislamiento: ya autorizado por el padre
     if ter:
         data.terapeuta_nombre = ter.nombre_completo
     return data
@@ -27,7 +28,7 @@ def _enrich_plan(p: PlanRehabilitacion, db: Session) -> PlanRead:
 
 def _enrich_sesion(s: SesionTerapia, db: Session) -> SesionRead:
     data = SesionRead.model_validate(s)
-    ter = db.get(Usuario, s.terapeuta_id)
+    ter = db.get(Usuario, s.terapeuta_id)  # aislamiento: ya autorizado por el padre
     if ter:
         data.terapeuta_nombre = ter.nombre_completo
     return data
@@ -62,9 +63,7 @@ def get_plan(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    p = db.get(PlanRehabilitacion, plan_id)
-    if not p:
-        raise HTTPException(status_code=404, detail="Plan no encontrado")
+    p = obtener(db, PlanRehabilitacion, plan_id, current_user, que="plan de rehabilitación")
     return _enrich_plan(p, db)
 
 
@@ -74,7 +73,7 @@ def create_plan(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(Paciente, payload.paciente_id):
+    if not db.get(Paciente, payload.paciente_id):  # aislamiento: ya autorizado por el padre
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     p = PlanRehabilitacion(
         terapeuta_id=current_user.id,
@@ -94,9 +93,7 @@ def update_plan(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    p = db.get(PlanRehabilitacion, plan_id)
-    if not p:
-        raise HTTPException(status_code=404, detail="Plan no encontrado")
+    p = obtener(db, PlanRehabilitacion, plan_id, current_user, que="plan de rehabilitación")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(p, field, value)
     db.add(p)
@@ -113,8 +110,7 @@ def list_sesiones(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(PlanRehabilitacion, plan_id):
-        raise HTTPException(status_code=404, detail="Plan no encontrado")
+    obtener(db, PlanRehabilitacion, plan_id, current_user, que="plan de rehabilitación")
     sesiones = db.exec(
         select(SesionTerapia)
         .where(SesionTerapia.plan_id == plan_id)
@@ -130,9 +126,7 @@ def create_sesion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    plan = db.get(PlanRehabilitacion, plan_id)
-    if not plan:
-        raise HTTPException(status_code=404, detail="Plan no encontrado")
+    plan = obtener(db, PlanRehabilitacion, plan_id, current_user, que="plan de rehabilitación")
     numero = plan.sesiones_realizadas + 1
     s = SesionTerapia(
         plan_id=plan_id,
@@ -159,9 +153,7 @@ def update_sesion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    s = db.get(SesionTerapia, sesion_id)
-    if not s:
-        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    s = obtener(db, SesionTerapia, sesion_id, current_user, que="sesión")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(s, field, value)
     db.add(s)

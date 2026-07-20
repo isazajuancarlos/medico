@@ -5,6 +5,7 @@ from models import Usuario, RolUsuario
 from schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioRead
 from schemas.common import PaginatedResponse
 from core.deps import get_db, get_current_active_user, require_role
+from core.aislamiento import obtener
 import bcrypt
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
@@ -45,9 +46,7 @@ def create_usuario(
 
 @router.get("/{usuario_id}", response_model=UsuarioRead)
 def get_usuario(usuario_id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user)):
-    usuario = db.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     return usuario
 
 
@@ -58,9 +57,7 @@ def update_usuario(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(RolUsuario.ADMIN, RolUsuario.SUPERADMIN)),
 ):
-    usuario = db.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(usuario, field, value)
     db.add(usuario)

@@ -8,6 +8,7 @@ from models import (
 )
 from models import ModuloSistema
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from core.aislamiento import obtener
 from schemas.farmacia import (
     ItemInventarioRead, ItemInventarioCreate, ItemInventarioUpdate,
     EntradaStockCreate, FormulaPendienteRead, DispensarCreate,
@@ -91,9 +92,7 @@ def get_item(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    item = db.get(ItemInventario, item_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
+    item = obtener(db, ItemInventario, item_id, current_user, que="ítem")
     return _enrich_item(item)
 
 
@@ -129,9 +128,7 @@ def actualizar_item(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    item = db.get(ItemInventario, item_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
+    item = obtener(db, ItemInventario, item_id, current_user, que="ítem")
     data = payload.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(item, k, v)
@@ -148,9 +145,7 @@ def eliminar_item(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    item = db.get(ItemInventario, item_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
+    item = obtener(db, ItemInventario, item_id, current_user, que="ítem")
     if item.cantidad_actual > 0:
         raise HTTPException(
             status_code=400,
@@ -167,9 +162,7 @@ def entrada_stock(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    item = db.get(ItemInventario, item_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Item no encontrado")
+    item = obtener(db, ItemInventario, item_id, current_user, que="ítem")
     if payload.cantidad <= 0:
         raise HTTPException(status_code=400, detail="La cantidad debe ser mayor a 0")
     item.cantidad_actual += payload.cantidad
@@ -207,15 +200,15 @@ def list_formulas_pendientes(
     result = []
     for f in formulas:
         item = FormulaPendienteRead.model_validate(f)
-        historia = db.get(Historia, f.historia_id)
+        historia = db.get(Historia, f.historia_id)  # aislamiento: ya autorizado por el padre
         if historia:
             item.paciente_id = historia.paciente_id
-            p = db.get(Paciente, historia.paciente_id)
+            p = db.get(Paciente, historia.paciente_id)  # aislamiento: ya autorizado por el padre
             if p:
                 item.paciente_nombre = p.nombre_completo.strip()
                 if q and q.lower() not in item.paciente_nombre.lower() and q.lower() not in f.medicamento.lower():
                     continue
-            m = db.get(Usuario, historia.medico_id)
+            m = db.get(Usuario, historia.medico_id)  # aislamiento: ya autorizado por el padre
             if m:
                 item.medico_nombre = m.nombre_completo
         result.append(item)
@@ -230,13 +223,13 @@ def dispensar(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    formula = db.get(Formula, payload.formula_id)
+    formula = db.get(Formula, payload.formula_id)  # aislamiento: ya autorizado por el padre
     if not formula:
         raise HTTPException(status_code=404, detail="Fórmula no encontrada")
     if formula.dispensada:
         raise HTTPException(status_code=400, detail="Esta fórmula ya fue dispensada")
 
-    item = db.get(ItemInventario, payload.item_inventario_id)
+    item = db.get(ItemInventario, payload.item_inventario_id)  # aislamiento: ya autorizado por el padre
     if not item:
         raise HTTPException(status_code=404, detail="Item de inventario no encontrado")
     if item.cantidad_actual < payload.cantidad_dispensada:
@@ -245,7 +238,7 @@ def dispensar(
             detail=f"Stock insuficiente. Disponible: {item.cantidad_actual} {item.unidad_medida}",
         )
 
-    historia = db.get(Historia, formula.historia_id)
+    historia = db.get(Historia, formula.historia_id)  # aislamiento: ya autorizado por el padre
     if not historia:
         raise HTTPException(status_code=404, detail="Historia clínica no encontrada")
 
@@ -301,16 +294,16 @@ def list_dispensaciones(
 
 def _enrich_dispensacion(d: DispensacionMedicamento, db: Session) -> DispensacionRead:
     data = DispensacionRead.model_validate(d)
-    p = db.get(Paciente, d.paciente_id)
+    p = db.get(Paciente, d.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
-    item = db.get(ItemInventario, d.item_inventario_id)
+    item = db.get(ItemInventario, d.item_inventario_id)  # aislamiento: ya autorizado por el padre
     if item:
         data.item_nombre = item.nombre
-    f = db.get(Formula, d.formula_id)
+    f = db.get(Formula, d.formula_id)  # aislamiento: ya autorizado por el padre
     if f:
         data.medicamento_nombre = f.medicamento
-    r = db.get(Usuario, d.regente_farmacia_id)
+    r = db.get(Usuario, d.regente_farmacia_id)  # aislamiento: ya autorizado por el padre
     if r:
         data.regente_nombre = r.nombre_completo
     return data
@@ -337,10 +330,10 @@ def list_movimientos(
     result = []
     for m in movs:
         data = MovimientoRead.model_validate(m)
-        u = db.get(Usuario, m.usuario_id)
+        u = db.get(Usuario, m.usuario_id)  # aislamiento: ya autorizado por el padre
         if u:
             data.usuario_nombre = u.nombre_completo
-        i = db.get(ItemInventario, m.item_inventario_id)
+        i = db.get(ItemInventario, m.item_inventario_id)  # aislamiento: ya autorizado por el padre
         if i:
             data.item_nombre = i.nombre
         result.append(data)

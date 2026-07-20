@@ -24,12 +24,12 @@ router = APIRouter(prefix="/imagenes", tags=["imagenes"],
 def _enrich_orden(orden: Orden, db: Session) -> OrdenImagenRead:
     data = OrdenImagenRead.model_validate(orden)
     if orden.paciente_id:
-        p = db.get(Paciente, orden.paciente_id)
+        p = db.get(Paciente, orden.paciente_id)  # aislamiento: ya autorizado por el padre
         if p:
             data.paciente_nombre = p.nombre_completo.strip()
             data.paciente_identificacion = p.identificacion
     if orden.medico_ordena_id:
-        m = db.get(Usuario, orden.medico_ordena_id)
+        m = db.get(Usuario, orden.medico_ordena_id)  # aislamiento: ya autorizado por el padre
         if m:
             data.medico_nombre = m.nombre_completo
     informe = db.exec(
@@ -41,7 +41,7 @@ def _enrich_orden(orden: Orden, db: Session) -> OrdenImagenRead:
 
 def _enrich_informe(r: ResultadoImagen, db: Session) -> InformeRead:
     data = InformeRead.model_validate(r)
-    rad = db.get(Usuario, r.radiologo_id)
+    rad = db.get(Usuario, r.radiologo_id)  # aislamiento: ya autorizado por el padre
     if rad:
         data.radiologo_nombre = rad.nombre_completo
     return data
@@ -77,8 +77,8 @@ def get_orden(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    orden = db.get(Orden, orden_id)
-    if not orden or orden.tipo != TipoOrden.IMAGENOLOGIA:
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de imagen")
+    if orden.tipo != TipoOrden.IMAGENOLOGIA:
         raise HTTPException(status_code=404, detail="Orden de imagen no encontrada")
     return _enrich_orden(orden, db)
 
@@ -90,8 +90,8 @@ def update_estado(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    orden = db.get(Orden, orden_id)
-    if not orden or orden.tipo != TipoOrden.IMAGENOLOGIA:
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de imagen")
+    if orden.tipo != TipoOrden.IMAGENOLOGIA:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     try:
         orden.estado = EstadoOrden(payload.estado)
@@ -128,8 +128,8 @@ def create_informe(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    orden = db.get(Orden, orden_id)
-    if not orden or orden.tipo != TipoOrden.IMAGENOLOGIA:
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de imagen")
+    if orden.tipo != TipoOrden.IMAGENOLOGIA:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     if db.exec(select(ResultadoImagen).where(ResultadoImagen.orden_id == orden_id)).first():
         raise HTTPException(status_code=400, detail="Ya existe un informe. Use PUT para actualizarlo.")
@@ -182,7 +182,7 @@ def firmar_informe(
     if not informe:
         raise HTTPException(status_code=404, detail="Informe no encontrado")
     informe.firmado = True
-    orden = db.get(Orden, orden_id)
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de imagen")
     if orden:
         orden.estado = EstadoOrden.COMPLETADA
         db.add(orden)

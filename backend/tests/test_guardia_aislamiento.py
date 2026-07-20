@@ -4,14 +4,11 @@ La corrección de `core/aislamiento.py` no sirve de nada si el próximo endpoint
 se escribe copiando uno viejo. Una directiva en un documento no lo impide; esta
 prueba sí.
 
-DEUDA CONOCIDA: la corrección se aplicó primero donde más pesa —`pacientes` e
-`historias`, que son los datos de categoría especial—. Los demás routers siguen
-pendientes y están listados abajo. La lista solo puede ENCOGER: si alguien
-migra un router, quita su nombre y la prueba lo protege desde entonces. Si
-alguien añade un `db.get` en un router ya limpio, esta prueba falla.
+Cubre los veinticuatro routers. La lista de deuda quedó vacía.
 
 No se listan excepciones por línea a propósito. Una lista de líneas se
 desactualiza en el primer refactor y acaba silenciando lo que debía vigilar.
+En su lugar, cada `db.get` legítimo lleva su razón escrita al lado.
 """
 import os
 import re
@@ -20,15 +17,10 @@ RUTA_ROUTERS = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "routers"
 )
 
-#: Routers todavía sin migrar a `obtener()`. Quitar de aquí al migrarlos.
-#: Ver la tarea "aislamiento por institución en los routers restantes".
-PENDIENTES_DE_MIGRAR = {
-    "admin.py", "agenda_medica.py", "auth.py", "citas.py", "epicrisis.py",
-    "estadisticas.py", "evoluciones.py", "facturacion.py", "farmacia.py",
-    "hospitalizacion.py", "imagenes_dx.py", "interconsultas.py",
-    "laboratorio.py", "nutricion.py", "quirofano.py", "rehabilitacion.py",
-    "superadmin.py", "urgencias.py", "usuarios.py",
-}
+#: Routers sin migrar. Llegó a tener diecinueve; hoy está VACÍA y todos los
+#: routers están vigilados. Si alguna vez vuelve a llenarse, que sea una
+#: decisión escrita y no un olvido.
+PENDIENTES_DE_MIGRAR: set[str] = set()
 
 #: Modelos sin dueño: traerlos por id no expone nada de nadie.
 #: Se mantiene alineado con `core.aislamiento.COMPARTIDOS`.
@@ -40,11 +32,20 @@ SIN_DUENNO = {
 
 PATRON = re.compile(r"db\.get\(\s*([A-Z]\w*)")
 
-#: Marca para el `db.get` que sí es legítimo: el que trae un dato COLGADO de un
-#: registro ya autorizado (la historia que acaba de pasar por `obtener()` trae
-#: su propio paciente, su cita, su médico). Se escribe al final de la línea y
-#: obliga a justificarlo una por una, en vez de callar el aviso en bloque.
-MARCA = "# aislamiento: ya autorizado por el padre"
+#: Marca para el `db.get` que sí es legítimo, con SU razón escrita al lado:
+#:
+#:     db.get(Paciente, historia.paciente_id)  # aislamiento: ya autorizado por el padre
+#:
+#: No es una etiqueta para callar el aviso: la razón es obligatoria y tiene que
+#: decir algo. Los casos que aparecieron son tres, y cada uno se defiende
+#: distinto —un dato colgado de un registro ya autorizado, un id que sale de una
+#: consulta ya filtrada, y el refresh de sesión, donde todavía no hay usuario y
+#: el id viene de un token firmado—. Una sola etiqueta para los tres los habría
+#: vuelto indistinguibles.
+MARCA = "# aislamiento:"
+#: Longitud mínima de la razón. Sin esto, `# aislamiento:` a secas sería un
+#: silenciador y volveríamos al punto de partida.
+RAZON_MINIMA = 15
 
 
 def _infracciones(archivo: str) -> list[tuple[int, str]]:
@@ -54,6 +55,9 @@ def _infracciones(archivo: str) -> list[tuple[int, str]]:
     fuera = []
     for n, linea in enumerate(lineas, 1):
         if MARCA in linea:
+            razon = linea.split(MARCA, 1)[1].strip()
+            if len(razon) < RAZON_MINIMA:
+                fuera.append((n, f"marca sin razón: «{razon}»"))
             continue
         m = PATRON.search(linea)
         if m and m.group(1) not in SIN_DUENNO:

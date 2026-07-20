@@ -9,6 +9,7 @@ from models import (
 )
 from models import ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
+from core.aislamiento import obtener
 
 router = APIRouter(prefix="/agenda", tags=["agenda"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.CITAS))],
@@ -197,7 +198,7 @@ def list_bloqueos(
     bloqueos = db.exec(query.order_by(BloqueoAgenda.fecha_inicio)).all()
     result = []
     for b in bloqueos:
-        medico = db.get(Usuario, b.medico_id)
+        medico = db.get(Usuario, b.medico_id)  # aislamiento: ya autorizado por el padre
         result.append({
             "id": b.id,
             "medico_id": b.medico_id,
@@ -253,9 +254,7 @@ def delete_bloqueo(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    bloqueo = db.get(BloqueoAgenda, bloqueo_id)
-    if not bloqueo:
-        raise HTTPException(status_code=404, detail="Bloqueo no encontrado")
+    bloqueo = obtener(db, BloqueoAgenda, bloqueo_id, current_user, que="bloqueo")
     db.delete(bloqueo)
     db.commit()
     return {"mensaje": "Bloqueo eliminado"}
@@ -335,7 +334,7 @@ def list_agendas(
     agendas = db.exec(query).all()
     result = []
     for a in agendas:
-        medico = db.get(Usuario, a.medico_id)
+        medico = db.get(Usuario, a.medico_id)  # aislamiento: ya autorizado por el padre
         bloques = db.exec(select(BloqueHorario).where(BloqueHorario.agenda_id == a.id)).all()
         result.append({
             "id": a.id,
@@ -406,10 +405,8 @@ def get_agenda(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    agenda = db.get(AgendaMedico, agenda_id)
-    if not agenda:
-        raise HTTPException(status_code=404, detail="Agenda no encontrada")
-    medico = db.get(Usuario, agenda.medico_id)
+    agenda = obtener(db, AgendaMedico, agenda_id, current_user, que="agenda")
+    medico = db.get(Usuario, agenda.medico_id)  # aislamiento: ya autorizado por el padre
     bloques = db.exec(select(BloqueHorario).where(BloqueHorario.agenda_id == agenda_id)).all()
     return {
         "id": agenda.id,
@@ -440,9 +437,7 @@ def update_agenda(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    agenda = db.get(AgendaMedico, agenda_id)
-    if not agenda:
-        raise HTTPException(status_code=404, detail="Agenda no encontrada")
+    agenda = obtener(db, AgendaMedico, agenda_id, current_user, que="agenda")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(agenda, field, value)
     db.add(agenda)
@@ -456,9 +451,7 @@ def delete_agenda(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    agenda = db.get(AgendaMedico, agenda_id)
-    if not agenda:
-        raise HTTPException(status_code=404, detail="Agenda no encontrada")
+    agenda = obtener(db, AgendaMedico, agenda_id, current_user, que="agenda")
     db.delete(agenda)
     db.commit()
     return {"mensaje": "Agenda eliminada"}
@@ -471,9 +464,7 @@ def add_bloque(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    agenda = db.get(AgendaMedico, agenda_id)
-    if not agenda:
-        raise HTTPException(status_code=404, detail="Agenda no encontrada")
+    agenda = obtener(db, AgendaMedico, agenda_id, current_user, que="agenda")
     bloque = BloqueHorario(
         agenda_id=agenda_id,
         dia_semana=payload.dia_semana,

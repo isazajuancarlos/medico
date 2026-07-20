@@ -160,7 +160,7 @@ def get_citas(
     q_med = _q([Cita.medico_id, func.count(Cita.id).label("c")]).group_by(Cita.medico_id).order_by(func.count(Cita.id).desc()).limit(10)
     by_medico = []
     for r in db.exec(q_med).all():
-        u = db.get(Usuario, r[0])
+        u = db.get(Usuario, r[0])  # aislamiento: el id sale de una agregación ya filtrada, y solo se usa para poner el nombre
         nombre = u.nombre_completo if u else f"ID {r[0]}"
         by_medico.append({"medico": nombre, "cantidad": r[1]})
 
@@ -337,7 +337,7 @@ def get_produccion(
     medico_ids = set(list(citas_map.keys()) + list(hist_map.keys()))
     produccion = []
     for mid in medico_ids:
-        u = db.get(Usuario, mid)
+        u = db.get(Usuario, mid)  # aislamiento: el id sale de una agregación ya filtrada, y solo se usa para poner el nombre
         if not u:
             continue
         produccion.append({

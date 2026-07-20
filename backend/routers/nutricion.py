@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import ValoracionNutricional, PlanAlimentacion, Paciente, Usuario, RolUsuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
+from core.aislamiento import obtener
 from schemas.nutricion import (
     ValoracionCreate, ValoracionUpdate, ValoracionRead,
     PlanCreate, PlanUpdate, PlanRead,
@@ -15,11 +16,11 @@ router = APIRouter(prefix="/nutricion", tags=["nutricion"],
 
 def _enrich_val(v: ValoracionNutricional, db: Session) -> ValoracionRead:
     data = ValoracionRead.model_validate(v)
-    p = db.get(Paciente, v.paciente_id)
+    p = db.get(Paciente, v.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
         data.paciente_identificacion = p.identificacion
-    n = db.get(Usuario, v.nutricionista_id)
+    n = db.get(Usuario, v.nutricionista_id)  # aislamiento: ya autorizado por el padre
     if n:
         data.nutricionista_nombre = n.nombre_completo
     return data
@@ -27,7 +28,7 @@ def _enrich_val(v: ValoracionNutricional, db: Session) -> ValoracionRead:
 
 def _enrich_plan(p: PlanAlimentacion, db: Session) -> PlanRead:
     data = PlanRead.model_validate(p)
-    n = db.get(Usuario, p.nutricionista_id)
+    n = db.get(Usuario, p.nutricionista_id)  # aislamiento: ya autorizado por el padre
     if n:
         data.nutricionista_nombre = n.nombre_completo
     return data
@@ -59,9 +60,7 @@ def get_valoracion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    v = db.get(ValoracionNutricional, val_id)
-    if not v:
-        raise HTTPException(status_code=404, detail="Valoración no encontrada")
+    v = obtener(db, ValoracionNutricional, val_id, current_user, que="valoración")
     return _enrich_val(v, db)
 
 
@@ -71,7 +70,7 @@ def create_valoracion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(Paciente, payload.paciente_id):
+    if not db.get(Paciente, payload.paciente_id):  # aislamiento: ya autorizado por el padre
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     v = ValoracionNutricional(
         nutricionista_id=current_user.id,
@@ -91,9 +90,7 @@ def update_valoracion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    v = db.get(ValoracionNutricional, val_id)
-    if not v:
-        raise HTTPException(status_code=404, detail="Valoración no encontrada")
+    v = obtener(db, ValoracionNutricional, val_id, current_user, que="valoración")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(v, field, value)
     db.add(v)
@@ -108,9 +105,7 @@ def delete_valoracion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    v = db.get(ValoracionNutricional, val_id)
-    if not v:
-        raise HTTPException(status_code=404, detail="Valoración no encontrada")
+    v = obtener(db, ValoracionNutricional, val_id, current_user, que="valoración")
     db.delete(v)
     db.commit()
 
@@ -138,9 +133,7 @@ def create_plan(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    v = db.get(ValoracionNutricional, val_id)
-    if not v:
-        raise HTTPException(status_code=404, detail="Valoración no encontrada")
+    v = obtener(db, ValoracionNutricional, val_id, current_user, que="valoración")
     existing = db.exec(
         select(PlanAlimentacion).where(PlanAlimentacion.valoracion_id == val_id)
     ).first()
@@ -166,9 +159,7 @@ def update_plan(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    plan = db.get(PlanAlimentacion, plan_id)
-    if not plan:
-        raise HTTPException(status_code=404, detail="Plan no encontrado")
+    plan = obtener(db, PlanAlimentacion, plan_id, current_user, que="plan alimentario")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(plan, field, value)
     db.add(plan)

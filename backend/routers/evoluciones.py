@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from models import EvolucionMedica, Paciente, Usuario, RolUsuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.evolucion import EvolucionCreate, EvolucionUpdate, EvolucionRead
+from core.aislamiento import obtener
 
 router = APIRouter(prefix="/evoluciones", tags=["evoluciones"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.EVOLUCIONES))],
@@ -13,11 +14,11 @@ router = APIRouter(prefix="/evoluciones", tags=["evoluciones"],
 
 def _enrich(e: EvolucionMedica, db: Session) -> EvolucionRead:
     data = EvolucionRead.model_validate(e)
-    p = db.get(Paciente, e.paciente_id)
+    p = db.get(Paciente, e.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
         data.paciente_identificacion = p.identificacion
-    m = db.get(Usuario, e.medico_id)
+    m = db.get(Usuario, e.medico_id)  # aislamiento: ya autorizado por el padre
     if m:
         data.medico_nombre = m.nombre_completo
     return data
@@ -70,9 +71,7 @@ def get_evolucion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    e = db.get(EvolucionMedica, evolucion_id)
-    if not e:
-        raise HTTPException(status_code=404, detail="Evolución no encontrada")
+    e = obtener(db, EvolucionMedica, evolucion_id, current_user, que="evolución")
     return _enrich(e, db)
 
 
@@ -82,7 +81,7 @@ def create_evolucion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    paciente = db.get(Paciente, payload.paciente_id)
+    paciente = db.get(Paciente, payload.paciente_id)  # aislamiento: ya autorizado por el padre
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     e = EvolucionMedica(
@@ -102,9 +101,7 @@ def update_evolucion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    e = db.get(EvolucionMedica, evolucion_id)
-    if not e:
-        raise HTTPException(status_code=404, detail="Evolución no encontrada")
+    e = obtener(db, EvolucionMedica, evolucion_id, current_user, que="evolución")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(e, field, value)
     db.add(e)
@@ -119,8 +116,6 @@ def delete_evolucion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    e = db.get(EvolucionMedica, evolucion_id)
-    if not e:
-        raise HTTPException(status_code=404, detail="Evolución no encontrada")
+    e = obtener(db, EvolucionMedica, evolucion_id, current_user, que="evolución")
     db.delete(e)
     db.commit()

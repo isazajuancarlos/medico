@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from models import Interconsulta, Paciente, Usuario, RolUsuario, PrioridadInterconsulta, EstadoInterconsulta, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.interconsulta import InterconsultaCreate, InterconsultaResponder, InterconsultaRead
+from core.aislamiento import obtener
 
 router = APIRouter(prefix="/interconsultas", tags=["interconsultas"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.INTERCONSULTAS))],
@@ -13,21 +14,21 @@ router = APIRouter(prefix="/interconsultas", tags=["interconsultas"],
 
 def _enrich(ic: Interconsulta, db: Session) -> InterconsultaRead:
     data = InterconsultaRead.model_validate(ic)
-    p = db.get(Paciente, ic.paciente_id)
+    p = db.get(Paciente, ic.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
         data.paciente_identificacion = p.identificacion
-    ms = db.get(Usuario, ic.medico_solicita_id)
+    ms = db.get(Usuario, ic.medico_solicita_id)  # aislamiento: ya autorizado por el padre
     if ms:
         data.medico_solicita_nombre = ms.nombre_completo
     if ic.medico_responde_id:
-        mr = db.get(Usuario, ic.medico_responde_id)
+        mr = db.get(Usuario, ic.medico_responde_id)  # aislamiento: ya autorizado por el padre
         if mr:
             data.medico_responde_nombre = mr.nombre_completo
     # Especialidad
     try:
         from models import Especialidad
-        esp = db.get(Especialidad, ic.especialidad_solicitada_id)
+        esp = db.get(Especialidad, ic.especialidad_solicitada_id)  # aislamiento: ya autorizado por el padre
         if esp:
             data.especialidad_nombre = esp.nombre
     except Exception:
@@ -66,9 +67,7 @@ def get_interconsulta(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    ic = db.get(Interconsulta, ic_id)
-    if not ic:
-        raise HTTPException(status_code=404, detail="Interconsulta no encontrada")
+    ic = obtener(db, Interconsulta, ic_id, current_user, que="interconsulta")
     return _enrich(ic, db)
 
 
@@ -78,7 +77,7 @@ def create_interconsulta(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(Paciente, payload.paciente_id):
+    if not db.get(Paciente, payload.paciente_id):  # aislamiento: ya autorizado por el padre
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     try:
         prioridad = PrioridadInterconsulta(payload.prioridad)
@@ -102,9 +101,7 @@ def aceptar_interconsulta(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    ic = db.get(Interconsulta, ic_id)
-    if not ic:
-        raise HTTPException(status_code=404, detail="Interconsulta no encontrada")
+    ic = obtener(db, Interconsulta, ic_id, current_user, que="interconsulta")
     if ic.estado != EstadoInterconsulta.SOLICITADA:
         raise HTTPException(status_code=400, detail="Solo se pueden aceptar interconsultas en estado SOLICITADA")
     ic.estado = EstadoInterconsulta.ACEPTADA
@@ -122,9 +119,7 @@ def responder_interconsulta(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    ic = db.get(Interconsulta, ic_id)
-    if not ic:
-        raise HTTPException(status_code=404, detail="Interconsulta no encontrada")
+    ic = obtener(db, Interconsulta, ic_id, current_user, que="interconsulta")
     if ic.estado == EstadoInterconsulta.CANCELADA:
         raise HTTPException(status_code=400, detail="No se puede responder una interconsulta cancelada")
     ic.estado = EstadoInterconsulta.RESPONDIDA
@@ -144,9 +139,7 @@ def cancelar_interconsulta(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    ic = db.get(Interconsulta, ic_id)
-    if not ic:
-        raise HTTPException(status_code=404, detail="Interconsulta no encontrada")
+    ic = obtener(db, Interconsulta, ic_id, current_user, que="interconsulta")
     if ic.estado == EstadoInterconsulta.RESPONDIDA:
         raise HTTPException(status_code=400, detail="No se puede cancelar una interconsulta ya respondida")
     ic.estado = EstadoInterconsulta.CANCELADA

@@ -9,6 +9,7 @@ from models import (
     RolUsuario, TipoCampo,
 )
 from core.deps import get_db, get_current_active_user, require_role
+from core.aislamiento import obtener
 import bcrypt
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -147,7 +148,7 @@ def get_institucion(
 ):
     if not current_user.institucion_id:
         raise HTTPException(status_code=404, detail="Sin institución asignada")
-    inst = db.get(Institucion, current_user.institucion_id)
+    inst = db.get(Institucion, current_user.institucion_id)  # aislamiento: ya autorizado por el padre
     if not inst:
         raise HTTPException(status_code=404, detail="Institución no encontrada")
     return inst
@@ -161,7 +162,7 @@ def update_institucion(
 ):
     if not current_user.institucion_id:
         raise HTTPException(status_code=404, detail="Sin institución asignada")
-    inst = db.get(Institucion, current_user.institucion_id)
+    inst = db.get(Institucion, current_user.institucion_id)  # aislamiento: ya autorizado por el padre
     if not inst:
         raise HTTPException(status_code=404, detail="Institución no encontrada")
     for field, value in payload.model_dump(exclude_none=True).items():
@@ -339,9 +340,7 @@ def update_usuario_admin(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    usuario = db.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     if current_user.rol != RolUsuario.SUPERADMIN and usuario.institucion_id != current_user.institucion_id:
         raise HTTPException(status_code=403, detail="Sin permisos")
     for field, value in payload.model_dump(exclude_none=True).items():
@@ -358,9 +357,7 @@ def desbloquear_usuario(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    usuario = db.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     usuario.cuenta_bloqueada = False
     usuario.intentos_fallidos = 0
     usuario.fecha_bloqueo = None
@@ -376,9 +373,7 @@ def reset_password(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    usuario = db.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     if len(payload.nueva_password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
     hashed = bcrypt.hashpw(payload.nueva_password.encode(), bcrypt.gensalt()).decode()
@@ -398,9 +393,7 @@ def delete_usuario(
 ):
     if usuario_id == current_user.id:
         raise HTTPException(status_code=400, detail="No puede eliminarse a sí mismo")
-    usuario = db.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     if current_user.rol != RolUsuario.SUPERADMIN and usuario.institucion_id != current_user.institucion_id:
         raise HTTPException(status_code=403, detail="Sin permisos")
     # Soft delete to preserve audit trail
@@ -442,9 +435,7 @@ def update_campo(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    campo = db.get(ConfigCampo, campo_id)
-    if not campo:
-        raise HTTPException(status_code=404, detail="Campo no encontrado")
+    campo = obtener(db, ConfigCampo, campo_id, current_user, que="configcampo")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(campo, field, value)
     db.add(campo)
@@ -459,9 +450,7 @@ def delete_campo(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    campo = db.get(ConfigCampo, campo_id)
-    if not campo:
-        raise HTTPException(status_code=404, detail="Campo no encontrado")
+    campo = obtener(db, ConfigCampo, campo_id, current_user, que="configcampo")
     db.delete(campo)
     db.commit()
     return {"ok": True}
@@ -500,7 +489,7 @@ def list_auditoria(
     result = []
     for row in rows:
         if row.usuario_id not in user_cache:
-            u = db.get(Usuario, row.usuario_id)
+            u = db.get(Usuario, row.usuario_id)  # aislamiento: ya autorizado por el padre
             user_cache[row.usuario_id] = u.nombre_completo if u else f"ID {row.usuario_id}"
         result.append({
             "id": row.id,
@@ -552,9 +541,7 @@ def delete_especialidad(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    esp = db.get(Especialidad, esp_id)
-    if not esp:
-        raise HTTPException(status_code=404, detail="Especialidad no encontrada")
+    esp = obtener(db, Especialidad, esp_id, current_user, que="especialidad")
     en_uso = db.exec(select(Usuario).where(Usuario.especialidad_id == esp_id)).all()
     if en_uso:
         raise HTTPException(
@@ -605,9 +592,7 @@ def update_entidad(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    entidad = db.get(Entidad, entidad_id)
-    if not entidad:
-        raise HTTPException(status_code=404, detail="Entidad no encontrada")
+    entidad = obtener(db, Entidad, entidad_id, current_user, que="entidad")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(entidad, field, value)
     db.add(entidad)
@@ -622,9 +607,7 @@ def delete_entidad(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
-    entidad = db.get(Entidad, entidad_id)
-    if not entidad:
-        raise HTTPException(status_code=404, detail="Entidad no encontrada")
+    entidad = obtener(db, Entidad, entidad_id, current_user, que="entidad")
     db.delete(entidad)
     db.commit()
     return {"ok": True}
@@ -643,8 +626,8 @@ def list_autorizaciones(
     rows = db.exec(select(AutorizacionAcceso)).all()
     result = []
     for r in rows:
-        pac = db.get(Paciente, r.paciente_id)
-        medico = db.get(Usuario, r.medico_id)
+        pac = db.get(Paciente, r.paciente_id)  # aislamiento: ya autorizado por el padre
+        medico = db.get(Usuario, r.medico_id)  # aislamiento: ya autorizado por el padre
         result.append({
             "id": r.id,
             "medico_nombre": medico.nombre_completo if medico else "—",

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from models import Institucion, Licencia, Usuario, RolUsuario, AuditoriaSuperAdmin
 from core.deps import get_db, get_current_active_user, require_role
+from core.aislamiento import obtener
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -45,9 +46,7 @@ def get_institucion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(RolUsuario.SUPERADMIN)),
 ):
-    inst = db.get(Institucion, inst_id)
-    if not inst:
-        raise HTTPException(status_code=404, detail="Institución no encontrada")
+    inst = obtener(db, Institucion, inst_id, current_user, que="institución")
     return inst
 
 
@@ -58,9 +57,7 @@ def update_institucion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(RolUsuario.SUPERADMIN)),
 ):
-    inst = db.get(Institucion, inst_id)
-    if not inst:
-        raise HTTPException(status_code=404, detail="No encontrada")
+    inst = obtener(db, Institucion, inst_id, current_user, que="institución")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(inst, field, value)
     db.add(inst)
@@ -83,9 +80,7 @@ def activar_licencia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(RolUsuario.SUPERADMIN)),
 ):
-    lic = db.get(Licencia, lic_id)
-    if not lic:
-        raise HTTPException(status_code=404, detail="No encontrada")
+    lic = obtener(db, Licencia, lic_id, current_user, que="licencia")
     lic.activa = True
     db.add(lic)
     db.commit()
@@ -98,9 +93,7 @@ def suspender_licencia(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(RolUsuario.SUPERADMIN)),
 ):
-    lic = db.get(Licencia, lic_id)
-    if not lic:
-        raise HTTPException(status_code=404, detail="No encontrada")
+    lic = obtener(db, Licencia, lic_id, current_user, que="licencia")
     lic.activa = False
     db.add(lic)
     db.commit()

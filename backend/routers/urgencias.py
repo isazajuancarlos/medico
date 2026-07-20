@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from models import AtencionUrgencias, TipoTriage, DestinoSalidaUrgencias, Usuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.common import PaginatedResponse
+from core.aislamiento import obtener
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/urgencias", tags=["urgencias"],
@@ -81,9 +82,7 @@ def egreso_urgencias(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    urg = db.get(AtencionUrgencias, urgencia_id)
-    if not urg:
-        raise HTTPException(status_code=404, detail="No encontrado")
+    urg = obtener(db, AtencionUrgencias, urgencia_id, current_user, que="atención de urgencias")
     urg.destino_salida = destino
     urg.fecha_egreso = datetime.utcnow()
     db.add(urg)

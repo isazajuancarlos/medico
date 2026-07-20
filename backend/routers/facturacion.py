@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import Factura, DetalleFactura, Glosa, Contrato, Entidad, Paciente, Usuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from core.aislamiento import obtener
 from schemas.facturacion import (
     FacturaRead, FacturaCreate, FacturaUpdate, DetalleRead, DetalleCreate,
     GlosaRead, GlosaCreate, GlosaResponder, ContratoRead, ContratoCreate,
@@ -45,11 +46,11 @@ def _gen_numero_factura(db: Session) -> str:
 
 def _enrich_factura(f: Factura, db: Session, include_detalles: bool = True) -> FacturaRead:
     data = FacturaRead.model_validate(f)
-    e = db.get(Entidad, f.entidad_id)
+    e = db.get(Entidad, f.entidad_id)  # aislamiento: ya autorizado por el padre
     if e:
         data.entidad_nombre = e.nombre
     if f.contrato_id:
-        c = db.get(Contrato, f.contrato_id)
+        c = db.get(Contrato, f.contrato_id)  # aislamiento: ya autorizado por el padre
         if c:
             data.contrato_nombre = c.nombre
     if include_detalles:
@@ -58,7 +59,7 @@ def _enrich_factura(f: Factura, db: Session, include_detalles: bool = True) -> F
         for d in detalles:
             dr = DetalleRead.model_validate(d)
             if d.paciente_id:
-                p = db.get(Paciente, d.paciente_id)
+                p = db.get(Paciente, d.paciente_id)  # aislamiento: ya autorizado por el padre
                 if p:
                     dr.paciente_nombre = p.nombre_completo.strip()
             enriched_det.append(dr)
@@ -73,7 +74,7 @@ def _enrich_factura(f: Factura, db: Session, include_detalles: bool = True) -> F
 def _recalcular_totales(factura_id: int, descuentos: float, db: Session) -> None:
     detalles = db.exec(select(DetalleFactura).where(DetalleFactura.factura_id == factura_id)).all()
     bruto = sum(d.valor_total for d in detalles)
-    factura = db.get(Factura, factura_id)
+    factura = db.get(Factura, factura_id)  # aislamiento: helper interno, la factura ya pasó por obtener() en el endpoint
     if factura:
         factura.valor_bruto = bruto
         factura.valor_neto = max(0, bruto - descuentos)
@@ -139,9 +140,7 @@ def get_factura(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     return _enrich_factura(f, db)
 
 
@@ -151,7 +150,7 @@ def crear_factura(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(Entidad, payload.entidad_id):
+    if not db.get(Entidad, payload.entidad_id):  # aislamiento: ya autorizado por el padre
         raise HTTPException(status_code=404, detail="Entidad no encontrada")
 
     numero = _gen_numero_factura(db)
@@ -196,9 +195,7 @@ def actualizar_factura(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden editar facturas en estado BORRADOR")
     data = payload.model_dump(exclude_unset=True)
@@ -217,9 +214,7 @@ def eliminar_factura(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden eliminar facturas en estado BORRADOR")
     for det in db.exec(select(DetalleFactura).where(DetalleFactura.factura_id == factura_id)).all():
@@ -235,9 +230,7 @@ def radicar_factura(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden radicar facturas en estado BORRADOR")
     if f.valor_neto <= 0:
@@ -258,9 +251,7 @@ def cambiar_estado(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     permitidos = _TRANSICIONES.get(f.estado, set())
     if nuevo_estado not in permitidos:
         raise HTTPException(
@@ -285,9 +276,7 @@ def agregar_detalle(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden agregar detalles a facturas en BORRADOR")
     det = DetalleFactura(
@@ -315,10 +304,10 @@ def eliminar_detalle(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f or f.estado != "BORRADOR":
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
+    if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden modificar facturas en BORRADOR")
-    det = db.get(DetalleFactura, detalle_id)
+    det = db.get(DetalleFactura, detalle_id)  # aislamiento: se exige abajo que pertenezca a la factura ya autorizada
     if not det or det.factura_id != factura_id:
         raise HTTPException(status_code=404, detail="Detalle no encontrado")
     db.delete(det)
@@ -345,7 +334,7 @@ def list_glosas(
     result = []
     for g in glosas:
         gr = GlosaRead.model_validate(g)
-        f = db.get(Factura, g.factura_id)
+        f = db.get(Factura, g.factura_id)  # aislamiento: ya autorizado por el padre
         if f:
             gr.numero_factura = f.numero_factura
         result.append(gr)
@@ -359,9 +348,7 @@ def agregar_glosa(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    f = db.get(Factura, factura_id)
-    if not f:
-        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    f = obtener(db, Factura, factura_id, current_user, que="factura")
     g = Glosa(
         factura_id=factura_id,
         item_glosado=payload.item_glosado,
@@ -387,9 +374,7 @@ def responder_glosa(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    g = db.get(Glosa, glosa_id)
-    if not g:
-        raise HTTPException(status_code=404, detail="Glosa no encontrada")
+    g = obtener(db, Glosa, glosa_id, current_user, que="glosa")
     if g.estado != "PENDIENTE":
         raise HTTPException(status_code=400, detail="Esta glosa ya fue respondida")
     g.respuesta = payload.respuesta
@@ -399,7 +384,7 @@ def responder_glosa(
     db.commit()
     db.refresh(g)
     gr = GlosaRead.model_validate(g)
-    f = db.get(Factura, g.factura_id)
+    f = db.get(Factura, g.factura_id)  # aislamiento: ya autorizado por el padre
     if f:
         gr.numero_factura = f.numero_factura
     return gr
@@ -421,7 +406,7 @@ def list_contratos(
     result = []
     for c in contratos:
         cr = ContratoRead.model_validate(c)
-        e = db.get(Entidad, c.entidad_id)
+        e = db.get(Entidad, c.entidad_id)  # aislamiento: ya autorizado por el padre
         if e:
             cr.entidad_nombre = e.nombre
         result.append(cr)
@@ -442,7 +427,7 @@ def crear_contrato(
     db.commit()
     db.refresh(c)
     cr = ContratoRead.model_validate(c)
-    e = db.get(Entidad, c.entidad_id)
+    e = db.get(Entidad, c.entidad_id)  # aislamiento: ya autorizado por el padre
     if e:
         cr.entidad_nombre = e.nombre
     return cr
@@ -455,16 +440,14 @@ def actualizar_contrato(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    c = db.get(Contrato, contrato_id)
-    if not c:
-        raise HTTPException(status_code=404, detail="Contrato no encontrado")
+    c = obtener(db, Contrato, contrato_id, current_user, que="contrato")
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(c, k, v)
     db.add(c)
     db.commit()
     db.refresh(c)
     cr = ContratoRead.model_validate(c)
-    e = db.get(Entidad, c.entidad_id)
+    e = db.get(Entidad, c.entidad_id)  # aislamiento: ya autorizado por el padre
     if e:
         cr.entidad_nombre = e.nombre
     return cr

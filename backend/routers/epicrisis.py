@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 from models import Epicrisis, Paciente, Usuario, RolUsuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
 from schemas.epicrisis import EpicrisisCreate, EpicrisisUpdate, EpicrisisRead
+from core.aislamiento import obtener
 
 router = APIRouter(prefix="/epicrisis", tags=["epicrisis"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.EPICRISIS))],
@@ -12,11 +13,11 @@ router = APIRouter(prefix="/epicrisis", tags=["epicrisis"],
 
 def _enrich(e: Epicrisis, db: Session) -> EpicrisisRead:
     data = EpicrisisRead.model_validate(e)
-    p = db.get(Paciente, e.paciente_id)
+    p = db.get(Paciente, e.paciente_id)  # aislamiento: ya autorizado por el padre
     if p:
         data.paciente_nombre = p.nombre_completo.strip()
         data.paciente_identificacion = p.identificacion
-    m = db.get(Usuario, e.medico_tratante_id)
+    m = db.get(Usuario, e.medico_tratante_id)  # aislamiento: ya autorizado por el padre
     if m:
         data.medico_nombre = m.nombre_completo
     return data
@@ -59,9 +60,7 @@ def get_epicrisis(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    e = db.get(Epicrisis, epicrisis_id)
-    if not e:
-        raise HTTPException(status_code=404, detail="Epicrisis no encontrada")
+    e = obtener(db, Epicrisis, epicrisis_id, current_user, que="epicrisis")
     return _enrich(e, db)
 
 
@@ -71,7 +70,7 @@ def create_epicrisis(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(Paciente, payload.paciente_id):
+    if not db.get(Paciente, payload.paciente_id):  # aislamiento: ya autorizado por el padre
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     e = Epicrisis(medico_tratante_id=current_user.id, **payload.model_dump())
     db.add(e)
@@ -87,9 +86,7 @@ def update_epicrisis(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    e = db.get(Epicrisis, epicrisis_id)
-    if not e:
-        raise HTTPException(status_code=404, detail="Epicrisis no encontrada")
+    e = obtener(db, Epicrisis, epicrisis_id, current_user, que="epicrisis")
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(e, field, value)
     db.add(e)
@@ -104,8 +101,6 @@ def delete_epicrisis(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    e = db.get(Epicrisis, epicrisis_id)
-    if not e:
-        raise HTTPException(status_code=404, detail="Epicrisis no encontrada")
+    e = obtener(db, Epicrisis, epicrisis_id, current_user, que="epicrisis")
     db.delete(e)
     db.commit()

@@ -8,6 +8,7 @@ from models import Cita, Paciente, Usuario, EstadoCita, Historia, ModuloSistema
 from schemas.cita import CitaCreate, CitaUpdate, CitaRead
 from schemas.common import PaginatedResponse
 from core.deps import get_db, get_current_active_user, requiere_modulo
+from core.aislamiento import obtener
 
 router = APIRouter(prefix="/citas", tags=["citas"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.CITAS))],
@@ -15,8 +16,8 @@ router = APIRouter(prefix="/citas", tags=["citas"],
 
 
 def _cita_to_read(cita: Cita, db: Session) -> CitaRead:
-    paciente = db.get(Paciente, cita.paciente_id)
-    medico = db.get(Usuario, cita.medico_id)
+    paciente = db.get(Paciente, cita.paciente_id)  # aislamiento: ya autorizado por el padre
+    medico = db.get(Usuario, cita.medico_id)  # aislamiento: ya autorizado por el padre
     data = CitaRead.model_validate(cita)
     data.paciente_nombre = f"{paciente.nombre1} {paciente.apellido1}" if paciente else None
     data.medico_nombre = medico.nombre_completo if medico else None
@@ -88,9 +89,7 @@ def get_cita(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    cita = db.get(Cita, cita_id)
-    if not cita:
-        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    cita = obtener(db, Cita, cita_id, current_user, que="cita")
     return _cita_to_read(cita, db)
 
 
@@ -101,9 +100,7 @@ def update_cita(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    cita = db.get(Cita, cita_id)
-    if not cita:
-        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    cita = obtener(db, Cita, cita_id, current_user, que="cita")
 
     update_data = payload.model_dump(exclude_none=True)
     # Handle fecha/hora → fecha_hora conversion
@@ -128,9 +125,7 @@ def cancel_cita(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    cita = db.get(Cita, cita_id)
-    if not cita:
-        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    cita = obtener(db, Cita, cita_id, current_user, que="cita")
     cita.estado = EstadoCita.CANCELADA
     db.add(cita)
     db.commit()
@@ -143,9 +138,7 @@ def atender_cita(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    cita = db.get(Cita, cita_id)
-    if not cita:
-        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    cita = obtener(db, Cita, cita_id, current_user, que="cita")
     import uuid as _uuid
     historia = Historia(
         paciente_id=cita.paciente_id,

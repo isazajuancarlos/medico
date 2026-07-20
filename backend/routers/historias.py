@@ -360,7 +360,7 @@ def delete_formula(
 def _enrich_orden(orden: Orden, db: Session) -> OrdenRead:
     r = OrdenRead.model_validate(orden)
     if orden.especialidad_destino_id:
-        esp = db.get(Especialidad, orden.especialidad_destino_id)
+        esp = db.get(Especialidad, orden.especialidad_destino_id)  # aislamiento: ya autorizado por el padre
         if esp:
             r.especialidad_nombre = esp.nombre
     return r

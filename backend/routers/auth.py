@@ -57,7 +57,7 @@ def refresh_token(response: Response, refresh_token: Optional[str] = Cookie(defa
     if payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
     user_id = int(payload.get("sub", 0))
-    user = db.get(Usuario, user_id)
+    user = db.get(Usuario, user_id)  # aislamiento: aquí no hay sesión todavía; el id viene del refresh token firmado, no del cliente
     if not user or not user.activo:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no válido")
     token_data = {"sub": str(user.id), "rol": user.rol.value, "institucion_id": user.institucion_id}

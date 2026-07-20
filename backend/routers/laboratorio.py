@@ -13,6 +13,7 @@ from schemas.laboratorio import (
 )
 from models import ModuloSistema
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from core.aislamiento import obtener
 
 router = APIRouter(prefix="/laboratorio", tags=["laboratorio"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.LABORATORIO))],
@@ -22,12 +23,12 @@ router = APIRouter(prefix="/laboratorio", tags=["laboratorio"],
 def _enrich_orden(orden: Orden, db: Session) -> OrdenLabRead:
     data = OrdenLabRead.model_validate(orden)
     if orden.paciente_id:
-        p = db.get(Paciente, orden.paciente_id)
+        p = db.get(Paciente, orden.paciente_id)  # aislamiento: ya autorizado por el padre
         if p:
             data.paciente_nombre = p.nombre_completo.strip()
             data.paciente_identificacion = p.identificacion
     if orden.medico_ordena_id:
-        m = db.get(Usuario, orden.medico_ordena_id)
+        m = db.get(Usuario, orden.medico_ordena_id)  # aislamiento: ya autorizado por el padre
         if m:
             data.medico_nombre = m.nombre_completo
     resultado = db.exec(
@@ -39,7 +40,7 @@ def _enrich_orden(orden: Orden, db: Session) -> OrdenLabRead:
 
 def _enrich_resultado(r: ResultadoLaboratorio, db: Session) -> ResultadoRead:
     data = ResultadoRead.model_validate(r)
-    bio = db.get(Usuario, r.bioanalista_id)
+    bio = db.get(Usuario, r.bioanalista_id)  # aislamiento: ya autorizado por el padre
     if bio:
         data.bioanalista_nombre = bio.nombre_completo
     return data
@@ -79,8 +80,8 @@ def get_orden(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    orden = db.get(Orden, orden_id)
-    if not orden or orden.tipo != TipoOrden.LABORATORIO:
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de laboratorio")
+    if orden.tipo != TipoOrden.LABORATORIO:
         raise HTTPException(status_code=404, detail="Orden de laboratorio no encontrada")
     return _enrich_orden(orden, db)
 
@@ -92,8 +93,8 @@ def update_estado(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    orden = db.get(Orden, orden_id)
-    if not orden or orden.tipo != TipoOrden.LABORATORIO:
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de laboratorio")
+    if orden.tipo != TipoOrden.LABORATORIO:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     try:
         orden.estado = EstadoOrden(payload.estado)
@@ -130,8 +131,8 @@ def create_resultado(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    orden = db.get(Orden, orden_id)
-    if not orden or orden.tipo != TipoOrden.LABORATORIO:
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de laboratorio")
+    if orden.tipo != TipoOrden.LABORATORIO:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     existente = db.exec(
         select(ResultadoLaboratorio).where(ResultadoLaboratorio.orden_id == orden_id)
@@ -191,7 +192,7 @@ def validar_resultado(
     resultado.fecha_validacion = datetime.now()
     resultado.validado_por_id = current_user.id
     # Mark order as COMPLETADA
-    orden = db.get(Orden, orden_id)
+    orden = obtener(db, Orden, orden_id, current_user, que="orden de laboratorio")
     if orden:
         orden.estado = EstadoOrden.COMPLETADA
         db.add(orden)
@@ -263,9 +264,7 @@ def delete_perfil(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    perfil = db.get(PerfilLaboratorio, perfil_id)
-    if not perfil:
-        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+    perfil = obtener(db, PerfilLaboratorio, perfil_id, current_user, que="perfil")
     perfil.activo = False
     db.add(perfil)
     db.commit()
