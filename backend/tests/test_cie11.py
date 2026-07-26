@@ -231,3 +231,57 @@ class TestNoFallaEnSilencio:
         from models import Historia
         assert "diagnostico_principal_cie11" in Historia.model_fields
         assert "diagnostico_principal_uri" in Historia.model_fields
+
+
+# ---------------------------------------------------------------------------
+# El CIE-11 dentro del RIPS
+#
+# La 948 pide 22 campos CIE-11 y los admite vacíos: sus propios ejemplos traen
+# "" y null, porque el periodo paralelo no obliga a tenerlos todavía. Eso hace
+# que rellenarlos mal sea peor que dejarlos en blanco — nadie lo rechaza y
+# entra como dato clínico falso.
+# ---------------------------------------------------------------------------
+
+class TestElParQueEmiteElRips:
+    def _par(self, cie10):
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from rips_completo import _par_cie11
+        return _par_cie11(cie10)
+
+    def test_una_equivalencia_exacta_y_unica_se_rellena_con_su_titulo(self):
+        codigo, titulo = self._par("I10")
+        assert codigo == "BA00.Z"
+        assert titulo, "el nomCod*CIE11 sale del propio mapeo, no se pide aparte"
+
+    def test_lo_ambiguo_va_VACIO_en_vez_de_elegir_el_primero(self):
+        """Escoger un candidato de varios sería inventar un diagnóstico."""
+        import cie11
+        ambiguo = next(
+            (c for c in ("E119", "Z00") if (e := cie11.buscar(c)) and not e.derivable),
+            None,
+        )
+        if ambiguo is None:
+            pytest.skip("no hay un CIE-10 ambiguo a mano en el mapeo")
+        assert self._par(ambiguo) == ("", "")
+
+    def test_un_codigo_desconocido_no_revienta_ni_inventa(self):
+        assert self._par("XXXX") == ("", "")
+        assert self._par(None) == ("", "")
+        assert self._par("") == ("", "")
+
+    def test_una_categoria_de_tres_no_se_da_por_buena(self):
+        """`derivable` exige nivel exacto además de destino único: rebajar un
+        diagnóstico de cuatro caracteres a su categoría pierde especificidad
+        clínica sin que nadie se entere."""
+        import cie11
+        porCategoria = next(
+            (c for c in cie11._cargar()["mapa"]
+             if (e := cie11.buscar(c)) and e.nivel == "categoria" and len(e.destinos) == 1),
+            None,
+        )
+        if porCategoria is None:
+            pytest.skip("el mapeo no trae equivalencias por categoría")
+        assert self._par(porCategoria) == ("", ""), (
+            "una equivalencia hallada por categoría no es exacta: no se rellena"
+        )

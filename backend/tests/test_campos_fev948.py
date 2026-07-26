@@ -173,8 +173,8 @@ class TestLaNormaCargada:
 #: esperado. Copiar una cifra de un documento y llamarlo medición es el error
 #: que estas pruebas existen para no repetir.
 EMITIDOS_HOY = {
-    "consultas": 21, "procedimientos": 16, "medicamentos": 11,
-    "urgencias": 9, "hospitalizacion": 12,
+    "consultas": 29, "procedimientos": 22, "medicamentos": 11,
+    "urgencias": 15, "hospitalizacion": 20,
 }
 
 

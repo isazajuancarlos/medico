@@ -35,6 +35,7 @@ from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 
 from database import engine
+import cie11
 import cum
 from models import (
     AtencionUrgencias, CausaExterna, FinalidadConsulta, Formula,
@@ -246,6 +247,26 @@ def _bloque_economico(obj: Any, rec: "Recolector", archivo: str) -> Dict:
     }
 
 
+def _par_cie11(cie10: Any) -> tuple[str, str]:
+    """El par (código CIE-11, su título) que la 948 pide junto a cada CIE-10.
+
+    Vacío cuando la equivalencia no es **exacta y única**. Es deliberado y la
+    norma lo permite: sus propios ejemplos traen "" y null en estos campos,
+    porque el periodo paralelo no obliga a tener el CIE-11 todavía.
+
+    Rellenarlo con el primer candidato de una equivalencia ambigua, o con la
+    categoría de tres caracteres cuando el médico escribió un código de cuatro,
+    sería rebajar la especificidad del diagnóstico en silencio. En un RIPS eso
+    no lo rechaza nadie: entra como dato clínico falso y ahí se queda. Por eso
+    `cie11.derivar` exige las dos condiciones y aquí no se relaja ninguna.
+
+    El título viene del propio mapeo (`Destino.titulo`), así que `nomCod*CIE11`
+    no hay que pedirlo aparte ni inventarlo.
+    """
+    destino = cie11.derivar(cie10)
+    return (destino.codigo, destino.titulo) if destino else ("", "")
+
+
 def _valor_enum(v: Any) -> Any:
     """El `.value` de un Enum, o el valor tal cual. No sustituye ausencias."""
     return v.value if hasattr(v, "value") else v
@@ -395,6 +416,17 @@ def generar_archivo_ac(
                 "codDiagnosticoRelacionado1": h.diagnostico_relacionado1 or "",
                 "codDiagnosticoRelacionado2": getattr(h, 'diagnostico_relacionado2', None) or "",
                 "codDiagnosticoRelacionado3": getattr(h, 'diagnostico_relacionado3', None) or "",
+                # El CIE-11 se deriva del CIE-10 DE ORIGEN, no del que se acaba
+                # emitiendo: si el diagnóstico falta y entra el supuesto, derivar
+                # de él daría un CIE-11 para un diagnóstico que nadie hizo.
+                "codDiagnosticoPrincipalCIE11": _par_cie11(h.diagnostico_principal)[0],
+                "nomCodDiagnosticoPrincipalCIE11": _par_cie11(h.diagnostico_principal)[1],
+                "codDiagnosticoRelacionado1CIE11": _par_cie11(h.diagnostico_relacionado1)[0],
+                "nomCodDiagnosticoRelacionado1CIE11": _par_cie11(h.diagnostico_relacionado1)[1],
+                "codDiagnosticoRelacionado2CIE11": _par_cie11(getattr(h, 'diagnostico_relacionado2', None))[0],
+                "nomCodDiagnosticoRelacionado2CIE11": _par_cie11(getattr(h, 'diagnostico_relacionado2', None))[1],
+                "codDiagnosticoRelacionado3CIE11": _par_cie11(getattr(h, 'diagnostico_relacionado3', None))[0],
+                "nomCodDiagnosticoRelacionado3CIE11": _par_cie11(getattr(h, 'diagnostico_relacionado3', None))[1],
                 "tipoDiagnosticoPrincipal": exigir(
                     _valor_enum(getattr(h, 'tipo_diagnostico', None)),
                     "tipo_diagnostico", "tipo de diagnóstico principal", "01"),
@@ -531,6 +563,14 @@ def generar_archivo_ap(
                 "codComplicacion": "",
                 **_bloque_economico(orden, rec, "AP"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["procedimientos"]) + 1,
+                # CIE-11 derivado del CIE-10 de origen; vacío si la
+                # equivalencia no es exacta y única. La 948 lo admite.
+                "codDiagnosticoPrincipalCIE11": _par_cie11(getattr(orden, 'diagnostico_principal', None))[0],
+                "nomCodDiagnosticoPrincipalCIE11": _par_cie11(getattr(orden, 'diagnostico_principal', None))[1],
+                "codDiagnosticoRelacionadoCIE11": _par_cie11(getattr(orden, 'diagnostico_relacionado', None))[0],
+                "nomCodDiagnosticoRelacionadoCIE11": _par_cie11(getattr(orden, 'diagnostico_relacionado', None))[1],
+                "codComplicacionCIE11": _par_cie11(getattr(orden, 'complicacion', None))[0],
+                "nomCodComplicacionCIE11": _par_cie11(getattr(orden, 'complicacion', None))[1],
             }
             usuarios_map[p.id]["servicios"]["procedimientos"].append(procedimiento)
 
@@ -752,6 +792,14 @@ def generar_archivo_au(
                 "numDocumentoIdentificacion": p.identificacion,
                 **_bloque_economico(au, rec, "AU"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["urgencias"]) + 1,
+                # CIE-11 derivado del CIE-10 de origen; vacío si la
+                # equivalencia no es exacta y única. La 948 lo admite.
+                "codDiagnosticoPrincipalCIE11": _par_cie11(getattr(au, 'diagnostico_ingreso', None))[0],
+                "nomCodDiagnosticoPrincipalCIE11": _par_cie11(getattr(au, 'diagnostico_ingreso', None))[1],
+                "codDiagnosticoRelacionadoE1CIE11": _par_cie11(au.diagnostico_egreso)[0],
+                "nomCodDiagnosticoRelacionadoE1CIE11": _par_cie11(au.diagnostico_egreso)[1],
+                "codDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(au, 'diagnostico_causa_muerte', None))[0],
+                "nomCodDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(au, 'diagnostico_causa_muerte', None))[1],
             }
             usuarios_map[p.id]["servicios"]["urgencias"].append(urgencia)
 
@@ -881,6 +929,16 @@ def generar_archivo_ah(
                 "numDocumentoIdentificacion": p.identificacion,
                 **_bloque_economico(h, rec, "AH"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["hospitalizacion"]) + 1,
+                # CIE-11 derivado del CIE-10 de origen; vacío si la
+                # equivalencia no es exacta y única. La 948 lo admite.
+                "codDiagnosticoPrincipalCIE11": _par_cie11(getattr(h, 'diagnostico_ingreso', None))[0],
+                "nomCodDiagnosticoPrincipalCIE11": _par_cie11(getattr(h, 'diagnostico_ingreso', None))[1],
+                "codDiagnosticoRelacionadoE1CIE11": _par_cie11(h.diagnostico_egreso)[0],
+                "nomCodDiagnosticoRelacionadoE1CIE11": _par_cie11(h.diagnostico_egreso)[1],
+                "codComplicacionCIE11": _par_cie11(getattr(h, 'complicacion', None))[0],
+                "nomCodComplicacionCIE11": _par_cie11(getattr(h, 'complicacion', None))[1],
+                "codDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(h, 'diagnostico_causa_muerte', None))[0],
+                "nomCodDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(h, 'diagnostico_causa_muerte', None))[1],
             }
             usuarios_map[p.id]["servicios"]["hospitalizacion"].append(hospitalizacion_rec)
 
