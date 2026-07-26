@@ -5,7 +5,7 @@ repetido en los seis archivos. La lista completa, medida sobre el código:
 
     codConsulta            → "890201"    consulta de PRIMERA VEZ, siempre
     codProcedimiento       → "999999"    un CUPS que no existe
-    codMedicamento         → "00000000"  un CUM que no existe
+    codTecnologiaSalud     → "00000000"  un CUM que no existe
     codDiagnosticoPrincipal→ "R69"       «morbilidad desconocida» (urgencias)
     codDiagnosticoPrincipal→ "Z00"       «examen general» (hospitalización)
     codMunicipioResidencia → "05001"     Medellín, para todo el país

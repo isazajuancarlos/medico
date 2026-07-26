@@ -567,21 +567,20 @@ def generar_archivo_am(
 
             medicamento = {
                 "codPrestador": cod_habilitacion,
-                "fechaDispensacion": _fecha_d(h.fecha.date() if isinstance(h.fecha, datetime) else h.fecha),
+                "fechaDispensAdmon": _fecha_d(h.fecha.date() if isinstance(h.fecha, datetime) else h.fecha),
                 "idMIPRES": "",
-                "numAutorizacion": "",
                 # `"00000000"` no es un CUM. Es el campo que la Resolución 948
                 # valida contra el listado del INVIMA, así que un CUM inventado
                 # no solo miente: hace rechazar la factura entera.
-                "codMedicamento": exigir(formula.codigo_cum, "codigo_cum",
-                                         "CUM del medicamento", "00000000"),
+                "codTecnologiaSalud": exigir(formula.codigo_cum, "codigo_cum",
+                                            "CUM del medicamento", "00000000"),
                 # 01 medicamento, 02 biológico, 03 magistral, 04 fitoterapéutico.
                 # El `if` que había aquí devolvía "01" en las dos ramas: parecía
                 # que clasificaba y no clasificaba nada.
                 "tipoMedicamento": exigir(getattr(formula, 'tipo_medicamento', None),
                                           "tipo_medicamento",
                                           "tipo de medicamento", "01"),
-                "nombreMedicamento": formula.medicamento,
+                "nomTecnologiaSalud": formula.medicamento,
                 "cantidadMedicamento": float(formula.cantidad),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,

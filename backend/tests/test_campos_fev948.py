@@ -69,7 +69,13 @@ TOLERADOS = {
 #: ESPERADO en vez de borrar la prueba: así el defecto queda escrito en el
 #: código y, en cuanto se arregle, `strict=True` obliga a quitar la marca.
 #: Ver [[principio-registrar-cerca-de-la-violacion]].
-SIN_CORREGIR = {"medicamentos", "urgencias", "hospitalizacion"}
+#: `medicamentos` salió de aquí el 2026-07-26: era el único de los tres
+#: verificado por DOS fuentes independientes —el ejemplo JSON y la tabla
+#: numerada M## del Documento Técnico 1—, así que se podía corregir sin
+#: adivinar. Para `urgencias` la única fuente fue el ejemplo JSON, y en
+#: `hospitalizacion` la tabla dice 30 campos y el ejemplo da 28: hay dos sin
+#: identificar. Ninguno de los dos se toca sin leer esas secciones del PDF.
+SIN_CORREGIR = {"urgencias", "hospitalizacion"}
 
 
 def emitidos(arreglo: str) -> list[str]:
@@ -83,8 +89,10 @@ def emitidos(arreglo: str) -> list[str]:
 @pytest.mark.parametrize("arreglo", [
     pytest.param(a, marks=pytest.mark.xfail(
         strict=True,
-        reason=f"#67: {a} usa nombres que la 948 no tiene (el AM dice "
-               f"codMedicamento donde la norma dice codTecnologiaSalud)"))
+        reason=f"#67: {a} usa nombres que la 948 no tiene. No se corrige a "
+               f"ciegas: en urgencias la única fuente fue el ejemplo JSON, y en "
+               f"hospitalización la tabla dice 30 campos y el ejemplo da 28. "
+               f"Hay que leer esas secciones del PDF antes de tocarlo."))
     if a in SIN_CORREGIR else a
     for a in sorted(BLOQUES)
 ])
@@ -136,3 +144,39 @@ class TestLaNormaCargada:
         """No estaba en ninguna lista de pendientes anterior."""
         for arreglo, campos in NORMA.items():
             assert "codigoVIDA" in campos, arreglo
+
+
+#: Campos válidos que HOY se emiten en cada arreglo. Es una foto, no un ideal.
+#:
+#: Existe por un error real: el 2026-07-26, corrigiendo los nombres del AM, se
+#: quitó `numAutorizacion` del bloque de PROCEDIMIENTOS —un `replace` con
+#: `count=1` sobre una cadena que aparece en cuatro bloques— y ninguna prueba lo
+#: notó. Las de arriba miran lo que SOBRA, que es lo que hace rechazar el
+#: archivo; nada miraba lo que se pierde.
+#:
+#: Perder un campo exigido no rechaza el archivo: lo deja incompleto, que es
+#: peor, porque pasa el validador y falta información en la factura.
+#:
+#: Cuando se implemente un campo nuevo, esta lista CRECE. Lo que no puede es
+#: encoger sin que alguien lo decida a propósito.
+#: MEDIDO, no recordado. La primera versión de esta tabla copió las cifras del
+#: apunte de la tarea («urgencias emite 14, pide 25»), pero aquel 14 contaba
+#: TODOS los campos emitidos, y aquí solo cuentan los que la norma reconoce. En
+#: urgencias son 6 y en hospitalización 9: por eso siguen marcados como fallo
+#: esperado. Copiar una cifra de un documento y llamarlo medición es el error
+#: que estas pruebas existen para no repetir.
+EMITIDOS_HOY = {
+    "consultas": 21, "procedimientos": 16, "medicamentos": 11,
+    "urgencias": 6, "hospitalizacion": 9,
+}
+
+
+@pytest.mark.parametrize("arreglo", sorted(BLOQUES))
+def test_no_se_pierde_un_campo_que_la_norma_exige(arreglo):
+    """Los campos válidos no desaparecen sin que se note."""
+    validos = set(emitidos(arreglo)) & set(NORMA[arreglo])
+    assert len(validos) >= EMITIDOS_HOY[arreglo], (
+        f"{arreglo} emite {len(validos)} campos de la norma y antes emitía "
+        f"{EMITIDOS_HOY[arreglo]}: se perdió alguno. Si la reducción es "
+        f"deliberada, baja el número aquí y di por qué."
+    )
