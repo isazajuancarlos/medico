@@ -37,6 +37,7 @@ from sqlmodel import Session, select
 from database import engine
 import cie11
 import cum
+import maestros_muv
 from models import (
     AtencionUrgencias, CausaExterna, FinalidadConsulta, Formula,
     Historia, Hospitalizacion, Institucion, Orden, Paciente,
@@ -351,32 +352,18 @@ def _documento_profesional(
     }
 
 
-#: Texto libre de `Formula.unidad` -> código numérico de la unidad mínima de
-#: dispensación (campo M13). Solo lo evidente y en singular y plural; lo que no
-#: esté aquí se anota como falta en vez de resolverse por parecido.
-#:
-#: Está a medias A PROPÓSITO. La 948 remite a una tabla de referencia de
-#: SISPRO que no está cargada, y adivinar el código de una presentación cambia
-#: el sentido del valor unitario y de la cantidad que van al lado. Cuando se
-#: cargue la tabla, esto se sustituye por ella.
-UNIDAD_MIN_DISPENSA = {
-    "tableta": 1, "tabletas": 1,
-    "capsula": 2, "cápsula": 2, "capsulas": 2, "cápsulas": 2,
-    "ampolla": 3, "ampollas": 3,
-    "frasco": 4, "frascos": 4,
-    "vial": 5, "viales": 5,
-}
-
-
 def _unidad_min_dispensa(unidad: Any) -> Optional[int]:
-    """El código de la unidad, o `None` para que quede anotado como falta.
+    """El código de la presentación (campo M13), del catálogo del MUV.
 
-    `«unidad»` —el valor por defecto del modelo— devuelve `None` a propósito:
-    no es una presentación, es la ausencia de una.
+    Antes había aquí un diccionario escrito a mano con códigos INVENTADOS
+    —tableta 1, cuando el catálogo dice 66 y el 1 es AMPOLLA—. El MUV lo aceptó
+    y devolvió CUV, porque valida este campo como rango (1 a 999) y no contra la
+    tabla. Un dato falso que pasa la validación no lo corrige nadie, porque
+    nadie lo ve.
+
+    Ahora sale de `maestros_muv`, que se genera desde el propio validador.
     """
-    if not unidad:
-        return None
-    return UNIDAD_MIN_DISPENSA.get(str(unidad).strip().lower())
+    return maestros_muv.codigo_presentacion(unidad)
 
 
 def _cantidad_entera(

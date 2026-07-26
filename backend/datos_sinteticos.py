@@ -110,6 +110,14 @@ def _cums_activos() -> tuple:
     return tuple(activos[:200])
 
 
+def _codigo_tableta() -> int:
+    """La presentación más común, tomada del maestro y no escrita a mano."""
+    import maestros_muv
+    codigo = maestros_muv.codigo_presentacion("TABLETA")
+    assert codigo is not None, "el maestro de presentaciones no trae TABLETA"
+    return codigo
+
+
 def _cie11(cie10: str, prefijo: str) -> Dict[str, str]:
     """El par CIE-11 que la 948 pide junto a cada CIE-10.
 
@@ -247,7 +255,9 @@ def medicamento_sintetico(profesional, momento, semilla, cod_prestador) -> Dict[
         "codDiagnosticoPrincipal": semilla.choice(DIAGNOSTICOS),
         "codTecnologiaSalud": medicamento.codigo,
         "tipoMedicamento": "01",
-        "unidadMinDispensa": 1,  # tableta
+        # Del catálogo real, no inventado: TABLETA es 66. El 1 es AMPOLLA,
+        # que es lo que se estuvo enviando.
+        "unidadMinDispensa": _codigo_tableta(),
         "nomTecnologiaSalud": medicamento.nombre[:60],
         "cantidadMedicamento": semilla.randint(1, 30),
         "diasTratamiento": semilla.randint(1, 30),

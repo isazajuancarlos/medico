@@ -23,7 +23,8 @@ os.environ.setdefault("SECRET_KEY", "clave-de-prueba-con-mas-de-32-caracteres-ok
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from routers.historias import unidades_dispensacion  # noqa: E402
-from rips_completo import UNIDAD_MIN_DISPENSA, _unidad_min_dispensa  # noqa: E402
+import maestros_muv  # noqa: E402
+from rips_completo import _unidad_min_dispensa  # noqa: E402
 
 
 def catalogo():
@@ -45,11 +46,11 @@ def test_el_catalogo_SALE_del_mapa_y_no_de_una_lista_aparte():
     backend solo aporta algo si de verdad se deriva de la misma fuente que usa
     el generador de RIPS.
     """
-    datos = catalogo()
-    assert {d["codigo"] for d in datos} == set(UNIDAD_MIN_DISPENSA.values())
-    for d in datos:
-        assert UNIDAD_MIN_DISPENSA[d["nombre"]] == d["codigo"], (
-            f"«{d['nombre']}» no está en el mapa con el código {d['codigo']}")
+    maestro = {int(f["Codigo"]): f["Nombre"] for f in maestros_muv.cargar("upr")["filas"]}
+    for d in catalogo():
+        assert maestro[d["codigo"]] == d["nombre"], (
+            f"«{d['nombre']}» no lleva el código {d['codigo']} en el maestro")
+    assert {d["codigo"] for d in catalogo()} == set(maestro)
 
 
 def test_no_repite_un_codigo_aunque_el_mapa_traiga_singular_y_plural():
@@ -76,3 +77,50 @@ def test_el_valor_por_defecto_viejo_NO_se_traduce():
     assert _unidad_min_dispensa(None) is None
     assert _unidad_min_dispensa("") is None
     assert "unidad" not in {d["nombre"] for d in catalogo()}
+
+
+# ---------------------------------------------------------------------------
+# La prueba que habría impedido el defecto
+#
+# El mapa anterior estaba escrito a mano y NINGUNO de sus cinco códigos
+# coincidía con el catálogo. Pasó la validación del MUV porque ese campo se
+# comprueba como rango (1 a 999), no contra la tabla.
+# ---------------------------------------------------------------------------
+
+CASOS_REALES = {
+    "AMPOLLA": 1,
+    "FRASCO": 13,
+    "CAPSULA": 14,
+    "TABLETA": 66,
+    "VIAL": 75,
+}
+
+
+def test_los_codigos_son_los_del_catalogo_y_no_unos_inventados():
+    """Los cinco que estuvieron mal, fijados contra el maestro."""
+    for nombre, codigo in CASOS_REALES.items():
+        assert _unidad_min_dispensa(nombre) == codigo, (
+            f"{nombre} debe ser {codigo}. Si esto falla tras regenerar el "
+            f"maestro, comprobar el cambio contra el validador antes de "
+            f"actualizar la cifra aquí.")
+
+
+def test_el_plural_y_las_tildes_no_rompen_la_traduccion():
+    """El médico escribe «tabletas» y «dilución»; el catálogo, sin tilde."""
+    assert _unidad_min_dispensa("tabletas") == 66
+    assert _unidad_min_dispensa("  Tableta  ") == 66
+    assert _unidad_min_dispensa("dilucion homeopatica") == \
+        _unidad_min_dispensa("DILUCIÓN HOMEOPÁTICA")
+
+
+def test_lo_que_no_esta_en_el_catalogo_no_se_parece_a_nada():
+    """No hay traducción por semejanza: «gotero» no es «gotas»."""
+    assert _unidad_min_dispensa("gotero") is None
+    assert _unidad_min_dispensa("cucharadita") is None
+
+
+def test_el_frasco_deshabilitado_no_entra():
+    """`REFs_UPR` trae FRASCO dos veces: 13 habilitado y 40 no. Quedarse con
+    el primero de la tabla habría dado el que ya no vale."""
+    assert _unidad_min_dispensa("frasco") == 13
+    assert 40 not in {d["codigo"] for d in catalogo()}
