@@ -40,7 +40,7 @@ import cum
 from models import (
     AtencionUrgencias, CausaExterna, FinalidadConsulta, Formula,
     Historia, Hospitalizacion, Institucion, Orden, Paciente,
-    TipoDiagnostico, Usuario,
+    TIPOS_DOCUMENTO_PROFESIONAL, TipoDiagnostico, Usuario,
 )
 
 
@@ -306,6 +306,80 @@ def _usuario_base(p: Paciente, consecutivo: int, rec: "Recolector") -> Dict:
     }
 
 
+def _documento_profesional(
+    medico: Any, rec: "Recolector", *, archivo: str, registro_id: Any
+) -> Dict[str, Any]:
+    """Los campos P11/P12 de un bloque de servicios: quién ATENDIÓ.
+
+    La Resolución 948 (Documento Técnico 1) los define como «tipo/número de
+    documento de identificación del profesional de la salud que ordenó o realizó
+    el procedimiento», y solo admite ocho tipos —ninguno de menor de edad—.
+
+    Hasta el 2026-07-26 aquí iba el documento del PACIENTE. El MUV lo destapó
+    rechazando las atenciones de menores con RVG01 («valores permitidos
+    CC,CE,CD,PA,SC,PE,DE,PT, valor enviado: RC»). Lo grave no era el rechazo:
+    las atenciones de adultos PASABAN, llevando el documento del paciente como
+    si fuera el del médico. Un dato falso que nunca se habría notado.
+
+    No hay supuesto. Inventar un documento de profesional sería atribuir un acto
+    médico a alguien: es exactamente lo que no puede rellenarse solo.
+    """
+    tipo = rec.dato(
+        getattr(medico, "tipo_documento", None), archivo=archivo,
+        registro_id=registro_id, campo="medico.tipo_documento",
+        etiqueta="tipo de documento del profesional que atendió")
+    numero = rec.dato(
+        getattr(medico, "numero_documento", None), archivo=archivo,
+        registro_id=registro_id, campo="medico.numero_documento",
+        etiqueta="número de documento del profesional que atendió")
+
+    if tipo is not None and tipo not in TIPOS_DOCUMENTO_PROFESIONAL:
+        # Presente pero imposible. Se devuelve TAL CUAL, como hace `codigo` con
+        # un CUM inválido: sustituirlo escondería lo que hay en la base, que es
+        # el dato que hay que corregir.
+        rec.faltantes.append(Falta(
+            archivo, registro_id, "medico.tipo_documento",
+            "tipo de documento del profesional que atendió", None,
+            motivo=(f"«{tipo}» no puede ser el documento de un profesional. "
+                    f"La Resolución 948 solo admite "
+                    f"{', '.join(TIPOS_DOCUMENTO_PROFESIONAL)}."),
+        ))
+
+    return {
+        "tipoDocumentoIdentificacion": tipo,
+        "numDocumentoIdentificacion": numero,
+    }
+
+
+def _cantidad_entera(
+    cantidad: Any, rec: "Recolector", *, registro_id: Any
+) -> Any:
+    """La cantidad dispensada, como ENTERO.
+
+    Iba con `float()`, que en JSON escribe `7.0`, y el MUV lo rechaza:
+    «Existen errores en el formato JSON» sobre `cantidadMedicamento`. Los
+    ejemplos de la propia Resolución 948 traen `"cantidadMedicamento": 10`.
+
+    Una fracción NO se trunca. `int(2.5)` daría 2 y se habría perdido media
+    dosis sin que nadie lo viera: en un medicamento eso es peor que un rechazo.
+    Se anota como falta, con el valor original a la vista, y quien cierra el mes
+    decide si el dato estaba mal registrado o si hay que reportarlo de otro modo.
+    """
+    if cantidad is None:
+        return rec.dato(None, archivo="AM", registro_id=registro_id,
+                        campo="cantidad", etiqueta="cantidad del medicamento")
+
+    numero = float(cantidad)
+    if numero != int(numero):
+        rec.faltantes.append(Falta(
+            "AM", registro_id, "cantidad", "cantidad del medicamento", None,
+            motivo=(f"«{cantidad}» no es entera y el RIPS solo admite enteros. "
+                    f"Truncarla perdería parte de la dosis en silencio."),
+        ))
+        return cantidad  # tal cual: es el dato que hay que revisar
+    return int(numero)
+
+
 def _fecha_dt(f: datetime) -> str:
     return f.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -430,8 +504,8 @@ def generar_archivo_ac(
                 "tipoDiagnosticoPrincipal": exigir(
                     _valor_enum(getattr(h, 'tipo_diagnostico', None)),
                     "tipo_diagnostico", "tipo de diagnóstico principal", "01"),
-                "tipoDocumentoIdentificacion": p.tipo_id,
-                "numDocumentoIdentificacion": p.identificacion,
+                # P11/P12: el PROFESIONAL que atendió, no el paciente.
+                **_documento_profesional(h.medico, rec, archivo="AC", registro_id=h.id),
                 # El valor del servicio: de él depende el pago. Iba en 0 SIEMPRE.
                 # Ojo: `0` es un valor legítimo —un servicio puede ser gratuito—
                 # y por eso el recolector solo considera ausente el `None`.
@@ -554,8 +628,8 @@ def generar_archivo_ap(
                 "finalidadTecnologiaSalud": exigir(
                     _valor_enum(getattr(h, 'finalidad', None)),
                     "finalidad", "finalidad del procedimiento", "10"),
-                "tipoDocumentoIdentificacion": p.tipo_id,
-                "numDocumentoIdentificacion": p.identificacion,
+                # P11/P12: el PROFESIONAL que atendió, no el paciente.
+                **_documento_profesional(orden.historia.medico, rec, archivo="AP", registro_id=orden.id),
                 "codDiagnosticoPrincipal": exigir(
                     h.diagnostico_principal, "diagnostico_principal",
                     "diagnóstico principal"),
@@ -669,9 +743,10 @@ def generar_archivo_am(
                                           "tipo_medicamento",
                                           "tipo de medicamento", "01"),
                 "nomTecnologiaSalud": formula.medicamento,
-                "cantidadMedicamento": float(formula.cantidad),
-                "tipoDocumentoIdentificacion": p.tipo_id,
-                "numDocumentoIdentificacion": p.identificacion,
+                "cantidadMedicamento": _cantidad_entera(
+                    formula.cantidad, rec, registro_id=formula.id),
+                # P11/P12: el PROFESIONAL que atendió, no el paciente.
+                **_documento_profesional(formula.historia.medico, rec, archivo="AM", registro_id=formula.id),
                 "vrUnitMedicamento": exigir(getattr(formula, 'valor_unitario', None),
                                             "valor_unitario",
                                             "valor unitario del medicamento", 0),
@@ -721,7 +796,10 @@ def generar_archivo_au(
 
         q = (
             select(AtencionUrgencias)
-            .options(joinedload(AtencionUrgencias.paciente))
+            .options(
+                joinedload(AtencionUrgencias.paciente),
+                joinedload(AtencionUrgencias.medico),
+            )
             .join(Paciente, AtencionUrgencias.paciente_id == Paciente.id)
             .where(
                 AtencionUrgencias.fecha_ingreso >= datetime.combine(fecha_inicio, datetime.min.time()),
@@ -788,9 +866,14 @@ def generar_archivo_au(
                     "destino de salida", "01"),
                 "codDiagnosticoCausaMuerte": "",
                 "fechaEgreso": _fecha_dt(au.fecha_egreso),
-                "tipoDocumentoIdentificacion": p.tipo_id,
-                "numDocumentoIdentificacion": p.identificacion,
-                **_bloque_economico(au, rec, "AU"),
+                # P11/P12: el PROFESIONAL que atendió, no el paciente.
+                **_documento_profesional(au.medico, rec, archivo="AU", registro_id=au.id),
+                # SIN bloque económico. El ejemplo de la Resolución 948 para
+                # AU termina en fechaEgreso/consecutivo: no lleva vrServicio,
+                # conceptoRecaudo, valorPagoModerador ni numFEVPagoModerador.
+                # Un campo que sobra hace rechazar el archivo completo, y estos
+                # cuatro estaban ocultos al guardián de campos porque llegaban
+                # por `**` en vez de escritos.
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["urgencias"]) + 1,
                 # CIE-11 derivado del CIE-10 de origen; vacío si la
                 # equivalencia no es exacta y única. La 948 lo admite.
@@ -925,9 +1008,14 @@ def generar_archivo_ah(
                     "condición de egreso", "01"),
                 "codDiagnosticoCausaMuerte": "",
                 "fechaEgreso": _fecha_dt(h.fecha_egreso),
-                "tipoDocumentoIdentificacion": p.tipo_id,
-                "numDocumentoIdentificacion": p.identificacion,
-                **_bloque_economico(h, rec, "AH"),
+                # P11/P12: el PROFESIONAL que atendió, no el paciente.
+                **_documento_profesional(h.medico_tratante, rec, archivo="AH", registro_id=h.id),
+                # SIN bloque económico. El ejemplo de la Resolución 948 para
+                # AH termina en fechaEgreso/consecutivo: no lleva vrServicio,
+                # conceptoRecaudo, valorPagoModerador ni numFEVPagoModerador.
+                # Un campo que sobra hace rechazar el archivo completo, y estos
+                # cuatro estaban ocultos al guardián de campos porque llegaban
+                # por `**` en vez de escritos.
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["hospitalizacion"]) + 1,
                 # CIE-11 derivado del CIE-10 de origen; vacío si la
                 # equivalencia no es exacta y única. La 948 lo admite.

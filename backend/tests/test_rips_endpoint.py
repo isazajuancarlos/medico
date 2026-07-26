@@ -67,7 +67,8 @@ def cliente(monkeypatch):
             clave_licencia="k1", hash_validacion="h"))
         db.add(Usuario(id=1, username="admin", hashed_password="h",
                        nombre_completo="Admin", email="a@x.co",
-                       rol=RolUsuario.ADMIN, institucion_id=1, activo=True))
+                       rol=RolUsuario.ADMIN, institucion_id=1, activo=True,
+                       tipo_documento="CC", numero_documento="79123456"))
         db.add(Paciente(id=10, institucion_id=1, identificacion="CC10",
                         nombre1="N", apellido1="A",
                         fecha_nacimiento=date(1990, 1, 1), sexo="M",

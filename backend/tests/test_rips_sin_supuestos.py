@@ -71,7 +71,11 @@ def bd(monkeypatch):
             identificacion_representante="1", codigo_prestador="05001"))
         db.add(Usuario(id=1, username="m", hashed_password="h",
                        nombre_completo="Médica", email="m@x.co",
-                       rol=RolUsuario.MEDICO, institucion_id=1, activo=True))
+                       rol=RolUsuario.MEDICO, institucion_id=1, activo=True,
+                       # El RIPS pide el documento DEL PROFESIONAL en cada
+                       # servicio (948, P11/P12). Sin esto «una atención con
+                       # todos los datos» ya no los tiene todos.
+                       tipo_documento="CC", numero_documento="79123456"))
         db.add(Paciente(id=10, institucion_id=1, identificacion="CC10",
                         nombre1="N", apellido1="A",
                         fecha_nacimiento=date(1990, 1, 1), sexo="M",

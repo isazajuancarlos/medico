@@ -85,12 +85,34 @@ TOLERADOS = {
 SIN_CORREGIR: set[str] = set()
 
 
+def _claves_de(fuente: str, funcion: str) -> list[str]:
+    """Las claves literales que devuelve un ayudante como `_documento_profesional`."""
+    i = fuente.index(f"\ndef {funcion}(")
+    j = fuente.index("\ndef ", i + 1)
+    return re.findall(r'"([A-Za-z0-9]+)":', fuente[i:j])
+
+
 def emitidos(arreglo: str) -> list[str]:
-    """Los nombres que `rips_completo.py` pone en ese diccionario."""
+    """Los nombres que `rips_completo.py` pone en ese diccionario.
+
+    Un campo puede llegar de dos formas: escrito como literal, o aportado por un
+    ayudante con `**_lo_que_sea(...)`. Solo mirar los literales dejó de ver los
+    dos campos del profesional en cuanto se extrajeron a una función, y las tres
+    pruebas fallaron por un motivo falso: los campos SÍ se emitían.
+
+    Las claves del ayudante se leen de su propio cuerpo, no se copian aquí. Una
+    lista repetida en dos sitios se desincroniza, y esta prueba existe justo
+    para que eso no pase inadvertido.
+    """
     fuente = (RAIZ / "rips_completo.py").read_text(encoding="utf-8")
     i = fuente.index(BLOQUES[arreglo])
     j = fuente.index("\n            }", i)
-    return re.findall(r'"([A-Za-z0-9]+)":', fuente[i:j])
+    bloque = fuente[i:j]
+
+    nombres = re.findall(r'"([A-Za-z0-9]+)":', bloque)
+    for ayudante in re.findall(r"\*\*(_[a-z_]+)\(", bloque):
+        nombres += _claves_de(fuente, ayudante)
+    return nombres
 
 
 @pytest.mark.parametrize("arreglo", [

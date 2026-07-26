@@ -227,6 +227,18 @@ class Usuario(SQLModel, table=True):
     registro_medico: Optional[str] = None  # Número de tarjeta profesional
     registro_rethus: Optional[str] = None  # Registro RETHUS obligatorio
     tarjeta_profesional: Optional[str] = None
+
+    # Documento de identidad DEL PROFESIONAL. Va en los campos P11/P12 de cada
+    # bloque de servicios del RIPS, y no es el del paciente: hasta que se añadió
+    # esto, el generador ponía ahí el del paciente y el MUV rechazaba las
+    # atenciones de menores. Ver TIPOS_DOCUMENTO_PROFESIONAL.
+    #
+    # Opcional en el modelo porque un `Usuario` puede ser recepcionista o
+    # administrador, que nunca aparecen en un RIPS. Quien SÍ aparece y no lo
+    # tenga hace fallar la exportación de forma ruidosa, que es lo correcto: el
+    # valor ausente no se sustituye.
+    tipo_documento: Optional[str] = None
+    numero_documento: Optional[str] = Field(default=None, index=True)
     firma_digital_path: Optional[str] = None  # Path a certificado digital
 
     # Seguridad
@@ -249,6 +261,27 @@ TIPOS_DOCUMENTO = {
     "NU": "NUIP",
     "PE": "Permiso Especial de Permanencia",
     "PT": "Permiso Temporal de Permanencia",
+}
+
+#: Los ÚNICOS tipos que la Resolución 948 admite para un profesional de la salud
+#: (Documento Técnico 1, campos P11/P12). No es un subconjunto arbitrario: RC y
+#: TI son documentos de menores, y AS/MS son «sin identificación» — ninguno puede
+#: corresponder a quien ordenó o realizó el procedimiento.
+#:
+#: Existe porque el MUV nos rechazó por enviar aquí el documento del PACIENTE:
+#: las consultas de menores salían con RC y TI. Las de adultos pasaban, llevando
+#: un dato falso que nadie habría notado.
+TIPOS_DOCUMENTO_PROFESIONAL = {
+    c: TIPOS_DOCUMENTO.get(c, n) for c, n in {
+        "CC": "Cédula de Ciudadanía",
+        "CE": "Cédula de Extranjería",
+        "CD": "Carné Diplomático",
+        "PA": "Pasaporte",
+        "SC": "Salvoconducto de Permanencia",
+        "PE": "Permiso Especial de Permanencia",
+        "DE": "Documento Extranjero",
+        "PT": "Permiso por Protección Temporal",
+    }.items()
 }
 
 class Paciente(SQLModel, table=True):
@@ -797,6 +830,16 @@ class AtencionUrgencias(CamposRips, table=True):
 
     # Atención médica
     medico_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    # La relación faltaba: solo estaba la clave. El RIPS necesita el documento
+    # del profesional que atendió (campos P11/P12), y sin esto no había forma de
+    # llegar a él desde la atención.
+    #
+    # `foreign_keys` es obligatorio: esta tabla apunta DOS veces a `usuario`
+    # —`enfermera_triage_id` y `medico_id`— y sin decir cuál, SQLAlchemy no
+    # puede resolver el join y revienta al mapear, no al consultar.
+    # Quien firma la atención en el RIPS es el médico, no quien hizo el triage.
+    medico: Optional["Usuario"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "AtencionUrgencias.medico_id"})
     hora_atencion_medica: Optional[datetime] = None
 
     # Diagnósticos
