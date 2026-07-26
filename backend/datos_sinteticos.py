@@ -17,6 +17,7 @@ motivo equivocado, ocultando los errores de estructura que sí buscamos.
 
 from __future__ import annotations
 
+import os
 import random
 from datetime import date, datetime, timedelta
 from functools import lru_cache
@@ -74,6 +75,22 @@ TIPOS_DOCUMENTO_PROFESIONAL = ["CC", "CE", "PA"]
 SEXOS = ["M", "F"]
 
 
+def _del_entorno(variable: str, que_es: str) -> str:
+    """Un dato del prestador, o un error que dice cuál falta.
+
+    Se resuelve UNA vez, arriba, y se pasa hacia abajo. Leerlo desde el fondo
+    de la pila obligaba a montar variables de entorno para ejercitar cosas que
+    nada tienen que ver con el MUV, y una prueba que necesita el entorno para
+    comprobar la forma de un JSON está midiendo dos cosas a la vez.
+    """
+    valor = os.environ.get(variable)
+    if not valor:
+        raise RuntimeError(
+            f"Falta {variable}: {que_es}. No hay valor por defecto — uno "
+            f"inventado produce un rechazo que parece un error del archivo.")
+    return valor
+
+
 def _documento_falso(i: int) -> str:
     """Identificación claramente inventada, para que nadie la confunda con una
     real ni siquiera de un vistazo."""
@@ -125,10 +142,27 @@ def profesional_sintetico(i: int, semilla: random.Random) -> Dict[str, Any]:
     }
 
 
+def _documento_por_edad(nacimiento: date) -> str:
+    """El tipo de documento que corresponde a esa edad.
+
+    El MUV lo comprueba (RVC007): «La edad según la fecha de nacimiento debe
+    coincidir con el tipo de documento registrado». Elegirlo al azar producía
+    recién nacidos con cédula y adultos con registro civil — un archivo de
+    prueba imposible, que rechaza por un motivo que ningún prestador real
+    tendría.
+    """
+    anios = (date(2026, 6, 1) - nacimiento).days // 365
+    if anios < 7:
+        return "RC"      # registro civil
+    if anios < 18:
+        return "TI"      # tarjeta de identidad
+    return "CC"
+
+
 def paciente_sintetico(i: int, semilla: random.Random) -> Dict[str, Any]:
     nacimiento = date(1950, 1, 1) + timedelta(days=semilla.randint(0, 27000))
     return {
-        "tipoDocumentoIdentificacion": semilla.choice(TIPOS_DOCUMENTO),
+        "tipoDocumentoIdentificacion": _documento_por_edad(nacimiento),
         "numDocumentoIdentificacion": _documento_falso(i),
         "tipoUsuario": "12",
         "fechaNacimiento": nacimiento.isoformat(),
@@ -143,24 +177,25 @@ def paciente_sintetico(i: int, semilla: random.Random) -> Dict[str, Any]:
 
 
 def consulta_sintetica(paciente: Dict[str, Any], profesional: Dict[str, Any],
-                       momento: datetime, semilla: random.Random) -> Dict[str, Any]:
+                       momento: datetime, semilla: random.Random,
+                       cod_prestador: str) -> Dict[str, Any]:
     """El paciente se recibe para nada más que el consecutivo: su documento NO
     va aquí. Los campos P11/P12 son del profesional, y confundirlos fue el
     fallo que el MUV destapó."""
     return {
-        "codPrestador": "700010000101",
-        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M:%S"),
+        "codPrestador": cod_prestador,
+        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M"),
         "numAutorizacion": "",
         "codConsulta": semilla.choice(CONSULTAS_CUPS),
         "modalidadGrupoServicioTecSal": "01",
         "grupoServicios": "01",
         "codServicio": 328,
-        "finalidadTecnologiaSalud": "10",
+        "finalidadTecnologiaSalud": "11",
         "causaMotivoAtencion": "38",
         "codDiagnosticoPrincipal": semilla.choice(DIAGNOSTICOS),
-        "codDiagnosticoRelacionado1": "",
-        "codDiagnosticoRelacionado2": "",
-        "codDiagnosticoRelacionado3": "",
+        "codDiagnosticoRelacionado1": None,
+        "codDiagnosticoRelacionado2": None,
+        "codDiagnosticoRelacionado3": None,
         "tipoDiagnosticoPrincipal": "01",
         **profesional,
         "vrServicio": 0,
@@ -171,11 +206,11 @@ def consulta_sintetica(paciente: Dict[str, Any], profesional: Dict[str, Any],
     }
 
 
-def procedimiento_sintetico(profesional, momento, semilla) -> Dict[str, Any]:
+def procedimiento_sintetico(profesional, momento, semilla, cod_prestador) -> Dict[str, Any]:
     dx = semilla.choice(DIAGNOSTICOS)
     return {
-        "codPrestador": "700010000101",
-        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M:%S"),
+        "codPrestador": cod_prestador,
+        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M"),
         "idMIPRES": "",
         "numAutorizacion": "",
         "codProcedimiento": semilla.choice(PROCEDIMIENTOS_CUPS),
@@ -183,10 +218,10 @@ def procedimiento_sintetico(profesional, momento, semilla) -> Dict[str, Any]:
         "modalidadGrupoServicioTecSal": "01",
         "grupoServicios": "01",
         "codServicio": 328,
-        "finalidadTecnologiaSalud": "10",
+        "finalidadTecnologiaSalud": "44",
         "codDiagnosticoPrincipal": dx,
-        "codDiagnosticoRelacionado": "",
-        "codComplicacion": "",
+        "codDiagnosticoRelacionado": None,
+        "codComplicacion": None,
         **_cie11(dx, "codDiagnosticoPrincipal"),
         **profesional,
         "vrServicio": 25000,
@@ -197,7 +232,7 @@ def procedimiento_sintetico(profesional, momento, semilla) -> Dict[str, Any]:
     }
 
 
-def medicamento_sintetico(profesional, momento, semilla) -> Dict[str, Any]:
+def medicamento_sintetico(profesional, momento, semilla, cod_prestador) -> Dict[str, Any]:
     """Con un CUM REAL del catálogo del INVIMA, no uno inventado.
 
     Un código con forma de CUM que no existe pasa cualquier validación de
@@ -206,13 +241,16 @@ def medicamento_sintetico(profesional, momento, semilla) -> Dict[str, Any]:
     """
     medicamento = semilla.choice(_cums_activos())
     return {
-        "codPrestador": "700010000101",
-        "fechaDispensAdmon": momento.strftime("%Y-%m-%d %H:%M:%S"),
+        "codPrestador": cod_prestador,
+        "fechaDispensAdmon": momento.strftime("%Y-%m-%d %H:%M"),
         "idMIPRES": "",
+        "codDiagnosticoPrincipal": semilla.choice(DIAGNOSTICOS),
         "codTecnologiaSalud": medicamento.codigo,
         "tipoMedicamento": "01",
+        "unidadMinDispensa": 1,  # tableta
         "nomTecnologiaSalud": medicamento.nombre[:60],
         "cantidadMedicamento": semilla.randint(1, 30),
+        "diasTratamiento": semilla.randint(1, 30),
         "vrUnitMedicamento": 1500.0,
         **profesional,
         "vrServicio": 1500.0,
@@ -223,48 +261,55 @@ def medicamento_sintetico(profesional, momento, semilla) -> Dict[str, Any]:
     }
 
 
-def urgencia_sintetica(profesional, momento, semilla) -> Dict[str, Any]:
+def urgencia_sintetica(profesional, momento, semilla, cod_prestador) -> Dict[str, Any]:
     dx = semilla.choice(DIAGNOSTICOS_AGUDOS)
     return {
-        "codPrestador": "700010000101",
-        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M:%S"),
+        "codPrestador": cod_prestador,
+        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M"),
         "causaMotivoAtencion": "38",
         "codDiagnosticoPrincipal": dx,
-        "codDiagnosticoRelacionadoE1": "",
+        "codDiagnosticoPrincipalE": dx,
+        "codDiagnosticoRelacionadoE1": None,
         "condicionDestinoUsuarioEgreso": "01",
-        # Vacío porque el egreso es vivo. Poner aquí un código «por si acaso»
-        # inventaría una muerte.
-        "codDiagnosticoCausaMuerte": "",
-        "fechaEgreso": (momento + timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"),
+        # `null` porque el egreso es vivo. La norma no admite "" —pide entre 4 y
+        # 6 caracteres— y poner un código «por si acaso» inventaría una muerte.
+        "codDiagnosticoCausaMuerte": None,
+        "fechaEgreso": (momento + timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"),
         **_cie11(dx, "codDiagnosticoPrincipal"),
-        **profesional,
+        # Sin documento del profesional: la estructura de urgencias y
+        # hospitalización no lo admite. El MUV lo rechaza como propiedad no
+        # permitida.
         "consecutivo": 1,
     }
 
 
-def hospitalizacion_sintetica(profesional, momento, semilla) -> Dict[str, Any]:
+def hospitalizacion_sintetica(profesional, momento, semilla, cod_prestador) -> Dict[str, Any]:
     dx = semilla.choice(DIAGNOSTICOS_AGUDOS)
     return {
-        "codPrestador": "700010000101",
+        "codPrestador": cod_prestador,
         "viaIngresoServicioSalud": "02",
-        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M:%S"),
+        "fechaInicioAtencion": momento.strftime("%Y-%m-%d %H:%M"),
         "numAutorizacion": "",
         "causaMotivoAtencion": "38",
         "codDiagnosticoPrincipal": dx,
-        "codDiagnosticoRelacionadoE1": "",
-        "codComplicacion": "",
+        "codDiagnosticoPrincipalE": dx,
+        "codDiagnosticoRelacionadoE1": None,
+        "codComplicacion": None,
         "condicionDestinoUsuarioEgreso": "01",
-        "codDiagnosticoCausaMuerte": "",
-        "fechaEgreso": (momento + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S"),
+        "codDiagnosticoCausaMuerte": None,
+        "fechaEgreso": (momento + timedelta(days=3)).strftime("%Y-%m-%d %H:%M"),
         **_cie11(dx, "codDiagnosticoPrincipal"),
-        **profesional,
+        # Sin documento del profesional: la estructura de urgencias y
+        # hospitalización no lo admite. El MUV lo rechaza como propiedad no
+        # permitida.
         "consecutivo": 1,
     }
 
 
 def documento_sintetico(
     n_pacientes: int = 10,
-    nit_obligado: str = "999999999",
+    nit_obligado: str | None = None,
+    cod_prestador: str | None = None,
     semilla: int = 20260719,
 ) -> Dict[str, Any]:
     """Un documento con la misma forma que produce `rips_completo`.
@@ -279,6 +324,18 @@ def documento_sintetico(
     hospitalización, para que el archivo ejercite los cinco bloques y los 22
     campos CIE-11 que viven sobre todo en los dos últimos.
     """
+    # El MUV compara el NIT del archivo con el de la sesión y rechaza si
+    # difieren. Uno inventado hacía fallar todo el paquete por un motivo que
+    # nada tiene que ver con lo que se quiere probar.
+    if nit_obligado is None:
+        nit_obligado = _del_entorno(
+            "MUV_NIT", "el RIPS tiene que ir a nombre del prestador que autentica")
+    if cod_prestador is None:
+        cod_prestador = _del_entorno(
+            "MUV_COD_PRESTADOR",
+            "el código de habilitación del prestador en el REPS, que el MUV "
+            "comprueba contra el NIT (regla RVC012)")
+
     rnd = random.Random(semilla)
     inicio = datetime(2026, 6, 1, 8, 0)
 
@@ -288,18 +345,18 @@ def documento_sintetico(
         prof = profesional_sintetico(i, rnd)
         momento = inicio + timedelta(days=rnd.randint(0, 29), minutes=rnd.randint(0, 480))
 
-        servicios: Dict[str, Any] = {"consultas": [consulta_sintetica(p, prof, momento, rnd)]}
+        servicios: Dict[str, Any] = {"consultas": [consulta_sintetica(p, prof, momento, rnd, cod_prestador)]}
         # Repartidos y no todos a todos: un paciente con consulta, urgencias y
         # hospitalización el mismo día no es un caso realista, y un archivo de
         # prueba irreal esconde justo los errores que solo salen en lo normal.
         if i % 2 == 0:
-            servicios["procedimientos"] = [procedimiento_sintetico(prof, momento, rnd)]
+            servicios["procedimientos"] = [procedimiento_sintetico(prof, momento, rnd, cod_prestador)]
         if i % 3 == 0:
-            servicios["medicamentos"] = [medicamento_sintetico(prof, momento, rnd)]
+            servicios["medicamentos"] = [medicamento_sintetico(prof, momento, rnd, cod_prestador)]
         if i % 4 == 0:
-            servicios["urgencias"] = [urgencia_sintetica(prof, momento, rnd)]
+            servicios["urgencias"] = [urgencia_sintetica(prof, momento, rnd, cod_prestador)]
         if i % 5 == 0:
-            servicios["hospitalizacion"] = [hospitalizacion_sintetica(prof, momento, rnd)]
+            servicios["hospitalizacion"] = [hospitalizacion_sintetica(prof, momento, rnd, cod_prestador)]
 
         p["servicios"] = servicios
         usuarios.append(p)

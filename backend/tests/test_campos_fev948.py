@@ -25,6 +25,7 @@ nombres, y para eso no hacen falta datos de pacientes.
 """
 import json
 import os
+import ast
 import re
 import sys
 from pathlib import Path
@@ -54,15 +55,15 @@ TOLERADOS = {
     "consultas": {"consecutivo"},
     "procedimientos": {"consecutivo"},
     "medicamentos": {"consecutivo"},
-    # `tipoDocumentoIdentificacion` y `numDocumentoIdentificacion` NO aparecen
-    # en la lista extraída de urgencias ni de hospitalización, pero sí en la de
-    # consultas y procedimientos. No me creo la ausencia: las tablas R y H son
-    # las dos que `pdftotext` peor descompone, y el resto de archivos sí los
-    # llevan. Se toleran hasta comprobarlo A OJO contra el PDF.
-    "urgencias": {"consecutivo", "tipoDocumentoIdentificacion",
-                  "numDocumentoIdentificacion"},
-    "hospitalizacion": {"consecutivo", "tipoDocumentoIdentificacion",
-                        "numDocumentoIdentificacion"},
+    # RESUELTO el 2026-07-26, y al revés de lo que aquí se sospechaba. Decía
+    # «no me creo la ausencia» de `tipoDocumentoIdentificacion` y
+    # `numDocumentoIdentificacion` en urgencias y hospitalización, achacándola a
+    # que `pdftotext` descompone mal esas tablas. La extracción estaba bien: el
+    # MUV real rechaza esos dos campos ahí —«Propiedades no permitidas en la
+    # estructura de Urgencia»—. Se quitan de la tolerancia, así que si alguien
+    # los vuelve a añadir, esta prueba lo para.
+    "urgencias": {"consecutivo"},
+    "hospitalizacion": {"consecutivo"},
 }
 
 #: Archivos con el defecto todavía sin corregir (#67). Se marcan como fallo
@@ -86,10 +87,24 @@ SIN_CORREGIR: set[str] = set()
 
 
 def _claves_de(fuente: str, funcion: str) -> list[str]:
-    """Las claves literales que devuelve un ayudante como `_documento_profesional`."""
-    i = fuente.index(f"\ndef {funcion}(")
-    j = fuente.index("\ndef ", i + 1)
-    return re.findall(r'"([A-Za-z0-9]+)":', fuente[i:j])
+    """Las claves literales que devuelve un ayudante como `_documento_profesional`.
+
+    Con AST y no recortando texto «hasta el siguiente def»: la primera versión
+    se tragaba lo que hubiera entre medias, y en cuanto apareció un diccionario
+    de módulo —`UNIDAD_MIN_DISPENSA`, con «tableta» y «vial» dentro— empezó a
+    denunciar esos nombres como campos emitidos. Recortar por texto adivina la
+    estructura; el árbol la tiene.
+    """
+    arbol = ast.parse(fuente)
+    for nodo in arbol.body:
+        if isinstance(nodo, ast.FunctionDef) and nodo.name == funcion:
+            return [
+                c.value
+                for d in ast.walk(nodo) if isinstance(d, ast.Dict)
+                for c in d.keys
+                if isinstance(c, ast.Constant) and isinstance(c.value, str)
+            ]
+    raise AssertionError(f"no encontré {funcion} en rips_completo.py")
 
 
 def emitidos(arreglo: str) -> list[str]:

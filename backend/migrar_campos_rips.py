@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Añade a `usuario` el documento de identidad del profesional.
+"""Añade las columnas que el RIPS exige y el modelo no tenía.
 
-    python migrar_documento_profesional.py            # ver qué haría
-    python migrar_documento_profesional.py --aplicar
+    python migrar_campos_rips.py            # ver qué haría
+    python migrar_campos_rips.py --aplicar
 
 POR QUÉ. El RIPS pide en cada bloque de servicios el documento del PROFESIONAL
 que ordenó o realizó el procedimiento (Resolución 948, Documento Técnico 1,
@@ -29,15 +29,30 @@ from sqlalchemy.exc import OperationalError
 
 from database import engine
 
+#: Tabla -> columnas que hay que añadir, con su tipo.
 COLUMNAS = {
-    "tipo_documento": "VARCHAR",
-    "numero_documento": "VARCHAR",
+    "usuario": {
+        "tipo_documento": "VARCHAR",
+        "numero_documento": "VARCHAR",
+    },
+    # M15 del RIPS: el MUV exige días de tratamiento mayores que cero, y no
+    # había dónde guardarlos. `dosis` es texto libre y no sirve: «1 cada 8
+    # horas» no dice cuántos días.
+    "formula": {
+        "dias_tratamiento": "INTEGER",
+    },
 }
 
 
-def faltantes() -> list[str]:
-    existentes = {c["name"] for c in inspect(engine).get_columns("usuario")}
-    return [c for c in COLUMNAS if c not in existentes]
+def faltantes() -> dict[str, list[str]]:
+    inspector = inspect(engine)
+    pendientes = {}
+    for tabla, columnas in COLUMNAS.items():
+        existentes = {c["name"] for c in inspector.get_columns(tabla)}
+        faltan = [c for c in columnas if c not in existentes]
+        if faltan:
+            pendientes[tabla] = faltan
+    return pendientes
 
 
 def cuantos_lo_necesitan(con) -> int:
@@ -83,16 +98,19 @@ def main() -> int:
         print("Las dos columnas ya existen. Nada que hacer.")
         return 0
 
-    print(f"Columnas por añadir a `usuario`: {', '.join(pendientes)}")
+    for tabla, columnas in pendientes.items():
+        print(f"Columnas por añadir a `{tabla}`: {', '.join(columnas)}")
     if not args.aplicar:
         print("\nEn seco. Vuelve a llamar con --aplicar para ejecutarlo.")
         return 0
 
     with engine.begin() as con:
-        for columna in pendientes:
-            con.execute(text(
-                f"ALTER TABLE usuario ADD COLUMN {columna} {COLUMNAS[columna]}"))
-            print(f"  añadida {columna}")
+        for tabla, columnas in pendientes.items():
+            for columna in columnas:
+                con.execute(text(
+                    f"ALTER TABLE {tabla} ADD COLUMN {columna} "
+                    f"{COLUMNAS[tabla][columna]}"))
+                print(f"  añadida {tabla}.{columna}")
         con.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_usuario_numero_documento "
             "ON usuario (numero_documento)"))

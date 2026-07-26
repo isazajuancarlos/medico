@@ -82,22 +82,48 @@ class TestLosTiposDeMenorSonImposibles:
 class TestElArchivoSinteticoLosDistingue:
     """La prueba que habría cazado el fallo original."""
 
+    #: Los únicos bloques con campos P11/P12. Urgencias y hospitalización NO
+    #: los admiten: el MUV los rechaza como «propiedades no permitidas en la
+    #: estructura». Se comprobó contra el validador real, no se dedujo.
+    CON_DOCUMENTO = {"consultas", "procedimientos", "medicamentos"}
+
     def _servicios(self):
-        for u in documento_sintetico(20)["usuarios"]:
+        # NIT explícito: `documento_sintetico` exige el del prestador que
+        # autentica y aquí no hay sesión del MUV. Que lo pida es lo correcto;
+        # lo que no puede es que una prueba dependa de una variable de entorno.
+        for u in documento_sintetico(20, nit_obligado="900123456",
+                                        cod_prestador="900123456789")["usuarios"]:
             for tipo, atenciones in u["servicios"].items():
                 for a in atenciones:
                     yield u, tipo, a
 
     def test_ningun_servicio_lleva_el_documento_del_paciente(self):
+        visto = 0
         for usuario, tipo, atencion in self._servicios():
+            if tipo not in self.CON_DOCUMENTO:
+                continue
+            visto += 1
             assert (atencion["numDocumentoIdentificacion"]
                     != usuario["numDocumentoIdentificacion"]), (
                 f"en {tipo} se coló el documento del paciente")
+        assert visto, "no se comprobó ni un servicio: la prueba no mide nada"
 
     def test_ningun_servicio_lleva_un_tipo_imposible(self):
         for _, tipo, atencion in self._servicios():
+            if tipo not in self.CON_DOCUMENTO:
+                continue
             assert atencion["tipoDocumentoIdentificacion"] in TIPOS_DOCUMENTO_PROFESIONAL, (
                 f"{tipo} lleva un tipo que la 948 no admite para un profesional")
+
+    def test_urgencias_y_hospitalizacion_NO_llevan_documento(self):
+        """Se aplicó a los cinco bloques por simetría, y la simetría no era del
+        formato. El MUV: «Propiedades no permitidas en la estructura de
+        Urgencia: tipoDocumentoIdentificacion, numDocumentoIdentificacion»."""
+        for _, tipo, atencion in self._servicios():
+            if tipo in self.CON_DOCUMENTO:
+                continue
+            assert "tipoDocumentoIdentificacion" not in atencion, tipo
+            assert "numDocumentoIdentificacion" not in atencion, tipo
 
     def test_el_archivo_ejercita_los_cinco_bloques(self):
         """Validar solo consultas responde por un quinto y se concluye del todo."""

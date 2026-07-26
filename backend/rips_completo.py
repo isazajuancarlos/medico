@@ -351,6 +351,34 @@ def _documento_profesional(
     }
 
 
+#: Texto libre de `Formula.unidad` -> código numérico de la unidad mínima de
+#: dispensación (campo M13). Solo lo evidente y en singular y plural; lo que no
+#: esté aquí se anota como falta en vez de resolverse por parecido.
+#:
+#: Está a medias A PROPÓSITO. La 948 remite a una tabla de referencia de
+#: SISPRO que no está cargada, y adivinar el código de una presentación cambia
+#: el sentido del valor unitario y de la cantidad que van al lado. Cuando se
+#: cargue la tabla, esto se sustituye por ella.
+UNIDAD_MIN_DISPENSA = {
+    "tableta": 1, "tabletas": 1,
+    "capsula": 2, "cápsula": 2, "capsulas": 2, "cápsulas": 2,
+    "ampolla": 3, "ampollas": 3,
+    "frasco": 4, "frascos": 4,
+    "vial": 5, "viales": 5,
+}
+
+
+def _unidad_min_dispensa(unidad: Any) -> Optional[int]:
+    """El código de la unidad, o `None` para que quede anotado como falta.
+
+    `«unidad»` —el valor por defecto del modelo— devuelve `None` a propósito:
+    no es una presentación, es la ausencia de una.
+    """
+    if not unidad:
+        return None
+    return UNIDAD_MIN_DISPENSA.get(str(unidad).strip().lower())
+
+
 def _cantidad_entera(
     cantidad: Any, rec: "Recolector", *, registro_id: Any
 ) -> Any:
@@ -381,7 +409,14 @@ def _cantidad_entera(
 
 
 def _fecha_dt(f: datetime) -> str:
-    return f.strftime('%Y-%m-%d %H:%M:%S')
+    """Fecha y hora como las quiere el RIPS: SIN segundos.
+
+    Iba con `%H:%M:%S` y el MUV lo rechaza —«Fecha no válida, formato
+    (AAAA-MM-DD HH:MM)»— en `fechaEgreso` y `fechaDispensAdmon`. La ficha M04
+    declara el campo de 16 caracteres, que es justo lo que mide
+    «2021-08-18 08:10»; con segundos son 19.
+    """
+    return f.strftime('%Y-%m-%d %H:%M')
 
 
 def _fecha_d(f: date) -> str:
@@ -478,18 +513,23 @@ def generar_archivo_ac(
                                       "cod_servicio", "código de servicio", 328),
                 "finalidadTecnologiaSalud": exigir(
                     _valor_enum(getattr(h, 'finalidad', None)),
-                    "finalidad", "finalidad de la consulta", "10"),
+                    # «10» no está en la tabla de referencia y el MUV lo
+                    # rechaza; el ejemplo de la norma usa 11 en consultas.
+                    "finalidad", "finalidad de la consulta", "11"),
                 "causaMotivoAtencion": exigir(
                     _valor_enum(getattr(h, 'causa_externa', None)),
                     "causa_externa", "causa o motivo de la atención", "13"),
                 "codDiagnosticoPrincipal": exigir(
                     h.diagnostico_principal, "diagnostico_principal",
                     "diagnóstico principal"),
-                # Los relacionados SÍ pueden ir vacíos: son opcionales, y una
-                # cadena vacía aquí significa «no hay», no «no se registró».
-                "codDiagnosticoRelacionado1": h.diagnostico_relacionado1 or "",
-                "codDiagnosticoRelacionado2": getattr(h, 'diagnostico_relacionado2', None) or "",
-                "codDiagnosticoRelacionado3": getattr(h, 'diagnostico_relacionado3', None) or "",
+                # Los relacionados SÍ pueden no estar: son opcionales. Pero
+                # «no hay» se escribe `null`, no "". El MUV rechaza la cadena
+                # vacía —«El campo código diagnóstico relacionado [] no es
+                # válido»— porque la contrasta contra la tabla de la CIE, y ""
+                # no está en ninguna tabla.
+                "codDiagnosticoRelacionado1": h.diagnostico_relacionado1 or None,
+                "codDiagnosticoRelacionado2": getattr(h, 'diagnostico_relacionado2', None) or None,
+                "codDiagnosticoRelacionado3": getattr(h, 'diagnostico_relacionado3', None) or None,
                 # El CIE-11 se deriva del CIE-10 DE ORIGEN, no del que se acaba
                 # emitiendo: si el diagnóstico falta y entra el supuesto, derivar
                 # de él daría un CIE-11 para un diagnóstico que nadie hizo.
@@ -627,14 +667,16 @@ def generar_archivo_ap(
                                       "cod_servicio", "código de servicio", 0),
                 "finalidadTecnologiaSalud": exigir(
                     _valor_enum(getattr(h, 'finalidad', None)),
-                    "finalidad", "finalidad del procedimiento", "10"),
+                    # Igual que arriba: el ejemplo de la norma usa 44 en
+                    # procedimientos.
+                    "finalidad", "finalidad del procedimiento", "44"),
                 # P11/P12: el PROFESIONAL que atendió, no el paciente.
                 **_documento_profesional(orden.historia.medico, rec, archivo="AP", registro_id=orden.id),
                 "codDiagnosticoPrincipal": exigir(
                     h.diagnostico_principal, "diagnostico_principal",
                     "diagnóstico principal"),
-                "codDiagnosticoRelacionado": h.diagnostico_relacionado1 or "",
-                "codComplicacion": "",
+                "codDiagnosticoRelacionado": h.diagnostico_relacionado1 or None,
+                "codComplicacion": None,
                 **_bloque_economico(orden, rec, "AP"),
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["procedimientos"]) + 1,
                 # CIE-11 derivado del CIE-10 de origen; vacío si la
@@ -743,8 +785,38 @@ def generar_archivo_am(
                                           "tipo_medicamento",
                                           "tipo de medicamento", "01"),
                 "nomTecnologiaSalud": formula.medicamento,
+                # M05, obligatorio y no lo emitíamos. La norma lo define como
+                # «el diagnóstico por el cual se hace necesaria la formulación».
+                # Se toma el de la historia en que se formuló: la fórmula no
+                # tiene diagnóstico propio, y el de la atención ES el contexto
+                # clínico de la prescripción. No es un valor de relleno; si la
+                # historia tampoco lo tiene, se anota como falta.
+                "codDiagnosticoPrincipal": rec.dato(
+                    getattr(formula.historia, "diagnostico_principal", None),
+                    archivo="AM", registro_id=formula.id,
+                    campo="historia.diagnostico_principal",
+                    etiqueta="diagnóstico que motivó la fórmula"),
+                # M13: código NUMÉRICO de la unidad mínima en que se dispensó
+                # (vial, tableta, frasco). `Formula.unidad` es texto libre con
+                # «unidad» por defecto, así que NO se puede derivar: mandar 1
+                # afirmaría una presentación concreta que nadie registró, y de
+                # ella dependen el valor unitario y la cantidad. Se anota como
+                # falta hasta que exista la tabla de equivalencias.
+                "unidadMinDispensa": rec.dato(
+                    _unidad_min_dispensa(getattr(formula, "unidad", None)),
+                    archivo="AM", registro_id=formula.id, campo="unidad",
+                    etiqueta="unidad mínima de dispensación (código de la 948)"),
                 "cantidadMedicamento": _cantidad_entera(
                     formula.cantidad, rec, registro_id=formula.id),
+                # M15: «debe ser mayor a cero». No se emitía. `Formula` no
+                # guarda la duración —solo `dosis`, que es texto libre—, así
+                # que se anota como falta en vez de mandar 1: los días de
+                # tratamiento salen de la prescripción, no de una constante.
+                "diasTratamiento": rec.dato(
+                    getattr(formula, "dias_tratamiento", None),
+                    archivo="AM", registro_id=formula.id,
+                    campo="dias_tratamiento",
+                    etiqueta="días de tratamiento de la fórmula"),
                 # P11/P12: el PROFESIONAL que atendió, no el paciente.
                 **_documento_profesional(formula.historia.medico, rec, archivo="AM", registro_id=formula.id),
                 "vrUnitMedicamento": exigir(getattr(formula, 'valor_unitario', None),
@@ -860,14 +932,27 @@ def generar_archivo_au(
                 "codDiagnosticoPrincipal": exigir(
                     au.diagnostico_ingreso, "diagnostico_ingreso",
                     "diagnóstico de ingreso", "R69"),
-                "codDiagnosticoRelacionadoE1": au.diagnostico_egreso or "",
+                # R05: el diagnóstico principal DE EGRESO. Estaba en
+                # `codDiagnosticoRelacionadoE1`, que es otra cosa —un
+                # diagnóstico relacionado del egreso—, así que el campo
+                # obligatorio salía vacío y el opcional salía con un dato que
+                # no le tocaba. El MUV se quejó de los dos a la vez.
+                "codDiagnosticoPrincipalE": au.diagnostico_egreso,
+                # Vacío significa «no hay», y la norma lo escribe `null`: la
+                # cadena vacía no cumple el mínimo de 4 caracteres.
+                "codDiagnosticoRelacionadoE1": None,
                 "condicionDestinoUsuarioEgreso": exigir(
                     destino_map.get(destino_val), "destino_salida",
                     "destino de salida", "01"),
-                "codDiagnosticoCausaMuerte": "",
+                "codDiagnosticoCausaMuerte": None,
                 "fechaEgreso": _fecha_dt(au.fecha_egreso),
-                # P11/P12: el PROFESIONAL que atendió, no el paciente.
-                **_documento_profesional(au.medico, rec, archivo="AU", registro_id=au.id),
+                # SIN documento del profesional. El MUV: «Propiedades no
+                # permitidas en la estructura de urgencias:
+                # tipoDocumentoIdentificacion, numDocumentoIdentificacion».
+                # Los campos P11/P12 existen en AC, AP y AM, no aquí — el
+                # ejemplo de la norma para AU termina en fechaEgreso,
+                # consecutivo y codigoVIDA. Se aplicó a los cinco bloques por
+                # simetría, y la simetría no era del formato.
                 # SIN bloque económico. El ejemplo de la Resolución 948 para
                 # AU termina en fechaEgreso/consecutivo: no lleva vrServicio,
                 # conceptoRecaudo, valorPagoModerador ni numFEVPagoModerador.
@@ -879,8 +964,14 @@ def generar_archivo_au(
                 # equivalencia no es exacta y única. La 948 lo admite.
                 "codDiagnosticoPrincipalCIE11": _par_cie11(getattr(au, 'diagnostico_ingreso', None))[0],
                 "nomCodDiagnosticoPrincipalCIE11": _par_cie11(getattr(au, 'diagnostico_ingreso', None))[1],
-                "codDiagnosticoRelacionadoE1CIE11": _par_cie11(au.diagnostico_egreso)[0],
-                "nomCodDiagnosticoRelacionadoE1CIE11": _par_cie11(au.diagnostico_egreso)[1],
+                # Acompañan al PRINCIPAL de egreso, que es donde vive ahora
+                # ese diagnóstico. Se quedaron colgando del campo antiguo al
+                # moverlo, y habrían dejado el CIE-11 del egreso etiquetado
+                # como si fuera de un diagnóstico relacionado.
+                "codDiagnosticoPrincipalECIE11": _par_cie11(au.diagnostico_egreso)[0],
+                "nomCodDiagnosticoPrincipalECIE11": _par_cie11(au.diagnostico_egreso)[1],
+                "codDiagnosticoRelacionadoE1CIE11": "",
+                "nomCodDiagnosticoRelacionadoE1CIE11": "",
                 "codDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(au, 'diagnostico_causa_muerte', None))[0],
                 "nomCodDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(au, 'diagnostico_causa_muerte', None))[1],
             }
@@ -1001,15 +1092,28 @@ def generar_archivo_ah(
                 "codDiagnosticoPrincipal": exigir(
                     h.diagnostico_ingreso, "diagnostico_ingreso",
                     "diagnóstico de ingreso", "Z00"),
-                "codDiagnosticoRelacionadoE1": h.diagnostico_egreso or "",
-                "codComplicacion": "",
+                # R05: el diagnóstico principal DE EGRESO. Estaba en
+                # `codDiagnosticoRelacionadoE1`, que es otra cosa —un
+                # diagnóstico relacionado del egreso—, así que el campo
+                # obligatorio salía vacío y el opcional salía con un dato que
+                # no le tocaba. El MUV se quejó de los dos a la vez.
+                "codDiagnosticoPrincipalE": h.diagnostico_egreso,
+                # Vacío significa «no hay», y la norma lo escribe `null`: la
+                # cadena vacía no cumple el mínimo de 4 caracteres.
+                "codDiagnosticoRelacionadoE1": None,
+                "codComplicacion": None,
                 "condicionDestinoUsuarioEgreso": exigir(
                     estado_egreso_map.get(estado), "estado",
                     "condición de egreso", "01"),
-                "codDiagnosticoCausaMuerte": "",
+                "codDiagnosticoCausaMuerte": None,
                 "fechaEgreso": _fecha_dt(h.fecha_egreso),
-                # P11/P12: el PROFESIONAL que atendió, no el paciente.
-                **_documento_profesional(h.medico_tratante, rec, archivo="AH", registro_id=h.id),
+                # SIN documento del profesional. El MUV: «Propiedades no
+                # permitidas en la estructura de hospitalización:
+                # tipoDocumentoIdentificacion, numDocumentoIdentificacion».
+                # Los campos P11/P12 existen en AC, AP y AM, no aquí — el
+                # ejemplo de la norma para AH termina en fechaEgreso,
+                # consecutivo y codigoVIDA. Se aplicó a los cinco bloques por
+                # simetría, y la simetría no era del formato.
                 # SIN bloque económico. El ejemplo de la Resolución 948 para
                 # AH termina en fechaEgreso/consecutivo: no lleva vrServicio,
                 # conceptoRecaudo, valorPagoModerador ni numFEVPagoModerador.
@@ -1021,8 +1125,14 @@ def generar_archivo_ah(
                 # equivalencia no es exacta y única. La 948 lo admite.
                 "codDiagnosticoPrincipalCIE11": _par_cie11(getattr(h, 'diagnostico_ingreso', None))[0],
                 "nomCodDiagnosticoPrincipalCIE11": _par_cie11(getattr(h, 'diagnostico_ingreso', None))[1],
-                "codDiagnosticoRelacionadoE1CIE11": _par_cie11(h.diagnostico_egreso)[0],
-                "nomCodDiagnosticoRelacionadoE1CIE11": _par_cie11(h.diagnostico_egreso)[1],
+                # Acompañan al PRINCIPAL de egreso, que es donde vive ahora
+                # ese diagnóstico. Se quedaron colgando del campo antiguo al
+                # moverlo, y habrían dejado el CIE-11 del egreso etiquetado
+                # como si fuera de un diagnóstico relacionado.
+                "codDiagnosticoPrincipalECIE11": _par_cie11(h.diagnostico_egreso)[0],
+                "nomCodDiagnosticoPrincipalECIE11": _par_cie11(h.diagnostico_egreso)[1],
+                "codDiagnosticoRelacionadoE1CIE11": "",
+                "nomCodDiagnosticoRelacionadoE1CIE11": "",
                 "codComplicacionCIE11": _par_cie11(getattr(h, 'complicacion', None))[0],
                 "nomCodComplicacionCIE11": _par_cie11(getattr(h, 'complicacion', None))[1],
                 "codDiagnosticoCausaMuerteCIE11": _par_cie11(getattr(h, 'diagnostico_causa_muerte', None))[0],

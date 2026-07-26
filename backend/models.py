@@ -594,6 +594,12 @@ class Formula(CamposRips, table=True):
     tipo_medicamento: Optional[str] = Field(default=None)
     #: El precio de UNA unidad. `vrServicio` es el de la dispensación completa.
     valor_unitario: Optional[int] = Field(default=None)
+    #: Días de tratamiento (campo M15 del RIPS). El MUV exige que sea mayor que
+    #: cero. No se deduce de `dosis`, que es texto libre: «1 cada 8 horas» no
+    #: dice cuántos días. Sin él, el archivo de medicamentos no se puede generar
+    #: —y esa es la conducta correcta: un número inventado aquí cambia lo que se
+    #: factura.
+    dias_tratamiento: Optional[int] = Field(default=None)
 
 class Orden(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
