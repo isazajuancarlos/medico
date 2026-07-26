@@ -139,3 +139,120 @@ def requiere_modulo(modulo) -> Callable:
             )
 
     return _verificar
+
+
+# =====================================================================
+# LICENCIA: vigencia y cupos
+# =====================================================================
+#
+# Estos tres controles existían en la versión NiceGUI (`middleware.py`,
+# `ValidadorLicencia`) y se perdieron al pasar a FastAPI. Nadie los aplicaba:
+# `Licencia.fecha_vencimiento` no se leía en ninguna parte del backend, y
+# `max_usuarios`/`max_medicos` solo aparecían en el modelo y en la semilla.
+# En la práctica, una licencia vencía y el sistema seguía funcionando para
+# siempre — que es lo mismo que no tener licencia.
+#
+# DOS DECISIONES DE DISEÑO QUE NO SON DETALLES:
+#
+# 1. LOS CUPOS SE CUENTAN, NO SE LEEN DE UN CONTADOR. El modelo trae
+#    `uso_actual_usuarios`, `uso_actual_medicos` y `uso_actual_pacientes`, y
+#    **ningún sitio del sistema los actualiza**: valen 0 desde que se sembró la
+#    licencia. El control heredado comparaba contra ellos, así que nunca podía
+#    saltar. Aquí se cuentan las filas reales; un valor derivado que nadie
+#    deriva no es un dato, es un adorno que aparenta control.
+#
+# 2. UNA LICENCIA VENCIDA NO CIEGA LA HISTORIA CLÍNICA. Bloquear la lectura
+#    dejaría a un hospital sin sus registros por un asunto comercial, y con
+#    ello incumpliendo ante un tercero —el paciente, la EPS, la Supersalud—.
+#    Lo que se bloquea es la EXPANSIÓN: crear usuarios, dar de alta médicos.
+#    Vencida se lee y se sigue operando; no se crece. Ver la tarea #71.
+
+def licencia_de(user: "Usuario", db: Session):
+    """La licencia de la institución del usuario, en el estado que esté.
+
+    A diferencia de `modulos_de`, NO filtra por estado: quien pregunta por la
+    vigencia necesita ver la licencia vencida para poder decirlo. Filtrarla
+    aquí devolvería «no hay licencia», que es un diagnóstico distinto.
+    """
+    from models import Licencia
+
+    if not user.institucion_id:
+        return None
+    return db.exec(
+        select(Licencia).where(Licencia.institucion_id == user.institucion_id)
+    ).first()
+
+
+def licencia_vigente(user: "Usuario", db: Session) -> tuple[bool, str]:
+    """(vigente, motivo). El motivo va vacío si lo está.
+
+    El SUPERADMIN no pertenece a ninguna institución: es el dueño del sistema,
+    no un cliente, y no se le puede vencer una licencia que no tiene.
+    """
+    from datetime import date
+
+    from models import EstadoLicencia
+
+    if user.rol == RolUsuario.SUPERADMIN:
+        return True, ""
+
+    licencia = licencia_de(user, db)
+    if licencia is None:
+        return False, "La institución no tiene licencia registrada."
+    if licencia.estado != EstadoLicencia.ACTIVA:
+        return False, f"La licencia está en estado {licencia.estado.value}."
+    hoy = date.today()
+    if licencia.fecha_vencimiento < hoy:
+        return False, f"La licencia venció el {licencia.fecha_vencimiento}."
+    if licencia.fecha_inicio > hoy:
+        return False, f"La licencia empieza a regir el {licencia.fecha_inicio}."
+    return True, ""
+
+
+def _en_uso(db: Session, institucion_id: int, solo_medicos: bool) -> int:
+    """Cuenta usuarios reales de la institución. Ver decisión (1) arriba."""
+    from models import Usuario as U
+
+    consulta = select(U).where(U.institucion_id == institucion_id)
+    if solo_medicos:
+        consulta = consulta.where(U.rol == RolUsuario.MEDICO)
+    return len(db.exec(consulta).all())
+
+
+def hay_cupo(user: "Usuario", db: Session, *, para_medico: bool) -> tuple[bool, str]:
+    """¿Cabe un usuario más en la licencia? (cabe, motivo).
+
+    Sin licencia no se afirma que hay cupo: se dice que no se puede comprobar,
+    y quien llama decide. Devolver `True` ante la duda convertiría un control
+    en un adorno.
+    """
+    if user.rol == RolUsuario.SUPERADMIN:
+        return True, ""
+
+    licencia = licencia_de(user, db)
+    if licencia is None:
+        return False, "La institución no tiene licencia registrada."
+
+    tope = licencia.max_medicos if para_medico else licencia.max_usuarios
+    usados = _en_uso(db, user.institucion_id, solo_medicos=para_medico)
+    if usados >= tope:
+        que = "médicos" if para_medico else "usuarios"
+        return False, (
+            f"La licencia permite {tope} {que} y ya hay {usados}. "
+            "Amplíe la licencia para agregar más."
+        )
+    return True, ""
+
+
+def requiere_licencia_vigente(
+    user: "Usuario" = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Dependencia para las acciones que NO son de lectura clínica.
+
+    Se pone donde el sistema CRECE —altas de usuarios, de médicos, de sedes—,
+    nunca sobre consultar o registrar atención: ver la decisión (2) de arriba.
+    """
+    vigente, motivo = licencia_vigente(user, db)
+    if not vigente:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=motivo)
