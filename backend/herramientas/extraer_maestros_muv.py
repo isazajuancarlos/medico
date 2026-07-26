@@ -51,18 +51,29 @@ TABLAS = {
     "CUPS": ("Rips.REFs_CUPS", "Codigo, Nombre", "Habilitado = 1"),
     "CUPS_CIE10": ("Rips.REFs_CUPS_CIE10", "*", None),
     "FINALIDAD_CUPS": ("Rips.REFs_FinalidadCups", "*", None),
-    "FINALIDAD_TEC": ("Rips.REFs_FinalidadTecnologiaSalud", "Codigo, Nombre",
-                      "Habilitado = 1"),
-    "CAUSA_MOTIVO": ("Rips.REFs_CausaMotivoAtencion", "Codigo, Nombre",
-                     "Habilitado = 1"),
-    "VIA_INGRESO": ("Rips.REFs_ViaIngresoServicioSalud", "Codigo, Nombre",
-                    "Habilitado = 1"),
+    # Estas tres traen columnas AplicaAC/AplicaAP/AplicaAU/AplicaAH y, la
+    # primera, Sexo y rango de edad: un mismo código vale en unos archivos y no
+    # en otros. Se traen enteras porque ahí está lo que decide RVC059, y
+    # recortarlas a «Codigo, Nombre» sería tirar justo la parte útil.
+    "FINALIDAD_TEC": ("Rips.REFs_FinalidadTecnologiaSalud", "*", None),
+    "CAUSA_MOTIVO": ("Rips.REFs_CausaMotivoAtencion", "*", None),
+    "VIA_INGRESO": ("Rips.REFs_ViaIngresoServicioSalud", "*", None),
     "TIPO_DOC": ("Rips.REFs_TipoDoc", "*", None),
 }
 
 
 class ContenedorNoDisponible(RuntimeError):
     """El validador no está levantado. No se usa una copia vieja en su lugar."""
+
+
+class ConsultaMal(RuntimeError):
+    """La consulta está mal escrita. El contenedor respondió perfectamente.
+
+    Se separa de `ContenedorNoDisponible` porque decirle a alguien «levanta el
+    validador» cuando el validador está arriba y lo que falla es un nombre de
+    columna manda a buscar donde no es. Es el mismo error que el cliente del
+    MUV cometía con el HTTP 400: tomar una respuesta legítima por una avería.
+    """
 
 
 def consultar(sql: str) -> list[dict]:
@@ -88,6 +99,14 @@ def consultar(sql: str) -> list[dict]:
     if r.returncode != 0:
         raise ContenedorNoDisponible(
             f"el contenedor `{CONTENEDOR}` no respondió.\n{r.stderr.strip()}")
+
+    # SQL Server informa los errores de consulta por la salida normal y con
+    # código 0. Sin esto, un nombre de columna mal escrito se leía como
+    # «respuesta ininteligible» y mandaba a revisar el contenedor.
+    if "Msg " in r.stdout and "Level " in r.stdout:
+        detalle = next((l.strip() for l in r.stdout.splitlines()
+                        if "Invalid" in l or "Msg " in l), r.stdout[:200])
+        raise ConsultaMal(detalle)
 
     # Se descarta todo lo que no sea el JSON: sqlcmd antepone la cabecera de
     # la columna y una línea de guiones, y `-h -1` no se puede usar con `-y 0`.
@@ -154,6 +173,10 @@ def main() -> int:
             return 2
         try:
             ruta = extraer(nombre)
+        except ConsultaMal as e:
+            print(f"\n{nombre}: la consulta está mal, no el contenedor.\n  {e}\n"
+                  f"Revisa las columnas declaradas en TABLAS.", file=sys.stderr)
+            return 4
         except ContenedorNoDisponible as e:
             print(f"\n{nombre}: {e}\n\nNo se ha escrito nada. Levanta el "
                   f"validador con `docker compose up -d` en muv/.",

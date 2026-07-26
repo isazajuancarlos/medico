@@ -101,3 +101,34 @@ def nombres_presentacion() -> list[dict]:
          for f in cargar("upr")["filas"]),
         key=lambda d: d["nombre"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Tipos de documento
+#
+# `REFs_TipoDoc` marca cada tipo con dos banderas: si vale para el USUARIO del
+# RIPS y si vale para quien REALIZA la atención. Es la misma distinción que la
+# Resolución 948 hace en los campos P11/P12 y que estaba escrita a mano tras
+# leerla del PDF —correctamente, resultó—, pero aquí viene como dato.
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def _tipos_documento() -> list[dict]:
+    return cargar("tipo_doc")["filas"]
+
+
+def tipos_documento_paciente() -> dict[str, str]:
+    """Los que el MUV admite para el usuario atendido."""
+    return {f["TipoDocumentoIdentificacion"]: f["DocumentoIdentificacion"]
+            for f in _tipos_documento() if f["UsuarioRips"]}
+
+
+def tipos_documento_profesional() -> dict[str, str]:
+    """Los que el MUV admite para quien realiza la atención.
+
+    Ninguno es de menor ni de «sin identificar»: quien atiende es un adulto
+    identificado. Es la regla que el MUV aplicó al rechazarnos las consultas de
+    niños, cuando el documento del paciente iba en el campo del médico.
+    """
+    return {f["TipoDocumentoIdentificacion"]: f["DocumentoIdentificacion"]
+            for f in _tipos_documento() if f["RealizaAtencionRips"]}

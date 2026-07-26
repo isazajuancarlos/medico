@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict
 from datetime import date, datetime
+import maestros_muv
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, JSON
 from enum import Enum
@@ -250,39 +251,20 @@ class Usuario(SQLModel, table=True):
 
     paciente_id: Optional[int] = Field(default=None, foreign_key="paciente.id")
 
-TIPOS_DOCUMENTO = {
-    "CC": "Cédula de Ciudadanía",
-    "TI": "Tarjeta de Identidad",
-    "RC": "Registro Civil",
-    "CE": "Cédula de Extranjería",
-    "PA": "Pasaporte",
-    "AS": "Adulto sin identificación",
-    "MS": "Menor sin identificación",
-    "NU": "NUIP",
-    "PE": "Permiso Especial de Permanencia",
-    "PT": "Permiso Temporal de Permanencia",
-}
+#: Tipos de documento, DERIVADOS del maestro del MUV (`REFs_TipoDoc`) y no
+#: escritos a mano. La lista anterior incluía `NU` (NUIP), que el MUV no admite
+#: —un paciente registrado así hacía rechazar la factura—, y le faltaban `CD`,
+#: `SC`, `DE` y, sobre todo, `CN`: certificado de nacido vivo, sin el cual un
+#: recién nacido no se puede registrar. El RIPS tiene un archivo entero para
+#: ellos.
+TIPOS_DOCUMENTO = maestros_muv.tipos_documento_paciente()
 
-#: Los ÚNICOS tipos que la Resolución 948 admite para un profesional de la salud
-#: (Documento Técnico 1, campos P11/P12). No es un subconjunto arbitrario: RC y
-#: TI son documentos de menores, y AS/MS son «sin identificación» — ninguno puede
-#: corresponder a quien ordenó o realizó el procedimiento.
-#:
-#: Existe porque el MUV nos rechazó por enviar aquí el documento del PACIENTE:
-#: las consultas de menores salían con RC y TI. Las de adultos pasaban, llevando
-#: un dato falso que nadie habría notado.
-TIPOS_DOCUMENTO_PROFESIONAL = {
-    c: TIPOS_DOCUMENTO.get(c, n) for c, n in {
-        "CC": "Cédula de Ciudadanía",
-        "CE": "Cédula de Extranjería",
-        "CD": "Carné Diplomático",
-        "PA": "Pasaporte",
-        "SC": "Salvoconducto de Permanencia",
-        "PE": "Permiso Especial de Permanencia",
-        "DE": "Documento Extranjero",
-        "PT": "Permiso por Protección Temporal",
-    }.items()
-}
+#: Los que el MUV admite para quien REALIZA la atención (campos P11/P12).
+#: Ninguno es de menor ni de «sin identificar»: quien atiende es un adulto
+#: identificado. Es la regla que el MUV aplicó al rechazarnos las consultas de
+#: niños, cuando el documento del paciente iba en el campo del médico.
+TIPOS_DOCUMENTO_PROFESIONAL = maestros_muv.tipos_documento_profesional()
+
 
 class Paciente(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

@@ -124,3 +124,44 @@ def test_el_frasco_deshabilitado_no_entra():
     el primero de la tabla habría dado el que ya no vale."""
     assert _unidad_min_dispensa("frasco") == 13
     assert 40 not in {d["codigo"] for d in catalogo()}
+
+
+# ---------------------------------------------------------------------------
+# Los tipos de documento salen del mismo maestro
+#
+# `REFs_TipoDoc` marca cada tipo con `UsuarioRips` y `RealizaAtencionRips`. La
+# lista de profesionales estaba escrita a mano tras leer el PDF —y resultó
+# correcta—, pero la de pacientes traía `NU` (NUIP), que el MUV no admite, y no
+# traía `CN`, sin el cual un recién nacido no se puede registrar.
+# ---------------------------------------------------------------------------
+
+def test_el_profesional_no_admite_documentos_de_menor():
+    """La regla que el MUV aplicó al rechazarnos las consultas de niños."""
+    from models import TIPOS_DOCUMENTO_PROFESIONAL
+
+    for imposible in ("RC", "TI", "CN", "AS", "MS"):
+        assert imposible not in TIPOS_DOCUMENTO_PROFESIONAL
+
+
+def test_las_dos_listas_salen_del_maestro_y_no_de_una_copia():
+    from models import TIPOS_DOCUMENTO, TIPOS_DOCUMENTO_PROFESIONAL
+
+    filas = maestros_muv.cargar("tipo_doc")["filas"]
+    assert set(TIPOS_DOCUMENTO) == {
+        f["TipoDocumentoIdentificacion"] for f in filas if f["UsuarioRips"]}
+    assert set(TIPOS_DOCUMENTO_PROFESIONAL) == {
+        f["TipoDocumentoIdentificacion"] for f in filas
+        if f["RealizaAtencionRips"]}
+
+
+def test_el_recien_nacido_puede_registrarse():
+    """`CN` faltaba, y el RIPS tiene un archivo entero para recién nacidos."""
+    from models import TIPOS_DOCUMENTO
+
+    assert "CN" in TIPOS_DOCUMENTO
+
+
+def test_el_NUIP_que_el_MUV_no_admite_ya_no_se_ofrece():
+    from models import TIPOS_DOCUMENTO
+
+    assert "NU" not in TIPOS_DOCUMENTO
