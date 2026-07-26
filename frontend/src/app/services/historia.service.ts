@@ -101,9 +101,15 @@ export interface Formula {
   dosis: string;
   cantidad: number;
   unidad?: string;
+  dias_tratamiento?: number;
   observaciones?: string;
   fecha_formula: string;
   dispensada: boolean;
+}
+
+export interface UnidadDispensacion {
+  codigo: number;
+  nombre: string;
 }
 
 export interface FormulaCreate {
@@ -112,6 +118,8 @@ export interface FormulaCreate {
   dosis: string;
   cantidad: number;
   unidad?: string;
+  /** Campo M15 del RIPS: el MUV exige que sea mayor que cero. */
+  dias_tratamiento?: number;
   observaciones?: string;
 }
 
@@ -202,6 +210,13 @@ export class HistoriaService {
   // ── Fórmulas médicas ────────────────────────────────────────────
   listFormulas(historiaId: number): Observable<Formula[]> {
     return this.http.get<Formula[]>(`${this.API}/${historiaId}/formulas`);
+  }
+
+  /** Las presentaciones que el RIPS sabe traducir a su código M13.
+   *  Se piden al backend y no se copian aquí: una lista en dos sitios se
+   *  desincroniza, y de ese código dependen el valor unitario y la cantidad. */
+  getUnidadesDispensacion(): Observable<UnidadDispensacion[]> {
+    return this.http.get<UnidadDispensacion[]>(`${this.API}/unidades-dispensacion`);
   }
 
   createFormula(historiaId: number, data: FormulaCreate): Observable<Formula> {

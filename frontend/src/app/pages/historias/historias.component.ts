@@ -20,7 +20,8 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { TabsModule } from 'primeng/tabs';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
-import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo } from '../../services/historia.service';
+import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo,
+         UnidadDispensacion } from '../../services/historia.service';
 import { PacienteService } from '../../services/paciente.service';
 import { Patient } from '../../models/patient.models';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -700,9 +701,24 @@ function defaultAntPrenatales(): AntPrenatales {
                           <p-inputNumber [(ngModel)]="fForm.cantidad" [min]="1" class="w-full" />
                         </div>
                         <div class="field">
-                          <label>Unidad</label>
-                          <input pInputText [(ngModel)]="fForm.unidad" class="w-full"
-                            placeholder="tabletas, cápsulas, ml, amp..." />
+                          <label>Unidad *</label>
+                          <p-select [(ngModel)]="fForm.unidad" [options]="unidades()"
+                            optionLabel="nombre" optionValue="nombre"
+                            placeholder="Elija la presentación" class="w-full"
+                            appendTo="body" />
+                          <small class="text-color-secondary">
+                            El RIPS la pide como código. Si la presentación no
+                            está en la lista, queda anotada al cerrar el mes.
+                          </small>
+                        </div>
+                        <div class="field">
+                          <label>Días de tratamiento *</label>
+                          <p-inputNumber [(ngModel)]="fForm.dias_tratamiento" [min]="1"
+                            class="w-full" placeholder="Ej: 7" />
+                          <small class="text-color-secondary">
+                            Obligatorio en el RIPS y mayor que cero. No se deduce
+                            de la dosis.
+                          </small>
                         </div>
                         <div class="field" style="grid-column:1/-1">
                           <label>Observaciones</label>
@@ -1193,7 +1209,11 @@ export class HistoriasComponent implements OnInit {
   termMed = '';
   buscandoMed = signal(false);
   resultadosMed = signal<MedicamentoInfo[]>([]);
-  fForm: FormulaCreate = { medicamento: '', dosis: '', cantidad: 1, unidad: 'tabletas' };
+  // Sin `unidad: 'tabletas'`: era un dato inventado con aspecto de dato. Vacío,
+  // la falta se ve al cerrar el mes; relleno, se factura una presentación que
+  // nadie eligió y de la que dependen el valor unitario y la cantidad.
+  fForm: FormulaCreate = { medicamento: '', dosis: '', cantidad: 1 };
+  readonly unidades = signal<UnidadDispensacion[]>([]);
   private medSearch$ = new Subject<string>();
 
   // ── Órdenes médicas ──
@@ -1223,6 +1243,13 @@ export class HistoriasComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Las presentaciones vienen del backend, que es donde vive el mapa a los
+    // códigos del RIPS. Si falla, la lista queda vacía y el campo se ve vacío:
+    // preferible a ofrecer opciones que quizá ya no se sepan traducir.
+    this.svc.getUnidadesDispensacion()
+      .pipe(catchError(() => of([] as UnidadDispensacion[])))
+      .subscribe(u => this.unidades.set(u));
+
     // Búsqueda de medicamentos con debounce
     this.medSearch$.pipe(
       debounceTime(350),
@@ -1609,7 +1636,7 @@ export class HistoriasComponent implements OnInit {
   }
 
   private _resetFForm(): void {
-    this.fForm = { medicamento: '', dosis: '', cantidad: 1, unidad: 'tabletas' };
+    this.fForm = { medicamento: '', dosis: '', cantidad: 1 };
     this.termMed = '';
     this.resultadosMed.set([]);
     this.formulaEditando.set(null);
@@ -1645,6 +1672,7 @@ export class HistoriasComponent implements OnInit {
       dosis: f.dosis,
       cantidad: f.cantidad,
       unidad: f.unidad ?? '',
+      dias_tratamiento: f.dias_tratamiento,
       observaciones: f.observaciones,
     };
     this.termMed = f.medicamento;

@@ -95,7 +95,7 @@ def main() -> int:
         return 3
 
     if not pendientes:
-        print("Las dos columnas ya existen. Nada que hacer.")
+        print("Todas las columnas ya existen. Nada que hacer.")
         return 0
 
     for tabla, columnas in pendientes.items():
@@ -116,7 +116,7 @@ def main() -> int:
             "ON usuario (numero_documento)"))
         n = cuantos_lo_necesitan(con)
 
-    print(f"\nListo. Quedan en NULL a propósito: no hay valor que suponer.")
+    print("\nListo. Quedan en NULL a propósito: no hay valor que suponer.")
     if n:
         print(f"Hay al menos {n} profesional(es) con atenciones registradas. "
               f"Hasta que tengan documento, generar su RIPS fallará diciendo "

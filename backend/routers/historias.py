@@ -101,6 +101,31 @@ def create_historia(
     return _enrich_historia(historia, db)
 
 
+@router.get("/unidades-dispensacion")
+def unidades_dispensacion(
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Las presentaciones que hoy se saben traducir al código del RIPS (M13).
+
+    Se sirven desde aquí y no se copian al frontend a propósito: una lista
+    repetida en dos sitios se desincroniza, y de este código dependen el valor
+    unitario y la cantidad que el MUV valida al lado. Cuando se cargue la tabla
+    de referencia de SISPRO, cambia una vez y el formulario se entera solo.
+
+    Están las evidentes y nada más. Lo que el médico escriba fuera de esta
+    lista queda anotado como falta al cerrar el mes, en vez de resolverse por
+    parecido: «gotas» y «gotero» no son lo mismo para quien paga.
+    """
+    from rips_completo import UNIDAD_MIN_DISPENSA
+
+    vistos: dict[int, str] = {}
+    for nombre, codigo in UNIDAD_MIN_DISPENSA.items():
+        # El mapa trae singular y plural apuntando al mismo código. Para elegir
+        # en una lista basta uno, y se queda el primero, que es el singular.
+        vistos.setdefault(codigo, nombre)
+    return [{"codigo": c, "nombre": n} for c, n in sorted(vistos.items())]
+
+
 @router.get("/paciente/{paciente_id}", response_model=list[HistoriaRead])
 def list_historias_paciente(
     paciente_id: int,
