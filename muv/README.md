@@ -1,58 +1,55 @@
 # Validador FEV-RIPS en local
 
-Los dos contenedores contra los que habla `backend/muv_client.py`. La receta
-está escrita; **faltan los artefactos**, que no son públicos.
+El contenedor contra el que habla `backend/muv_client.py`. **Ambiente de
+pruebas**, siempre.
 
-## Lo que hay que conseguir
+## De dónde sale la imagen
 
-MinSalud **no publica una imagen**: la *Guía de Instalación API Docker FEV-RIPS
-v1.0* no contiene ningún `docker pull`. El prestador descarga un paquete y
-construye las imágenes con él.
+MinSalud **sí publica la imagen**, en un Azure Container Registry, y entrega el
+`docker compose` con la credencial de extracción dentro:
 
-**De dónde sale.** Del micrositio de Factura Electrónica de Venta en Salud:
+| Archivo | Registro e imagen | Perfil |
+|---|---|---|
+| `apilocal-dockercompose.Stage.yml` | `crmspsgovcostage.azurecr.io/stage-fevrips-apilocal` | `DockerStage` |
+| `apilocal-dockercompose.Production.yml` | `crmspsgovcoprd.azurecr.io/production-fevrips-apilocal` | `DockerProduction` |
 
-> https://www.sispro.gov.co/central-financiamiento/Pages/facturacion-electronica.aspx
+Comprobado el 2026-07-26 contra el registro real: la credencial del archivo de
+stage autentica, y `stage-fevrips-apilocal:latest` existe — 8 capas, 120 MB
+comprimidos, digest `sha256:add9b16b16e7df51…`.
 
-Los *Lineamientos para la generación, validación y envío de RIPS como soporte de
-la FEV* (v3.2, MinSalud) dicen que allí está «la versión vigente de estos
-lineamientos y de los documentos y **herramientas técnicas** emitidos por el
-Ministerio». Es la misma página desde la que se descarga el validador
-cliente-servidor.
+**La *Guía de Instalación API Docker FEV-RIPS v1.0* describe un método
+anterior**, en el que uno construía las imágenes copiando dentro un
+`FevsRipsLocal.bak`, un `FEVRIPS-script.sql` y una carpeta `FVE1/`. Nada de eso
+hace falta ya: el API crea y migra su propio esquema. Queda dicho porque esa
+guía sigue publicada y manda por un camino que ya no es.
 
-Esa página no se puede consultar con `curl`: devuelve un 302 hacia sí misma en
-bucle, así que hay que abrirla en un navegador. Por lo mismo **no está
-verificado** si la descarga es pública o exige sesión de SISPRO. Lo que sí está
-confirmado (caso 2026403888) es que *usar* el MUV exige credenciales de una
-persona vinculada a la entidad; descargar el paquete puede ser otra cosa.
+Los dos `.yml` **no se versionan** (`.gitignore`): llevan dentro la credencial
+del registro, la clave del `sa` y la del certificado. El repositorio es privado,
+pero eso protege de quien no tiene acceso, no de un `git add -A`.
 
-**Si el prestador ya factura**, el camino corto es su propia máquina: la carpeta
-con la que construyó su contenedor tiene los tres archivos.
+## Nunca el de producción
 
-**Mesa de ayuda** (capítulo 7.1 de los Lineamientos):
-`soporte-fev-rips@minsalud.gov.co` · Bogotá (601) 330 5043 · resto del país
-018000960020 · L-V 7:00–18:00, sábados 8:00–13:00.
+`apilocal-dockercompose.Production.yml` apunta al validador con **efectos
+jurídicos y financieros reales**. Una factura inventada obtendría allí un CUV
+verdadero. Para probar, solo el de stage.
 
-Del paquete salen tres cosas, que van aquí:
-
-| Archivo del paquete | Dónde ponerlo |
-|---|---|
-| `FevsRipsLocal.bak` | `sqlserver/artefactos/` |
-| `FEVRIPS-script.sql` | `sqlserver/artefactos/scripts/` |
-| carpeta `FVE1/` (con `FVE.WebAPI.dll`) | `api/FVE1/` |
-
-Basta con el `.bak` **o** con el `.sql`: el respaldo trae la base entera y el
-script la construye vacía. Si están los dos se usa el respaldo. Si no está
-ninguno, la construcción falla en vez de dejar un SQL Server vacío que
-reventaría después como un error incomprensible del API.
-
-Ninguno de los tres se versiona: son de MinSalud, el respaldo pesa, y no nos
-corresponde redistribuirlos. Están en `.gitignore`.
+Ojo con las copias editadas a mano: se encontró una en `reporips/api/` que hace
+`docker login` contra el registro de *stage* pero pide la imagen de
+*producción*. Comprobar siempre que el registro del `login`, el del `image:` y
+el `ASPNETCORE_ENVIRONMENT` digan los tres lo mismo.
 
 ## Levantar
 
 ```bash
-export MSSQL_SA_PASSWORD='...'          # sin valor por defecto, a propósito
-cd muv && docker compose up --build     # la primera vez tarda: restaura la BD
+cd muv
+export CERT_PASSWORD='...'     # la que quieras; no hay defecto
+./certificado.sh               # una sola vez
+
+# La credencial NO está en este repositorio: sale del .yml del Ministerio.
+docker login -u puller -p <la del archivo de stage> crmspsgovcostage.azurecr.io
+
+docker compose pull
+docker compose up -d
 ```
 
 Y después, desde `backend/`:
@@ -62,33 +59,33 @@ set -a; . ~/.config/medico/muv.entorno; set +a
 python validar_muv.py --enviar --sin-verificar-tls
 ```
 
-`--sin-verificar-tls` solo es defendible porque la conexión no sale de la
-máquina: el certificado del contenedor es autofirmado.
+`--sin-verificar-tls` es correcto y no una concesión: el certificado lo genera
+`certificado.sh` y es autofirmado, pero la conexión no sale de la máquina.
 
-## Lo que cambia respecto de la guía, y por qué
+## Lo que se cambió del archivo del Ministerio, y por qué
 
-La guía es un borrador publicado —conserva el código de proceso sin rellenar
-(`XXXSXX`) y frases de plantilla— y va en v1.0 mientras el manual de consumo de
-la API va en v2.0 para la v4.3. Cinco diferencias deliberadas:
+1. **`C:\Certificates` → `./certificates`.** Ruta de Windows; en Linux docker la
+   tomaría como nombre de volumen y el API arrancaría sin certificado.
+2. **El `.pfx` se genera aquí.** El archivo espera un `fevripsapilocal.pfx` que
+   no viene con él. `certificado.sh` lo fabrica y comprueba que abre con la
+   clave; sin `CERT_PASSWORD` se niega, en vez de dejar una clave de ejemplo
+   copiada por todo el mundo.
+3. **`MSSQL_PID=Enterprise` → `Developer`.** Funcionalmente equivalente para
+   esto, y su licencia cubre desarrollo y pruebas sin coste. Declarar Enterprise
+   afirma una licencia que no tenemos, y quien acepta el EULA es quien corre el
+   contenedor.
+4. **La base persiste en un volumen.** El original no guarda nada: recrear el
+   contenedor borraba el esquema recién migrado.
+5. **Los límites de CPU y memoria no se copiaron.** El propio archivo trae la
+   nota «validar documentación referente, para los recursos del límite y reserva
+   del contenedor» — es decir, ni el Ministerio los da por buenos. Sin ellos
+   docker no restringe nada, que en una máquina de desarrollo es lo que se
+   quiere.
 
-1. **La clave del `sa` no se hornea.** La guía la pone con `ENV` en el
-   Dockerfile; ahí queda en una capa y `docker history` la enseña. Va por
-   entorno, y el arranque se cae si falta.
-2. **`sqlcmd` se busca en vez de suponerse.** La guía fija
-   `/opt/mssql-tools/bin/sqlcmd`. Comprobado dentro de la imagen real: **esa
-   ruta no existe**. Lo único que hay es `/opt/mssql-tools18/bin/sqlcmd`, que
-   además exige `-C`. Seguir la guía literalmente da un «no such file» en cada
-   consulta, que no se parece al problema real.
-3. **No se restaura dos veces.** Una marca en el volumen de datos evita que
-   recrear el contenedor vuelva a restaurar con `REPLACE` sobre lo ya validado.
-4. **La cadena de conexión va por entorno.** La del manual apunta a `localhost`
-   —que dentro del contenedor del API es el propio API— y separa el puerto con
-   dos puntos en vez de coma.
-5. **El 1433 no se publica al host.** Los contenedores se hablan por la red
-   interna de compose.
+## Sin verificar
 
-## Lo que está sin verificar
-
-Cómo sirve TLS el API en el 9443: dev-cert, certificado montado o HTTP simple.
-Depende de lo que traiga el paquete y se ajusta al abrirlo. Está marcado como
-tal en `compose.yml`.
+- Si la clave del `sa` (`FEVRIPS1*`, fijada por el Ministerio) puede cambiarse,
+  o si el API la lleva horneada en su cadena de conexión. Mientras no se sepa,
+  se deja como está; lo que la protege es que el 1433 no se publica al host.
+- Que el perfil `DockerStage` apunte de verdad a `stage-fevrips.sispro.gov.co`.
+  Se confirma leyendo la configuración dentro de la imagen, ya descargada.

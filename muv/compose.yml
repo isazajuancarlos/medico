@@ -1,53 +1,69 @@
-# Validador FEV-RIPS de MinSalud, los dos contenedores.
+# Validador FEV-RIPS de MinSalud — ambiente de PRUEBAS.
 #
-#     cd muv && docker compose up --build
+# Adaptado de `apilocal-dockercompose.Stage.yml`, el archivo que entrega el
+# Ministerio. Se conserva todo lo que decide el comportamiento del validador y
+# solo se cambia lo que no puede funcionar aquí; cada cambio, anotado.
 #
-# La guía oficial (secciones 11.3.2 y 11.4) manda crear la red a mano y lanzar
-# dos `docker run` con las claves en la línea de órdenes, donde quedan en el
-# historial del shell y en `ps`. Esto hace lo mismo en una orden y lee los
-# valores del entorno.
+#     ./certificado.sh                      # una vez: genera el .pfx
+#     docker login ...                      # ver README: la credencial NO vive aquí
+#     docker compose pull && docker compose up -d
 #
-# Antes de levantar hay que exportar MSSQL_SA_PASSWORD. No hay valor por
-# defecto a propósito: uno haría que un despliegue mal configurado arrancara
-# igual, con una clave conocida y publicada en un manual.
+# NUNCA usar el archivo .Production.yml para probar. Su perfil es
+# `DockerProduction` y valida contra el ambiente con efectos jurídicos y
+# financieros reales: una factura inventada obtendría allí un CUV verdadero.
+
+networks:
+  fevrips-net:
+    driver: bridge
 
 services:
-  sql:
-    build: ./sqlserver
+  fevrips-db:
+    container_name: fevrips-db
+    image: mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
     environment:
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?exporta MSSQL_SA_PASSWORD antes de levantar}
+      - ACCEPT_EULA=Y
+      # Fijada por el Ministerio. No es un secreto nuestro —viene en el archivo
+      # que reparte a todos los prestadores— y presumiblemente el API la lleva
+      # en su cadena de conexión, así que cambiarla lo dejaría sin base. NO
+      # VERIFICADO que se pueda cambiar; mientras tanto, se deja como está y el
+      # 1433 no se publica al host, que es lo que de verdad la protege.
+      - MSSQL_SA_PASSWORD=FEVRIPS1*
+      - MSSQL_MEMORY_LIMIT_MB=9000
+      - MSSQL_COLLATION=SQL_Latin1_General_CP1_CI_AS
+      # CAMBIO: el original pide `Enterprise`. `Developer` es funcionalmente
+      # equivalente y su licencia cubre desarrollo y pruebas sin coste, que es
+      # exactamente lo que hacemos aquí. Declarar Enterprise sería afirmar una
+      # licencia que no tenemos, y quien acepta el EULA es quien corre el
+      # contenedor, no quien repartió el archivo.
+      - MSSQL_PID=Developer
     volumes:
+      # CAMBIO: el original no persiste nada, así que recrear el contenedor
+      # borraba el esquema que el API acaba de migrar y obligaba a esperar el
+      # arranque completo otra vez.
       - datos-sql:/var/opt/mssql
-    # 1433 NO se publica al host. Los dos contenedores se hablan por la red
-    # interna; exponer la base solo serviría para que algo más de la máquina
-    # llegue a ella. Para inspeccionarla: docker compose exec sql ...
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /var/opt/mssql/data/.fevrips-inicializada"]
-      interval: 10s
-      timeout: 5s
-      retries: 60
-      start_period: 60s
+    networks:
+      - fevrips-net
 
-  api:
-    build: ./api
-    depends_on:
-      sql:
-        condition: service_healthy
-    environment:
-      # Sobreescribe ConnectionStrings:DefaultConnection del appsettings.json
-      # sin editarlo. Dos motivos: la clave no queda horneada en la imagen, y
-      # el ejemplo de la guía apunta a `localhost`, que dentro del contenedor
-      # del API es el propio API y no la base. El host es el nombre del
-      # servicio. El puerto va tras COMA, que es la sintaxis de SqlClient; el
-      # `localhost:1433` del manual usa dos puntos.
-      ConnectionStrings__DefaultConnection: "Server=tcp:sql,1433;Database=FevsRipsApix;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
-      # SIN VERIFICAR: el manual de consumo documenta https://localhost:9443,
-      # pero cómo obtiene el API su certificado (dev-cert, uno montado, o
-      # HTTP simple detrás de algo) depende de lo que traiga el paquete del
-      # Ministerio. Ajustar al abrirlo.
-      ASPNETCORE_URLS: ${ASPNETCORE_URLS:-https://+:9443}
+  fevrips-api:
+    container_name: fevrips-api
+    image: crmspsgovcostage.azurecr.io/stage-fevrips-apilocal
     ports:
-      - "9443:9443"
+      # 5100 es el puerto REAL dentro del contenedor; 9443 es solo la cara que
+      # da al host, que es la que documenta el manual de consumo.
+      - "9443:5100"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=DockerStage
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=${CERT_PASSWORD:?exporta CERT_PASSWORD (ver certificado.sh)}
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/certificates/fevrips.pfx
+    volumes:
+      # CAMBIO: el original monta `C:\Certificates`, ruta de Windows. En Linux
+      # docker la tomaría como un nombre de volumen y el API arrancaría sin
+      # certificado.
+      - ./certificates:/certificates:ro
+    networks:
+      - fevrips-net
+    depends_on:
+      - fevrips-db
 
 volumes:
   datos-sql:
