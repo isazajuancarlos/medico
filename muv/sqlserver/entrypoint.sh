@@ -23,10 +23,16 @@ fi
 export MSSQL_SA_PASSWORD="$CLAVE"
 
 # --- sqlcmd se busca, no se supone ------------------------------------------
-# La guía usa /opt/mssql-tools/bin/sqlcmd. En las imágenes 2022 recientes las
-# herramientas son mssql-tools18, en OTRA ruta, y exigen -C para aceptar el
-# certificado autofirmado del propio servidor. Suponer la ruta vieja da un
-# "no such file or directory" que parece un fallo de SQL Server y no lo es.
+# La guía usa /opt/mssql-tools/bin/sqlcmd. COMPROBADO contra la imagen real
+# (mssql/server:2022-latest, digest sha256:ba4c8329f48f…, 2026-07-26): esa ruta
+# NO existe; lo único que hay es /opt/mssql-tools18/bin/sqlcmd, que además
+# exige -C para aceptar el certificado autofirmado del propio servidor. Seguir
+# la guía al pie de la letra da un "no such file or directory" en cada consulta
+# que parece un fallo de SQL Server y no lo es.
+#
+# Se conserva el rodeo con las dos rutas, y no se fija tools18 a secas, porque
+# `2022-latest` es una etiqueta móvil: la imagen de dentro de un año puede traer
+# otra cosa.
 SQLCMD=""
 for c in /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools/bin/sqlcmd; do
     [ -x "$c" ] && SQLCMD="$c" && break
@@ -43,6 +49,17 @@ sql() { "$SQLCMD" -S localhost -U sa -P "$CLAVE" $CONFIAR "$@"; }
 /opt/mssql/bin/sqlservr &
 PID_SQL=$!
 
+# El primer intento suele fallar con «Login failed for user 'sa' (18456,
+# state 7): an error occurred while evaluating the password», y NO es un
+# problema de credenciales: hay una ventana en la que el servidor ya escucha en
+# el 1433 pero todavía está aplicando la política de claves al usuario sa.
+# Observado en la corrida del 2026-07-26; en el log se ve «Failed to open
+# password policy registry path» antes y «Password policy update was
+# successful» después. El bucle la absorbe y a la segunda entra.
+#
+# Por eso no se distingue aquí un fallo de login de un servidor que no ha
+# arrancado: al principio son indistinguibles, y tratar el 18456 como fatal
+# haría abortar un arranque perfectamente sano.
 for i in $(seq 1 120); do
     sql -Q "SELECT 1" > /dev/null 2>&1 && break
     echo "esperando a SQL Server... ($i/120)"

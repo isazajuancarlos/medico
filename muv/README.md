@@ -53,8 +53,10 @@ la API va en v2.0 para la v4.3. Cinco diferencias deliberadas:
    Dockerfile; ahí queda en una capa y `docker history` la enseña. Va por
    entorno, y el arranque se cae si falta.
 2. **`sqlcmd` se busca en vez de suponerse.** La guía fija
-   `/opt/mssql-tools/bin/sqlcmd`; en las imágenes 2022 recientes las
-   herramientas son `mssql-tools18`, en otra ruta y con `-C` obligatorio.
+   `/opt/mssql-tools/bin/sqlcmd`. Comprobado dentro de la imagen real: **esa
+   ruta no existe**. Lo único que hay es `/opt/mssql-tools18/bin/sqlcmd`, que
+   además exige `-C`. Seguir la guía literalmente da un «no such file» en cada
+   consulta, que no se parece al problema real.
 3. **No se restaura dos veces.** Una marca en el volumen de datos evita que
    recrear el contenedor vuelva a restaurar con `REPLACE` sobre lo ya validado.
 4. **La cadena de conexión va por entorno.** La del manual apunta a `localhost`
