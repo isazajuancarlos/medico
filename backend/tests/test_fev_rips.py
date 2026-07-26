@@ -16,7 +16,6 @@ import sys
 
 import pytest
 
-os.environ.setdefault("DATABASE_URL", "sqlite:///./test_fev.db")
 os.environ.setdefault("SECRET_KEY", "clave-de-prueba-con-mas-de-32-caracteres-ok")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
