@@ -114,3 +114,57 @@ def test_se_busca_por_principio_activo_y_no_solo_por_marca():
 def test_buscar_por_nombre_vacio_no_devuelve_el_catalogo_entero():
     assert cum.buscar_por_nombre("") == []
     assert cum.buscar_por_nombre("   ") == []
+
+
+# ---------------------------------------------------------------------------
+# El catálogo conectado al generador de RIPS
+#
+# Cargar un maestro que nadie consulta no arregla nada. Esto comprueba que el
+# generador lo usa de verdad.
+# ---------------------------------------------------------------------------
+
+class TestElRecolectorComprueba:
+    """`Recolector.codigo` distingue lo que falta de lo que no vale."""
+
+    def _recolector(self, permitir=False):
+        from rips_completo import Recolector
+        return Recolector(permitir_supuestos=permitir)
+
+    def _llamar(self, rec, valor):
+        return rec.codigo(valor, validador=cum.validar, archivo="medicamentos",
+                          registro_id=1, campo="codigo_cum",
+                          etiqueta="CUM del medicamento", supuesto="00000000")
+
+    def test_un_cum_valido_pasa_sin_anotar_nada(self):
+        rec = self._recolector()
+        assert self._llamar(rec, "20048021-41") == "20048021-41"
+        assert rec.faltantes == []
+
+    def test_un_cum_que_no_existe_se_anota_diciendo_por_que(self):
+        """Lo que antes pasaba intacto y hacía rechazar la factura entera."""
+        rec = self._recolector(permitir=True)
+        self._llamar(rec, "99999999-99")
+        assert len(rec.faltantes) == 1
+        assert "no está en el CatalogoCUMs" in rec.faltantes[0].motivo
+
+    def test_un_cum_invalido_se_devuelve_TAL_CUAL_y_no_como_supuesto(self):
+        """Sustituirlo por «00000000» escondería lo que el operador escribió,
+        que es justo el dato que necesita ver para corregirlo."""
+        rec = self._recolector(permitir=True)
+        assert self._llamar(rec, "99999999-99") == "99999999-99"
+
+    def test_la_ausencia_sigue_distinguiendose_de_la_invalidez(self):
+        rec = self._recolector(permitir=True)
+        self._llamar(rec, None)
+        assert len(rec.faltantes) == 1
+        assert rec.faltantes[0].motivo is None, (
+            "un dato ausente no lleva motivo: el motivo es lo que separa "
+            "«falta» de «está y no vale»"
+        )
+
+    def test_sin_permitir_supuestos_el_cierre_revienta_con_el_cum_invalido(self):
+        from rips_completo import DatosIncompletos
+        rec = self._recolector(permitir=False)
+        self._llamar(rec, "99999999-99")
+        with pytest.raises(DatosIncompletos):
+            rec.cerrar()

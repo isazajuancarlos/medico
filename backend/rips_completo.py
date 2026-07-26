@@ -35,6 +35,7 @@ from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 
 from database import engine
+import cum
 from models import (
     AtencionUrgencias, CausaExterna, FinalidadConsulta, Formula,
     Historia, Hospitalizacion, Institucion, Orden, Paciente,
@@ -93,16 +94,22 @@ class DatosIncompletos(ValueError):
 
 
 class Falta:
-    """Un dato obligatorio que no está, con dónde buscarlo."""
+    """Un dato obligatorio que no está —o que está y no vale—, con dónde buscarlo.
 
-    __slots__ = ("archivo", "registro_id", "campo", "etiqueta", "supuesto")
+    `motivo` separa los dos casos, y separarlos importa: «falta el CUM» se
+    corrige buscándolo, «el CUM 12345-6 no está en el catálogo del INVIMA» se
+    corrige revisando qué se digitó. Mandan a sitios distintos.
+    """
 
-    def __init__(self, archivo, registro_id, campo, etiqueta, supuesto):
+    __slots__ = ("archivo", "registro_id", "campo", "etiqueta", "supuesto", "motivo")
+
+    def __init__(self, archivo, registro_id, campo, etiqueta, supuesto, motivo=None):
         self.archivo = archivo
         self.registro_id = registro_id
         self.campo = campo
         self.etiqueta = etiqueta
         self.supuesto = supuesto
+        self.motivo = motivo
 
     def __repr__(self) -> str:
         return (f"{self.archivo} #{self.registro_id}: falta {self.etiqueta} "
@@ -145,6 +152,38 @@ class Recolector:
             return valor
         self.faltantes.append(Falta(archivo, registro_id, campo, etiqueta, supuesto))
         return supuesto if self.permitir_supuestos else None
+
+    def codigo(self, valor: Any, *, validador, archivo: str, registro_id: Any,
+               campo: str, etiqueta: str, supuesto: Any = None) -> Any:
+        """Como `dato`, pero además comprueba el valor contra un catálogo.
+
+        Existe porque `dato` solo ve la AUSENCIA. Un código presente pero
+        inexistente —un CUM mal digitado, un municipio que no está en
+        DIVIPOLA— tiene la forma correcta, pasa cualquier validación de
+        estructura y hace rechazar la factura entera en el MUV. Detectarlo aquí
+        lo convierte en una línea del informe de cierre en vez de en un rechazo
+        tres semanas después.
+
+        Cuando el valor está pero NO vale, se devuelve **tal cual**, no el
+        supuesto: sustituirlo por `"00000000"` escondería lo que el operador
+        escribió, y es justo el dato que necesita ver para corregirlo. El
+        supuesto se reserva para la ausencia.
+        """
+        antes = len(self.faltantes)
+        valor = self.dato(valor, archivo=archivo, registro_id=registro_id,
+                          campo=campo, etiqueta=etiqueta, supuesto=supuesto)
+        if len(self.faltantes) > antes or self._vacio(valor):
+            # El dato faltaba y ya quedó anotado. No se valida lo que se puso
+            # en su lugar: `"00000000"` tampoco está en el catálogo, y anotarlo
+            # otra vez pondría DOS líneas en el informe de cierre por un solo
+            # problema. Se cuenta la ausencia, que es la causa.
+            return valor
+        try:
+            return validador(valor)
+        except Exception as e:  # noqa: BLE001 — el catálogo decide, aquí se anota
+            self.faltantes.append(
+                Falta(archivo, registro_id, campo, etiqueta, supuesto, motivo=str(e)))
+            return valor
 
     def cerrar(self) -> None:
         if self.faltantes and not self.permitir_supuestos:
@@ -572,8 +611,17 @@ def generar_archivo_am(
                 # `"00000000"` no es un CUM. Es el campo que la Resolución 948
                 # valida contra el listado del INVIMA, así que un CUM inventado
                 # no solo miente: hace rechazar la factura entera.
-                "codTecnologiaSalud": exigir(formula.codigo_cum, "codigo_cum",
-                                            "CUM del medicamento", "00000000"),
+                # Se comprueba contra el CatalogoCUMs del INVIMA, que es lo
+                # que la 948 dice en M08: «se podrá validar la existencia del
+                # IUM o del CUM en las tablas de referencia». Antes solo se
+                # miraba que el campo no estuviera vacío, y un CUM mal digitado
+                # tiene la forma correcta: pasaba, y el MUV rechazaba la
+                # factura completa tres semanas después.
+                "codTecnologiaSalud": rec.codigo(
+                    formula.codigo_cum, validador=cum.validar,
+                    archivo="medicamentos", registro_id=getattr(formula, "id", None),
+                    campo="codigo_cum", etiqueta="CUM del medicamento",
+                    supuesto="00000000"),
                 # 01 medicamento, 02 biológico, 03 magistral, 04 fitoterapéutico.
                 # El `if` que había aquí devolvía "01" en las dos ramas: parecía
                 # que clasificaba y no clasificaba nada.
