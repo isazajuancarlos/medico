@@ -112,8 +112,20 @@ class Credenciales:
     numero_documento: str
     clave: str
     nit: str
-    #: RE, PIN, PINx o PIE. Solo para profesionales independientes; una IPS no lo
-    #: informa. Ver sección 8.1 del manual.
+    #: Solo para profesionales independientes; una IPS no lo informa. Los cuatro
+    #: valores de la sección 8.1 «LoginSispro» del manual, y lo que los separa:
+    #:
+    #:   RE    no es facturador electrónico (sea cual sea su NIT)
+    #:   PIN   factura electrónicamente y el NIT COINCIDE con el documento
+    #:   PINx  factura electrónicamente y el NIT de la DIAN NO coincide
+    #:   PIE   documento distinto de cédula de ciudadanía (extranjero)
+    #:
+    #: El discriminante primero es si factura electrónicamente, y solo después
+    #: la igualdad NIT/documento: quien lea «Nacional» vs «de Excepción» sin la
+    #: tabla delante elige por el adjetivo y se equivoca.
+    #:
+    #: No confundirlo con el `tipoUsuario` del RIPS («01».«12», tipo de
+    #: afiliado): mismo nombre, documento distinto, valores sin relación.
     tipo_usuario: Optional[str] = None
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
