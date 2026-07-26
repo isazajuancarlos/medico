@@ -69,13 +69,20 @@ TOLERADOS = {
 #: ESPERADO en vez de borrar la prueba: así el defecto queda escrito en el
 #: código y, en cuanto se arregle, `strict=True` obliga a quitar la marca.
 #: Ver [[principio-registrar-cerca-de-la-violacion]].
-#: `medicamentos` salió de aquí el 2026-07-26: era el único de los tres
-#: verificado por DOS fuentes independientes —el ejemplo JSON y la tabla
-#: numerada M## del Documento Técnico 1—, así que se podía corregir sin
-#: adivinar. Para `urgencias` la única fuente fue el ejemplo JSON, y en
-#: `hospitalizacion` la tabla dice 30 campos y el ejemplo da 28: hay dos sin
-#: identificar. Ninguno de los dos se toca sin leer esas secciones del PDF.
-SIN_CORREGIR = {"urgencias", "hospitalizacion"}
+#: Vacío desde el 2026-07-26: los cinco arreglos emiten solo nombres que la
+#: Resolución 948 nombra. Los tres que faltaban se cerraron leyendo A OJO las
+#: tablas numeradas del Documento Técnico 1, que es lo que la tarea #67 exigía
+#: antes de tocarlos:
+#:
+#:   urgencias (tabla R##, pp. 2522-3050) NO lleva viaIngresoServicioSalud,
+#:   numAutorizacion ni codComplicacion — hospitalización sí, y esa asimetría
+#:   era justo lo que no se podía adivinar desde el ejemplo JSON.
+#:
+#:   Ninguna de las dos lleva diasEstancia: se deduce de las dos fechas.
+#:
+#: Se conserva el mecanismo, no la lista: el día que aparezca otro defecto se
+#: mete aquí y la prueba vuelve a documentarlo en vez de esconderlo.
+SIN_CORREGIR: set[str] = set()
 
 
 def emitidos(arreglo: str) -> list[str]:
@@ -167,7 +174,7 @@ class TestLaNormaCargada:
 #: que estas pruebas existen para no repetir.
 EMITIDOS_HOY = {
     "consultas": 21, "procedimientos": 16, "medicamentos": 11,
-    "urgencias": 6, "hospitalizacion": 9,
+    "urgencias": 9, "hospitalizacion": 12,
 }
 
 

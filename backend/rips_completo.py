@@ -730,27 +730,24 @@ def generar_archivo_au(
                 "codPrestador": cod_habilitacion,
                 # Esta sí es constante legítima: es el archivo de urgencias, la
                 # vía de ingreso ES urgencias. No se supone nada.
-                "viaIngresoServicioSalud": "02",
                 "fechaInicioAtencion": _fecha_dt(au.fecha_ingreso),
-                "numAutorizacion": "",
                 # Iba quemada en "17". Un accidente de trabajo, uno de tránsito
                 # y una lesión por agresión llegan todos por urgencias y son
                 # causas DISTINTAS, con responsables de pago distintos.
-                "causaMotivo": exigir(getattr(au, 'causa_motivo', None),
-                                      "causa_motivo", "causa o motivo de la atención",
+                "causaMotivoAtencion": exigir(getattr(au, 'causa_motivo', None),
+                                             "causa_motivo", "causa o motivo de la atención",
                                       "17"),
                 # `"R69"` es «causas de morbilidad desconocidas»: un diagnóstico
                 # de verdad, inventado para un paciente real.
                 "codDiagnosticoPrincipal": exigir(
                     au.diagnostico_ingreso, "diagnostico_ingreso",
                     "diagnóstico de ingreso", "R69"),
-                "codDiagnosticoRelacionado": au.diagnostico_egreso or "",
-                "codComplicacion": "",
+                "codDiagnosticoRelacionadoE1": au.diagnostico_egreso or "",
                 "condicionDestinoUsuarioEgreso": exigir(
                     destino_map.get(destino_val), "destino_salida",
                     "destino de salida", "01"),
                 "codDiagnosticoCausaMuerte": "",
-                "fechaEgresoAtencion": _fecha_dt(au.fecha_egreso),
+                "fechaEgreso": _fecha_dt(au.fecha_egreso),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
                 **_bloque_economico(au, rec, "AU"),
@@ -849,7 +846,9 @@ def generar_archivo_ah(
                 return rec.dato(valor, archivo="AH", registro_id=h.id,
                                 campo=campo, etiqueta=etiqueta, supuesto=supuesto)
 
-            dias_estancia = max(1, (h.fecha_egreso - h.fecha_ingreso).days)
+            # `dias_estancia` se calculaba aquí para emitir `diasEstancia`, que
+            # la 948 no tiene: la estancia se deduce de las dos fechas, que sí
+            # van en el archivo. Al quitar el campo, el cálculo sobra.
             via_ingreso = (h.via_ingreso or "").upper()
             estado = (h.estado or "").upper()
 
@@ -862,23 +861,22 @@ def generar_archivo_ah(
                 "numAutorizacion": "",
                 # Iba quemada en "13", enfermedad general. Con eso, ninguna
                 # hospitalización por accidente de tránsito se cobraba al SOAT.
-                "causaMotivo": exigir(getattr(h, 'causa_motivo', None),
-                                      "causa_motivo",
-                                      "causa o motivo de la atención", "13"),
+                "causaMotivoAtencion": exigir(getattr(h, 'causa_motivo', None),
+                                             "causa_motivo",
+                                             "causa o motivo de la atención", "13"),
                 # `"Z00"` es «examen general»; además no es un código válido del
                 # RIPS, que exige cuatro caracteres. Un ingreso hospitalario por
                 # examen general no existe.
                 "codDiagnosticoPrincipal": exigir(
                     h.diagnostico_ingreso, "diagnostico_ingreso",
                     "diagnóstico de ingreso", "Z00"),
-                "codDiagnosticoRelacionado": h.diagnostico_egreso or "",
+                "codDiagnosticoRelacionadoE1": h.diagnostico_egreso or "",
                 "codComplicacion": "",
                 "condicionDestinoUsuarioEgreso": exigir(
                     estado_egreso_map.get(estado), "estado",
                     "condición de egreso", "01"),
                 "codDiagnosticoCausaMuerte": "",
-                "fechaEgresoAtencion": _fecha_dt(h.fecha_egreso),
-                "diasEstancia": dias_estancia,
+                "fechaEgreso": _fecha_dt(h.fecha_egreso),
                 "tipoDocumentoIdentificacion": p.tipo_id,
                 "numDocumentoIdentificacion": p.identificacion,
                 **_bloque_economico(h, rec, "AH"),
