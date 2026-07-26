@@ -21,6 +21,7 @@ que a efectos prácticos es no tener licencia.
    contador, así que no podía saltar nunca. Aquí se cuentan filas reales, y hay
    una prueba dedicada a que así siga siendo.
 """
+import itertools
 import os
 import sys
 from datetime import date, timedelta
@@ -29,7 +30,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlmodel import Session, SQLModel, create_engine  # noqa: E402
+from sqlmodel import Session, SQLModel, create_engine, select  # noqa: E402
 
 from core.deps import hay_cupo, licencia_de, licencia_vigente  # noqa: E402
 from models import (  # noqa: E402
@@ -84,9 +85,16 @@ def _licencia(db, institucion, *, vence_en_dias=365, empieza_hace_dias=1,
     return lic
 
 
+#: Contador para nombres únicos. `id(object())` devolvía la MISMA dirección en
+#: llamadas seguidas —el objeto se libera al instante y CPython reutiliza el
+#: hueco—, así que dos usuarios creados uno tras otro chocaban contra el índice
+#: único. Las pruebas que había pasaban por no crear dos seguidos.
+_contador = itertools.count()
+
+
 def _usuario(db, institucion, *, rol=RolUsuario.ADMIN, username=None):
     u = Usuario(
-        username=username or f"u{id(object()) % 100000}",
+        username=username or f"u{next(_contador)}",
         hashed_password="x",
         nombre_completo="Quien sea",
         rol=rol,
@@ -222,3 +230,68 @@ def test_sin_licencia_no_hay_cupo(db):
     cabe, motivo = hay_cupo(_usuario(db, inst), db, para_medico=False)
     assert not cabe
     assert "no tiene licencia" in motivo, motivo
+
+
+# =====================================================================
+# EL CUPO SE CONSUME SIN CREAR NADIE
+#
+# `hay_cupo` se comprobaba solo al dar de alta, y `_en_uso(solo_medicos=True)`
+# cuenta por ROL. Convertir en médico a alguien que ya existe sumaba un médico
+# sin pasar por ninguna comprobación: una institución con el cupo lleno podía
+# seguir añadiendo médicos indefinidamente cambiando roles.
+# =====================================================================
+
+def _rol_a(usuario, rol, quien, db):
+    from core.deps import exigir_cupo_al_cambiar_rol
+    exigir_cupo_al_cambiar_rol(usuario, rol, quien, db)
+
+
+class TestCambiarElRolTambienConsume:
+    def _lleno_de_medicos(self, db):
+        """Institución con los 2 cupos de médico ya ocupados."""
+        inst = _institucion(db, "Con el cupo lleno")
+        _licencia(db, inst, max_usuarios=10, max_medicos=2)
+        admin = _usuario(db, inst, rol=RolUsuario.ADMIN)
+        for _ in range(2):
+            _usuario(db, inst, rol=RolUsuario.MEDICO)
+        return inst, admin
+
+    def test_ascender_a_medico_con_el_cupo_lleno_se_rechaza(self, db):
+        from fastapi import HTTPException
+
+        inst, admin = self._lleno_de_medicos(db)
+        otro = _usuario(db, inst, rol=RolUsuario.ENFERMERIA)
+        with pytest.raises(HTTPException) as e:
+            _rol_a(otro, RolUsuario.MEDICO, admin, db)
+        assert e.value.status_code == 403
+        assert "2 médicos" in e.value.detail
+
+    def test_con_cupo_libre_el_ascenso_pasa(self, db):
+        inst = _institucion(db, "Con sitio")
+        _licencia(db, inst, max_medicos=2)
+        admin = _usuario(db, inst, rol=RolUsuario.ADMIN)
+        otro = _usuario(db, inst, rol=RolUsuario.ENFERMERIA)
+        _rol_a(otro, RolUsuario.MEDICO, admin, db)   # no levanta
+
+    def test_DEJAR_de_ser_medico_no_se_estorba(self, db):
+        """Bajar de rol libera cupo. Bloquearlo sería cerrar por cerrar."""
+        inst, admin = self._lleno_de_medicos(db)
+        medico = db.exec(
+            select(Usuario).where(Usuario.institucion_id == inst.id,
+                                  Usuario.rol == RolUsuario.MEDICO)).first()
+        _rol_a(medico, RolUsuario.ENFERMERIA, admin, db)   # no levanta
+
+    def test_guardar_sin_tocar_el_rol_no_se_estorba(self, db):
+        """Editar el teléfono de un médico no es crecer."""
+        inst, admin = self._lleno_de_medicos(db)
+        medico = db.exec(
+            select(Usuario).where(Usuario.institucion_id == inst.id,
+                                  Usuario.rol == RolUsuario.MEDICO)).first()
+        _rol_a(medico, None, admin, db)                       # payload sin rol
+        _rol_a(medico, RolUsuario.MEDICO, admin, db)          # el mismo rol
+
+    def test_al_superadmin_no_se_le_cuenta_cupo(self, db):
+        inst, _ = self._lleno_de_medicos(db)
+        raiz = _usuario(db, None, rol=RolUsuario.SUPERADMIN)
+        otro = _usuario(db, inst, rol=RolUsuario.ENFERMERIA)
+        _rol_a(otro, RolUsuario.MEDICO, raiz, db)             # no levanta

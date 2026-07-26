@@ -244,6 +244,27 @@ def hay_cupo(user: "Usuario", db: Session, *, para_medico: bool) -> tuple[bool, 
     return True, ""
 
 
+def exigir_cupo_al_cambiar_rol(usuario, rol_nuevo, user: "Usuario", db: Session) -> None:
+    """El cupo de médicos se consume también SIN crear un usuario.
+
+    `hay_cupo` se comprobaba solo al dar de alta, y `_en_uso(solo_medicos=True)`
+    cuenta por `rol`: convertir a MEDICO un usuario que ya existe suma un médico
+    sin pasar por ninguna comprobación. Una institución con el cupo lleno podía
+    seguir añadiendo médicos indefinidamente cambiándoles el rol.
+
+    Solo se comprueba cuando el rol ENTRA a MEDICO. Salir de médico libera cupo
+    y no hay razón para estorbarlo; y guardar un usuario sin tocarle el rol no
+    es crecer, así que tampoco se mira.
+    """
+    from models import RolUsuario as R
+
+    if rol_nuevo is None or rol_nuevo == usuario.rol or rol_nuevo != R.MEDICO:
+        return
+    cabe, motivo = hay_cupo(user, db, para_medico=True)
+    if not cabe:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=motivo)
+
+
 def requiere_licencia_vigente(
     user: "Usuario" = Depends(get_current_active_user),
     db: Session = Depends(get_db),

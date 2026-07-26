@@ -5,6 +5,7 @@ from models import Usuario, RolUsuario
 from schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioRead
 from schemas.common import PaginatedResponse
 from core.deps import (get_db, get_current_active_user, hay_cupo,
+                       exigir_cupo_al_cambiar_rol,
                        licencia_vigente, require_role)
 from core.aislamiento import obtener
 import bcrypt
@@ -76,6 +77,8 @@ def update_usuario(
     current_user: Usuario = Depends(require_role(RolUsuario.ADMIN, RolUsuario.SUPERADMIN)),
 ):
     usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
+    # Cambiar el rol a MEDICO consume cupo igual que dar de alta uno nuevo.
+    exigir_cupo_al_cambiar_rol(usuario, payload.rol, current_user, db)
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(usuario, field, value)
     db.add(usuario)
