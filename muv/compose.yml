@@ -1,0 +1,53 @@
+# Validador FEV-RIPS de MinSalud, los dos contenedores.
+#
+#     cd muv && docker compose up --build
+#
+# La guía oficial (secciones 11.3.2 y 11.4) manda crear la red a mano y lanzar
+# dos `docker run` con las claves en la línea de órdenes, donde quedan en el
+# historial del shell y en `ps`. Esto hace lo mismo en una orden y lee los
+# valores del entorno.
+#
+# Antes de levantar hay que exportar MSSQL_SA_PASSWORD. No hay valor por
+# defecto a propósito: uno haría que un despliegue mal configurado arrancara
+# igual, con una clave conocida y publicada en un manual.
+
+services:
+  sql:
+    build: ./sqlserver
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?exporta MSSQL_SA_PASSWORD antes de levantar}
+    volumes:
+      - datos-sql:/var/opt/mssql
+    # 1433 NO se publica al host. Los dos contenedores se hablan por la red
+    # interna; exponer la base solo serviría para que algo más de la máquina
+    # llegue a ella. Para inspeccionarla: docker compose exec sql ...
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /var/opt/mssql/data/.fevrips-inicializada"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  api:
+    build: ./api
+    depends_on:
+      sql:
+        condition: service_healthy
+    environment:
+      # Sobreescribe ConnectionStrings:DefaultConnection del appsettings.json
+      # sin editarlo. Dos motivos: la clave no queda horneada en la imagen, y
+      # el ejemplo de la guía apunta a `localhost`, que dentro del contenedor
+      # del API es el propio API y no la base. El host es el nombre del
+      # servicio. El puerto va tras COMA, que es la sintaxis de SqlClient; el
+      # `localhost:1433` del manual usa dos puntos.
+      ConnectionStrings__DefaultConnection: "Server=tcp:sql,1433;Database=FevsRipsApix;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
+      # SIN VERIFICAR: el manual de consumo documenta https://localhost:9443,
+      # pero cómo obtiene el API su certificado (dev-cert, uno montado, o
+      # HTTP simple detrás de algo) depende de lo que traiga el paquete del
+      # Ministerio. Ajustar al abrirlo.
+      ASPNETCORE_URLS: ${ASPNETCORE_URLS:-https://+:9443}
+    ports:
+      - "9443:9443"
+
+volumes:
+  datos-sql:

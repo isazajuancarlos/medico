@@ -59,3 +59,8 @@ frontend/dist/
 .angular/
 backend/.venv/
 backend/*.db
+
+# Artefactos del validador FEV-RIPS: los entrega MinSalud al prestador, no son
+# públicos y no nos corresponde redistribuirlos. Ver muv/README.md.
+muv/sqlserver/artefactos/
+muv/api/FVE1/
