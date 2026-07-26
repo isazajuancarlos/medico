@@ -6,9 +6,31 @@ está escrita; **faltan los artefactos**, que no son públicos.
 ## Lo que hay que conseguir
 
 MinSalud **no publica una imagen**: la *Guía de Instalación API Docker FEV-RIPS
-v1.0* no contiene ningún `docker pull`. El prestador descarga un paquete del
-micrositio de Facturación Electrónica en SISPRO —con sus propias credenciales,
-las mismas del login— y construye las imágenes con él.
+v1.0* no contiene ningún `docker pull`. El prestador descarga un paquete y
+construye las imágenes con él.
+
+**De dónde sale.** Del micrositio de Factura Electrónica de Venta en Salud:
+
+> https://www.sispro.gov.co/central-financiamiento/Pages/facturacion-electronica.aspx
+
+Los *Lineamientos para la generación, validación y envío de RIPS como soporte de
+la FEV* (v3.2, MinSalud) dicen que allí está «la versión vigente de estos
+lineamientos y de los documentos y **herramientas técnicas** emitidos por el
+Ministerio». Es la misma página desde la que se descarga el validador
+cliente-servidor.
+
+Esa página no se puede consultar con `curl`: devuelve un 302 hacia sí misma en
+bucle, así que hay que abrirla en un navegador. Por lo mismo **no está
+verificado** si la descarga es pública o exige sesión de SISPRO. Lo que sí está
+confirmado (caso 2026403888) es que *usar* el MUV exige credenciales de una
+persona vinculada a la entidad; descargar el paquete puede ser otra cosa.
+
+**Si el prestador ya factura**, el camino corto es su propia máquina: la carpeta
+con la que construyó su contenedor tiene los tres archivos.
+
+**Mesa de ayuda** (capítulo 7.1 de los Lineamientos):
+`soporte-fev-rips@minsalud.gov.co` · Bogotá (601) 330 5043 · resto del país
+018000960020 · L-V 7:00–18:00, sábados 8:00–13:00.
 
 Del paquete salen tres cosas, que van aquí:
 
