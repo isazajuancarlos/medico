@@ -210,10 +210,21 @@ def licencia_vigente(user: "Usuario", db: Session) -> tuple[bool, str]:
 
 
 def _en_uso(db: Session, institucion_id: int, solo_medicos: bool) -> int:
-    """Cuenta usuarios reales de la institución. Ver decisión (1) arriba."""
+    """Cuenta usuarios ACTIVOS de la institución. Ver decisión (1) arriba.
+
+    Los inactivos no consumen: una clínica de diez puestos que en tres años ha
+    tenido quince empleados, desactivando a cada uno que se va, chocaba contra
+    el tope con solo diez trabajando. Se venden asientos ocupados, no personas
+    que pasaron por allí.
+
+    De aquí sale la obligación de comprobar la REACTIVACIÓN: si desactivar
+    libera un asiento, volver a activar lo ocupa, y sin ese control bastaría
+    desactivar, crear y reactivar para pasarse del tope.
+    """
     from models import Usuario as U
 
-    consulta = select(U).where(U.institucion_id == institucion_id)
+    consulta = select(U).where(U.institucion_id == institucion_id,
+                               U.activo == True)  # noqa: E712 — SQL, no Python
     if solo_medicos:
         consulta = consulta.where(U.rol == RolUsuario.MEDICO)
     return len(db.exec(consulta).all())
@@ -244,25 +255,41 @@ def hay_cupo(user: "Usuario", db: Session, *, para_medico: bool) -> tuple[bool, 
     return True, ""
 
 
-def exigir_cupo_al_cambiar_rol(usuario, rol_nuevo, user: "Usuario", db: Session) -> None:
-    """El cupo de médicos se consume también SIN crear un usuario.
+def exigir_cupo_al_modificar(usuario, cambios: dict, user: "Usuario",
+                             db: Session) -> None:
+    """El cupo se consume también SIN crear a nadie.
 
-    `hay_cupo` se comprobaba solo al dar de alta, y `_en_uso(solo_medicos=True)`
-    cuenta por `rol`: convertir a MEDICO un usuario que ya existe suma un médico
-    sin pasar por ninguna comprobación. Una institución con el cupo lleno podía
-    seguir añadiendo médicos indefinidamente cambiándoles el rol.
+    `_en_uso` cuenta usuarios ACTIVOS y los médicos POR ROL, así que hay dos
+    formas de ocupar un asiento sin pasar por el alta:
 
-    Solo se comprueba cuando el rol ENTRA a MEDICO. Salir de médico libera cupo
-    y no hay razón para estorbarlo; y guardar un usuario sin tocarle el rol no
-    es crecer, así que tampoco se mira.
+        activo: False -> True     reactivar a quien se había ido
+        rol:    otro  -> MEDICO   ascender a quien ya está
+
+    `hay_cupo` solo se comprobaba al crear, de modo que una institución con el
+    tope lleno podía crecer indefinidamente por cualquiera de las dos.
+
+    Se comprueba al ENTRAR al conjunto contado, nunca al salir: desactivar o
+    dejar de ser médico liberan asiento y estorbarlo sería cerrar por cerrar.
+    Guardar sin tocar ninguno de los dos campos tampoco es crecer.
     """
     from models import RolUsuario as R
 
-    if rol_nuevo is None or rol_nuevo == usuario.rol or rol_nuevo != R.MEDICO:
-        return
-    cabe, motivo = hay_cupo(user, db, para_medico=True)
-    if not cabe:
+    sera_activo = cambios.get("activo", usuario.activo)
+    sera_medico = cambios.get("rol", usuario.rol) == R.MEDICO
+    era_activo = usuario.activo
+    era_medico = usuario.rol == R.MEDICO
+
+    def negar(motivo):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=motivo)
+
+    if sera_activo and not era_activo:
+        cabe, motivo = hay_cupo(user, db, para_medico=False)
+        if not cabe:
+            negar(motivo)
+    if (sera_activo and sera_medico) and not (era_activo and era_medico):
+        cabe, motivo = hay_cupo(user, db, para_medico=True)
+        if not cabe:
+            negar(motivo)
 
 
 def requiere_licencia_vigente(

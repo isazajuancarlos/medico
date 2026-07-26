@@ -241,9 +241,13 @@ def test_sin_licencia_no_hay_cupo(db):
 # seguir añadiendo médicos indefinidamente cambiando roles.
 # =====================================================================
 
+def _cambiar(usuario, quien, db, **cambios):
+    from core.deps import exigir_cupo_al_modificar
+    exigir_cupo_al_modificar(usuario, cambios, quien, db)
+
+
 def _rol_a(usuario, rol, quien, db):
-    from core.deps import exigir_cupo_al_cambiar_rol
-    exigir_cupo_al_cambiar_rol(usuario, rol, quien, db)
+    _cambiar(usuario, quien, db, **({} if rol is None else {"rol": rol}))
 
 
 class TestCambiarElRolTambienConsume:
@@ -295,3 +299,78 @@ class TestCambiarElRolTambienConsume:
         raiz = _usuario(db, None, rol=RolUsuario.SUPERADMIN)
         otro = _usuario(db, inst, rol=RolUsuario.ENFERMERIA)
         _rol_a(otro, RolUsuario.MEDICO, raiz, db)             # no levanta
+
+
+# =====================================================================
+# LOS INACTIVOS NO CONSUMEN CUPO — y por eso reactivar sí lo comprueba
+#
+# Una clínica de diez puestos que en tres años ha tenido quince empleados,
+# desactivando a cada uno que se va, chocaba contra el tope con solo diez
+# trabajando. Al liberar el asiento al desactivar, volver a activarlo pasa a ser
+# una forma de crecer, y sin control bastaba desactivar, crear y reactivar.
+# =====================================================================
+
+class TestElInactivoNoOcupaAsiento:
+    def _con_uno_fuera(self, db, max_usuarios=3):
+        inst = _institucion(db, "Con rotación")
+        _licencia(db, inst, max_usuarios=max_usuarios, max_medicos=3)
+        admin = _usuario(db, inst, rol=RolUsuario.ADMIN)
+        ido = _usuario(db, inst, rol=RolUsuario.ENFERMERIA)
+        ido.activo = False
+        db.add(ido); db.commit(); db.refresh(ido)
+        return inst, admin, ido
+
+    def test_quien_se_fue_deja_de_contar(self, db):
+        inst, admin, ido = self._con_uno_fuera(db, max_usuarios=2)
+        # admin activo + ido inactivo = 1 asiento ocupado de 2.
+        cabe, motivo = hay_cupo(admin, db, para_medico=False)
+        assert cabe, motivo
+
+    def test_reactivarlo_con_el_cupo_lleno_se_rechaza(self, db):
+        from fastapi import HTTPException
+
+        inst, admin, ido = self._con_uno_fuera(db, max_usuarios=2)
+        _usuario(db, inst, rol=RolUsuario.ENFERMERIA)   # ocupa el segundo
+        with pytest.raises(HTTPException) as e:
+            _cambiar(ido, admin, db, activo=True)
+        assert e.value.status_code == 403
+        assert "2 usuarios" in e.value.detail
+
+    def test_reactivarlo_con_sitio_pasa(self, db):
+        inst, admin, ido = self._con_uno_fuera(db, max_usuarios=5)
+        _cambiar(ido, admin, db, activo=True)           # no levanta
+
+    def test_DESACTIVAR_nunca_se_estorba(self, db):
+        """Aunque esté todo lleno: salir libera, no ocupa."""
+        inst, admin, _ = self._con_uno_fuera(db, max_usuarios=2)
+        _usuario(db, inst, rol=RolUsuario.ENFERMERIA)
+        otro = db.exec(select(Usuario).where(
+            Usuario.institucion_id == inst.id,
+            Usuario.rol == RolUsuario.ENFERMERIA,
+            Usuario.activo == True)).first()          # noqa: E712
+        _cambiar(otro, admin, db, activo=False)         # no levanta
+
+    def test_un_medico_inactivo_tampoco_ocupa_cupo_de_medico(self, db):
+        inst = _institucion(db, "Médico que se fue")
+        _licencia(db, inst, max_usuarios=10, max_medicos=1)
+        admin = _usuario(db, inst, rol=RolUsuario.ADMIN)
+        fuera = _usuario(db, inst, rol=RolUsuario.MEDICO)
+        fuera.activo = False
+        db.add(fuera); db.commit()
+        cabe, motivo = hay_cupo(admin, db, para_medico=True)
+        assert cabe, motivo
+
+    def test_reactivar_a_un_medico_comprueba_LAS_DOS_cuentas(self, db):
+        """Vuelve a ocupar un asiento de usuario y uno de médico a la vez."""
+        from fastapi import HTTPException
+
+        inst = _institucion(db, "Las dos cuentas")
+        _licencia(db, inst, max_usuarios=10, max_medicos=1)
+        admin = _usuario(db, inst, rol=RolUsuario.ADMIN)
+        fuera = _usuario(db, inst, rol=RolUsuario.MEDICO)
+        fuera.activo = False
+        db.add(fuera); db.commit(); db.refresh(fuera)
+        _usuario(db, inst, rol=RolUsuario.MEDICO)       # ocupa el único cupo
+        with pytest.raises(HTTPException) as e:
+            _cambiar(fuera, admin, db, activo=True)
+        assert "1 médicos" in e.value.detail

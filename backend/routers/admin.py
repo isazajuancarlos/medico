@@ -9,7 +9,7 @@ from models import (
     RolUsuario, TipoCampo,
 )
 from core.deps import (get_db, get_current_active_user, require_role,
-                       licencia_vigente, hay_cupo, exigir_cupo_al_cambiar_rol)
+                       licencia_vigente, hay_cupo, exigir_cupo_al_modificar)
 from core.aislamiento import obtener
 import bcrypt
 
@@ -355,7 +355,8 @@ def update_usuario_admin(
     usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     if current_user.rol != RolUsuario.SUPERADMIN and usuario.institucion_id != current_user.institucion_id:
         raise HTTPException(status_code=403, detail="Sin permisos")
-    exigir_cupo_al_cambiar_rol(usuario, payload.rol, current_user, db)
+    exigir_cupo_al_modificar(usuario, payload.model_dump(exclude_none=True),
+                             current_user, db)
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(usuario, field, value)
     db.add(usuario)
