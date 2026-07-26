@@ -287,13 +287,34 @@ class MuvClient:
                 f"Revisar el registro en Mi Seguridad Social y la vinculación a "
                 f"la entidad; no es un problema del archivo."
             )
+        try:
+            cuerpo_json = json.loads(texto)
+        except ValueError:
+            cuerpo_json = None
+
+        # Un RECHAZO viaja con HTTP 400 y el resultado completo dentro.
+        # Observado el 2026-07-26 contra el contenedor de stage: 400 con
+        # {"ResultState":false, "Ambiente":"DockerStage", "ResultadosValidacion":
+        # [...]}. Tratarlo como avería tiraba justo los hallazgos que se fueron
+        # a buscar, y le decía al usuario «el contenedor no respondió» cuando
+        # había respondido perfectamente para decir que el archivo está mal.
+        #
+        # Lo que separa un resultado de una avería no es el código HTTP sino si
+        # el cuerpo ES un resultado. Un 400 con HTML de un proxy sigue siendo
+        # una avería, y por eso se exige la forma, no solo que haya JSON.
+        if isinstance(cuerpo_json, dict) and any(
+            c in cuerpo_json
+            for c in ("ResultState", "ResultadosValidacion", "CodigoUnicoValidacion")
+        ):
+            return cuerpo_json
+
         if codigo >= 400:
             raise MuvNoDisponible(f"el MUV respondió HTTP {codigo}: {texto[:300]}")
-
-        try:
-            return json.loads(texto)
-        except ValueError as e:
-            raise MuvNoDisponible(f"respuesta ininteligible del MUV: {e}") from e
+        if cuerpo_json is None:
+            raise MuvNoDisponible(
+                f"respuesta ininteligible del MUV (HTTP {codigo}): {texto[:200]}"
+            )
+        return cuerpo_json
 
     # --- Operaciones ----------------------------------------------------
 
