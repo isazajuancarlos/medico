@@ -296,6 +296,24 @@ wznew/wzedit/wzdelete/wzsave/wzundo en 18 formularios). El marco se construye un
 Aplicado ya a seis pantallas: pacientes, incapacidades, remisiones, contrarreferencia,
 consentimiento y nota-operatoria.
 
+### Un solo proceso en despliegue
+
+`npm run build` y el mismo FastAPI sirve el Angular compilado desde
+`frontend/dist/frontend/browser` (`AngularSPA` al final de `main.py`). En sitio no
+hace falta nginx: un proceso y un directorio. Es lo que decidió #73 — «el costo de
+Angular es de compilación, no de despliegue».
+
+En desarrollo no se usa: `npm start` da recarga en caliente en :4200 con proxy a
+:8000, y la ausencia de `dist/` es normal. El log dice cuál de los dos modos quedó
+activo.
+
+**El comodín del SPA no puede tapar el backend.** Va montado después de los routers,
+así que solo ve lo que nadie reconoció — y ahí devolvería `index.html` con 200 a
+`GET /api/pacintes`, que es una errata. `PREFIJOS_DEL_BACKEND` la deja pasar como
+404. Si se añade un prefijo nuevo del backend, va en esa lista;
+`tests/test_frontend_embebido.py` lo comprueba contra el esquema OpenAPI y falla si
+falta.
+
 ## Convenciones
 
 - **`db.commit()` no es automático** en SQLModel.
