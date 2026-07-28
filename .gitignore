@@ -71,3 +71,7 @@ muv/api/FVE1/
 # `git add -A`. Ver muv/README.md.
 apilocal-dockercompose.*.yml
 *.pfx
+
+# Rust
+/target/
+crates/*/target/
