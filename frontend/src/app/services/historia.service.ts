@@ -12,10 +12,10 @@ export interface PacienteInfo {
   edad: number;
   celular?: string;
   entidad_nombre?: string;
-  ant_familiares_struct?: Record<string, any>;
-  ant_personales_struct?: Record<string, any>;
-  ant_ginecologicos_struct?: Record<string, any>;
-  ant_obstetricos_struct?: Record<string, any>;
+  ant_familiares?: Record<string, any>;
+  ant_personales?: Record<string, any>;
+  ant_ginecologicos?: Record<string, any>;
+  ant_obstetricos?: Record<string, any>;
 }
 
 export interface MedicoInfo {
@@ -78,10 +78,10 @@ export interface PacienteContexto {
 }
 
 export interface AntecedentesUpdate {
-  ant_familiares_struct?: Record<string, any>;
-  ant_personales_struct?: Record<string, any>;
-  ant_ginecologicos_struct?: Record<string, any>;
-  ant_obstetricos_struct?: Record<string, any>;
+  ant_familiares?: Record<string, any>;
+  ant_personales?: Record<string, any>;
+  ant_ginecologicos?: Record<string, any>;
+  ant_obstetricos?: Record<string, any>;
 }
 
 export interface MedicamentoInfo {

@@ -1,7 +1,8 @@
 //! Pacientes. Toda consulta lleva el ámbito, y el ámbito no se puede omitir.
 
 use medico_dominio::{Ambito, Visibilidad};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use sqlx::types::Json;
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Paciente {
@@ -22,12 +23,19 @@ pub struct Paciente {
     pub cod_pais: Option<String>,
     pub zona: Option<String>,
     pub entidad_id: Option<i64>,
+    // Antecedentes: objetos JSON de estructura abierta. `Json<Value>` los sirve
+    // como objetos reales (no como cadenas escapadas) y los lee del TEXT tal cual.
+    pub ant_familiares: Json<serde_json::Value>,
+    pub ant_personales: Json<serde_json::Value>,
+    pub ant_ginecologicos: Json<serde_json::Value>,
+    pub ant_obstetricos: Json<serde_json::Value>,
     pub institucion_id: i64,
 }
 
 const COLUMNAS: &str = "id, tipo_documento, numero_documento, nombre1, nombre2, \
                         apellido1, apellido2, fecha_nacimiento, sexo, cod_municipio, \
                         celular, email, direccion, tipo_usuario, cod_pais, zona, entidad_id, \
+                        ant_familiares, ant_personales, ant_ginecologicos, ant_obstetricos, \
                         institucion_id";
 
 /// El `Ambito` es un parámetro OBLIGATORIO, no opcional.
@@ -187,9 +195,89 @@ pub async fn actualizar(
     Ok(q.execute(pool).await?.rows_affected() > 0)
 }
 
+/// Los cuatro bloques de antecedentes en una actualización. Cada uno es opcional:
+/// se actualiza SOLO lo que llega, para que guardar los ginecológicos no borre
+/// los familiares. Un `None` no toca esa columna; un `Some({})` la vacía a
+/// propósito —son cosas distintas y se distinguen—.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Antecedentes {
+    pub ant_familiares: Option<serde_json::Value>,
+    pub ant_personales: Option<serde_json::Value>,
+    pub ant_ginecologicos: Option<serde_json::Value>,
+    pub ant_obstetricos: Option<serde_json::Value>,
+}
+
+/// Actualiza los antecedentes de un paciente **visible para el ámbito**. `false`
+/// si no existe o no es suyo —indistinguibles, como en `actualizar`—. El ámbito
+/// va en el `WHERE`: un id ajeno no coincide y no se toca ni una fila. Solo se
+/// escriben los bloques presentes; si no viene ninguno, no hay nada que cambiar
+/// y se responde `true` cuando el paciente es visible.
+pub async fn actualizar_antecedentes(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+    ant: &Antecedentes,
+) -> Result<bool, sqlx::Error> {
+    let condicion_institucion = match ambito {
+        Ambito::Superadmin => None,
+        Ambito::Institucion(i) => Some(i),
+        Ambito::Ninguno => return Ok(false),
+    };
+
+    // Se arma la lista de columnas a partir de lo que llegó. Nada de columnas
+    // dinámicas que vengan del cliente: los nombres son literales de aquí, solo
+    // se decide cuáles entran.
+    let mut sets: Vec<&str> = Vec::new();
+    if ant.ant_familiares.is_some() {
+        sets.push("ant_familiares = ?");
+    }
+    if ant.ant_personales.is_some() {
+        sets.push("ant_personales = ?");
+    }
+    if ant.ant_ginecologicos.is_some() {
+        sets.push("ant_ginecologicos = ?");
+    }
+    if ant.ant_obstetricos.is_some() {
+        sets.push("ant_obstetricos = ?");
+    }
+
+    // Sin bloques que escribir: solo confirmar que el paciente es visible, para
+    // no responder `true` sobre uno ajeno.
+    if sets.is_empty() {
+        return Ok(obtener(pool, ambito, id).await?.is_some());
+    }
+
+    let filtro = if condicion_institucion.is_some() {
+        "id = ? AND institucion_id = ?"
+    } else {
+        "id = ?"
+    };
+    let sql = format!("UPDATE paciente SET {} WHERE {filtro}", sets.join(", "));
+    let mut q = sqlx::query(&sql);
+    // El orden de los `bind` sigue el de los `push` de arriba.
+    if let Some(v) = &ant.ant_familiares {
+        q = q.bind(Json(v));
+    }
+    if let Some(v) = &ant.ant_personales {
+        q = q.bind(Json(v));
+    }
+    if let Some(v) = &ant.ant_ginecologicos {
+        q = q.bind(Json(v));
+    }
+    if let Some(v) = &ant.ant_obstetricos {
+        q = q.bind(Json(v));
+    }
+    q = q.bind(id);
+    if let Some(i) = condicion_institucion {
+        q = q.bind(i);
+    }
+    Ok(q.execute(pool).await?.rows_affected() > 0)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
+    use serde_json::json;
 
     /// Base en memoria con dos instituciones y un paciente en cada una.
     async fn base() -> crate::Pool {
@@ -373,5 +461,60 @@ mod pruebas {
     async fn sin_ambito_no_se_actualiza() {
         let pool = base().await;
         assert!(!actualizar(&pool, Ambito::Ninguno, 10, &nuevo("111", "Z")).await.unwrap());
+    }
+
+    // ── Antecedentes ─────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn un_paciente_nuevo_trae_antecedentes_vacios_no_nulos() {
+        let pool = base().await;
+        let p = obtener(&pool, Ambito::institucion(1), 10).await.unwrap().unwrap();
+        assert_eq!(p.ant_familiares.0, json!({}));
+        assert_eq!(p.ant_personales.0, json!({}));
+    }
+
+    #[tokio::test]
+    async fn actualizar_un_bloque_no_borra_los_otros() {
+        let pool = base().await;
+        // Primero, los personales.
+        let solo_personales = Antecedentes {
+            ant_personales: Some(json!({"hta": true, "diabetes": false})),
+            ..Default::default()
+        };
+        assert!(actualizar_antecedentes(&pool, Ambito::institucion(1), 10, &solo_personales).await.unwrap());
+        // Luego, los familiares: los personales deben seguir ahí.
+        let solo_familiares = Antecedentes {
+            ant_familiares: Some(json!({"cancer": "madre"})),
+            ..Default::default()
+        };
+        assert!(actualizar_antecedentes(&pool, Ambito::institucion(1), 10, &solo_familiares).await.unwrap());
+
+        let p = obtener(&pool, Ambito::institucion(1), 10).await.unwrap().unwrap();
+        assert_eq!(p.ant_personales.0, json!({"hta": true, "diabetes": false}));
+        assert_eq!(p.ant_familiares.0, json!({"cancer": "madre"}));
+    }
+
+    /// Aislamiento en la escritura de antecedentes: la institución 1 no toca al
+    /// paciente 20, que es de la 2.
+    #[tokio::test]
+    async fn actualizar_antecedentes_ajenos_no_toca_nada() {
+        let pool = base().await;
+        let ant = Antecedentes {
+            ant_personales: Some(json!({"inyectado": true})),
+            ..Default::default()
+        };
+        assert!(!actualizar_antecedentes(&pool, Ambito::institucion(1), 20, &ant).await.unwrap());
+        let p = obtener(&pool, Ambito::Superadmin, 20).await.unwrap().unwrap();
+        assert_eq!(p.ant_personales.0, json!({}), "un ajeno escribió antecedentes de otra institución");
+    }
+
+    /// Una actualización sin bloques no falla, pero tampoco confirma sobre un
+    /// paciente ajeno: distingue el visible del que no lo es.
+    #[tokio::test]
+    async fn actualizacion_vacia_distingue_visible_de_ajeno() {
+        let pool = base().await;
+        let vacio = Antecedentes::default();
+        assert!(actualizar_antecedentes(&pool, Ambito::institucion(1), 10, &vacio).await.unwrap());
+        assert!(!actualizar_antecedentes(&pool, Ambito::institucion(1), 20, &vacio).await.unwrap());
     }
 }

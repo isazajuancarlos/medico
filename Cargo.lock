@@ -920,6 +920,7 @@ dependencies = [
  "chrono",
  "medico-dominio",
  "serde",
+ "serde_json",
  "sqlx",
  "tokio",
 ]

@@ -19,7 +19,7 @@ use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
-use medico_datos::paciente::{self, Paciente, PacienteNuevo};
+use medico_datos::paciente::{self, Antecedentes, Paciente, PacienteNuevo};
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
 /// Tope de una subida de imagen. Una radiografía o un PDF de laboratorio caben
@@ -33,6 +33,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/yo", get(yo))
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
         .route("/api/pacientes/{id}", get(obtener_paciente).put(actualizar_paciente))
+        .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
         .route("/api/pacientes/{id}/historias", get(listar_historias_paciente))
         .route("/api/historias", post(crear_historia))
         .route("/api/historias/{id}", get(obtener_historia))
@@ -181,6 +182,22 @@ async fn actualizar_paciente(
     Json(datos): Json<PacienteNuevo>,
 ) -> StatusCode {
     match paciente::actualizar(&e.pool, u.ambito(), id, &datos).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+/// Actualiza los antecedentes (JSON) de un paciente propio. 204 si se actualizó;
+/// **404 si no existe o no es suyo** —nunca 403, la misma regla que el resto—.
+/// Solo se escriben los bloques presentes: guardar unos no borra los otros.
+async fn actualizar_antecedentes_paciente(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(ant): Json<Antecedentes>,
+) -> StatusCode {
+    match paciente::actualizar_antecedentes(&e.pool, u.ambito(), id, &ant).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,

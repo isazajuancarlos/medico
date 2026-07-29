@@ -1443,10 +1443,10 @@ export class HistoriasComponent implements OnInit {
 
   // ── Formulario ──
   private _loadAnt(p: PacienteInfo): void {
-    if (p.ant_familiares_struct) this.antFam = { ...defaultAntFam(), ...p.ant_familiares_struct } as AntFamiliares;
-    if (p.ant_personales_struct) this.antPers = { ...defaultAntPers(), ...p.ant_personales_struct } as AntPersonales;
-    if (p.ant_ginecologicos_struct) this.antGineco = { ...defaultAntGineco(), ...p.ant_ginecologicos_struct } as AntGineco;
-    if (p.ant_obstetricos_struct) this.antPrenatales = { ...defaultAntPrenatales(), ...p.ant_obstetricos_struct } as AntPrenatales;
+    if (p.ant_familiares) this.antFam = { ...defaultAntFam(), ...p.ant_familiares } as AntFamiliares;
+    if (p.ant_personales) this.antPers = { ...defaultAntPers(), ...p.ant_personales } as AntPersonales;
+    if (p.ant_ginecologicos) this.antGineco = { ...defaultAntGineco(), ...p.ant_ginecologicos } as AntGineco;
+    if (p.ant_obstetricos) this.antPrenatales = { ...defaultAntPrenatales(), ...p.ant_obstetricos } as AntPrenatales;
   }
 
   // ── Examen físico — checkboxes ───────────────────────────────
@@ -1529,8 +1529,8 @@ export class HistoriasComponent implements OnInit {
 
   private _antPayload() {
     return {
-      ant_familiares_struct: { ...this.antFam },
-      ant_personales_struct: {
+      ant_familiares: { ...this.antFam },
+      ant_personales: {
         hta: this.antPers.hta, diabetes: this.antPers.diabetes,
         coronarias: this.antPers.coronarias, acv: this.antPers.acv,
         tbc: this.antPers.tbc, asma: this.antPers.asma,
@@ -1540,8 +1540,8 @@ export class HistoriasComponent implements OnInit {
         otros: this.antPers.otros, habitos: this.antPers.habitos,
       },
       ...(this.esMujer() ? {
-        ant_ginecologicos_struct: { ...this.antGineco },
-        ant_obstetricos_struct: { ...this.antPrenatales },
+        ant_ginecologicos: { ...this.antGineco },
+        ant_obstetricos: { ...this.antPrenatales },
       } : {}),
     };
   }

@@ -20,6 +20,7 @@ sqlx = { version = "0.8", default-features = false, features = [
     "migrate",
     "macros",
     "chrono",
+    "json",
 ] }
 axum = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
