@@ -13,6 +13,7 @@ pub mod licencia;
 pub mod nutricion;
 pub mod orden;
 pub mod paciente;
+pub mod rehabilitacion;
 pub mod urgencias;
 pub mod usuario;
 

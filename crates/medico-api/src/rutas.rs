@@ -20,6 +20,7 @@ use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
 use medico_datos::hospitalizacion::{self, Egreso, Ingreso};
 use medico_datos::nutricion::{self, PlanCrear, PlanEditar, ValoracionCrear, ValoracionEditar};
+use medico_datos::rehabilitacion::{self, SesionCrear, SesionEditar};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
@@ -77,6 +78,16 @@ pub fn router(estado: Estado) -> Router {
             get(nutri_plan).post(nutri_crear_plan),
         )
         .route("/api/nutricion/planes/{id}", put(nutri_actualizar_plan))
+        .route("/api/rehabilitacion/planes", get(rehab_listar).post(rehab_crear))
+        .route(
+            "/api/rehabilitacion/planes/{id}",
+            get(rehab_obtener).put(rehab_actualizar),
+        )
+        .route(
+            "/api/rehabilitacion/planes/{id}/sesiones",
+            get(rehab_sesiones).post(rehab_crear_sesion),
+        )
+        .route("/api/rehabilitacion/sesiones/{id}", put(rehab_actualizar_sesion))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -742,6 +753,97 @@ async fn nutri_actualizar_plan(
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+// --- Rehabilitación ----------------------------------------------------------
+
+async fn rehab_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroNutri>,
+) -> Response {
+    match rehabilitacion::listar_planes(&e.pool, u.ambito(), f.paciente_id).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rehab_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => Json(p).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rehab_crear(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(p): Json<rehabilitacion::PlanCrear>,
+) -> Response {
+    match rehabilitacion::crear_plan(&e.pool, u.ambito(), u.id, &p).await {
+        Ok(Some(id)) => match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
+            Ok(Some(plan)) => (StatusCode::CREATED, Json(plan)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rehab_actualizar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(p): Json<rehabilitacion::PlanEditar>,
+) -> Response {
+    match rehabilitacion::actualizar_plan(&e.pool, u.ambito(), id, &p).await {
+        Ok(true) => match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
+            Ok(Some(plan)) => Json(plan).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rehab_sesiones(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match rehabilitacion::listar_sesiones(&e.pool, u.ambito(), id).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rehab_crear_sesion(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(s): Json<SesionCrear>,
+) -> Response {
+    match rehabilitacion::crear_sesion(&e.pool, u.ambito(), id, u.id, &s).await {
+        Ok(Some(sid)) => match rehabilitacion::obtener_sesion(&e.pool, u.ambito(), sid).await {
+            Ok(Some(ses)) => (StatusCode::CREATED, Json(ses)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rehab_actualizar_sesion(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(s): Json<SesionEditar>,
+) -> Response {
+    match rehabilitacion::actualizar_sesion(&e.pool, u.ambito(), id, &s).await {
+        Ok(true) => match rehabilitacion::obtener_sesion(&e.pool, u.ambito(), id).await {
+            Ok(Some(ses)) => Json(ses).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
