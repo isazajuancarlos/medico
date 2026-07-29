@@ -1,0 +1,13 @@
+# Configuración de cargo-audit (RustSec) para medico. Cierra OWASP A03.
+#
+# El único ignore es preciso y justificado (nunca una categoría abierta):
+#
+# RUSTSEC-2023-0071 — Marvin Attack (canal lateral de tiempo en `rsa` 0.9.x).
+#   NO EXPLOTABLE aquí: medico usa sqlx SOLO con SQLite (default-features=false,
+#   features=[sqlite,…]). El crate `rsa` entra únicamente por `sqlx-macros-core`,
+#   que declara los tres backends para el macro `migrate!`; nunca se conecta a
+#   MySQL ni se ejecuta una operación RSA con clave privada, que es lo que el
+#   ataque necesita. Sin fix disponible aguas arriba. Revisar si algún día se
+#   habilita el backend MySQL (entonces deja de ser ignorable).
+[advisories]
+ignore = ["RUSTSEC-2023-0071"]

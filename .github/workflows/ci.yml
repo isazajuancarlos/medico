@@ -70,3 +70,19 @@ jobs:
       - name: Pruebas (vitest vía ng test)
         working-directory: frontend
         run: npx ng test --watch=false
+
+  auditoria-deps:
+    name: cargo-audit (RustSec)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # RustSec: falla si alguna dependencia tiene un CVE publicado. El único
+      # ignore vive en .cargo/audit.toml, preciso y justificado. Cierra OWASP
+      # A03 (Software Supply Chain Failures). La lección de Ubuntu Forums (2016):
+      # el hueco entró por un componente de terceros sin parchear.
+      - name: cargo-audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
