@@ -204,9 +204,9 @@ export class HistoriaService {
     return this.http.put(`${this.PACIENTES_API}/${pacienteId}/antecedentes`, data);
   }
 
-  // ── Medicamentos ────────────────────────────────────────────────
+  // ── Medicamentos (catálogo CUM, compartido) ─────────────────────
   buscarMedicamentos(q: string): Observable<MedicamentoInfo[]> {
-    return this.http.get<MedicamentoInfo[]>(`${this.API}/medicamentos/buscar`, { params: { q } });
+    return this.http.get<MedicamentoInfo[]>(`/api/medicamentos/buscar`, { params: { q } });
   }
 
   // ── Fórmulas médicas ────────────────────────────────────────────
@@ -218,7 +218,7 @@ export class HistoriaService {
    *  Se piden al backend y no se copian aquí: una lista en dos sitios se
    *  desincroniza, y de ese código dependen el valor unitario y la cantidad. */
   getUnidadesDispensacion(): Observable<UnidadDispensacion[]> {
-    return this.http.get<UnidadDispensacion[]>(`${this.API}/unidades-dispensacion`);
+    return this.http.get<UnidadDispensacion[]>(`/api/unidades-dispensacion`);
   }
 
   createFormula(historiaId: number, data: FormulaCreate): Observable<Formula> {
@@ -233,9 +233,9 @@ export class HistoriaService {
     return this.http.delete<void>(`${this.API}/${historiaId}/formulas/${formulaId}`);
   }
 
-  // ── Especialidades ───────────────────────────────────────────────
+  // ── Especialidades (catálogo compartido) ─────────────────────────
   listEspecialidades(): Observable<EspecialidadInfo[]> {
-    return this.http.get<EspecialidadInfo[]>(`${this.API}/especialidades`);
+    return this.http.get<EspecialidadInfo[]>(`/api/especialidades`);
   }
 
   // ── Órdenes médicas ──────────────────────────────────────────────

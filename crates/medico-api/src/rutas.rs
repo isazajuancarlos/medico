@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::auth::{autenticar, Autenticado, Estado};
 use crate::{claves, sesion};
+use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
@@ -58,6 +59,10 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/medicos", get(listar_medicos))
         .route("/api/citas", get(listar_citas).post(crear_cita))
         .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
+        // Catálogos de referencia: los lee cualquier usuario autenticado.
+        .route("/api/especialidades", get(listar_especialidades))
+        .route("/api/medicamentos/buscar", get(buscar_medicamentos))
+        .route("/api/unidades-dispensacion", get(listar_unidades_dispensacion))
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
         // los archivos del build y, para las rutas del SPA, el index.html.
         .fallback(crate::estaticos::servir)
@@ -681,4 +686,46 @@ async fn cambiar_estado_cita(
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+// --- Catálogos de referencia -------------------------------------------------
+// Datos compartidos por todas las instituciones: no llevan ámbito. Basta con
+// estar autenticado (la firma `Autenticado`); no se filtra por institución
+// porque una especialidad o un medicamento son los mismos para todas.
+
+async fn listar_especialidades(
+    State(e): State<Estado>,
+    _: Autenticado,
+) -> Result<Json<Vec<Especialidad>>, StatusCode> {
+    catalogo::especialidades(&e.pool)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(Deserialize)]
+struct BusquedaMedicamento {
+    #[serde(default)]
+    q: String,
+}
+
+async fn buscar_medicamentos(
+    State(e): State<Estado>,
+    _: Autenticado,
+    Query(b): Query<BusquedaMedicamento>,
+) -> Result<Json<Vec<Medicamento>>, StatusCode> {
+    catalogo::buscar_medicamentos(&e.pool, &b.q)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn listar_unidades_dispensacion(
+    State(e): State<Estado>,
+    _: Autenticado,
+) -> Result<Json<Vec<UnidadDispensacion>>, StatusCode> {
+    catalogo::unidades_dispensacion(&e.pool)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
