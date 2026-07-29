@@ -16,4 +16,5 @@ chrono = { workspace = true }
 guaca = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+# `time` para el timeout de la prueba de concurrencia (directiva #8).
+tokio = { workspace = true, features = ["time"] }

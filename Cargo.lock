@@ -645,8 +645,8 @@ dependencies = [
 
 [[package]]
 name = "guaca"
-version = "0.1.0"
-source = "git+https://github.com/isazajuancarlos/guaca?tag=v0.1.0#40fb4b423e22adfc2160fc12c849dee8917de903"
+version = "0.3.0"
+source = "git+https://github.com/isazajuancarlos/guaca?tag=v0.3.0#9d26cceccc95cbe146f3e6a0cac7b44b04ef7cfb"
 dependencies = [
  "argon2",
  "base64",
@@ -656,6 +656,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "zeroize",
 ]
 
 [[package]]
