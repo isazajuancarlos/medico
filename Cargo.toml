@@ -8,6 +8,9 @@ edition = "2024"
 authors = ["Juan Carlos Isaza Arenas <isazajuancarlos@gmail.com>"]
 license = "LicenseRef-Propietario"
 repository = "https://github.com/isazajuancarlos/medico"
+# App propietaria: NUNCA se publica en crates.io. Explícito, para que un
+# `cargo publish` accidental falle y para que cargo-deny la trate como privada.
+publish = false
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
