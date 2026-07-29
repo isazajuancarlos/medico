@@ -2,6 +2,7 @@
 
 pub mod catalogo;
 pub mod cita;
+pub mod documento;
 pub mod formula;
 pub mod historia;
 pub mod imagen;
@@ -12,6 +13,16 @@ pub mod paciente;
 pub mod usuario;
 
 pub type Pool = sqlx::SqlitePool;
+
+/// Resultado de editar o borrar algo que puede estar firmado. `Firmada` NO es
+/// `NoExiste`: existe y es del ámbito, pero está cerrado. Lo comparten la
+/// historia y los documentos clínicos, que aplican la misma inmutabilidad.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Resultado {
+    NoExiste,
+    Firmada,
+    Hecho,
+}
 
 /// Abre la base y aplica las migraciones pendientes.
 ///

@@ -304,15 +304,9 @@ pub async fn obtener(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<Opti
     }
 }
 
-/// Resultado de editar o borrar una historia. `Firmada` NO es `NoExiste`: la
-/// historia existe y es del ámbito, pero está cerrada. Distinguirlos deja a la
-/// interfaz decir «esta historia ya está firmada» en vez de un 404 confuso.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Resultado {
-    NoExiste,
-    Firmada,
-    Hecho,
-}
+// Editar o borrar una historia firmada se niega distinto de «no existe»: la
+// distinción vive en `crate::Resultado`, compartida con los documentos clínicos.
+pub use crate::Resultado;
 
 /// Lee el paciente y el estado de firma de una historia visible para el ámbito.
 /// `None` si no existe o es ajena —indistinguibles—.

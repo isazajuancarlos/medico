@@ -14,6 +14,7 @@ use crate::auth::{autenticar, Autenticado, Estado};
 use crate::{claves, sesion};
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
+use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
@@ -43,6 +44,14 @@ pub fn router(estado: Estado) -> Router {
         )
         .route("/api/historias/{id}/firmar", post(firmar_historia))
         .route("/api/historias/paciente/{id}/contexto", get(contexto_paciente))
+        // Documentos clínicos: una sola familia de rutas para todos los tipos
+        // (evolución, epicrisis, interconsulta, …); el tipo va como filtro/campo.
+        .route("/api/documentos", get(listar_documentos).post(crear_documento))
+        .route(
+            "/api/documentos/{id}",
+            get(obtener_documento).put(actualizar_documento).delete(eliminar_documento),
+        )
+        .route("/api/documentos/{id}/firmar", post(firmar_documento))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -337,6 +346,99 @@ async fn listar_historias_paciente(
         .await
         .map(Json)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+// --- Documentos clínicos (evolución, epicrisis, interconsulta, …) ------------
+
+#[derive(Deserialize)]
+struct FiltroDocumentos {
+    paciente_id: Option<i64>,
+    tipo: Option<String>,
+}
+
+/// La worklist de documentos visibles para el ámbito, con los nombres unidos.
+/// Ambos filtros son opcionales: por tipo (una worklist de evoluciones) y por
+/// paciente (los documentos de un paciente). Devuelve la vista ligera, sin
+/// `contenido`; el editor pide el documento completo con `GET /{id}`.
+async fn listar_documentos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroDocumentos>,
+) -> Result<Json<Vec<DocumentoVista>>, StatusCode> {
+    documento::listar_ambito(&e.pool, u.ambito(), f.paciente_id, f.tipo.as_deref())
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+/// Crea un documento. El autor es el usuario autenticado —no un campo del
+/// cliente—. 201 con su id; 403 si el paciente no es del ámbito.
+async fn crear_documento(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(d): Json<DocumentoNuevo>,
+) -> Response {
+    match documento::crear(&e.pool, u.ambito(), u.id, &d).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn obtener_documento(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Result<Json<Documento>, StatusCode> {
+    match documento::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(d)) => Ok(Json(d)),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+/// Edita un documento de borrador. 200 con el documento ya actualizado; **404 si
+/// no existe o es ajeno; 409 si está firmado**.
+async fn actualizar_documento(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(d): Json<DocumentoEdicion>,
+) -> Response {
+    match documento::actualizar(&e.pool, u.ambito(), id, &d).await {
+        Ok(documento::Resultado::Hecho) => match documento::obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(actualizado)) => (StatusCode::OK, Json(actualizado)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(documento::Resultado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(documento::Resultado::Firmada) => StatusCode::CONFLICT.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn firmar_documento(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match documento::firmar(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn eliminar_documento(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match documento::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(documento::Resultado::Hecho) => StatusCode::NO_CONTENT,
+        Ok(documento::Resultado::NoExiste) => StatusCode::NOT_FOUND,
+        Ok(documento::Resultado::Firmada) => StatusCode::CONFLICT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }
 
 // --- Fórmulas (prescripciones de una historia) -------------------------------
