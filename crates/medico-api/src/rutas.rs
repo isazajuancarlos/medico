@@ -22,6 +22,7 @@ use medico_datos::hospitalizacion::{self, Egreso, Ingreso};
 use medico_datos::nutricion::{self, PlanCrear, PlanEditar, ValoracionCrear, ValoracionEditar};
 use medico_datos::rehabilitacion::{self, SesionCrear, SesionEditar};
 use medico_datos::incapacidad::{self, Filtros};
+use medico_datos::referencia::{self, ContrarreferenciaCrear, Recepcion};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
@@ -92,6 +93,14 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/incapacidades", get(incap_listar))
         .route("/api/incapacidades/resumen", get(incap_resumen))
         .route("/api/incapacidades/{historia_id}", get(incap_detalle))
+        .route("/api/remisiones", get(rem_listar))
+        .route("/api/remisiones/resumen", get(rem_resumen))
+        .route("/api/remisiones/{id}", get(rem_obtener))
+        .route("/api/remisiones/{id}/estado", put(rem_estado))
+        .route("/api/contrarreferencia", get(cr_listar).post(cr_crear))
+        .route("/api/contrarreferencia/remisiones-abiertas", get(cr_rem_abiertas))
+        .route("/api/contrarreferencia/{id}", get(cr_obtener))
+        .route("/api/contrarreferencia/{id}/recibir", post(cr_recibir))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -898,6 +907,136 @@ async fn incap_detalle(State(e): State<Estado>, Autenticado(u): Autenticado, Pat
     match incapacidad::detalle(&e.pool, u.ambito(), id).await {
         Ok(Some(d)) => Json(d).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Remisiones y contrarreferencia ------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct FiltroRem {
+    estado: Option<String>,
+    desde: Option<String>,
+    hasta: Option<String>,
+    buscar: Option<String>,
+}
+
+async fn rem_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroRem>,
+) -> Response {
+    match referencia::remisiones_listar(
+        &e.pool, u.ambito(), f.estado.as_deref(), f.desde.as_deref(), f.hasta.as_deref(), f.buscar.as_deref(),
+    )
+    .await
+    {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rem_resumen(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroRem>,
+) -> Response {
+    match referencia::remisiones_resumen(&e.pool, u.ambito(), f.desde.as_deref(), f.hasta.as_deref(), f.buscar.as_deref()).await {
+        Ok(r) => Json(r).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn rem_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match referencia::remision_obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(r)) => Json(r).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct EstadoBody {
+    estado: String,
+}
+
+async fn rem_estado(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(b): Json<EstadoBody>,
+) -> Response {
+    match referencia::remision_cambiar_estado(&e.pool, u.ambito(), id, &b.estado).await {
+        Ok(Some(r)) => Json(r).into_response(),
+        // No existe / ajena / transición no válida desde el estado actual.
+        Ok(None) => (
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({ "detail": "No se pudo cambiar el estado: remisión no encontrada o transición no válida" })),
+        )
+            .into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct FiltroCr {
+    solo_pendientes: Option<bool>,
+}
+
+async fn cr_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroCr>,
+) -> Response {
+    match referencia::contrarref_listar(&e.pool, u.ambito(), f.solo_pendientes.unwrap_or(false)).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cr_rem_abiertas(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match referencia::remisiones_abiertas(&e.pool, u.ambito()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cr_crear(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(c): Json<ContrarreferenciaCrear>,
+) -> Response {
+    match referencia::contrarref_crear(&e.pool, u.ambito(), u.id, u.institucion_id, &c).await {
+        Ok(Some(id)) => match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(cr)) => (StatusCode::CREATED, Json(cr)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        // Paciente ajeno o remisión que no cuadra.
+        Ok(None) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cr_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(cr)) => Json(cr).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cr_recibir(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match referencia::contrarref_recibir(&e.pool, u.ambito(), id, u.id).await {
+        Ok(Recepcion::Recibida) => match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(cr)) => Json(cr).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(Recepcion::YaRecibida) => (
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({ "detail": "Esta contrarreferencia ya se registró como recibida. El primer acuse es el que cuenta." })),
+        )
+            .into_response(),
+        Ok(Recepcion::NoExiste) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

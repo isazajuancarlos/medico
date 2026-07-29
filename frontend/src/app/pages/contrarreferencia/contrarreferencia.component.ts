@@ -108,7 +108,7 @@ export class ContrarreferenciaComponent implements OnInit {
     this.cargando.set(true);
     let params = new HttpParams();
     if (this.soloPendientes) params = params.set('solo_pendientes', 'true');
-    this.http.get<Contrarreferencia[]>('/api/contrarreferencia/', { params }).subscribe({
+    this.http.get<Contrarreferencia[]>('/api/contrarreferencia', { params }).subscribe({
       next: (r) => { this.filas.set(r); this.cargando.set(false); },
       error: () => { this.filas.set([]); this.cargando.set(false); },
     });
