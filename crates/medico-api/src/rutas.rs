@@ -17,6 +17,7 @@ use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::licencia;
+use medico_datos::orden::{self, Orden, OrdenNueva};
 use medico_datos::paciente::{self, Paciente, PacienteNuevo};
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
@@ -32,6 +33,9 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/historias/{id}", get(obtener_historia))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
+        .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
+        .route("/api/ordenes/{id}/estado", put(cambiar_estado_orden))
+        .route("/api/ordenes/{id}", axum::routing::delete(eliminar_orden))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
@@ -250,6 +254,57 @@ async fn eliminar_formula(
     Path(id): Path<i64>,
 ) -> StatusCode {
     match formula::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+// --- Órdenes médicas ---------------------------------------------------------
+
+async fn listar_ordenes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(historia_id): Path<i64>,
+) -> Result<Json<Vec<Orden>>, StatusCode> {
+    orden::listar_por_historia(&e.pool, u.ambito(), historia_id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn crear_orden(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(historia_id): Path<i64>,
+    Json(o): Json<OrdenNueva>,
+) -> Response {
+    match orden::crear(&e.pool, u.ambito(), historia_id, &o).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cambiar_estado_orden(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(req): Json<CambioEstado>,
+) -> StatusCode {
+    match orden::cambiar_estado(&e.pool, u.ambito(), id, &req.estado).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn eliminar_orden(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match orden::eliminar(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,

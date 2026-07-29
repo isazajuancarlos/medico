@@ -5,6 +5,7 @@ pub mod formula;
 pub mod historia;
 pub mod institucion;
 pub mod licencia;
+pub mod orden;
 pub mod paciente;
 pub mod usuario;
 
