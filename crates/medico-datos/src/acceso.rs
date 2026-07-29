@@ -16,6 +16,7 @@
 use std::collections::BTreeMap;
 
 use guaca::auditoria::{self, Auditoria, Entrada, GENESIS};
+use medico_dominio::{Ambito, Visibilidad};
 use serde_json::Value;
 
 /// Un acceso que se va a registrar. `ts` en UTC (RFC 3339); el llamante lo pone
@@ -185,9 +186,34 @@ pub async fn verificar(pool: &crate::Pool, vk_hex: Option<&str>) -> Result<Audit
     Ok(auditoria::verificar_con(&entradas, verif))
 }
 
+/// `true` si el paciente existe y es visible para el ámbito. Mismo guard que usan
+/// historia y documento: la institución vive en `paciente`, no en la bitácora.
+async fn paciente_es_del_ambito(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    paciente_id: i64,
+) -> Result<bool, sqlx::Error> {
+    let fila: Option<(i64,)> = sqlx::query_as("SELECT institucion_id FROM paciente WHERE id = ?")
+        .bind(paciente_id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(fila.is_some_and(|(i,)| ambito.puede_ver(Some(i)) == Visibilidad::Si))
+}
+
 /// El rastro de un paciente: sus accesos en orden. Para responder «¿quién vio mi
 /// historia?» (derecho del titular, Ley 1581). Devuelve el JSON de cada evento.
-pub async fn por_paciente(pool: &crate::Pool, paciente_id: i64) -> Result<Vec<String>, sqlx::Error> {
+///
+/// Filtra por `ambito` en la propia capa de datos (defensa en profundidad, como
+/// el resto de consultas de paciente): un ámbito ajeno recibe vacío —
+/// indistinguible de «sin accesos»—, aunque el llamante olvide comprobarlo.
+pub async fn por_paciente(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    paciente_id: i64,
+) -> Result<Vec<String>, sqlx::Error> {
+    if !paciente_es_del_ambito(pool, ambito, paciente_id).await? {
+        return Ok(Vec::new());
+    }
     let filas: Vec<(String,)> = sqlx::query_as(
         "SELECT contenido FROM acceso WHERE json_extract(contenido, '$.paciente_id') = ? ORDER BY secuencia ASC",
     )
@@ -227,6 +253,44 @@ mod pruebas {
             paciente_id: paciente,
             ts: "2026-07-29T17:00:00Z".into(),
         }
+    }
+
+    async fn sembrar_paciente(pool: &crate::Pool, id: i64, institucion: i64) {
+        // La institución debe existir (FK); OR IGNORE para poder sembrar varios
+        // pacientes de la misma sin chocar.
+        sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (?,'Inst',?)")
+            .bind(institucion)
+            .bind(format!("900{institucion}"))
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+             fecha_nacimiento,sexo,institucion_id) VALUES (?,'CC',?,'Ana','Ruiz','1990-01-01','F',?)",
+        )
+        .bind(id)
+        .bind(format!("doc{id}"))
+        .bind(institucion)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn por_paciente_respeta_el_ambito() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        for i in 0..2 {
+            registrar(&pool, &evento(2, 10, &format!("ver_{i}")), None).await.unwrap();
+        }
+        // El ámbito dueño ve el rastro; el superadmin también.
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 2);
+        assert_eq!(por_paciente(&pool, Ambito::Superadmin, 10).await.unwrap().len(), 2);
+        // Un ámbito AJENO no ve nada, aunque conozca el id (indistinguible de
+        // «sin accesos»). Es la defensa en profundidad de #88.
+        assert!(por_paciente(&pool, Ambito::institucion(2), 10).await.unwrap().is_empty());
+        // Sin ámbito, nada.
+        assert!(por_paciente(&pool, Ambito::Ninguno, 10).await.unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -287,12 +351,14 @@ mod pruebas {
     #[tokio::test]
     async fn el_rastro_por_paciente_filtra() {
         let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 20, 1).await;
         let (_, sk) = guaca::firma::generar_claves();
         registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
         registrar(&pool, &evento(3, 20, "ver"), Some(&sk)).await.unwrap();
         registrar(&pool, &evento(2, 10, "editar"), Some(&sk)).await.unwrap();
-        assert_eq!(por_paciente(&pool, 10).await.unwrap().len(), 2);
-        assert_eq!(por_paciente(&pool, 20).await.unwrap().len(), 1);
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 2);
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().len(), 1);
     }
 
     /// Directiva #8: 100+ accesos CONCURRENTES no bifurcan la cadena ni pierden

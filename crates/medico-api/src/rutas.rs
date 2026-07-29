@@ -193,7 +193,7 @@ async fn accesos_paciente(
         Ok(None) => return Err(StatusCode::NOT_FOUND),
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
-    match acceso::por_paciente(&e.pool, id).await {
+    match acceso::por_paciente(&e.pool, u.ambito(), id).await {
         Ok(eventos) => Ok(Json(
             eventos.iter().filter_map(|s| serde_json::from_str(s).ok()).collect(),
         )),
