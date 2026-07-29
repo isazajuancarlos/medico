@@ -6,6 +6,7 @@
 //! —quién es y qué alcance tiene— se expone por métodos, no volcando la fila.
 
 use medico_dominio::{Ambito, RolUsuario};
+use serde::Serialize;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Usuario {
@@ -68,6 +69,88 @@ pub async fn por_email(pool: &crate::Pool, email: &str) -> Result<Option<Usuario
         .await
 }
 
+/// Resumen de un usuario para listar. **No lleva `password_hash`** —ni siquiera
+/// se selecciona de la base—, así que es seguro serializarlo, a diferencia de
+/// [`Usuario`].
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct ResumenUsuario {
+    pub id: i64,
+    pub nombre: String,
+    pub email: String,
+    pub rol: String,
+    pub institucion_id: Option<i64>,
+    pub activo: bool,
+}
+
+/// Lista usuarios según el ámbito. Sin el hash: la consulta no lo trae.
+pub async fn listar(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<ResumenUsuario>, sqlx::Error> {
+    const COLS: &str = "id, nombre, email, rol, institucion_id, activo";
+    match ambito {
+        Ambito::Superadmin => {
+            sqlx::query_as::<_, ResumenUsuario>(&format!("SELECT {COLS} FROM usuario ORDER BY nombre"))
+                .fetch_all(pool)
+                .await
+        }
+        Ambito::Institucion(id) => {
+            sqlx::query_as::<_, ResumenUsuario>(&format!(
+                "SELECT {COLS} FROM usuario WHERE institucion_id = ? ORDER BY nombre"
+            ))
+            .bind(id)
+            .fetch_all(pool)
+            .await
+        }
+        Ambito::Ninguno => Ok(Vec::new()),
+    }
+}
+
+/// Datos para crear un usuario. La contraseña llega **ya hasheada**: esta capa
+/// nunca ve la clave en claro (la hashea la capa de API).
+pub struct UsuarioNuevo {
+    pub nombre: String,
+    pub email: String,
+    pub password_hash: String,
+    pub rol: String,
+    pub institucion_id: Option<i64>,
+}
+
+/// Los tres desenlaces reales de crear un usuario.
+pub enum ResultadoCrear {
+    Creado(i64),
+    SinPermiso,
+    EmailEnUso,
+}
+
+/// Crea un usuario. La institución del nuevo la fija QUIÉN crea: un admin lo crea
+/// en SU institución (el `institucion_id` que venga se ignora); el superadmin la
+/// elige (para dar de alta el primer admin de una IPS nueva, o incluso otro
+/// superadmin con `None`). El correo es único en todo el sistema.
+pub async fn crear(
+    pool: &crate::Pool,
+    quien: Ambito,
+    nuevo: &UsuarioNuevo,
+) -> Result<ResultadoCrear, sqlx::Error> {
+    let institucion_id = match quien {
+        Ambito::Institucion(id) => Some(id),
+        Ambito::Superadmin => nuevo.institucion_id,
+        Ambito::Ninguno => return Ok(ResultadoCrear::SinPermiso),
+    };
+    if por_email(pool, &nuevo.email).await?.is_some() {
+        return Ok(ResultadoCrear::EmailEnUso);
+    }
+    let r = sqlx::query(
+        "INSERT INTO usuario (nombre, email, password_hash, rol, institucion_id, activo) \
+         VALUES (?,?,?,?,?,1)",
+    )
+    .bind(&nuevo.nombre)
+    .bind(&nuevo.email)
+    .bind(&nuevo.password_hash)
+    .bind(&nuevo.rol)
+    .bind(institucion_id)
+    .execute(pool)
+    .await?;
+    Ok(ResultadoCrear::Creado(r.last_insert_rowid()))
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -76,7 +159,7 @@ mod pruebas {
     /// un médico de la 1, y uno con un rol que no existe.
     async fn base() -> crate::Pool {
         let pool = crate::abrir("sqlite::memory:").await.unwrap();
-        sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (1,'Uno','900')")
+        sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (1,'Uno','900'),(2,'Dos','901')")
             .execute(&pool)
             .await
             .unwrap();
@@ -127,5 +210,52 @@ mod pruebas {
         let u = por_email(&pool, "raro@x.co").await.unwrap().unwrap();
         assert_eq!(u.rol(), None);
         assert_eq!(u.ambito(), Ambito::Ninguno, "un rol corrupto no puede conceder acceso");
+    }
+
+    #[tokio::test]
+    async fn listar_es_scoped_y_no_trae_el_hash() {
+        let bd = base().await;
+        // El superadmin ve los tres; la institución 1, sus tres (root es NULL,
+        // no de la 1) → en realidad la 1 ve a Ruiz y Raro (2), no a root.
+        assert_eq!(listar(&bd, Ambito::Superadmin).await.unwrap().len(), 3);
+        assert_eq!(listar(&bd, Ambito::institucion(1)).await.unwrap().len(), 2);
+        assert!(listar(&bd, Ambito::Ninguno).await.unwrap().is_empty());
+        // El ResumenUsuario ni siquiera tiene campo de hash: es imposible filtrarlo.
+    }
+
+    fn nuevo(email: &str, inst: Option<i64>) -> UsuarioNuevo {
+        UsuarioNuevo {
+            nombre: "Nuevo".into(),
+            email: email.into(),
+            password_hash: "h-nuevo".into(),
+            rol: "medico".into(),
+            institucion_id: inst,
+        }
+    }
+
+    #[tokio::test]
+    async fn un_admin_crea_en_su_institucion_ignorando_lo_que_pidan() {
+        let bd = base().await;
+        // Pide institución 2, pero como el ámbito es de la 1, se crea en la 1.
+        let r = crear(&bd, Ambito::institucion(1), &nuevo("n1@x.co", Some(2))).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)));
+        let u = por_email(&bd, "n1@x.co").await.unwrap().unwrap();
+        assert_eq!(u.institucion_id, Some(1), "un admin no crea usuarios en otra institución");
+    }
+
+    #[tokio::test]
+    async fn el_superadmin_coloca_al_usuario_donde_indica() {
+        let bd = base().await;
+        let r = crear(&bd, Ambito::Superadmin, &nuevo("n2@x.co", Some(2))).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)));
+        assert_eq!(por_email(&bd, "n2@x.co").await.unwrap().unwrap().institucion_id, Some(2));
+    }
+
+    #[tokio::test]
+    async fn sin_ambito_no_crea_y_el_correo_repetido_se_rechaza() {
+        let bd = base().await;
+        assert!(matches!(crear(&bd, Ambito::Ninguno, &nuevo("n3@x.co", Some(1))).await.unwrap(), ResultadoCrear::SinPermiso));
+        // 'ruiz@x.co' ya existe.
+        assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("ruiz@x.co", None)).await.unwrap(), ResultadoCrear::EmailEnUso));
     }
 }

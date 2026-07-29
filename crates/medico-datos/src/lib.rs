@@ -1,5 +1,6 @@
 //! Acceso a la base. Nadie de aquí para arriba escribe SQL.
 
+pub mod institucion;
 pub mod paciente;
 pub mod usuario;
 

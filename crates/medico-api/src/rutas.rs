@@ -11,8 +11,10 @@ use medico_dominio::RolUsuario;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{autenticar, Autenticado, Estado};
-use crate::sesion;
+use crate::{claves, sesion};
+use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::paciente::{self, Paciente, PacienteNuevo};
+use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
 pub fn router(estado: Estado) -> Router {
     Router::new()
@@ -21,7 +23,14 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/yo", get(yo))
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
         .route("/api/pacientes/{id}", put(actualizar_paciente))
+        .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
+        .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
         .with_state(estado)
+}
+
+/// Quién puede gestionar usuarios e instituciones: administración del sistema.
+fn es_gestor(u: &Usuario) -> bool {
+    matches!(u.rol(), Some(RolUsuario::Admin | RolUsuario::Superadmin))
 }
 
 #[derive(Serialize)]
@@ -124,5 +133,92 @@ async fn actualizar_paciente(
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+// --- Instituciones (las gestiona el superadmin) ------------------------------
+
+async fn listar_instituciones(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+) -> Result<Json<Vec<Institucion>>, StatusCode> {
+    institucion::listar(&e.pool, u.ambito())
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn crear_institucion(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(nueva): Json<InstitucionNueva>,
+) -> Response {
+    match institucion::crear(&e.pool, u.ambito(), &nueva).await {
+        Ok(institucion::ResultadoCrear::Creada(id)) => {
+            (StatusCode::CREATED, Json(Creado { id })).into_response()
+        }
+        Ok(institucion::ResultadoCrear::SinPermiso) => StatusCode::FORBIDDEN.into_response(),
+        Ok(institucion::ResultadoCrear::NitEnUso) => StatusCode::CONFLICT.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Usuarios (los gestiona admin o superadmin) ------------------------------
+
+async fn listar_usuarios(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+) -> Result<Json<Vec<ResumenUsuario>>, StatusCode> {
+    if !es_gestor(&u) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    usuario::listar(&e.pool, u.ambito())
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(Deserialize)]
+struct CrearUsuario {
+    nombre: String,
+    email: String,
+    clave: String,
+    rol: String,
+    institucion_id: Option<i64>,
+}
+
+async fn crear_usuario(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(req): Json<CrearUsuario>,
+) -> Response {
+    if !es_gestor(&u) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    // El rol tiene que existir, y **solo un superadmin puede fabricar otro
+    // superadmin**: si no, un admin se ascendería creando una cuenta.
+    let Some(rol) = RolUsuario::desde_str(&req.rol) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    if rol == RolUsuario::Superadmin && u.rol() != Some(RolUsuario::Superadmin) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let Some(hash) = claves::hashear(&req.clave) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let nuevo = UsuarioNuevo {
+        nombre: req.nombre,
+        email: req.email,
+        password_hash: hash,
+        rol: req.rol,
+        institucion_id: req.institucion_id,
+    };
+    match usuario::crear(&e.pool, u.ambito(), &nuevo).await {
+        Ok(usuario::ResultadoCrear::Creado(id)) => {
+            (StatusCode::CREATED, Json(Creado { id })).into_response()
+        }
+        Ok(usuario::ResultadoCrear::SinPermiso) => StatusCode::FORBIDDEN.into_response(),
+        Ok(usuario::ResultadoCrear::EmailEnUso) => StatusCode::CONFLICT.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
