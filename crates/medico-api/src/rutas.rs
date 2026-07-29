@@ -751,6 +751,16 @@ async fn servir_imagen(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+    // Bitácora (Ley 1581): acceso a imagen diagnóstica. El paciente se resuelve
+    // por la historia de la imagen; si no se puede resolver NO se inventa un id
+    // (directiva 20): se avisa y se omite, sin bloquear la entrega.
+    match historia::obtener(&e.pool, u.ambito(), img.historia_id).await {
+        Ok(Some(h)) => registrar_acceso(&e, &u, "ver", "imagen", id, h.paciente_id).await,
+        _ => eprintln!(
+            "⚠️  bitácora de acceso: no se resolvió el paciente de la imagen {id} (historia {})",
+            img.historia_id
+        ),
+    }
     let crudo = match tokio::fs::read(e.dir_imagenes.join(&img.ruta_archivo)).await {
         Ok(b) => b,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
