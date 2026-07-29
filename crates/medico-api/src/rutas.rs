@@ -43,6 +43,7 @@ pub fn router(estado: Estado) -> Router {
             get(obtener_historia).put(actualizar_historia).delete(eliminar_historia),
         )
         .route("/api/historias/{id}/firmar", post(firmar_historia))
+        .route("/api/historias/{id}/verificar-firma", get(verificar_firma_historia))
         .route("/api/historias/paciente/{id}/contexto", get(contexto_paciente))
         // Documentos clínicos: una sola familia de rutas para todos los tipos
         // (evolución, epicrisis, interconsulta, …); el tipo va como filtro/campo.
@@ -275,10 +276,46 @@ async fn firmar_historia(
     Autenticado(u): Autenticado,
     Path(id): Path<i64>,
 ) -> StatusCode {
-    match historia::firmar(&e.pool, u.ambito(), id).await {
+    match historia::firmar(&e.pool, u.ambito(), id, e.clave_firma.as_deref()).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+#[derive(Serialize)]
+struct EstadoFirma {
+    estado: &'static str,
+}
+
+/// Verifica la firma criptográfica de una historia contra su contenido actual.
+/// `valida` / `alterada` / `invalida` / `sin_firma` (cerrada sin clave) /
+/// `sin_clave` (el servidor no tiene clave pública configurada). 404 si la
+/// historia no existe o no es del ámbito.
+async fn verificar_firma_historia(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    let Some(vk) = e.clave_verificacion.as_deref() else {
+        return (StatusCode::OK, Json(EstadoFirma { estado: "sin_clave" })).into_response();
+    };
+    match historia::verificar(&e.pool, u.ambito(), id, vk).await {
+        Ok(Some(v)) => {
+            let estado = match v {
+                guaca::firma::Verificacion::Valida => "valida",
+                guaca::firma::Verificacion::Alterada => "alterada",
+                guaca::firma::Verificacion::Invalida => "invalida",
+            };
+            (StatusCode::OK, Json(EstadoFirma { estado })).into_response()
+        }
+        // La historia existe (se pudo consultar) pero no tiene firma, o no existe.
+        Ok(None) => match historia::obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(_)) => (StatusCode::OK, Json(EstadoFirma { estado: "sin_firma" })).into_response(),
+            Ok(None) => StatusCode::NOT_FOUND.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 

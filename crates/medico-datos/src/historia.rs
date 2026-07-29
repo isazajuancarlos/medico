@@ -21,7 +21,7 @@ const COLUMNAS: &str = "id, fecha, codigo_historia, paciente_id, medico_id, cita
     diagnostico_principal, diagnostico_relacionado1, diagnostico_relacionado2, \
     diagnostico_relacionado3, impresion_diagnostica, diagnostico_principal_cie11, \
     diagnostico_principal_uri, procedencias, genera_incapacidad, dias_incapacidad, plan_tratamiento, \
-    firmada";
+    firmada, firma";
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Historia {
@@ -95,6 +95,9 @@ pub struct Historia {
     pub plan_tratamiento: String,
     /// Una historia firmada queda cerrada: no se edita ni se borra.
     pub firmada: bool,
+    /// Firma criptográfica (post-cuántica) del contenido al firmarse. `None` si
+    /// se cerró sin clave configurada. Verificarla detecta cualquier alteración.
+    pub firma: Option<String>,
 }
 
 /// Lo que llega para crear una historia. Los campos con defecto en la base son
@@ -430,19 +433,62 @@ pub async fn actualizar(
     Ok(Resultado::Hecho)
 }
 
-/// Firma una historia visible y sin firmar. `false` si no existe, es ajena o ya
-/// estaba firmada (firmar dos veces no es un error, pero tampoco cambia nada).
-pub async fn firmar(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<bool, sqlx::Error> {
-    match paciente_y_firma(pool, ambito, id).await? {
-        Some((_, false)) => {
-            let r = sqlx::query("UPDATE historia SET firmada = 1 WHERE id = ? AND firmada = 0")
-                .bind(id)
-                .execute(pool)
-                .await?;
-            Ok(r.rows_affected() > 0)
-        }
-        _ => Ok(false),
+/// Bytes canónicos que se firman: el contenido de la historia como JSON con
+/// claves ORDENADAS (BTreeMap), EXCLUYENDO los campos de firma. Determinista:
+/// firmar y verificar producen los mismos bytes, y cambiar cualquier campo
+/// clínico los cambia (rompe la firma).
+fn firmable(h: &Historia) -> Vec<u8> {
+    let v = serde_json::to_value(h).expect("Historia serializa");
+    let mut m: std::collections::BTreeMap<String, serde_json::Value> = match v {
+        serde_json::Value::Object(o) => o.into_iter().collect(),
+        _ => std::collections::BTreeMap::new(),
+    };
+    m.remove("firma");
+    m.remove("firmada");
+    guaca::firma::canonico(&m)
+}
+
+/// Firma una historia visible y sin firmar, y la cierra. Con `sk_hex` guarda una
+/// firma criptográfica del contenido; sin clave (`None`) la cierra sin firma —la
+/// ausencia de firma nunca impide cerrar—. `false` si no existe, es ajena o ya
+/// estaba firmada.
+pub async fn firmar(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+    sk_hex: Option<&str>,
+) -> Result<bool, sqlx::Error> {
+    let Some(h) = obtener(pool, ambito, id).await? else {
+        return Ok(false);
+    };
+    if h.firmada {
+        return Ok(false);
     }
+    let firma = sk_hex.and_then(|s| guaca::firma::firmar(&firmable(&h), s));
+    let r = sqlx::query("UPDATE historia SET firmada = 1, firma = ? WHERE id = ? AND firmada = 0")
+        .bind(&firma)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(r.rows_affected() > 0)
+}
+
+/// Verifica la firma de una historia contra su contenido actual. `None` si no
+/// existe, es ajena o no tiene firma criptográfica; si no, distingue
+/// `Valida` / `Alterada` (cambió tras firmarse) / `Invalida`.
+pub async fn verificar(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+    vk_hex: &str,
+) -> Result<Option<guaca::firma::Verificacion>, sqlx::Error> {
+    let Some(h) = obtener(pool, ambito, id).await? else {
+        return Ok(None);
+    };
+    let Some(firma) = h.firma.clone() else {
+        return Ok(None);
+    };
+    Ok(Some(guaca::firma::verificar(&firmable(&h), &firma, vk_hex)))
 }
 
 /// Borra una historia (y en cascada sus fórmulas, órdenes e imágenes). **Se niega
@@ -587,9 +633,9 @@ mod pruebas {
     async fn una_historia_firmada_es_inmutable() {
         let pool = base().await;
         let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
-        assert!(firmar(&pool, Ambito::institucion(1), id).await.unwrap());
+        assert!(firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
         // Firmar de nuevo no cambia nada.
-        assert!(!firmar(&pool, Ambito::institucion(1), id).await.unwrap());
+        assert!(!firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
         // Ni se edita ni se borra: se responde Firmada, no NoExiste.
         assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &nueva(10)).await.unwrap(), Resultado::Firmada);
         assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::Firmada);
@@ -601,7 +647,7 @@ mod pruebas {
     async fn no_se_firma_ni_se_borra_la_ajena() {
         let pool = base().await;
         let id = crear(&pool, Ambito::institucion(2), &nueva(20)).await.unwrap().unwrap();
-        assert!(!firmar(&pool, Ambito::institucion(1), id).await.unwrap());
+        assert!(!firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
         assert!(obtener(&pool, Ambito::institucion(2), id).await.unwrap().is_some());
     }
 
@@ -611,5 +657,43 @@ mod pruebas {
         let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
         assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::Hecho);
         assert!(obtener(&pool, Ambito::institucion(1), id).await.unwrap().is_none());
+    }
+
+    /// La firma criptográfica: firmar con clave, verificar Válida, y detectar una
+    /// alteración hecha por DEBAJO de la app (UPDATE directo, simulando a quien
+    /// escribe en la base) como Alterada.
+    #[tokio::test]
+    async fn la_firma_detecta_una_alteracion_directa_en_la_base() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        assert!(firmar(&pool, Ambito::institucion(1), id, Some(&sk)).await.unwrap());
+
+        // Recién firmada: verifica.
+        assert_eq!(
+            verificar(&pool, Ambito::institucion(1), id, &vk).await.unwrap(),
+            Some(guaca::firma::Verificacion::Valida)
+        );
+
+        // Un atacante con acceso a la base cambia el diagnóstico saltándose la app.
+        sqlx::query("UPDATE historia SET diagnostico_principal = 'ALTERADO' WHERE id = ?")
+            .bind(id).execute(&pool).await.unwrap();
+        assert_eq!(
+            verificar(&pool, Ambito::institucion(1), id, &vk).await.unwrap(),
+            Some(guaca::firma::Verificacion::Alterada),
+            "la firma no detectó la manipulación directa en la base"
+        );
+    }
+
+    #[tokio::test]
+    async fn sin_clave_se_cierra_pero_no_hay_firma_que_verificar() {
+        let pool = base().await;
+        let (vk, _) = guaca::firma::generar_claves();
+        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        assert!(firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert!(h.firmada && h.firma.is_none());
+        // Sin firma criptográfica, no hay nada que verificar.
+        assert_eq!(verificar(&pool, Ambito::institucion(1), id, &vk).await.unwrap(), None);
     }
 }

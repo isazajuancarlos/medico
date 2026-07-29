@@ -13,6 +13,7 @@ sqlx = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
+guaca = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

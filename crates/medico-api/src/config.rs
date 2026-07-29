@@ -43,6 +43,11 @@ pub struct Config {
     /// Dónde se guardan las imágenes diagnósticas. La ruta de un archivo la
     /// construye el servidor desde el id; nada que venga del cliente entra en ella.
     pub dir_imagenes: String,
+    /// Clave PRIVADA de firma (hex) para sellar la historia al firmarla. `None`
+    /// desactiva la firma con gracia: la historia se cierra sin firma criptográfica.
+    pub clave_firma: Option<String>,
+    /// Clave PÚBLICA de verificación (hex), para comprobar firmas. `None` si no hay.
+    pub clave_verificacion: Option<String>,
 }
 
 fn opcional(clave: &str) -> Option<String> {
@@ -88,6 +93,11 @@ impl Config {
             // almacenamiento al lado. El nombre del archivo lo pone el servidor
             // desde el id de la fila, nunca el cliente.
             dir_imagenes: opcional("MEDICO_DIR_IMAGENES").unwrap_or_else(|| "storage/imagenes".into()),
+            // Claves de firma: opcionales (sin ellas la historia se cierra sin
+            // firma criptográfica). La privada es SECRETA; la pública puede
+            // publicarse para que cualquiera verifique.
+            clave_firma: opcional("MEDICO_SIGNING_KEY"),
+            clave_verificacion: opcional("MEDICO_VERIFYING_KEY"),
         })
     }
 }

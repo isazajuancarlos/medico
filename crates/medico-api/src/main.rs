@@ -15,6 +15,16 @@ async fn main() -> ExitCode {
     // verifica el acceso. Lo usa el seeder de la demo; un hash de otra
     // herramienta con otra configuración deja al usuario fuera y el fallo
     // aparece lejos de su causa.
+    // `claves-firma`: imprime un par nuevo de claves de firma (pública, privada)
+    // en hex. La privada va en MEDICO_SIGNING_KEY (secreta); la pública en
+    // MEDICO_VERIFYING_KEY (puede publicarse). Se ejecuta una vez al instalar.
+    if std::env::args().nth(1).as_deref() == Some("claves-firma") {
+        let (publica, privada) = guaca::firma::generar_claves();
+        println!("MEDICO_VERIFYING_KEY={publica}");
+        println!("MEDICO_SIGNING_KEY={privada}");
+        return ExitCode::SUCCESS;
+    }
+
     if std::env::args().nth(1).as_deref() == Some("hashear") {
         let clave = std::env::args().nth(2).unwrap_or_default();
         if clave.is_empty() {
@@ -60,6 +70,8 @@ async fn main() -> ExitCode {
         secreto: cfg.secreto_sesion,
         minutos: cfg.minutos_sesion,
         dir_imagenes,
+        clave_firma: cfg.clave_firma,
+        clave_verificacion: cfg.clave_verificacion,
     };
     let app = rutas::router(estado);
 

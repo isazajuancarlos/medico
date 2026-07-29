@@ -24,6 +24,9 @@ sqlx = { version = "0.8", default-features = false, features = [
 ] }
 axum = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
+# Protección con Quipu (cifrado en reposo + firma de registros). Repo público,
+# fijado por tag para builds reproducibles.
+guaca = { git = "https://github.com/isazajuancarlos/guaca", tag = "v0.1.0" }
 
 [profile.release]
 lto = true
