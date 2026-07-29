@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::auth::{autenticar, Autenticado, Estado};
 use crate::{claves, sesion};
+use medico_datos::acceso;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
@@ -37,6 +38,8 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/pacientes/{id}", get(obtener_paciente).put(actualizar_paciente))
         .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
         .route("/api/pacientes/{id}/historias", get(listar_historias_paciente))
+        .route("/api/pacientes/{id}/accesos", get(accesos_paciente))
+        .route("/api/acceso/verificar", get(verificar_acceso))
         .route("/api/historias", post(crear_historia))
         .route(
             "/api/historias/{id}",
@@ -178,6 +181,41 @@ async fn obtener_paciente(
     }
 }
 
+/// El rastro de acceso de un paciente (derecho del titular, Ley 1581). Restringido
+/// al ámbito: un paciente ajeno no existe (404), igual que en el resto.
+async fn accesos_paciente(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Result<Json<Vec<serde_json::Value>>, StatusCode> {
+    match paciente::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => return Err(StatusCode::NOT_FOUND),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+    match acceso::por_paciente(&e.pool, id).await {
+        Ok(eventos) => Ok(Json(
+            eventos.iter().filter_map(|s| serde_json::from_str(s).ok()).collect(),
+        )),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+/// Verifica la integridad de TODA la bitácora (encadenamiento + firmas). Solo
+/// superadmin: es un control global, no de un recurso. Devuelve el veredicto.
+async fn verificar_acceso(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    if u.ambito() != Ambito::Superadmin {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    match acceso::verificar(&e.pool, e.clave_verificacion.as_deref()).await {
+        Ok(veredicto) => Ok(Json(serde_json::json!({ "veredicto": format!("{veredicto:?}") }))),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 /// Crea un paciente en la institución del usuario. 201 con su id; 403 si el
 /// ámbito no puede crear (superadmin sin institución, o sin ámbito).
 async fn crear_paciente(
@@ -238,13 +276,44 @@ async fn crear_historia(
     }
 }
 
+/// Registra un acceso a dato de paciente en la bitácora (Ley 1581), **best-effort**:
+/// si el registro falla NO se bloquea la atención — se grita en el log. El registro
+/// es casi infalible (BEGIN IMMEDIATE + reintentos); un fallo es raro y queda
+/// avisado. Decisión de Juan 2026-07-29: la seguridad del paciente por encima de la
+/// formalidad del rastro.
+async fn registrar_acceso(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    recurso_id: i64,
+    paciente_id: i64,
+) {
+    let evento = acceso::Evento {
+        usuario_id: u.id,
+        rol: u.rol.clone(),
+        institucion_id: u.institucion_id,
+        accion: accion.to_string(),
+        recurso: recurso.to_string(),
+        recurso_id,
+        paciente_id,
+        ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    };
+    if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {
+        eprintln!("⚠️  bitácora de acceso: no se registró {recurso} {recurso_id} (paciente {paciente_id}): {err}");
+    }
+}
+
 async fn obtener_historia(
     State(e): State<Estado>,
     Autenticado(u): Autenticado,
     Path(id): Path<i64>,
 ) -> Result<Json<Historia>, StatusCode> {
     match historia::obtener(&e.pool, u.ambito(), id).await {
-        Ok(Some(h)) => Ok(Json(h)),
+        Ok(Some(h)) => {
+            registrar_acceso(&e, &u, "ver", "historia", id, h.paciente_id).await;
+            Ok(Json(h))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -428,7 +497,10 @@ async fn obtener_documento(
     Path(id): Path<i64>,
 ) -> Result<Json<Documento>, StatusCode> {
     match documento::obtener(&e.pool, u.ambito(), id).await {
-        Ok(Some(d)) => Ok(Json(d)),
+        Ok(Some(d)) => {
+            registrar_acceso(&e, &u, "ver", "documento", id, d.paciente_id).await;
+            Ok(Json(d))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
