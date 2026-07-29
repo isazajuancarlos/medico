@@ -1,0 +1,24 @@
+[package]
+name = "medico-api"
+description = "El servidor HTTP de medico (axum) y la autenticación."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+medico-dominio = { path = "../medico-dominio" }
+medico-datos = { path = "../medico-datos" }
+axum = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+# Verificación de contraseñas: Argon2, la misma familia que el sistema Python.
+argon2 = "0.5"
+password-hash = { version = "0.5", features = ["std"] }
+# Firma de la cookie de sesión: HMAC-SHA256, como en informes.
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"

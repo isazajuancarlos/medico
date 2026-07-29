@@ -45,6 +45,17 @@ impl Usuario {
     }
 }
 
+/// Busca un usuario por su id. Lo usa cada petición autenticada para releer el
+/// usuario del token: rol e institución se leen de la base en cada petición, no
+/// se llevan en el token, porque un rol dentro del token sobrevive a que un
+/// administrador lo revoque.
+pub async fn por_id(pool: &crate::Pool, id: i64) -> Result<Option<Usuario>, sqlx::Error> {
+    sqlx::query_as::<_, Usuario>(&format!("SELECT {COLUMNAS} FROM usuario WHERE id = ?"))
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+}
+
 /// Busca un usuario por su correo (el camino del login). No lleva `Ambito`: es
 /// anterior a la autenticación —todavía no se sabe quién es—. Devuelve la fila
 /// esté activa o no; rechazar al inactivo y verificar la contraseña es trabajo

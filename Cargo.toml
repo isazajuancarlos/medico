@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/medico-dominio", "crates/medico-datos"]
+members = ["crates/medico-dominio", "crates/medico-datos", "crates/medico-api"]
 resolver = "2"
 
 [workspace.package]
@@ -13,7 +13,7 @@ repository = "https://github.com/isazajuancarlos/medico"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio",
     "sqlite",
