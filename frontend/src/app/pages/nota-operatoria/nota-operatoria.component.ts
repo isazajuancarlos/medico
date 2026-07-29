@@ -87,10 +87,29 @@ export class NotaOperatoriaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargando.set(true);
-    this.http.get<Nota[]>('/api/nota-operatoria/').subscribe({
-      next: (r) => { this.filas.set(r); this.cargando.set(false); },
+    // La nota operatoria es un documento clínico de tipo NOTA_OPERATORIA: sus
+    // campos viven en `contenido` y aquí se aplanan a la fila de la tabla.
+    this.http.get<any[]>('/api/documentos', { params: { tipo: 'NOTA_OPERATORIA' } }).subscribe({
+      next: (r) => { this.filas.set(r.map(d => this.aNota(d))); this.cargando.set(false); },
       error: () => { this.filas.set([]); this.cargando.set(false); },
     });
+  }
+
+  private aNota(d: any): Nota {
+    const c = d.contenido ?? {};
+    return {
+      id: d.id,
+      fecha_creacion: d.fecha,
+      paciente: d.paciente_nombre ?? null,
+      cirujano: d.medico_nombre ?? null,
+      procedimiento_realizado: c.procedimiento_realizado ?? '',
+      diagnostico_postoperatorio: c.diagnostico_postoperatorio ?? '',
+      hora_inicio: c.hora_inicio ?? '',
+      hora_fin: c.hora_fin ?? '',
+      tiempo_quirurgico_min: c.tiempo_quirurgico_min ?? 0,
+      estado_paciente_salida: c.estado_paciente_salida ?? '',
+      avisos: c.avisos ?? [],
+    };
   }
 
   /** «2 h 15 min» se lee mejor que «135». */
