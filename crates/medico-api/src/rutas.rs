@@ -28,6 +28,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        .route("/api/medicos", get(listar_medicos))
         .route("/api/citas", get(listar_citas).post(crear_cita))
         .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
@@ -299,6 +300,18 @@ async fn fijar_licencia(
         Ok(()) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+/// Los médicos de la institución, para poblar el selector de agendar. Cualquier
+/// usuario autenticado puede pedirla (agendar no es una acción de gestión).
+async fn listar_medicos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+) -> Result<Json<Vec<usuario::MedicoResumen>>, StatusCode> {
+    usuario::medicos(&e.pool, u.ambito())
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 // --- Citas -------------------------------------------------------------------

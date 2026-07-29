@@ -103,6 +103,38 @@ pub async fn listar(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<ResumenUsu
     }
 }
 
+/// Un médico para poblar selectores (agendar una cita, asignar). Sin datos
+/// sensibles: id y nombre.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct MedicoResumen {
+    pub id: i64,
+    pub nombre: String,
+}
+
+/// Los médicos ACTIVOS del ámbito. No lleva gate de rol: agendar una cita lo
+/// hace cualquier usuario, y para eso necesita la lista de médicos de su IPS.
+pub async fn medicos(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<MedicoResumen>, sqlx::Error> {
+    match ambito {
+        Ambito::Superadmin => {
+            sqlx::query_as::<_, MedicoResumen>(
+                "SELECT id, nombre FROM usuario WHERE rol = 'medico' AND activo = 1 ORDER BY nombre",
+            )
+            .fetch_all(pool)
+            .await
+        }
+        Ambito::Institucion(id) => {
+            sqlx::query_as::<_, MedicoResumen>(
+                "SELECT id, nombre FROM usuario WHERE rol = 'medico' AND activo = 1 \
+                 AND institucion_id = ? ORDER BY nombre",
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await
+        }
+        Ambito::Ninguno => Ok(Vec::new()),
+    }
+}
+
 /// Datos para crear un usuario. La contraseña llega **ya hasheada**: esta capa
 /// nunca ve la clave en claro (la hashea la capa de API).
 pub struct UsuarioNuevo {

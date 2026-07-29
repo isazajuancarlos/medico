@@ -191,31 +191,14 @@ import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from
       />
     </div>
 
-    <!-- Slot picker -->
-    <div style="grid-column:1/-1">
-      <label class="form-label">Hora disponible *</label>
-      @if (loadingSlots()) {
-        <p style="color:#64748b;font-size:.875rem">Cargando horarios disponibles...</p>
-      } @else if (slots().length === 0 && form.medico_id && form.fecha) {
-        <p style="color:#ef4444;font-size:.875rem">
-          No hay agenda configurada para este médico en la fecha seleccionada.
-        </p>
-      } @else if (slots().length > 0) {
-        <div style="display:flex;flex-wrap:wrap;gap:.375rem;max-height:180px;overflow-y:auto;padding:.25rem">
-          @for (slot of slots(); track slot.hora) {
-            <button
-              class="slot-btn"
-              [class.slot-disponible]="slot.disponible"
-              [class.slot-ocupado]="!slot.disponible"
-              [class.slot-selected]="form.hora === slot.hora"
-              [disabled]="!slot.disponible"
-              [title]="slot.motivo_no_disponible || ''"
-              (click)="selectSlot(slot)"
-              type="button"
-            >{{ slot.hora }}</button>
-          }
-        </div>
-      }
+    <!-- Hora (alta manual: la agenda por slots aún no está portada al medico-api) -->
+    <div>
+      <label class="form-label">Hora *</label>
+      <input
+        type="time"
+        [(ngModel)]="form.hora"
+        style="width:100%;padding:.5rem;border:1px solid #e2e8f0;border-radius:.375rem"
+      />
     </div>
 
     <!-- Motivo -->
@@ -395,8 +378,14 @@ export class CitasComponent implements OnInit {
 
   atenderCita(cita: Appointment): void {
     this.attendingId.set(cita.id);
-    this.svc.atender(cita.id).subscribe({
-      next: r => this.router.navigate(['/historias'], { queryParams: { historia_id: r.historia_id, paciente_id: r.paciente_id } }),
+    // La apertura de la historia clínica llegará cuando ese módulo se porte; por
+    // ahora, atender = registrar el estado ATENDIDA.
+    this.svc.marcarAtendida(cita.id).subscribe({
+      next: () => {
+        this.attendingId.set(null);
+        this.msg.add({ severity: 'success', summary: 'Cita atendida' });
+        this.loadCitas();
+      },
       error: () => this.attendingId.set(null),
     });
   }
