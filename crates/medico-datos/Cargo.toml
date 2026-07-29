@@ -1,0 +1,16 @@
+[package]
+name = "medico-datos"
+description = "Acceso a la base de medico. Nadie de aquí para arriba escribe SQL."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+medico-dominio = { path = "../medico-dominio" }
+sqlx = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
