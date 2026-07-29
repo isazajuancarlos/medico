@@ -1,5 +1,6 @@
 //! Pacientes. Toda consulta lleva el ámbito, y el ámbito no se puede omitir.
 
+use chrono::Datelike;
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
@@ -193,6 +194,81 @@ pub async fn actualizar(
         q = q.bind(i);
     }
     Ok(q.execute(pool).await?.rows_affected() > 0)
+}
+
+/// La vista del paciente que necesita el encabezado del formulario de historia:
+/// el nombre ya compuesto, la edad ya calculada y los antecedentes. No es la fila
+/// cruda —son datos derivados listos para pintar—.
+#[derive(Debug, Clone, Serialize)]
+pub struct InfoPaciente {
+    pub id: i64,
+    pub identificacion: String,
+    pub tipo_id: String,
+    pub nombre_completo: String,
+    pub fecha_nacimiento: String,
+    pub sexo: String,
+    pub edad: i64,
+    pub celular: Option<String>,
+    // El nombre de la EPS necesita el maestro de entidades, que aún no existe
+    // (lo carga #77). Hasta entonces es `None` —ausente, no inventado—.
+    pub entidad_nombre: Option<String>,
+    pub ant_familiares: serde_json::Value,
+    pub ant_personales: serde_json::Value,
+    pub ant_ginecologicos: serde_json::Value,
+    pub ant_obstetricos: serde_json::Value,
+}
+
+/// Años cumplidos entre `nacimiento` (YYYY-MM-DD) y hoy. `0` si la fecha no se
+/// puede leer: es un dato derivado para mostrar, no una regla de negocio, así que
+/// una fecha corrupta no debe tumbar la carga del formulario.
+fn edad_en_anios(nacimiento: &str) -> i64 {
+    let Ok(nac) = chrono::NaiveDate::parse_from_str(nacimiento.trim(), "%Y-%m-%d") else {
+        return 0;
+    };
+    let hoy = chrono::Local::now().date_naive();
+    let mut anios = hoy.year() - nac.year();
+    if (hoy.month(), hoy.day()) < (nac.month(), nac.day()) {
+        anios -= 1;
+    }
+    anios.max(0) as i64
+}
+
+fn nombre_completo(p: &Paciente) -> String {
+    [
+        Some(p.nombre1.as_str()),
+        p.nombre2.as_deref(),
+        Some(p.apellido1.as_str()),
+        p.apellido2.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+/// El contexto del paciente para el formulario, si es visible para el ámbito.
+/// `None` si no existe o es ajeno —la misma indistinguibilidad que `obtener`—.
+pub async fn info(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<Option<InfoPaciente>, sqlx::Error> {
+    let Some(p) = obtener(pool, ambito, id).await? else {
+        return Ok(None);
+    };
+    Ok(Some(InfoPaciente {
+        id: p.id,
+        identificacion: p.numero_documento.clone(),
+        tipo_id: p.tipo_documento.clone(),
+        nombre_completo: nombre_completo(&p),
+        edad: edad_en_anios(&p.fecha_nacimiento),
+        fecha_nacimiento: p.fecha_nacimiento.clone(),
+        sexo: p.sexo.clone(),
+        celular: p.celular.clone(),
+        entidad_nombre: None,
+        ant_familiares: p.ant_familiares.0.clone(),
+        ant_personales: p.ant_personales.0.clone(),
+        ant_ginecologicos: p.ant_ginecologicos.0.clone(),
+        ant_obstetricos: p.ant_obstetricos.0.clone(),
+    }))
 }
 
 /// Los cuatro bloques de antecedentes en una actualización. Cada uno es opcional:

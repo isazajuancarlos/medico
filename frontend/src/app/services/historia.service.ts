@@ -193,7 +193,7 @@ export class HistoriaService {
   }
 
   listByPaciente(pacienteId: number): Observable<Historia[]> {
-    return this.http.get<Historia[]>(`${this.API}/paciente/${pacienteId}`);
+    return this.http.get<Historia[]>(`${this.PACIENTES_API}/${pacienteId}/historias`);
   }
 
   delete(id: number): Observable<void> {
@@ -225,12 +225,14 @@ export class HistoriaService {
     return this.http.post<Formula>(`${this.API}/${historiaId}/formulas`, data);
   }
 
-  updateFormula(historiaId: number, formulaId: number, data: FormulaUpdate): Observable<Formula> {
-    return this.http.put<Formula>(`${this.API}/${historiaId}/formulas/${formulaId}`, data);
+  // Las fórmulas se editan y borran por su propio id: la historia se comprueba
+  // en el backend siguiendo la cadena historia→paciente, no por la URL.
+  updateFormula(_historiaId: number, formulaId: number, data: FormulaUpdate): Observable<void> {
+    return this.http.put<void>(`/api/formulas/${formulaId}`, data);
   }
 
-  deleteFormula(historiaId: number, formulaId: number): Observable<void> {
-    return this.http.delete<void>(`${this.API}/${historiaId}/formulas/${formulaId}`);
+  deleteFormula(_historiaId: number, formulaId: number): Observable<void> {
+    return this.http.delete<void>(`/api/formulas/${formulaId}`);
   }
 
   // ── Especialidades (catálogo compartido) ─────────────────────────
@@ -247,12 +249,8 @@ export class HistoriaService {
     return this.http.post<Orden>(`${this.API}/${historiaId}/ordenes`, data);
   }
 
-  updateOrden(historiaId: number, ordenId: number, data: Partial<OrdenCreate & { estado: string }>): Observable<Orden> {
-    return this.http.put<Orden>(`${this.API}/${historiaId}/ordenes/${ordenId}`, data);
-  }
-
-  deleteOrden(historiaId: number, ordenId: number): Observable<void> {
-    return this.http.delete<void>(`${this.API}/${historiaId}/ordenes/${ordenId}`);
+  deleteOrden(_historiaId: number, ordenId: number): Observable<void> {
+    return this.http.delete<void>(`/api/ordenes/${ordenId}`);
   }
 
   // ── Imágenes diagnósticas (adjuntas a la historia) ───────────────

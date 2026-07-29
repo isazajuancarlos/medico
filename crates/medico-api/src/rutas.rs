@@ -20,7 +20,7 @@ use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
-use medico_datos::paciente::{self, Antecedentes, Paciente, PacienteNuevo};
+use medico_datos::paciente::{self, Antecedentes, InfoPaciente, Paciente, PacienteNuevo};
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
 /// Tope de una subida de imagen. Una radiografía o un PDF de laboratorio caben
@@ -37,7 +37,12 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
         .route("/api/pacientes/{id}/historias", get(listar_historias_paciente))
         .route("/api/historias", post(crear_historia))
-        .route("/api/historias/{id}", get(obtener_historia))
+        .route(
+            "/api/historias/{id}",
+            get(obtener_historia).put(actualizar_historia).delete(eliminar_historia),
+        )
+        .route("/api/historias/{id}/firmar", post(firmar_historia))
+        .route("/api/historias/paciente/{id}/contexto", get(contexto_paciente))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -233,6 +238,94 @@ async fn obtener_historia(
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+/// Edita una historia de borrador. 200 con la historia ya actualizada; **404 si
+/// no existe o es ajena; 409 si está firmada** —cerrada, no editable—.
+async fn actualizar_historia(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(h): Json<HistoriaNueva>,
+) -> Response {
+    match historia::actualizar(&e.pool, u.ambito(), id, &h).await {
+        Ok(historia::Resultado::Hecho) => match historia::obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(actualizada)) => (StatusCode::OK, Json(actualizada)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(historia::Resultado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(historia::Resultado::Firmada) => StatusCode::CONFLICT.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Firma una historia, que queda cerrada. 204 si se firmó; 404 si no existe, es
+/// ajena o ya estaba firmada.
+async fn firmar_historia(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match historia::firmar(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+/// Borra una historia de borrador. 204 si se borró; **404 si no existe o es
+/// ajena; 409 si está firmada** —un documento legal cerrado no se elimina—.
+async fn eliminar_historia(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match historia::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(historia::Resultado::Hecho) => StatusCode::NO_CONTENT,
+        Ok(historia::Resultado::NoExiste) => StatusCode::NOT_FOUND,
+        Ok(historia::Resultado::Firmada) => StatusCode::CONFLICT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+/// El contexto del paciente para el encabezado del formulario: sus datos ya
+/// compuestos y el médico que atiende (el usuario autenticado). **404 si el
+/// paciente no existe o no es del ámbito**.
+async fn contexto_paciente(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(paciente_id): Path<i64>,
+) -> Result<Json<Contexto>, StatusCode> {
+    match paciente::info(&e.pool, u.ambito(), paciente_id).await {
+        Ok(Some(paciente)) => Ok(Json(Contexto {
+            paciente,
+            medico: InfoMedico {
+                id: u.id,
+                nombre_completo: u.nombre.clone(),
+                // La especialidad y el registro médico del profesional aún no
+                // viven en `usuario` (llegan con el maestro de talento humano);
+                // hasta entonces, ausentes y no inventados.
+                especialidad: None,
+                registro_medico: None,
+            },
+        })),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[derive(Serialize)]
+struct Contexto {
+    paciente: InfoPaciente,
+    medico: InfoMedico,
+}
+
+#[derive(Serialize)]
+struct InfoMedico {
+    id: i64,
+    nombre_completo: String,
+    especialidad: Option<String>,
+    registro_medico: Option<String>,
 }
 
 async fn listar_historias_paciente(

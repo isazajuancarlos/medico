@@ -25,7 +25,7 @@ import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCr
 import { PacienteService } from '../../services/paciente.service';
 import { Patient } from '../../models/patient.models';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { Subject } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -1553,6 +1553,12 @@ export class HistoriasComponent implements OnInit {
 
     this.svc.updateAntecedentes(pacienteId, this._antPayload()).subscribe({
       next: () => {
+        if (!this.historia()?.id) {
+          // Al crear, el formulario debe llevar el paciente y el médico que
+          // atiende (el del contexto); la API los exige y no los inventa.
+          this.form.paciente_id = pacienteId;
+          if (this.medico()) this.form.medico_id = this.medico()!.id;
+        }
         const obs = this.historia()?.id
           ? this.svc.update(this.historia()!.id, this.form)
           : this.svc.create(this.form);
@@ -1589,6 +1595,12 @@ export class HistoriasComponent implements OnInit {
 
     this.svc.updateAntecedentes(pacienteId, this._antPayload()).subscribe({
       next: () => {
+        if (!this.historia()?.id) {
+          // Al crear, el formulario debe llevar el paciente y el médico que
+          // atiende (el del contexto); la API los exige y no los inventa.
+          this.form.paciente_id = pacienteId;
+          if (this.medico()) this.form.medico_id = this.medico()!.id;
+        }
         const obs = this.historia()?.id
           ? this.svc.update(this.historia()!.id, this.form)
           : this.svc.create(this.form);
@@ -1688,17 +1700,17 @@ export class HistoriasComponent implements OnInit {
     const historiaId = this.historia()!.id;
     this.savingFormula.set(true);
 
-    const obs = this.formulaEditando()
+    // Crear devuelve el id y actualizar 204: tipos distintos que aquí no se usan
+    // (se recarga la lista), por eso el observable se toma como `unknown`.
+    const obs: Observable<unknown> = this.formulaEditando()
       ? this.svc.updateFormula(historiaId, this.formulaEditando()!.id, this.fForm)
       : this.svc.createFormula(historiaId, this.fForm);
 
     obs.subscribe({
-      next: f => {
-        if (this.formulaEditando()) {
-          this.formulas.update(fs => fs.map(x => x.id === f.id ? f : x));
-        } else {
-          this.formulas.update(fs => [...fs, f]);
-        }
+      next: () => {
+        // Se recarga la lista para traer la fila completa tal como la guardó el
+        // servidor (crear devuelve solo el id; actualizar, 204 sin cuerpo).
+        this.svc.listFormulas(historiaId).subscribe({ next: fs => this.formulas.set(fs) });
         this.savingFormula.set(false);
         this.cerrarFormFormula();
         this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Medicamento guardado en la fórmula' });
@@ -1765,12 +1777,14 @@ export class HistoriasComponent implements OnInit {
       return;
     }
     this.savingOrden.set(true);
-    this.svc.createOrden(this.historia()!.id, this.oForm).subscribe({
-      next: o => {
-        this.ordenes.update(os => [...os, o]);
+    const historiaId = this.historia()!.id;
+    this.svc.createOrden(historiaId, this.oForm).subscribe({
+      next: () => {
+        // Se recarga la lista: crear devuelve solo el id, no la fila completa.
+        this.svc.listOrdenes(historiaId).subscribe({ next: os => this.ordenes.set(os) });
         this.cerrarFormOrden();
         this.savingOrden.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Orden creada', detail: `Orden de ${o.tipo} agregada` });
+        this.messageService.add({ severity: 'success', summary: 'Orden creada', detail: 'Orden agregada' });
       },
       error: err => {
         this.savingOrden.set(false);

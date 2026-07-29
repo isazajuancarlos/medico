@@ -20,7 +20,8 @@ const COLUMNAS: &str = "id, fecha, codigo_historia, paciente_id, medico_id, cita
     datos_dinamicos, \
     diagnostico_principal, diagnostico_relacionado1, diagnostico_relacionado2, \
     diagnostico_relacionado3, impresion_diagnostica, diagnostico_principal_cie11, \
-    diagnostico_principal_uri, procedencias, genera_incapacidad, dias_incapacidad, plan_tratamiento";
+    diagnostico_principal_uri, procedencias, genera_incapacidad, dias_incapacidad, plan_tratamiento, \
+    firmada";
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Historia {
@@ -92,6 +93,8 @@ pub struct Historia {
     pub genera_incapacidad: bool,
     pub dias_incapacidad: i64,
     pub plan_tratamiento: String,
+    /// Una historia firmada queda cerrada: no se edita ni se borra.
+    pub firmada: bool,
 }
 
 /// Lo que llega para crear una historia. Los campos con defecto en la base son
@@ -301,6 +304,169 @@ pub async fn obtener(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<Opti
     }
 }
 
+/// Resultado de editar o borrar una historia. `Firmada` NO es `NoExiste`: la
+/// historia existe y es del ámbito, pero está cerrada. Distinguirlos deja a la
+/// interfaz decir «esta historia ya está firmada» en vez de un 404 confuso.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Resultado {
+    NoExiste,
+    Firmada,
+    Hecho,
+}
+
+/// Lee el paciente y el estado de firma de una historia visible para el ámbito.
+/// `None` si no existe o es ajena —indistinguibles—.
+async fn paciente_y_firma(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+) -> Result<Option<(i64, bool)>, sqlx::Error> {
+    let fila: Option<(i64, bool)> =
+        sqlx::query_as("SELECT paciente_id, firmada FROM historia WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?;
+    match fila {
+        Some((pid, firmada)) if paciente_es_del_ambito(pool, ambito, pid).await? => {
+            Ok(Some((pid, firmada)))
+        }
+        _ => Ok(None),
+    }
+}
+
+/// Actualiza los campos editables de una historia. No toca `paciente_id`,
+/// `medico_id`, `codigo_historia` ni `fecha`: editar una historia no la mueve de
+/// paciente ni la re-fecha. **Se niega sobre una historia firmada** (`Firmada`),
+/// que es inmutable por diseño.
+pub async fn actualizar(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+    h: &HistoriaNueva,
+) -> Result<Resultado, sqlx::Error> {
+    let Some((_, firmada)) = paciente_y_firma(pool, ambito, id).await? else {
+        return Ok(Resultado::NoExiste);
+    };
+    if firmada {
+        return Ok(Resultado::Firmada);
+    }
+    let sql = "UPDATE historia SET \
+        cita_id = ?, acomp_nombre = ?, acomp_parentesco = ?, acomp_telefono = ?, acomp_documento = ?, \
+        motivo_consulta = ?, enfermedad_actual = ?, \
+        tension_arterial = ?, pam = ?, frecuencia_cardiaca = ?, frecuencia_respiratoria = ?, pulso = ?, temperatura = ?, \
+        pabd = ?, pc = ?, peso = ?, talla = ?, imc = ?, peso_ideal = ?, estado_nutricional = ?, \
+        ef_cabeza = ?, ef_ojos = ?, ef_nariz = ?, ef_oidos = ?, ef_boca = ?, ef_faringe = ?, ef_cuello = ?, ef_pulmones = ?, \
+        ef_corazon = ?, ef_abdomen = ?, ef_gu = ?, ef_neurologico = ?, ef_extremidad = ?, ef_osteomuscular = ?, ef_piel = ?, \
+        ef_hallazgos = ?, ef_orl = ?, ef_cardiopulmonar = ?, \
+        finalidad = ?, causa_externa = ?, tipo_diagnostico = ?, cod_consulta_cups = ?, \
+        modalidad_grupo_servicio = ?, grupo_servicios = ?, cod_servicio = ?, via_ingreso_servicio = ?, causa_motivo = ?, \
+        valor_servicio = ?, concepto_recaudo = ?, valor_pago_moderador = ?, num_fev_pago_moderador = ?, \
+        datos_dinamicos = ?, \
+        diagnostico_principal = ?, diagnostico_relacionado1 = ?, diagnostico_relacionado2 = ?, \
+        diagnostico_relacionado3 = ?, impresion_diagnostica = ?, diagnostico_principal_cie11 = ?, \
+        diagnostico_principal_uri = ?, procedencias = ?, genera_incapacidad = ?, dias_incapacidad = ?, plan_tratamiento = ? \
+        WHERE id = ?";
+    sqlx::query(sql)
+        .bind(h.cita_id)
+        .bind(&h.acomp_nombre)
+        .bind(&h.acomp_parentesco)
+        .bind(&h.acomp_telefono)
+        .bind(&h.acomp_documento)
+        .bind(&h.motivo_consulta)
+        .bind(&h.enfermedad_actual)
+        .bind(&h.tension_arterial)
+        .bind(&h.pam)
+        .bind(h.frecuencia_cardiaca)
+        .bind(h.frecuencia_respiratoria)
+        .bind(h.pulso)
+        .bind(h.temperatura)
+        .bind(h.pabd)
+        .bind(h.pc)
+        .bind(h.peso)
+        .bind(h.talla)
+        .bind(h.imc)
+        .bind(h.peso_ideal)
+        .bind(&h.estado_nutricional)
+        .bind(&h.ef_cabeza)
+        .bind(&h.ef_ojos)
+        .bind(&h.ef_nariz)
+        .bind(&h.ef_oidos)
+        .bind(&h.ef_boca)
+        .bind(&h.ef_faringe)
+        .bind(&h.ef_cuello)
+        .bind(&h.ef_pulmones)
+        .bind(&h.ef_corazon)
+        .bind(&h.ef_abdomen)
+        .bind(&h.ef_gu)
+        .bind(&h.ef_neurologico)
+        .bind(&h.ef_extremidad)
+        .bind(&h.ef_osteomuscular)
+        .bind(&h.ef_piel)
+        .bind(&h.ef_hallazgos)
+        .bind(&h.ef_orl)
+        .bind(&h.ef_cardiopulmonar)
+        .bind(h.finalidad.as_deref().unwrap_or("10"))
+        .bind(h.causa_externa.as_deref().unwrap_or("13"))
+        .bind(h.tipo_diagnostico.as_deref().unwrap_or("01"))
+        .bind(&h.cod_consulta_cups)
+        .bind(&h.modalidad_grupo_servicio)
+        .bind(&h.grupo_servicios)
+        .bind(h.cod_servicio)
+        .bind(&h.via_ingreso_servicio)
+        .bind(&h.causa_motivo)
+        .bind(h.valor_servicio)
+        .bind(&h.concepto_recaudo)
+        .bind(h.valor_pago_moderador.unwrap_or(0))
+        .bind(&h.num_fev_pago_moderador)
+        .bind(h.datos_dinamicos.as_deref().unwrap_or("{}"))
+        .bind(&h.diagnostico_principal)
+        .bind(&h.diagnostico_relacionado1)
+        .bind(&h.diagnostico_relacionado2)
+        .bind(&h.diagnostico_relacionado3)
+        .bind(&h.impresion_diagnostica)
+        .bind(&h.diagnostico_principal_cie11)
+        .bind(&h.diagnostico_principal_uri)
+        .bind(&h.procedencias)
+        .bind(h.genera_incapacidad.unwrap_or(false))
+        .bind(h.dias_incapacidad.unwrap_or(0))
+        .bind(&h.plan_tratamiento)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(Resultado::Hecho)
+}
+
+/// Firma una historia visible y sin firmar. `false` si no existe, es ajena o ya
+/// estaba firmada (firmar dos veces no es un error, pero tampoco cambia nada).
+pub async fn firmar(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<bool, sqlx::Error> {
+    match paciente_y_firma(pool, ambito, id).await? {
+        Some((_, false)) => {
+            let r = sqlx::query("UPDATE historia SET firmada = 1 WHERE id = ? AND firmada = 0")
+                .bind(id)
+                .execute(pool)
+                .await?;
+            Ok(r.rows_affected() > 0)
+        }
+        _ => Ok(false),
+    }
+}
+
+/// Borra una historia (y en cascada sus fórmulas, órdenes e imágenes). **Se niega
+/// sobre una firmada** (`Firmada`): un documento legal cerrado no se elimina.
+pub async fn eliminar(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<Resultado, sqlx::Error> {
+    let Some((_, firmada)) = paciente_y_firma(pool, ambito, id).await? else {
+        return Ok(Resultado::NoExiste);
+    };
+    if firmada {
+        return Ok(Resultado::Firmada);
+    }
+    sqlx::query("DELETE FROM historia WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(Resultado::Hecho)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -390,5 +556,66 @@ mod pruebas {
         let pool = base().await;
         assert!(crear(&pool, Ambito::Ninguno, &nueva(10)).await.unwrap().is_none());
         assert!(listar_por_paciente(&pool, Ambito::Ninguno, 10).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn una_historia_nueva_no_esta_firmada() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert!(!h.firmada);
+    }
+
+    #[tokio::test]
+    async fn actualizar_cambia_los_campos_editables() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        let mut edit = nueva(10);
+        edit.motivo_consulta = "Control".into();
+        edit.diagnostico_principal = "I10".into();
+        assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &edit).await.unwrap(), Resultado::Hecho);
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert_eq!(h.motivo_consulta, "Control");
+        assert_eq!(h.diagnostico_principal, "I10");
+    }
+
+    #[tokio::test]
+    async fn la_historia_ajena_no_se_edita_ni_se_borra() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(2), &nueva(20)).await.unwrap().unwrap();
+        assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &nueva(20)).await.unwrap(), Resultado::NoExiste);
+        assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::NoExiste);
+        // Y sigue existiendo para su dueña.
+        assert!(obtener(&pool, Ambito::institucion(2), id).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn una_historia_firmada_es_inmutable() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        assert!(firmar(&pool, Ambito::institucion(1), id).await.unwrap());
+        // Firmar de nuevo no cambia nada.
+        assert!(!firmar(&pool, Ambito::institucion(1), id).await.unwrap());
+        // Ni se edita ni se borra: se responde Firmada, no NoExiste.
+        assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &nueva(10)).await.unwrap(), Resultado::Firmada);
+        assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::Firmada);
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert!(h.firmada);
+    }
+
+    #[tokio::test]
+    async fn no_se_firma_ni_se_borra_la_ajena() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(2), &nueva(20)).await.unwrap().unwrap();
+        assert!(!firmar(&pool, Ambito::institucion(1), id).await.unwrap());
+        assert!(obtener(&pool, Ambito::institucion(2), id).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn eliminar_una_de_borrador_la_quita() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::Hecho);
+        assert!(obtener(&pool, Ambito::institucion(1), id).await.unwrap().is_none());
     }
 }
