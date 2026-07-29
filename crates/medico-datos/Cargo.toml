@@ -11,6 +11,7 @@ repository.workspace = true
 medico-dominio = { path = "../medico-dominio" }
 sqlx = { workspace = true }
 serde = { workspace = true }
+chrono = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
