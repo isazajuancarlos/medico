@@ -2,7 +2,7 @@
 //! esa firma es, de un vistazo, una ruta pública — no hay que leerla entera para
 //! saberlo.
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::auth::{autenticar, Autenticado, Estado};
 use crate::{claves, sesion};
+use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::licencia;
 use medico_datos::paciente::{self, Paciente, PacienteNuevo};
@@ -27,6 +28,8 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        .route("/api/citas", get(listar_citas).post(crear_cita))
+        .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
         // los archivos del build y, para las rutas del SPA, el index.html.
         .fallback(crate::estaticos::servir)
@@ -294,6 +297,56 @@ async fn fijar_licencia(
     }
     match licencia::fijar(&e.pool, id, req.max_usuarios, req.vence.as_deref()).await {
         Ok(()) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+// --- Citas -------------------------------------------------------------------
+
+#[derive(Deserialize)]
+struct FiltroCitas {
+    fecha: Option<String>,
+}
+
+async fn listar_citas(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroCitas>,
+) -> Result<Json<Vec<CitaVista>>, StatusCode> {
+    cita::listar(&e.pool, u.ambito(), f.fecha.as_deref())
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+/// Agenda una cita. 201 con su id; 403 si el ámbito no puede agendar o si el
+/// paciente no es de su institución.
+async fn crear_cita(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(nueva): Json<CitaNueva>,
+) -> Response {
+    match cita::crear(&e.pool, u.ambito(), &nueva).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct CambioEstado {
+    estado: String,
+}
+
+async fn cambiar_estado_cita(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(req): Json<CambioEstado>,
+) -> StatusCode {
+    match cita::cambiar_estado(&e.pool, u.ambito(), id, &req.estado).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
