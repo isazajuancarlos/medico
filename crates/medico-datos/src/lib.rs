@@ -10,6 +10,7 @@ pub mod hospitalizacion;
 pub mod imagen;
 pub mod institucion;
 pub mod licencia;
+pub mod nutricion;
 pub mod orden;
 pub mod paciente;
 pub mod urgencias;

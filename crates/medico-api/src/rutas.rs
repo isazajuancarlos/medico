@@ -19,6 +19,7 @@ use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo,
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
 use medico_datos::hospitalizacion::{self, Egreso, Ingreso};
+use medico_datos::nutricion::{self, PlanCrear, PlanEditar, ValoracionCrear, ValoracionEditar};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
@@ -66,6 +67,16 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/hospitalizacion/medicos", get(hosp_medicos))
         .route("/api/hospitalizacion/ingresar", post(hosp_ingresar))
         .route("/api/hospitalizacion/{id}/egreso", put(hosp_egreso))
+        .route("/api/nutricion/valoraciones", get(nutri_listar).post(nutri_crear))
+        .route(
+            "/api/nutricion/valoraciones/{id}",
+            get(nutri_obtener).put(nutri_actualizar).delete(nutri_eliminar),
+        )
+        .route(
+            "/api/nutricion/valoraciones/{id}/plan",
+            get(nutri_plan).post(nutri_crear_plan),
+        )
+        .route("/api/nutricion/planes/{id}", put(nutri_actualizar_plan))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -626,6 +637,108 @@ async fn hosp_egreso(
     Json(eg): Json<Egreso>,
 ) -> StatusCode {
     match hospitalizacion::egreso(&e.pool, u.ambito(), id, &eg).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+// --- Nutrición ---------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct FiltroNutri {
+    paciente_id: Option<i64>,
+}
+
+async fn nutri_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroNutri>,
+) -> Response {
+    match nutricion::listar_valoraciones(&e.pool, u.ambito(), f.paciente_id).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn nutri_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
+        Ok(Some(v)) => Json(v).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn nutri_crear(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(v): Json<ValoracionCrear>,
+) -> Response {
+    match nutricion::crear_valoracion(&e.pool, u.ambito(), u.id, &v).await {
+        Ok(Some(id)) => match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
+            Ok(Some(val)) => (StatusCode::CREATED, Json(val)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn nutri_actualizar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(v): Json<ValoracionEditar>,
+) -> Response {
+    match nutricion::actualizar_valoracion(&e.pool, u.ambito(), id, &v).await {
+        Ok(true) => match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
+            Ok(Some(val)) => Json(val).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn nutri_eliminar(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> StatusCode {
+    match nutricion::eliminar_valoracion(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn nutri_plan(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match nutricion::obtener_plan(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => Json(p).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn nutri_crear_plan(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(p): Json<PlanCrear>,
+) -> Response {
+    match nutricion::crear_plan(&e.pool, u.ambito(), id, u.id, &p).await {
+        Ok(Some(_)) => match nutricion::obtener_plan(&e.pool, u.ambito(), id).await {
+            Ok(Some(plan)) => (StatusCode::CREATED, Json(plan)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn nutri_actualizar_plan(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(p): Json<PlanEditar>,
+) -> StatusCode {
+    match nutricion::actualizar_plan(&e.pool, u.ambito(), id, &p).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
