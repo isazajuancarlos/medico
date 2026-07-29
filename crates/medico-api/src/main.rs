@@ -72,6 +72,7 @@ async fn main() -> ExitCode {
         dir_imagenes,
         clave_firma: cfg.clave_firma,
         clave_verificacion: cfg.clave_verificacion,
+        clave_reposo: cfg.clave_reposo,
     };
     let app = rutas::router(estado);
 

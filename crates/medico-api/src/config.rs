@@ -48,6 +48,9 @@ pub struct Config {
     pub clave_firma: Option<String>,
     /// Clave PÚBLICA de verificación (hex), para comprobar firmas. `None` si no hay.
     pub clave_verificacion: Option<String>,
+    /// Frase para cifrar en reposo los archivos (imágenes). `None` los guarda en
+    /// claro (histórico / sin cifrado). Es un secreto de despliegue.
+    pub clave_reposo: Option<String>,
 }
 
 fn opcional(clave: &str) -> Option<String> {
@@ -98,6 +101,7 @@ impl Config {
             // publicarse para que cualquiera verifique.
             clave_firma: opcional("MEDICO_SIGNING_KEY"),
             clave_verificacion: opcional("MEDICO_VERIFYING_KEY"),
+            clave_reposo: opcional("MEDICO_STORAGE_KEY"),
         })
     }
 }

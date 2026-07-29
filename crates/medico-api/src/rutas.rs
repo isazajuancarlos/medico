@@ -640,13 +640,19 @@ async fn subir_imagen(
         return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
     }
 
+    // `tamano_bytes` es el tamaño del ORIGINAL (lo que ve el usuario), no del
+    // blob cifrado. Con clave de reposo el archivo va cifrado al disco.
     let meta = ImagenNueva {
         nombre_original: nombre,
         tipo_mime: mime,
         tamano_bytes: bytes.len() as i64,
         descripcion,
     };
-    let img = match imagen::registrar(&e.pool, u.ambito(), historia_id, &meta).await {
+    let (para_disco, cifrada) = match e.clave_reposo.as_deref() {
+        Some(frase) => (guaca::reposo::cifrar(&bytes, frase), true),
+        None => (bytes, false),
+    };
+    let img = match imagen::registrar(&e.pool, u.ambito(), historia_id, &meta, cifrada).await {
         Ok(Some(img)) => img,
         Ok(None) => return StatusCode::FORBIDDEN.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -654,7 +660,7 @@ async fn subir_imagen(
     // Los bytes van al disco DESPUÉS de la fila: si la escritura falla, se
     // deshace la fila para no dejar una referencia a un archivo que no existe.
     let destino = e.dir_imagenes.join(&img.ruta_archivo);
-    if tokio::fs::write(&destino, &bytes).await.is_err() {
+    if tokio::fs::write(&destino, &para_disco).await.is_err() {
         let _ = imagen::eliminar(&e.pool, u.ambito(), img.id).await;
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
@@ -673,9 +679,19 @@ async fn servir_imagen(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let bytes = match tokio::fs::read(e.dir_imagenes.join(&img.ruta_archivo)).await {
+    let crudo = match tokio::fs::read(e.dir_imagenes.join(&img.ruta_archivo)).await {
         Ok(b) => b,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
+    };
+    // Si el archivo está cifrado, se descifra con la clave de reposo. Sin clave
+    // (o si el blob fue alterado) no se puede servir: 500, no datos corruptos.
+    let bytes = if img.cifrada {
+        match e.clave_reposo.as_deref().and_then(|f| guaca::reposo::descifrar(&crudo, f).ok()) {
+            Some(claro) => claro,
+            None => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    } else {
+        crudo
     };
     // El nombre para descargar se limpia: un nombre de archivo del usuario podría
     // llevar comillas o saltos de línea y romper la cabecera.

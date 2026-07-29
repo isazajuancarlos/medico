@@ -19,6 +19,9 @@ pub struct Imagen {
     pub tamano_bytes: i64,
     pub descripcion: String,
     pub fecha_subida: String,
+    /// El archivo en disco está cifrado (blob de guaca) y hay que descifrarlo
+    /// para servirlo. `false` = archivo en claro (histórico o sin clave de reposo).
+    pub cifrada: bool,
 }
 
 /// Lo que aporta el cliente. El tamaño y el mime los mide el servidor sobre los
@@ -33,7 +36,7 @@ pub struct ImagenNueva {
 }
 
 const COLUMNAS: &str = "id, historia_id, ruta_archivo, nombre_original, tipo_mime, \
-                        tamano_bytes, descripcion, fecha_subida";
+                        tamano_bytes, descripcion, fecha_subida, cifrada";
 
 async fn historia_visible(pool: &crate::Pool, ambito: Ambito, historia_id: i64) -> Result<bool, sqlx::Error> {
     let fila: Option<(i64,)> = sqlx::query_as(
@@ -87,14 +90,15 @@ pub async fn registrar(
     ambito: Ambito,
     historia_id: i64,
     m: &ImagenNueva,
+    cifrada: bool,
 ) -> Result<Option<Imagen>, sqlx::Error> {
     if !historia_visible(pool, ambito, historia_id).await? {
         return Ok(None);
     }
     let mut tx = pool.begin().await?;
     let r = sqlx::query(
-        "INSERT INTO imagen_diagnostica (historia_id, ruta_archivo, nombre_original, tipo_mime, tamano_bytes, descripcion) \
-         VALUES (?,?,?,?,?,?)",
+        "INSERT INTO imagen_diagnostica (historia_id, ruta_archivo, nombre_original, tipo_mime, tamano_bytes, descripcion, cifrada) \
+         VALUES (?,?,?,?,?,?,?)",
     )
     .bind(historia_id)
     .bind("") // se fija enseguida desde el id
@@ -102,6 +106,7 @@ pub async fn registrar(
     .bind(&m.tipo_mime)
     .bind(m.tamano_bytes)
     .bind(&m.descripcion)
+    .bind(cifrada)
     .execute(&mut *tx)
     .await?;
     let id = r.last_insert_rowid();
@@ -169,7 +174,7 @@ mod pruebas {
     #[tokio::test]
     async fn registrar_fija_la_ruta_desde_el_id() {
         let pool = base().await;
-        let img = registrar(&pool, Ambito::institucion(1), 100, &nueva()).await.unwrap().unwrap();
+        let img = registrar(&pool, Ambito::institucion(1), 100, &nueva(), false).await.unwrap().unwrap();
         assert_eq!(img.ruta_archivo, format!("{}.dat", img.id));
         assert_eq!(img.nombre_original, "rx-torax.jpg");
         let lista = listar_por_historia(&pool, Ambito::institucion(1), 100).await.unwrap();
@@ -178,16 +183,24 @@ mod pruebas {
     }
 
     #[tokio::test]
+    async fn la_marca_cifrada_persiste() {
+        let pool = base().await;
+        let img = registrar(&pool, Ambito::institucion(1), 100, &nueva(), true).await.unwrap().unwrap();
+        assert!(img.cifrada);
+        assert!(obtener(&pool, Ambito::institucion(1), img.id).await.unwrap().unwrap().cifrada);
+    }
+
+    #[tokio::test]
     async fn la_historia_ajena_no_deja_subir_ni_listar() {
         let pool = base().await;
-        assert!(registrar(&pool, Ambito::institucion(1), 200, &nueva()).await.unwrap().is_none());
+        assert!(registrar(&pool, Ambito::institucion(1), 200, &nueva(), false).await.unwrap().is_none());
         assert!(listar_por_historia(&pool, Ambito::institucion(1), 200).await.unwrap().is_empty());
     }
 
     #[tokio::test]
     async fn obtener_y_eliminar_respetan_el_ambito() {
         let pool = base().await;
-        let img = registrar(&pool, Ambito::institucion(1), 100, &nueva()).await.unwrap().unwrap();
+        let img = registrar(&pool, Ambito::institucion(1), 100, &nueva(), false).await.unwrap().unwrap();
         // Ajena: ni se ve ni se borra.
         assert!(obtener(&pool, Ambito::institucion(2), img.id).await.unwrap().is_none());
         assert!(eliminar(&pool, Ambito::institucion(2), img.id).await.unwrap().is_none());
@@ -201,7 +214,7 @@ mod pruebas {
     #[tokio::test]
     async fn el_superadmin_ve_de_cualquier_institucion() {
         let pool = base().await;
-        let img = registrar(&pool, Ambito::Superadmin, 200, &nueva()).await.unwrap().unwrap();
+        let img = registrar(&pool, Ambito::Superadmin, 200, &nueva(), false).await.unwrap().unwrap();
         assert!(obtener(&pool, Ambito::Superadmin, img.id).await.unwrap().is_some());
     }
 }
