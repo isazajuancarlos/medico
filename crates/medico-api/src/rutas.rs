@@ -21,6 +21,7 @@ use medico_datos::urgencias::{self, TriageNuevo};
 use medico_datos::hospitalizacion::{self, Egreso, Ingreso};
 use medico_datos::nutricion::{self, PlanCrear, PlanEditar, ValoracionCrear, ValoracionEditar};
 use medico_datos::rehabilitacion::{self, SesionCrear, SesionEditar};
+use medico_datos::incapacidad::{self, Filtros};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
@@ -88,6 +89,9 @@ pub fn router(estado: Estado) -> Router {
             get(rehab_sesiones).post(rehab_crear_sesion),
         )
         .route("/api/rehabilitacion/sesiones/{id}", put(rehab_actualizar_sesion))
+        .route("/api/incapacidades", get(incap_listar))
+        .route("/api/incapacidades/resumen", get(incap_resumen))
+        .route("/api/incapacidades/{historia_id}", get(incap_detalle))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -843,6 +847,57 @@ async fn rehab_actualizar_sesion(
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
         Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Incapacidades (solo lectura sobre historia) -----------------------------
+
+#[derive(serde::Deserialize)]
+struct FiltroIncap {
+    desde: Option<String>,
+    hasta: Option<String>,
+    medico_id: Option<i64>,
+    buscar: Option<String>,
+}
+
+impl FiltroIncap {
+    fn como_filtros(&self) -> Filtros<'_> {
+        Filtros {
+            desde: self.desde.as_deref(),
+            hasta: self.hasta.as_deref(),
+            medico_id: self.medico_id,
+            buscar: self.buscar.as_deref(),
+        }
+    }
+}
+
+async fn incap_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroIncap>,
+) -> Response {
+    match incapacidad::listar(&e.pool, u.ambito(), &f.como_filtros()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn incap_resumen(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroIncap>,
+) -> Response {
+    match incapacidad::resumen(&e.pool, u.ambito(), &f.como_filtros()).await {
+        Ok(r) => Json(r).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn incap_detalle(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match incapacidad::detalle(&e.pool, u.ambito(), id).await {
+        Ok(Some(d)) => Json(d).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

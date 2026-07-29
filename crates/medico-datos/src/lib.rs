@@ -8,6 +8,7 @@ pub mod formula;
 pub mod historia;
 pub mod hospitalizacion;
 pub mod imagen;
+pub mod incapacidad;
 pub mod institucion;
 pub mod licencia;
 pub mod nutricion;
