@@ -18,6 +18,7 @@ use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
+use medico_datos::hospitalizacion::{self, Egreso, Ingreso};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
@@ -60,6 +61,11 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/urgencias/cola", get(urgencias_cola))
         .route("/api/urgencias/triage", post(urgencias_triage))
         .route("/api/urgencias/{id}/egreso", put(urgencias_egreso))
+        .route("/api/hospitalizacion", get(hosp_listar))
+        .route("/api/hospitalizacion/camas", get(hosp_camas))
+        .route("/api/hospitalizacion/medicos", get(hosp_medicos))
+        .route("/api/hospitalizacion/ingresar", post(hosp_ingresar))
+        .route("/api/hospitalizacion/{id}/egreso", put(hosp_egreso))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -550,6 +556,78 @@ async fn urgencias_egreso(
     match urgencias::egreso(&e.pool, u.ambito(), id, &b.destino, b.observaciones.as_deref()).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND, // no existe, ajena, cerrada o destino inválido
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+// --- Hospitalización ---------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct FiltroHosp {
+    estado: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct FiltroCamas {
+    estado: Option<String>,
+    servicio: Option<String>,
+}
+
+async fn hosp_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroHosp>,
+) -> Response {
+    match hospitalizacion::listar(&e.pool, u.ambito(), f.estado.as_deref()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn hosp_camas(
+    State(e): State<Estado>,
+    Autenticado(_u): Autenticado,
+    Query(f): Query<FiltroCamas>,
+) -> Response {
+    match hospitalizacion::listar_camas(&e.pool, f.estado.as_deref(), f.servicio.as_deref()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn hosp_medicos(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match hospitalizacion::listar_medicos(&e.pool, u.ambito()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn hosp_ingresar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(i): Json<Ingreso>,
+) -> Response {
+    match hospitalizacion::ingresar(&e.pool, u.ambito(), &i).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        // Cama no disponible, paciente ajeno, vía inválida o FK inexistente.
+        Ok(None) => (
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({ "detail": "No se pudo ingresar: cama no disponible o datos inválidos" })),
+        )
+            .into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn hosp_egreso(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(eg): Json<Egreso>,
+) -> StatusCode {
+    match hospitalizacion::egreso(&e.pool, u.ambito(), id, &eg).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }

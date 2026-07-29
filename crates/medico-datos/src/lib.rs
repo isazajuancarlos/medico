@@ -6,6 +6,7 @@ pub mod cita;
 pub mod documento;
 pub mod formula;
 pub mod historia;
+pub mod hospitalizacion;
 pub mod imagen;
 pub mod institucion;
 pub mod licencia;
