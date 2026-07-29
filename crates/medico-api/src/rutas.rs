@@ -17,6 +17,7 @@ use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
+use medico_datos::urgencias::{self, TriageNuevo};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
@@ -56,6 +57,9 @@ pub fn router(estado: Estado) -> Router {
             get(obtener_documento).put(actualizar_documento).delete(eliminar_documento),
         )
         .route("/api/documentos/{id}/firmar", post(firmar_documento))
+        .route("/api/urgencias/cola", get(urgencias_cola))
+        .route("/api/urgencias/triage", post(urgencias_triage))
+        .route("/api/urgencias/{id}/egreso", put(urgencias_egreso))
         .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
         .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
@@ -488,6 +492,65 @@ async fn crear_documento(
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Urgencias ---------------------------------------------------------------
+
+async fn urgencias_cola(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match urgencias::cola(&e.pool, u.ambito()).await {
+        Ok(cola) => {
+            // Se enriquece con la etiqueta humana del triage; el orden ya viene por
+            // prioridad desde la consulta.
+            let filas: Vec<serde_json::Value> = cola
+                .iter()
+                .map(|a| {
+                    serde_json::json!({
+                        "id": a.id,
+                        "paciente_id": a.paciente_id,
+                        "triage": a.triage,
+                        "triage_label": urgencias::etiqueta_triage(&a.triage),
+                        "motivo_consulta": a.motivo_consulta,
+                        "fecha_ingreso": a.fecha_ingreso,
+                        "estado": "EN_ESPERA",
+                    })
+                })
+                .collect();
+            Json(filas).into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn urgencias_triage(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(n): Json<TriageNuevo>,
+) -> Response {
+    match urgencias::registrar(&e.pool, u.ambito(), u.id, &n).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        // Paciente ajeno o triage inválido: no se distingue de «no se puede».
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct EgresoBody {
+    destino: String,
+    observaciones: Option<String>,
+}
+
+async fn urgencias_egreso(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(b): Json<EgresoBody>,
+) -> StatusCode {
+    match urgencias::egreso(&e.pool, u.ambito(), id, &b.destino, b.observaciones.as_deref()).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND, // no existe, ajena, cerrada o destino inválido
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 

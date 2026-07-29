@@ -11,6 +11,7 @@ pub mod institucion;
 pub mod licencia;
 pub mod orden;
 pub mod paciente;
+pub mod urgencias;
 pub mod usuario;
 
 pub type Pool = sqlx::SqlitePool;
