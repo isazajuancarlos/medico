@@ -15,11 +15,19 @@ pub struct Paciente {
     pub fecha_nacimiento: String,
     pub sexo: String,
     pub cod_municipio: Option<String>,
+    pub celular: Option<String>,
+    pub email: Option<String>,
+    pub direccion: Option<String>,
+    pub tipo_usuario: Option<String>,
+    pub cod_pais: Option<String>,
+    pub zona: Option<String>,
+    pub entidad_id: Option<i64>,
     pub institucion_id: i64,
 }
 
 const COLUMNAS: &str = "id, tipo_documento, numero_documento, nombre1, nombre2, \
                         apellido1, apellido2, fecha_nacimiento, sexo, cod_municipio, \
+                        celular, email, direccion, tipo_usuario, cod_pais, zona, entidad_id, \
                         institucion_id";
 
 /// El `Ambito` es un parámetro OBLIGATORIO, no opcional.
@@ -80,6 +88,13 @@ pub struct PacienteNuevo {
     pub fecha_nacimiento: String,
     pub sexo: String,
     pub cod_municipio: Option<String>,
+    pub celular: Option<String>,
+    pub email: Option<String>,
+    pub direccion: Option<String>,
+    pub tipo_usuario: Option<String>,
+    pub cod_pais: Option<String>,
+    pub zona: Option<String>,
+    pub entidad_id: Option<i64>,
 }
 
 /// Crea un paciente EN la institución de quien lo crea. La institución sale del
@@ -97,8 +112,9 @@ pub async fn crear(
     };
     let r = sqlx::query(
         "INSERT INTO paciente (tipo_documento, numero_documento, nombre1, nombre2, apellido1, \
-         apellido2, fecha_nacimiento, sexo, cod_municipio, institucion_id) \
-         VALUES (?,?,?,?,?,?,?,?,?,?)",
+         apellido2, fecha_nacimiento, sexo, cod_municipio, celular, email, direccion, \
+         tipo_usuario, cod_pais, zona, entidad_id, institucion_id) \
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     )
     .bind(&nuevo.tipo_documento)
     .bind(&nuevo.numero_documento)
@@ -109,6 +125,13 @@ pub async fn crear(
     .bind(&nuevo.fecha_nacimiento)
     .bind(&nuevo.sexo)
     .bind(&nuevo.cod_municipio)
+    .bind(&nuevo.celular)
+    .bind(&nuevo.email)
+    .bind(&nuevo.direccion)
+    .bind(&nuevo.tipo_usuario)
+    .bind(&nuevo.cod_pais)
+    .bind(&nuevo.zona)
+    .bind(nuevo.entidad_id)
     .bind(institucion_id)
     .execute(pool)
     .await?;
@@ -137,7 +160,8 @@ pub async fn actualizar(
     };
     let sql = format!(
         "UPDATE paciente SET tipo_documento=?, numero_documento=?, nombre1=?, nombre2=?, \
-         apellido1=?, apellido2=?, fecha_nacimiento=?, sexo=?, cod_municipio=? WHERE {filtro}"
+         apellido1=?, apellido2=?, fecha_nacimiento=?, sexo=?, cod_municipio=?, celular=?, \
+         email=?, direccion=?, tipo_usuario=?, cod_pais=?, zona=?, entidad_id=? WHERE {filtro}"
     );
     let mut q = sqlx::query(&sql)
         .bind(&datos.tipo_documento)
@@ -149,6 +173,13 @@ pub async fn actualizar(
         .bind(&datos.fecha_nacimiento)
         .bind(&datos.sexo)
         .bind(&datos.cod_municipio)
+        .bind(&datos.celular)
+        .bind(&datos.email)
+        .bind(&datos.direccion)
+        .bind(&datos.tipo_usuario)
+        .bind(&datos.cod_pais)
+        .bind(&datos.zona)
+        .bind(datos.entidad_id)
         .bind(id);
     if let Some(i) = condicion_institucion {
         q = q.bind(i);
@@ -293,6 +324,13 @@ mod pruebas {
             fecha_nacimiento: "2000-02-02".into(),
             sexo: "F".into(),
             cod_municipio: Some("05001".into()),
+            celular: Some("3001234567".into()),
+            email: None,
+            direccion: None,
+            tipo_usuario: Some("04".into()),
+            cod_pais: Some("170".into()),
+            zona: Some("01".into()),
+            entidad_id: None,
         }
     }
 

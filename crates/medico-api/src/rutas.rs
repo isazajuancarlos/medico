@@ -23,7 +23,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/salir", post(salir))
         .route("/api/yo", get(yo))
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
-        .route("/api/pacientes/{id}", put(actualizar_paciente))
+        .route("/api/pacientes/{id}", get(obtener_paciente).put(actualizar_paciente))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
@@ -111,6 +111,20 @@ async fn listar_pacientes(
 #[derive(Serialize)]
 struct Creado {
     id: i64,
+}
+
+/// Un paciente por id, si es visible para el ámbito. **404 si no existe o no es
+/// suyo** —nunca 403: un 403 confirmaría que el id existe en otra institución—.
+async fn obtener_paciente(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Result<Json<Paciente>, StatusCode> {
+    match paciente::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => Ok(Json(p)),
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 /// Crea un paciente en la institución del usuario. 201 con su id; 403 si el
