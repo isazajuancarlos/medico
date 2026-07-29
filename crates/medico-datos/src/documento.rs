@@ -123,6 +123,9 @@ pub struct DocumentoVista {
     pub medico_id: i64,
     pub fecha: String,
     pub titulo: String,
+    /// Se incluye el `contenido` en la worklist para que cada lista muestre los
+    /// campos propios de su tipo sin una segunda petición por fila.
+    pub contenido: Json<serde_json::Value>,
     pub firmada: bool,
     pub paciente_nombre: String,
     pub paciente_identificacion: String,
@@ -146,7 +149,7 @@ pub async fn listar_ambito(
         Ambito::Ninguno => return Ok(Vec::new()),
     };
     let mut sql = String::from(
-        "SELECT d.id, d.tipo, d.paciente_id, d.medico_id, d.fecha, d.titulo, d.firmada, \
+        "SELECT d.id, d.tipo, d.paciente_id, d.medico_id, d.fecha, d.titulo, d.contenido, d.firmada, \
          TRIM(REPLACE(REPLACE(p.nombre1 || ' ' || COALESCE(p.nombre2,'') || ' ' || p.apellido1 || ' ' || COALESCE(p.apellido2,''), '  ', ' '), '  ', ' ')) AS paciente_nombre, \
          p.numero_documento AS paciente_identificacion, \
          u.nombre AS medico_nombre \
