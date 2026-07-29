@@ -2,24 +2,25 @@
 //! esa firma es, de un vistazo, una ruta pública — no hay que leerla entera para
 //! saberlo.
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use medico_dominio::RolUsuario;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{autenticar, Autenticado, Estado};
 use crate::sesion;
-use medico_datos::paciente::{self, Paciente};
+use medico_datos::paciente::{self, Paciente, PacienteNuevo};
 
 pub fn router(estado: Estado) -> Router {
     Router::new()
         .route("/api/acceso", post(acceso))
         .route("/api/salir", post(salir))
         .route("/api/yo", get(yo))
-        .route("/api/pacientes", get(listar_pacientes))
+        .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
+        .route("/api/pacientes/{id}", put(actualizar_paciente))
         .with_state(estado)
 }
 
@@ -89,4 +90,39 @@ async fn listar_pacientes(
         .await
         .map(Json)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(Serialize)]
+struct Creado {
+    id: i64,
+}
+
+/// Crea un paciente en la institución del usuario. 201 con su id; 403 si el
+/// ámbito no puede crear (superadmin sin institución, o sin ámbito).
+async fn crear_paciente(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(nuevo): Json<PacienteNuevo>,
+) -> Response {
+    match paciente::crear(&e.pool, u.ambito(), &nuevo).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Actualiza un paciente propio. 204 si se actualizó; **404 si no existe o no es
+/// suyo** —nunca 403: un 403 confirmaría que el id existe en otra institución, y
+/// eso ya enumera pacientes ajenos—.
+async fn actualizar_paciente(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(datos): Json<PacienteNuevo>,
+) -> StatusCode {
+    match paciente::actualizar(&e.pool, u.ambito(), id, &datos).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }

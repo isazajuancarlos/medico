@@ -67,6 +67,95 @@ pub async fn obtener(
     Ok(fila.filter(|p| ambito.puede_ver(Some(p.institucion_id)) == Visibilidad::Si))
 }
 
+/// Los datos de un paciente sin su id ni su institución: la institución no la
+/// pone el cliente, la pone el ámbito de quien lo crea.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct PacienteNuevo {
+    pub tipo_documento: String,
+    pub numero_documento: String,
+    pub nombre1: String,
+    pub nombre2: Option<String>,
+    pub apellido1: String,
+    pub apellido2: Option<String>,
+    pub fecha_nacimiento: String,
+    pub sexo: String,
+    pub cod_municipio: Option<String>,
+}
+
+/// Crea un paciente EN la institución de quien lo crea. La institución sale del
+/// ámbito, **nunca del cliente**. `None` si el ámbito no puede crear: crear un
+/// paciente es un acto de una IPS concreta, así que ni el superadmin (sin una
+/// institución objetivo) ni «ninguno» lo hacen por esta vía.
+pub async fn crear(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    nuevo: &PacienteNuevo,
+) -> Result<Option<i64>, sqlx::Error> {
+    let institucion_id = match ambito {
+        Ambito::Institucion(id) => id,
+        Ambito::Superadmin | Ambito::Ninguno => return Ok(None),
+    };
+    let r = sqlx::query(
+        "INSERT INTO paciente (tipo_documento, numero_documento, nombre1, nombre2, apellido1, \
+         apellido2, fecha_nacimiento, sexo, cod_municipio, institucion_id) \
+         VALUES (?,?,?,?,?,?,?,?,?,?)",
+    )
+    .bind(&nuevo.tipo_documento)
+    .bind(&nuevo.numero_documento)
+    .bind(&nuevo.nombre1)
+    .bind(&nuevo.nombre2)
+    .bind(&nuevo.apellido1)
+    .bind(&nuevo.apellido2)
+    .bind(&nuevo.fecha_nacimiento)
+    .bind(&nuevo.sexo)
+    .bind(&nuevo.cod_municipio)
+    .bind(institucion_id)
+    .execute(pool)
+    .await?;
+    Ok(Some(r.last_insert_rowid()))
+}
+
+/// Actualiza un paciente **si es visible para el ámbito**. `false` si no existe
+/// o no es suyo —indistinguibles, como en `obtener`—. No cambia la institución:
+/// un paciente no se traslada de IPS editándolo. El ámbito va en el `WHERE`, así
+/// que un id ajeno sencillamente no coincide y no se toca ni una fila.
+pub async fn actualizar(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+    datos: &PacienteNuevo,
+) -> Result<bool, sqlx::Error> {
+    let condicion_institucion = match ambito {
+        Ambito::Superadmin => None,
+        Ambito::Institucion(i) => Some(i),
+        Ambito::Ninguno => return Ok(false),
+    };
+    let filtro = if condicion_institucion.is_some() {
+        "id = ? AND institucion_id = ?"
+    } else {
+        "id = ?"
+    };
+    let sql = format!(
+        "UPDATE paciente SET tipo_documento=?, numero_documento=?, nombre1=?, nombre2=?, \
+         apellido1=?, apellido2=?, fecha_nacimiento=?, sexo=?, cod_municipio=? WHERE {filtro}"
+    );
+    let mut q = sqlx::query(&sql)
+        .bind(&datos.tipo_documento)
+        .bind(&datos.numero_documento)
+        .bind(&datos.nombre1)
+        .bind(&datos.nombre2)
+        .bind(&datos.apellido1)
+        .bind(&datos.apellido2)
+        .bind(&datos.fecha_nacimiento)
+        .bind(&datos.sexo)
+        .bind(&datos.cod_municipio)
+        .bind(id);
+    if let Some(i) = condicion_institucion {
+        q = q.bind(i);
+    }
+    Ok(q.execute(pool).await?.rows_affected() > 0)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -191,5 +280,60 @@ mod pruebas {
         .execute(&pool)
         .await;
         assert!(huerfano.is_err(), "se aceptó un paciente de una institución inexistente");
+    }
+
+    fn nuevo(numero: &str, nombre: &str) -> PacienteNuevo {
+        PacienteNuevo {
+            tipo_documento: "CC".into(),
+            numero_documento: numero.into(),
+            nombre1: nombre.into(),
+            nombre2: None,
+            apellido1: "Prueba".into(),
+            apellido2: None,
+            fecha_nacimiento: "2000-02-02".into(),
+            sexo: "F".into(),
+            cod_municipio: Some("05001".into()),
+        }
+    }
+
+    #[tokio::test]
+    async fn crear_lo_pone_en_la_institucion_del_ambito() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), &nuevo("333", "Caro")).await.unwrap().unwrap();
+        let p = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert_eq!(p.institucion_id, 1);
+        // …y NO es visible desde la otra institución.
+        assert!(obtener(&pool, Ambito::institucion(2), id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn ni_el_superadmin_ni_ninguno_crean_por_esta_via() {
+        let pool = base().await;
+        assert!(crear(&pool, Ambito::Superadmin, &nuevo("444", "X")).await.unwrap().is_none());
+        assert!(crear(&pool, Ambito::Ninguno, &nuevo("445", "Y")).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn actualizar_el_propio_cambia_los_datos() {
+        let pool = base().await;
+        assert!(actualizar(&pool, Ambito::institucion(1), 10, &nuevo("111", "Ana Maria")).await.unwrap());
+        let p = obtener(&pool, Ambito::institucion(1), 10).await.unwrap().unwrap();
+        assert_eq!(p.nombre1, "Ana Maria");
+    }
+
+    /// La prueba de aislamiento en la escritura: la institución 1 NO puede editar
+    /// al paciente 20, que es de la 2. No se toca ni una fila, y el dato sigue.
+    #[tokio::test]
+    async fn actualizar_el_ajeno_no_toca_nada() {
+        let pool = base().await;
+        assert!(!actualizar(&pool, Ambito::institucion(1), 20, &nuevo("222", "HACKEADO")).await.unwrap());
+        let p = obtener(&pool, Ambito::Superadmin, 20).await.unwrap().unwrap();
+        assert_eq!(p.nombre1, "Beto", "un ajeno editó a un paciente de otra institución");
+    }
+
+    #[tokio::test]
+    async fn sin_ambito_no_se_actualiza() {
+        let pool = base().await;
+        assert!(!actualizar(&pool, Ambito::Ninguno, 10, &nuevo("111", "Z")).await.unwrap());
     }
 }
