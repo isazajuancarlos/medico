@@ -10,7 +10,7 @@
 //! está marcada como incapacitante pero sin días (< 1), las fechas van nulas: de
 //! ellas depende cuándo se reincorpora el trabajador, no se inventan.
 
-use medico_dominio::{Ambito, Visibilidad};
+use medico_dominio::Ambito;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
