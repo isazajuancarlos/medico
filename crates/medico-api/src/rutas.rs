@@ -7,12 +7,13 @@ use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::{Json, Router};
-use medico_dominio::RolUsuario;
+use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{autenticar, Autenticado, Estado};
 use crate::{claves, sesion};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
+use medico_datos::licencia;
 use medico_datos::paciente::{self, Paciente, PacienteNuevo};
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
@@ -24,6 +25,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
         .route("/api/pacientes/{id}", put(actualizar_paciente))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
+        .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
         .with_state(estado)
 }
@@ -203,6 +205,21 @@ async fn crear_usuario(
     if rol == RolUsuario::Superadmin && u.rol() != Some(RolUsuario::Superadmin) {
         return StatusCode::FORBIDDEN.into_response();
     }
+    // Gate comercial: limita SOLO la expansión, y solo para un admin de
+    // institución. El superadmin (onboarding) queda exento; el login y los
+    // listados nunca pasan por aquí. Una licencia vencida no ciega nada: solo
+    // impide agregar un usuario más.
+    if let Ambito::Institucion(id) = u.ambito() {
+        let hoy = chrono::Local::now().date_naive().to_string();
+        match licencia::puerta_para_usuario(&e.pool, id, &hoy).await {
+            Ok(licencia::Puerta::Abierta) => {}
+            Ok(bloqueo) => {
+                return (StatusCode::PAYMENT_REQUIRED, Json(Bloqueo { motivo: motivo(bloqueo) }))
+                    .into_response();
+            }
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
     let Some(hash) = claves::hashear(&req.clave) else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
@@ -220,5 +237,44 @@ async fn crear_usuario(
         Ok(usuario::ResultadoCrear::SinPermiso) => StatusCode::FORBIDDEN.into_response(),
         Ok(usuario::ResultadoCrear::EmailEnUso) => StatusCode::CONFLICT.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Por qué se bloqueó una expansión: un código que la interfaz traduce a un
+/// aviso accionable («renueve el plan», «amplíe el cupo»), no un 403 mudo.
+#[derive(Serialize)]
+struct Bloqueo {
+    motivo: &'static str,
+}
+
+fn motivo(p: licencia::Puerta) -> &'static str {
+    match p {
+        licencia::Puerta::SinLicencia => "sin_licencia",
+        licencia::Puerta::Vencida => "licencia_vencida",
+        licencia::Puerta::CupoLleno => "cupo_lleno",
+        licencia::Puerta::Abierta => "abierta",
+    }
+}
+
+#[derive(Deserialize)]
+struct FijarLicencia {
+    max_usuarios: i64,
+    vence: Option<String>,
+}
+
+/// Fija o renueva la licencia de una institución. **Solo el superadmin**: es
+/// quien vende el plan. 204 al fijarla; 403 a cualquier otro.
+async fn fijar_licencia(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(req): Json<FijarLicencia>,
+) -> StatusCode {
+    if u.rol() != Some(RolUsuario::Superadmin) {
+        return StatusCode::FORBIDDEN;
+    }
+    match licencia::fijar(&e.pool, id, req.max_usuarios, req.vence.as_deref()).await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
