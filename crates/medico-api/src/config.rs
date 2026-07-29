@@ -40,6 +40,9 @@ pub struct Config {
     pub puerto: u16,
     pub secreto_sesion: Vec<u8>,
     pub minutos_sesion: i64,
+    /// Dónde se guardan las imágenes diagnósticas. La ruta de un archivo la
+    /// construye el servidor desde el id; nada que venga del cliente entra en ella.
+    pub dir_imagenes: String,
 }
 
 fn opcional(clave: &str) -> Option<String> {
@@ -81,6 +84,10 @@ impl Config {
             puerto: numero("PORT", 8000u16)?,
             secreto_sesion: secreto.into_bytes(),
             minutos_sesion: numero("SESSION_TIMEOUT_MINUTES", 60i64)?,
+            // Carpeta local, no un secreto: el binario se despliega con su
+            // almacenamiento al lado. El nombre del archivo lo pone el servidor
+            // desde el id de la fila, nunca el cliente.
+            dir_imagenes: opcional("MEDICO_DIR_IMAGENES").unwrap_or_else(|| "storage/imagenes".into()),
         })
     }
 }

@@ -10,8 +10,8 @@ repository.workspace = true
 [dependencies]
 medico-dominio = { path = "../medico-dominio" }
 medico-datos = { path = "../medico-datos" }
-axum = { workspace = true }
-tokio = { workspace = true }
+axum = { workspace = true, features = ["multipart"] }
+tokio = { workspace = true, features = ["fs"] }
 sqlx = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

@@ -16,6 +16,8 @@ pub struct Estado {
     pub pool: medico_datos::Pool,
     pub secreto: Vec<u8>,
     pub minutos: i64,
+    /// Carpeta donde se guardan los archivos de las imágenes diagnósticas.
+    pub dir_imagenes: std::path::PathBuf,
 }
 
 /// El login. Devuelve el valor de la cookie de sesión, o `None`. **Mismo
@@ -116,7 +118,7 @@ mod pruebas {
     #[tokio::test]
     async fn usuario_de_una_cookie_valida_es_el_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60 };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir() };
         let cookie = sesion::emitir(SECRETO, 2, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={cookie}").parse().unwrap());
@@ -127,7 +129,7 @@ mod pruebas {
     #[tokio::test]
     async fn sin_cookie_no_hay_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60 };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir() };
         assert!(usuario_de(&estado, &HeaderMap::new()).await.is_none());
     }
 
@@ -136,7 +138,7 @@ mod pruebas {
     #[tokio::test]
     async fn una_cookie_de_otro_secreto_no_entra() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60 };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir() };
         let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={ajena}").parse().unwrap());

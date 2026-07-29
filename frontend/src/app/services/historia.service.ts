@@ -159,6 +159,8 @@ export interface ImagenDiagnostica {
   historia_id: number;
   ruta_archivo: string;
   nombre_original: string;
+  tipo_mime: string;
+  tamano_bytes: number;
   descripcion: string;
   fecha_subida: string;
 }
@@ -253,19 +255,27 @@ export class HistoriaService {
     return this.http.delete<void>(`${this.API}/${historiaId}/ordenes/${ordenId}`);
   }
 
-  // ── Imágenes diagnósticas ────────────────────────────────────────
+  // ── Imágenes diagnósticas (adjuntas a la historia) ───────────────
   listImagenes(historiaId: number): Observable<ImagenDiagnostica[]> {
-    return this.http.get<ImagenDiagnostica[]>(`${this.API}/${historiaId}/imagenes-diagnosticas`);
+    return this.http.get<ImagenDiagnostica[]>(`${this.API}/${historiaId}/imagenes`);
   }
 
-  uploadImagen(historiaId: number, file: File, descripcion: string): Observable<ImagenDiagnostica> {
+  /** Sube un archivo. El backend mide el mime y el tamaño sobre los bytes; el
+   *  campo debe llamarse `archivo`. Devuelve solo el id creado. */
+  uploadImagen(historiaId: number, file: File, descripcion: string): Observable<{ id: number }> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('archivo', file);
     formData.append('descripcion', descripcion);
-    return this.http.post<ImagenDiagnostica>(`${this.API}/${historiaId}/imagenes`, formData);
+    return this.http.post<{ id: number }>(`${this.API}/${historiaId}/imagenes`, formData);
   }
 
-  deleteImagen(historiaId: number, imagenId: number): Observable<void> {
-    return this.http.delete<void>(`${this.API}/${historiaId}/imagenes-diagnosticas/${imagenId}`);
+  /** URL para mostrar o descargar el archivo. Va en el `src` de un <img> o de
+   *  un enlace; el navegador manda la cookie de sesión con la petición. */
+  urlArchivo(imagenId: number): string {
+    return `/api/imagenes/${imagenId}/archivo`;
+  }
+
+  deleteImagen(imagenId: number): Observable<void> {
+    return this.http.delete<void>(`/api/imagenes/${imagenId}`);
   }
 }

@@ -973,7 +973,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       <ng-template pTemplate="body" let-img>
                         <tr>
                           <td>
-                            <a [href]="img.ruta_archivo" target="_blank" style="color:#818cf8">
+                            <a [href]="urlImagen(img.id)" target="_blank" style="color:#818cf8">
                               <i class="pi pi-file" style="margin-right:0.4rem"></i>{{ img.nombre_original }}
                             </a>
                           </td>
@@ -1823,6 +1823,12 @@ export class HistoriasComponent implements OnInit {
     this.svc.listImagenes(historiaId).subscribe({ next: imgs => this.imagenes.set(imgs) });
   }
 
+  /** URL para ver o descargar el archivo. El navegador manda la cookie de
+   *  sesión, así que solo lo sirve a quien puede ver la historia. */
+  urlImagen(imagenId: number): string {
+    return this.svc.urlArchivo(imagenId);
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.imagenArchivoSeleccionado = input.files?.[0] ?? null;
@@ -1836,8 +1842,10 @@ export class HistoriasComponent implements OnInit {
       this.imagenArchivoSeleccionado,
       this.imagenDescripcion || this.imagenArchivoSeleccionado.name,
     ).subscribe({
-      next: img => {
-        this.imagenes.update(imgs => [...imgs, img]);
+      next: () => {
+        // La subida devuelve solo el id; se recarga la lista para traer la fila
+        // completa (mime, tamaño, fecha) tal como la guardó el servidor.
+        this._cargarImagenes(this.historia()!.id);
         this.imagenArchivoSeleccionado = null;
         this.imagenDescripcion = '';
         this.uploadingImagen.set(false);
@@ -1860,7 +1868,7 @@ export class HistoriasComponent implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.svc.deleteImagen(this.historia()!.id, img.id).subscribe({
+        this.svc.deleteImagen(img.id).subscribe({
           next: () => {
             this.imagenes.update(imgs => imgs.filter(x => x.id !== img.id));
             this.messageService.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada' });

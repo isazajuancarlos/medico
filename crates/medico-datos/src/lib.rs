@@ -3,6 +3,7 @@
 pub mod cita;
 pub mod formula;
 pub mod historia;
+pub mod imagen;
 pub mod institucion;
 pub mod licencia;
 pub mod orden;

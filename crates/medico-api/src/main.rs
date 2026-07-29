@@ -49,10 +49,17 @@ async fn main() -> ExitCode {
         }
     };
 
+    let dir_imagenes = std::path::PathBuf::from(&cfg.dir_imagenes);
+    if let Err(e) = std::fs::create_dir_all(&dir_imagenes) {
+        eprintln!("no se pudo crear la carpeta de imágenes ({}): {e}", dir_imagenes.display());
+        return ExitCode::FAILURE;
+    }
+
     let estado = auth::Estado {
         pool,
         secreto: cfg.secreto_sesion,
         minutos: cfg.minutos_sesion,
+        dir_imagenes,
     };
     let app = rutas::router(estado);
 

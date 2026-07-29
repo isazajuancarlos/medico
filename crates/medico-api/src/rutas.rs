@@ -2,7 +2,7 @@
 //! esa firma es, de un vistazo, una ruta pública — no hay que leerla entera para
 //! saberlo.
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
@@ -15,11 +15,16 @@ use crate::{claves, sesion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
+use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
 use medico_datos::paciente::{self, Paciente, PacienteNuevo};
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
+
+/// Tope de una subida de imagen. Una radiografía o un PDF de laboratorio caben
+/// de sobra; por encima es casi seguro un error o un abuso.
+const MAX_SUBIDA: usize = 25 * 1024 * 1024;
 
 pub fn router(estado: Estado) -> Router {
     Router::new()
@@ -36,6 +41,16 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/historias/{id}/ordenes", get(listar_ordenes).post(crear_orden))
         .route("/api/ordenes/{id}/estado", put(cambiar_estado_orden))
         .route("/api/ordenes/{id}", axum::routing::delete(eliminar_orden))
+        .route(
+            "/api/historias/{id}/imagenes",
+            get(listar_imagenes)
+                .post(subir_imagen)
+                // El tope alto vale SOLO para esta ruta: las demás siguen con el
+                // límite modesto de axum, que basta para JSON.
+                .layer(DefaultBodyLimit::max(MAX_SUBIDA)),
+        )
+        .route("/api/imagenes/{id}/archivo", get(servir_imagen))
+        .route("/api/imagenes/{id}", axum::routing::delete(eliminar_imagen))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
@@ -309,6 +324,143 @@ async fn eliminar_orden(
         Ok(false) => StatusCode::NOT_FOUND,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+// --- Imágenes diagnósticas ---------------------------------------------------
+
+async fn listar_imagenes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(historia_id): Path<i64>,
+) -> Result<Json<Vec<Imagen>>, StatusCode> {
+    imagen::listar_por_historia(&e.pool, u.ambito(), historia_id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+/// Sube un archivo a una historia. Espera un `multipart/form-data` con el campo
+/// `archivo` (el binario) y, opcional, `descripcion`. El mime y el tamaño los
+/// mide el servidor sobre los bytes recibidos; el nombre y el tipo que declara
+/// el cliente no deciden dónde se guarda —la ruta la fija el id de la fila—.
+async fn subir_imagen(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(historia_id): Path<i64>,
+    mut multipart: Multipart,
+) -> Response {
+    let mut archivo: Option<(String, String, Vec<u8>)> = None; // nombre, mime, bytes
+    let mut descripcion = String::new();
+    loop {
+        match multipart.next_field().await {
+            Ok(Some(campo)) => match campo.name() {
+                Some("archivo") => {
+                    let nombre = campo.file_name().unwrap_or("archivo").to_string();
+                    let mime = campo
+                        .content_type()
+                        .unwrap_or("application/octet-stream")
+                        .to_string();
+                    match campo.bytes().await {
+                        Ok(b) => archivo = Some((nombre, mime, b.to_vec())),
+                        // El único fallo esperable al leer el campo es que exceda
+                        // el tope del `DefaultBodyLimit`.
+                        Err(_) => return StatusCode::PAYLOAD_TOO_LARGE.into_response(),
+                    }
+                }
+                Some("descripcion") => descripcion = campo.text().await.unwrap_or_default(),
+                _ => {}
+            },
+            Ok(None) => break,
+            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+        }
+    }
+
+    let Some((nombre, mime, bytes)) = archivo else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+    if bytes.is_empty() {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+    // Solo imágenes y PDF: es una imagen diagnóstica, no un buzón de archivos.
+    if !(mime.starts_with("image/") || mime == "application/pdf") {
+        return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
+    }
+
+    let meta = ImagenNueva {
+        nombre_original: nombre,
+        tipo_mime: mime,
+        tamano_bytes: bytes.len() as i64,
+        descripcion,
+    };
+    let img = match imagen::registrar(&e.pool, u.ambito(), historia_id, &meta).await {
+        Ok(Some(img)) => img,
+        Ok(None) => return StatusCode::FORBIDDEN.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    // Los bytes van al disco DESPUÉS de la fila: si la escritura falla, se
+    // deshace la fila para no dejar una referencia a un archivo que no existe.
+    let destino = e.dir_imagenes.join(&img.ruta_archivo);
+    if tokio::fs::write(&destino, &bytes).await.is_err() {
+        let _ = imagen::eliminar(&e.pool, u.ambito(), img.id).await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+    (StatusCode::CREATED, Json(Creado { id: img.id })).into_response()
+}
+
+/// Devuelve los bytes de una imagen visible, con su mime. **404 si no existe o
+/// no es del ámbito** —nunca 403—, la misma regla que el resto.
+async fn servir_imagen(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    let img = match imagen::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(img)) => img,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let bytes = match tokio::fs::read(e.dir_imagenes.join(&img.ruta_archivo)).await {
+        Ok(b) => b,
+        Err(_) => return StatusCode::NOT_FOUND.into_response(),
+    };
+    // El nombre para descargar se limpia: un nombre de archivo del usuario podría
+    // llevar comillas o saltos de línea y romper la cabecera.
+    let disp = format!("inline; filename=\"{}\"", nombre_seguro(&img.nombre_original));
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, img.tipo_mime),
+            (header::CONTENT_DISPOSITION, disp),
+        ],
+        bytes,
+    )
+        .into_response()
+}
+
+async fn eliminar_imagen(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match imagen::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(Some(ruta)) => {
+            // La fila ya no está; borrar el archivo es limpieza. Si falla (por
+            // ejemplo, ya no estaba), no cambia el resultado para el cliente.
+            let _ = tokio::fs::remove_file(e.dir_imagenes.join(&ruta)).await;
+            StatusCode::NO_CONTENT
+        }
+        Ok(None) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+/// Deja solo caracteres seguros para un nombre de archivo en una cabecera: el
+/// resto pasa a `_`. No se usa para la ruta en disco (esa la fija el id), solo
+/// para la etiqueta de descarga.
+fn nombre_seguro(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '.' | '-' | '_') { c } else { '_' })
+        .collect()
 }
 
 // --- Instituciones (las gestiona el superadmin) ------------------------------

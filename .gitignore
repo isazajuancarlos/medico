@@ -24,6 +24,9 @@ ENV/
 *.sqlite
 *.sqlite3
 
+# Almacenamiento de imágenes diagnósticas (dato de paciente — NUNCA se versiona)
+storage/
+
 # Logs
 *.log
 logs/
