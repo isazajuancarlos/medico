@@ -1,94 +1,83 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError } from 'rxjs';
-import { CurrentUser, TokenResponse, LoginRequest, RolUsuario } from '../models/auth.models';
+import { Observable, map, switchMap, tap, catchError, throwError } from 'rxjs';
+import { CurrentUser, YoResponse, LoginRequest, RolUsuario } from '../models/auth.models';
 import { ModulosService } from './modulos.service';
 
+/**
+ * Sesión contra el `medico-api` (Rust): cookie firmada `HttpOnly`, no un token
+ * en `localStorage`. El login no devuelve token; la identidad se lee de
+ * `GET /api/yo`, y la cookie —que el JavaScript no puede leer— es la verdad.
+ * En `localStorage` solo queda una copia de la identidad para pintar al instante;
+ * si la cookie no vale, el servidor responde 401 y se limpia.
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly API = '/api/auth';
   private _currentUser = signal<CurrentUser | null>(null);
-  private _accessToken = signal<string | null>(null);
-
   readonly currentUser = this._currentUser.asReadonly();
   readonly isLoggedIn = computed(() => this._currentUser() !== null);
 
-  // Los módulos contratados definen qué ve el usuario. Se cargan junto con la
-  // sesión: si se cargaran al pintar el menú, el primer render mostraría
-  // opciones que la institución no tiene.
   private modulos = inject(ModulosService);
 
   constructor(private http: HttpClient, private router: Router) {
-    this.loadFromStorage();
-    if (this._currentUser()) {
-      this.cargarModulos();
-    }
+    const cache = localStorage.getItem('current_user');
+    if (cache) this._currentUser.set(JSON.parse(cache));
+    // La cookie es la verdad: se valida contra el servidor al arrancar.
+    this.http.get<YoResponse>('/api/yo', { withCredentials: true }).subscribe({
+      next: (yo) => {
+        this.aplicar(yo);
+        this.cargarModulos();
+      },
+      error: () => this.cerrarLocal(),
+    });
+  }
+
+  private aplicar(yo: YoResponse): CurrentUser {
+    const user: CurrentUser = {
+      id: yo.id,
+      username: yo.email,
+      nombre_completo: yo.nombre,
+      rol: yo.rol,
+      institucion_id: yo.institucion_id,
+      email: yo.email,
+    };
+    this._currentUser.set(user);
+    localStorage.setItem('current_user', JSON.stringify(user));
+    return user;
   }
 
   private cargarModulos(): void {
     this.modulos.cargar().subscribe({
-      // Un fallo aquí NO debe dejar al usuario sin menú: el servicio trata
-      // "sin catálogo" como "todo visible", y el backend sigue respondiendo
-      // 403 en lo que no corresponda. Se pierde el filtro, no la seguridad.
+      // Un fallo aquí NO deja al usuario sin menú: "sin catálogo" es "todo
+      // visible", y el backend sigue respondiendo 403 en lo que no corresponda.
       error: () => console.warn('No se pudo cargar el catálogo de módulos'),
     });
   }
 
-  private loadFromStorage(): void {
-    const token = localStorage.getItem('access_token');
-    const user = localStorage.getItem('current_user');
-    if (token && user) {
-      this._accessToken.set(token);
-      this._currentUser.set(JSON.parse(user));
-    }
-  }
-
-  getToken(): string | null {
-    return this._accessToken();
-  }
-
-  login(credentials: LoginRequest): Observable<TokenResponse> {
-    return this.http.post<TokenResponse>(`${this.API}/login`, credentials, { withCredentials: true }).pipe(
-      tap(response => {
-        this._accessToken.set(response.access_token);
-        this._currentUser.set(response.user);
-        localStorage.setItem('access_token', response.access_token);
-        localStorage.setItem('current_user', JSON.stringify(response.user));
-        this.cargarModulos();
-      })
+  login(credentials: LoginRequest): Observable<CurrentUser> {
+    return this.http.post('/api/acceso', credentials, { withCredentials: true }).pipe(
+      switchMap(() => this.http.get<YoResponse>('/api/yo', { withCredentials: true })),
+      map((yo) => this.aplicar(yo)),
+      tap(() => this.cargarModulos()),
     );
   }
 
   logout(): Observable<unknown> {
-    return this.http.post(`${this.API}/logout`, {}, { withCredentials: true }).pipe(
-      tap(() => this.clearSession()),
+    return this.http.post('/api/salir', {}, { withCredentials: true }).pipe(
+      tap(() => this.cerrarLocal()),
       catchError(() => {
-        this.clearSession();
+        this.cerrarLocal();
         return throwError(() => new Error('Logout error'));
-      })
-    );
-  }
-
-  refreshToken(): Observable<{ access_token: string }> {
-    return this.http.post<{ access_token: string }>(`${this.API}/refresh`, {}, { withCredentials: true }).pipe(
-      tap(response => {
-        this._accessToken.set(response.access_token);
-        localStorage.setItem('access_token', response.access_token);
       }),
-      catchError(err => {
-        this.clearSession();
-        this.router.navigate(['/login']);
-        return throwError(() => err);
-      })
     );
   }
 
-  private clearSession(): void {
+  /** Limpia la sesión en el navegador, sin llamar al servidor. La usa el
+   *  interceptor cuando el servidor responde 401. */
+  cerrarLocal(): void {
     this.modulos.limpiar();
-    this._accessToken.set(null);
     this._currentUser.set(null);
-    localStorage.removeItem('access_token');
     localStorage.removeItem('current_user');
   }
 

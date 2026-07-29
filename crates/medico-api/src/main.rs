@@ -3,6 +3,7 @@
 mod auth;
 mod claves;
 mod config;
+mod estaticos;
 mod rutas;
 mod sesion;
 

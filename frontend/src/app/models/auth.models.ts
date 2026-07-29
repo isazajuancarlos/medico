@@ -24,14 +24,17 @@ export interface CurrentUser {
   email: string | null;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  user: CurrentUser;
+/** Lo que devuelve el `medico-api` en `GET /api/yo`. La identidad viene del
+ *  servidor, no de un token que el JavaScript pueda leer. */
+export interface YoResponse {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  institucion_id: number | null;
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
+  email: string;
+  clave: string;
 }

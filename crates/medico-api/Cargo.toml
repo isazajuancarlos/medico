@@ -23,3 +23,5 @@ password-hash = { version = "0.5", features = ["std"] }
 hmac = "0.12"
 sha2 = "0.10"
 base64 = "0.22"
+# La interfaz Angular viaja dentro del binario (como informes).
+rust-embed = { version = "8", features = ["mime-guess"] }

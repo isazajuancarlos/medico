@@ -1,35 +1,28 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
 
+/**
+ * La sesión es una cookie: viaja sola con `withCredentials`, no hay token que
+ * adjuntar. Ante un 401 (que no sea el propio login), se limpia la sesión local
+ * y se manda a `/login` — sin `refresh`, que el `medico-api` no ofrece.
+ */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  const token = authService.getToken();
-  const authReq = token
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : req;
+  const conCookie = req.clone({ withCredentials: true });
 
-  return next(authReq).pipe(
+  return next(conCookie).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !req.url.includes('/auth/')) {
-        return authService.refreshToken().pipe(
-          switchMap(response => {
-            const retryReq = req.clone({
-              setHeaders: { Authorization: `Bearer ${response.access_token}` }
-            });
-            return next(retryReq);
-          }),
-          catchError(refreshError => {
-            router.navigate(['/login']);
-            return throwError(() => refreshError);
-          })
-        );
+      const esLogin = req.url.includes('/api/acceso') || req.url.includes('/api/yo');
+      if (error.status === 401 && !esLogin) {
+        authService.cerrarLocal();
+        router.navigate(['/login']);
       }
       return throwError(() => error);
-    })
+    }),
   );
 };

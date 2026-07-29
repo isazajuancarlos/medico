@@ -75,3 +75,7 @@ apilocal-dockercompose.*.yml
 # Rust
 /target/
 crates/*/target/
+
+# La interfaz Angular compilada se empotra en el binario; no se versiona.
+crates/medico-api/estaticos/*
+!crates/medico-api/estaticos/.gitkeep

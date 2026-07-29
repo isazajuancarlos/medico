@@ -27,6 +27,9 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
+        // los archivos del build y, para las rutas del SPA, el index.html.
+        .fallback(crate::estaticos::servir)
         .with_state(estado)
 }
 
@@ -75,16 +78,18 @@ async fn salir() -> Response {
 struct Yo {
     id: i64,
     nombre: String,
+    email: String,
     rol: Option<RolUsuario>,
     institucion_id: Option<i64>,
 }
 
-/// Quién soy. La interfaz la usa para pintar el menú según el rol.
+/// Quién soy. La interfaz la usa para restaurar la sesión y pintar el menú.
 async fn yo(Autenticado(u): Autenticado) -> Json<Yo> {
     let rol = u.rol();
     Json(Yo {
         id: u.id,
         nombre: u.nombre,
+        email: u.email,
         rol,
         institucion_id: u.institucion_id,
     })
