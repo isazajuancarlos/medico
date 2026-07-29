@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::auth::{autenticar, Autenticado, Estado};
 use crate::{claves, sesion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
+use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
 use medico_datos::licencia;
@@ -29,6 +30,8 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/pacientes/{id}/historias", get(listar_historias_paciente))
         .route("/api/historias", post(crear_historia))
         .route("/api/historias/{id}", get(obtener_historia))
+        .route("/api/historias/{id}/formulas", get(listar_formulas).post(crear_formula))
+        .route("/api/formulas/{id}", put(actualizar_formula).delete(eliminar_formula))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
@@ -200,6 +203,57 @@ async fn listar_historias_paciente(
         .await
         .map(Json)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+// --- Fórmulas (prescripciones de una historia) -------------------------------
+
+async fn listar_formulas(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(historia_id): Path<i64>,
+) -> Result<Json<Vec<Formula>>, StatusCode> {
+    formula::listar_por_historia(&e.pool, u.ambito(), historia_id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn crear_formula(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(historia_id): Path<i64>,
+    Json(f): Json<FormulaNueva>,
+) -> Response {
+    match formula::crear(&e.pool, u.ambito(), historia_id, &f).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn actualizar_formula(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(f): Json<FormulaNueva>,
+) -> StatusCode {
+    match formula::actualizar(&e.pool, u.ambito(), id, &f).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn eliminar_formula(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match formula::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }
 
 // --- Instituciones (las gestiona el superadmin) ------------------------------
