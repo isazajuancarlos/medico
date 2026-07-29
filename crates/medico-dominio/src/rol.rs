@@ -43,6 +43,17 @@ impl RolUsuario {
             (_, None) => Ambito::Ninguno,
         }
     }
+
+    /// Del valor de cadena guardado en la base al rol. Usa el MISMO
+    /// `Deserialize` (snake_case) con el que se serializa, así que no hay una
+    /// segunda lista de nombres que se pueda desincronizar. `None` si la cadena
+    /// no nombra un rol conocido — que arriba se traduce a «no ve nada», nunca a
+    /// «lo ve todo».
+    pub fn desde_str(s: &str) -> Option<Self> {
+        use serde::de::IntoDeserializer;
+        let de: serde::de::value::StrDeserializer<serde::de::value::Error> = s.into_deserializer();
+        <Self as serde::Deserialize>::deserialize(de).ok()
+    }
 }
 
 #[cfg(test)]
@@ -99,5 +110,28 @@ mod pruebas {
         for (rol, esperado) in casos {
             assert_eq!(serde_json::to_string(&rol).unwrap(), esperado);
         }
+    }
+
+    /// `desde_str` invierte la serialización, y lo desconocido da `None` —no un
+    /// rol cualquiera—. Se prueba sobre el valor serializado real para que, si
+    /// alguna vez cambia el nombre de cadena, esto caiga con el test de arriba.
+    #[test]
+    fn desde_str_invierte_la_serializacion_y_rechaza_lo_desconocido() {
+        for rol in [
+            RolUsuario::Superadmin,
+            RolUsuario::Admin,
+            RolUsuario::Medico,
+            RolUsuario::AuxiliarEnfermeria,
+            RolUsuario::RegenteFarmacia,
+            RolUsuario::TrabajoSocial,
+            RolUsuario::Bacteriologo,
+        ] {
+            let s = serde_json::to_string(&rol).unwrap();
+            let s = s.trim_matches('"');
+            assert_eq!(RolUsuario::desde_str(s), Some(rol), "{rol:?}");
+        }
+        assert_eq!(RolUsuario::desde_str("dios"), None);
+        assert_eq!(RolUsuario::desde_str(""), None);
+        assert_eq!(RolUsuario::desde_str("MEDICO"), None, "no es snake_case");
     }
 }

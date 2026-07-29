@@ -1,6 +1,7 @@
 //! Acceso a la base. Nadie de aquí para arriba escribe SQL.
 
 pub mod paciente;
+pub mod usuario;
 
 pub type Pool = sqlx::SqlitePool;
 
