@@ -84,11 +84,11 @@ const SELECT_ENRIQUECIDO: &str = "\
       (p.nombre1 || COALESCE(' '||p.nombre2,'') || ' ' || p.apellido1 || COALESCE(' '||p.apellido2,'')) AS paciente_nombre, \
       p.numero_documento AS paciente_identificacion, \
       c.numero AS cama_numero, c.piso AS cama_piso, c.servicio AS cama_servicio, \
-      u.nombre AS medico_nombre \
+      COALESCE(u.nombre, '') AS medico_nombre \
     FROM hospitalizacion h \
     JOIN paciente p ON p.id = h.paciente_id \
     JOIN cama c ON c.id = h.cama_id \
-    JOIN usuario u ON u.id = h.medico_tratante_id";
+    LEFT JOIN usuario u ON u.id = h.medico_tratante_id AND u.institucion_id = p.institucion_id";
 
 /// Hospitalizaciones del ámbito con un estado dado (por defecto ACTIVA), de la
 /// más reciente a la más antigua. Vacío para el ámbito Ninguno.
@@ -117,10 +117,24 @@ pub async fn listar(
 /// número.
 pub async fn listar_camas(
     pool: &crate::Pool,
+    ambito: Ambito,
     estado: Option<&str>,
     servicio: Option<&str>,
 ) -> Result<Vec<Cama>, sqlx::Error> {
-    let mut sql = String::from("SELECT id, numero, piso, servicio, estado, tiene_oxigeno, tiene_monitor, es_aislamiento FROM cama WHERE 1 = 1");
+    // El ámbito es un parámetro y no un añadido opcional: esta función NO lo
+    // recibía, y por eso el handler podía descartarlo sin que nada chirriara.
+    // Devolvía el mapa de salas de todas las instituciones del despliegue.
+    let (filtro, inst) = match ambito {
+        Ambito::Superadmin => (String::new(), None),
+        Ambito::Institucion(id) => (" AND institucion_id = ?".to_string(), Some(id)),
+        // Sin ámbito no se ve nada, y se dice aquí en vez de dejar que la falta
+        // de filtro signifique «todo».
+        Ambito::Ninguno => return Ok(Vec::new()),
+    };
+    let mut sql = format!(
+        "SELECT id, numero, piso, servicio, estado, tiene_oxigeno, tiene_monitor, es_aislamiento \
+         FROM cama WHERE 1 = 1{filtro}"
+    );
     if estado.is_some() {
         sql.push_str(" AND estado = ?");
     }
@@ -129,6 +143,9 @@ pub async fn listar_camas(
     }
     sql.push_str(" ORDER BY piso, numero");
     let mut q = sqlx::query_as::<_, Cama>(&sql);
+    if let Some(i) = inst {
+        q = q.bind(i);
+    }
     if let Some(e) = estado {
         q = q.bind(e);
     }
@@ -136,6 +153,22 @@ pub async fn listar_camas(
         q = q.bind(s);
     }
     q.fetch_all(pool).await
+}
+
+/// ¿Esa cama es del ámbito de quien la pide?
+async fn cama_es_del_ambito(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    cama_id: i64,
+) -> Result<bool, sqlx::Error> {
+    let fila: Option<(i64,)> = sqlx::query_as("SELECT institucion_id FROM cama WHERE id = ?")
+        .bind(cama_id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(match fila {
+        None => false,
+        Some((inst,)) => ambito.puede_ver(Some(inst)) == Visibilidad::Si,
+    })
 }
 
 /// Médicos y anestesiólogos activos del ámbito, para elegir tratante.
@@ -180,6 +213,16 @@ pub async fn ingresar(
         .await?;
     let del_ambito = inst.is_some_and(|(x,)| ambito.puede_ver(Some(x)) == Visibilidad::Si);
     if !del_ambito {
+        return Ok(None);
+    }
+    // El médico tratante, con la misma regla que el paciente dos líneas arriba.
+    if !crate::usuario::es_del_ambito(pool, ambito, i.medico_id).await? {
+        return Ok(None);
+    }
+    // Y la CAMA. Sin esto se podía ingresar un paciente propio en una cama ajena:
+    // la otra institución la veía ocupada, sin ocupante en su listado —ese sí
+    // filtrado— y sin poder liberarla, porque el egreso también filtra.
+    if !cama_es_del_ambito(pool, ambito, i.cama_id).await? {
         return Ok(None);
     }
 
@@ -286,9 +329,9 @@ mod pruebas {
         );
         let pool = crate::abrir(&url).await.unwrap();
         sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (1,'Uno','900'),(2,'Dos','901')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) VALUES (5,'Dr House','h@x.co','x','medico',1,1)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) VALUES (5,'Dr House','h@x.co','x','medico',1,1),(6,'Dr Dos','h2@x.co','x','medico',2,1)").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,fecha_nacimiento,sexo,institucion_id) VALUES (10,'CC','111','Ana','Ruiz','1990-01-01','F',1),(20,'CC','222','Beto','Paz','1985-01-01','M',2)").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO cama (id,numero,piso,servicio) VALUES (1,'101-A','1','GENERAL'),(2,'201-B','2','UCI')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO cama (id,institucion_id,numero,piso,servicio) VALUES (1,1,'101-A','1','GENERAL'),(2,1,'201-B','2','UCI'),(3,2,'101-A','1','GENERAL')").execute(&pool).await.unwrap();
         pool
     }
 
@@ -309,7 +352,7 @@ mod pruebas {
         let pool = base().await;
         let id = ingresar(&pool, Ambito::institucion(1), &ingreso(10, 1)).await.unwrap().unwrap();
         // La cama quedó ocupada.
-        let camas = listar_camas(&pool, Some("OCUPADA"), None).await.unwrap();
+        let camas = listar_camas(&pool, Ambito::Institucion(1), Some("OCUPADA"), None).await.unwrap();
         assert_eq!(camas.len(), 1);
         assert_eq!(camas[0].id, 1);
         // La hospitalización aparece, enriquecida.
@@ -335,6 +378,46 @@ mod pruebas {
         assert!(ingresar(&pool, Ambito::institucion(1), &mala).await.unwrap().is_none());
     }
 
+    /// **El segundo hallazgo de la security-review del 2026-07-30.** La tabla
+    /// `cama` era GLOBAL, así que la institución 1 podía meter su paciente en una
+    /// cama de la 2: la 2 la veía OCUPADA, sin ocupante en su listado de
+    /// hospitalizaciones —ese sí filtrado— y sin poder liberarla, porque el
+    /// egreso también filtra. Una cama que no puede usar ni soltar.
+    #[tokio::test]
+    async fn no_se_ocupa_una_cama_de_otra_institucion() {
+        let pool = base().await;
+        // Paciente propio (10) en la cama 3, que es de la institución 2.
+        assert!(
+            ingresar(&pool, Ambito::institucion(1), &ingreso(10, 3)).await.unwrap().is_none(),
+            "se ocupó una cama ajena"
+        );
+        // Y la cama sigue libre para su dueña, que es lo que de verdad se protege.
+        let suyas = listar_camas(&pool, Ambito::institucion(2), Some("DISPONIBLE"), None)
+            .await
+            .unwrap();
+        assert!(suyas.iter().any(|c| c.id == 3), "la cama quedó bloqueada para su institución");
+    }
+
+    #[tokio::test]
+    async fn el_inventario_de_camas_no_cruza_instituciones() {
+        let pool = base().await;
+        let de_uno = listar_camas(&pool, Ambito::institucion(1), None, None).await.unwrap();
+        let de_dos = listar_camas(&pool, Ambito::institucion(2), None, None).await.unwrap();
+        assert_eq!(de_uno.len(), 2, "la 1 tiene dos camas");
+        assert_eq!(de_dos.len(), 1, "la 2 tiene una");
+        assert!(!de_uno.iter().any(|c| c.id == 3), "la 1 vio la cama de la 2");
+        // Y sin ámbito no se ve nada, en vez de verse todo por falta de filtro.
+        assert!(listar_camas(&pool, Ambito::Ninguno, None, None).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn no_se_ingresa_a_nombre_de_un_medico_ajeno() {
+        let pool = base().await;
+        let mut i = ingreso(10, 1);
+        i.medico_id = 6; // de la institución 2
+        assert!(ingresar(&pool, Ambito::institucion(1), &i).await.unwrap().is_none());
+    }
+
     #[tokio::test]
     async fn el_egreso_libera_la_cama_y_saca_de_los_activos() {
         let pool = base().await;
@@ -348,7 +431,7 @@ mod pruebas {
         // El dueño sí; libera la cama y sale de los ACTIVA.
         assert!(egreso(&pool, Ambito::institucion(1), id, &e).await.unwrap());
         assert!(listar(&pool, Ambito::institucion(1), None).await.unwrap().is_empty());
-        assert_eq!(listar_camas(&pool, Some("DISPONIBLE"), None).await.unwrap().len(), 2);
+        assert_eq!(listar_camas(&pool, Ambito::Institucion(1), Some("DISPONIBLE"), None).await.unwrap().len(), 2);
         // Egresar dos veces no hace nada.
         assert!(!egreso(&pool, Ambito::institucion(1), id, &e).await.unwrap());
     }
@@ -360,8 +443,14 @@ mod pruebas {
         assert_eq!(listar(&pool, Ambito::institucion(1), None).await.unwrap().len(), 1);
         assert!(listar(&pool, Ambito::institucion(2), None).await.unwrap().is_empty());
         assert!(listar(&pool, Ambito::Ninguno, None).await.unwrap().is_empty());
-        // El médico de la institución 1 aparece para ella, no para la 2.
-        assert_eq!(listar_medicos(&pool, Ambito::institucion(1)).await.unwrap().len(), 1);
-        assert!(listar_medicos(&pool, Ambito::institucion(2)).await.unwrap().is_empty());
+        // Cada institución ve SU médico y solo el suyo. (El fixture da uno a cada
+        // una: comprobar que la 2 no ve «ninguno» no discriminaba nada cuando la
+        // 2 no tenía médicos.)
+        let de_uno = listar_medicos(&pool, Ambito::institucion(1)).await.unwrap();
+        let de_dos = listar_medicos(&pool, Ambito::institucion(2)).await.unwrap();
+        assert_eq!(de_uno.len(), 1);
+        assert_eq!(de_dos.len(), 1);
+        assert_ne!(de_uno[0].id, de_dos[0].id, "las dos vieron al mismo médico");
+        assert!(listar_medicos(&pool, Ambito::Ninguno).await.unwrap().is_empty());
     }
 }

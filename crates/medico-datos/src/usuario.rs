@@ -79,6 +79,38 @@ pub async fn por_email(pool: &crate::Pool, email: &str) -> Result<Option<Usuario
 /// dispositivos" y el sitio donde enganchar "invalidar sesiones tras cambiar la
 /// contraseña" cuando exista ese flujo. `false` si el usuario no existe (nada que
 /// revocar) — no se inventa un éxito sobre un id que no está.
+/// ¿Ese profesional es del ámbito de quien pregunta, y está activo?
+///
+/// Existe porque las escrituras clínicas validaban el PACIENTE contra el ámbito y
+/// no el MÉDICO. El `medico_id` llegaba en el cuerpo y se ataba al INSERT sin más
+/// freno que la clave foránea a `usuario(id)`, que abarca todas las instituciones
+/// del despliegue. Con eso, una institución podía:
+///
+///   - **enumerar la plantilla ajena**: un id que existe daba 201 y uno que no,
+///     error — un oráculo global de ids de usuario— y el listado devolvía después
+///     el NOMBRE del profesional por el `JOIN usuario`;
+///   - **atribuir un acto clínico a un médico de otra institución**, y cerrarlo
+///     con `firmar`, que pone una firma criptográfica sobre un contenido que
+///     nombra a quien nunca vio al paciente.
+///
+/// Se exige `activo`: crear un registro nuevo a nombre de alguien dado de baja no
+/// es un caso legítimo de nadie.
+pub async fn es_del_ambito(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    usuario_id: i64,
+) -> Result<bool, sqlx::Error> {
+    let fila: Option<(i64,)> =
+        sqlx::query_as("SELECT institucion_id FROM usuario WHERE id = ? AND activo = 1")
+            .bind(usuario_id)
+            .fetch_optional(pool)
+            .await?;
+    Ok(match fila {
+        None => false,
+        Some((inst,)) => ambito.puede_ver(Some(inst)) == medico_dominio::Visibilidad::Si,
+    })
+}
+
 pub async fn revocar_sesiones(pool: &crate::Pool, id: i64) -> Result<bool, sqlx::Error> {
     let r = sqlx::query("UPDATE usuario SET token_version = token_version + 1 WHERE id = ?")
         .bind(id)

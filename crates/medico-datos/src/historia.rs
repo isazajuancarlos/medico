@@ -187,6 +187,13 @@ pub async fn crear(pool: &crate::Pool, ambito: Ambito, h: &HistoriaNueva) -> Res
     if !paciente_es_del_ambito(pool, ambito, h.paciente_id).await? {
         return Ok(None);
     }
+    // Y el MÉDICO. Es la más grave de las tres: una historia se cierra con
+    // `firmar`, que pone una firma criptográfica sobre un contenido que nombra al
+    // profesional. Sin esta comprobación, una institución podía dejar firmado un
+    // acto clínico a nombre de un médico de OTRA — que no puede verlo ni negarlo.
+    if !crate::usuario::es_del_ambito(pool, ambito, h.medico_id).await? {
+        return Ok(None);
+    }
     let codigo = match h.codigo_historia.as_deref() {
         Some(c) if !c.trim().is_empty() => c.to_string(),
         _ => format!("HC-{}-{}", h.paciente_id, chrono::Utc::now().timestamp()),
@@ -515,7 +522,7 @@ mod pruebas {
         let pool = crate::abrir("sqlite::memory:").await.unwrap();
         sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (1,'Uno','900'),(2,'Dos','901')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) VALUES (5,'Dra','d@x.co','h','medico',1,1)")
+        sqlx::query("INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) VALUES (5,'Dra','d@x.co','h','medico',1,1),(6,'Dr Dos','d2@x.co','h','medico',2,1),(7,'Retirada','r@x.co','h','medico',1,0)")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,fecha_nacimiento,sexo,institucion_id) VALUES (10,'CC','1','Ana','Ruiz','1990-01-01','F',1),(20,'CC','2','Beto','Paz','1985-01-01','M',2)")
             .execute(&pool).await.unwrap();
@@ -523,10 +530,14 @@ mod pruebas {
     }
 
     fn nueva(paciente_id: i64) -> HistoriaNueva {
+        nueva_con(paciente_id, 5)
+    }
+
+    fn nueva_con(paciente_id: i64, medico_id: i64) -> HistoriaNueva {
         HistoriaNueva {
             codigo_historia: None,
             paciente_id,
-            medico_id: 5,
+            medico_id,
             cita_id: None,
             acomp_nombre: None, acomp_parentesco: None, acomp_telefono: None, acomp_documento: None,
             motivo_consulta: "Dolor".into(),
@@ -579,6 +590,38 @@ mod pruebas {
         assert_eq!(listar_por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 1);
     }
 
+    /// **El hallazgo de la security-review del 2026-07-30.** El paciente se
+    /// validaba contra el ámbito y el MÉDICO no: `medico_id` llegaba en el cuerpo
+    /// y se ataba al INSERT con la sola clave foránea a `usuario(id)`, que abarca
+    /// todas las instituciones del despliegue.
+    ///
+    /// Lo grave no era leer: era que la historia se cierra con `firmar`, que pone
+    /// una firma criptográfica sobre un contenido que NOMBRA al profesional. Una
+    /// institución podía dejar firmado un acto clínico a nombre de un médico de
+    /// otra — que no puede verlo ni negarlo.
+    #[tokio::test]
+    async fn no_se_atribuye_una_historia_a_un_medico_ajeno() {
+        let pool = base().await;
+        // Paciente propio (10, de la 1) y médico de la OTRA institución (6).
+        assert!(
+            crear(&pool, Ambito::institucion(1), &nueva_con(10, 6)).await.unwrap().is_none(),
+            "se creó una historia a nombre de un médico de otra institución"
+        );
+        // Y con el suyo, sí.
+        assert!(crear(&pool, Ambito::institucion(1), &nueva_con(10, 5)).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn no_se_atribuye_a_un_medico_dado_de_baja_ni_a_uno_inexistente() {
+        let pool = base().await;
+        // El 7 es de la institución 1 pero está inactivo: crear un registro nuevo
+        // a nombre de quien ya no ejerce no es un caso legítimo de nadie.
+        assert!(crear(&pool, Ambito::institucion(1), &nueva_con(10, 7)).await.unwrap().is_none());
+        // Y un id que no existe da lo MISMO que uno ajeno, no un error distinto:
+        // si se distinguieran, esto sería un oráculo de qué ids existen.
+        assert!(crear(&pool, Ambito::institucion(1), &nueva_con(10, 9999)).await.unwrap().is_none());
+    }
+
     /// No se crea ni se ve la historia de un paciente de otra institución.
     #[tokio::test]
     async fn el_paciente_ajeno_no_deja_crear_ni_ver() {
@@ -586,7 +629,7 @@ mod pruebas {
         // La 1 no puede crear una historia para el paciente 20 (de la 2).
         assert!(crear(&pool, Ambito::institucion(1), &nueva(20)).await.unwrap().is_none());
         // Creada por la 2, la 1 no la ve.
-        let id = crear(&pool, Ambito::institucion(2), &nueva(20)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(2), &nueva_con(20, 6)).await.unwrap().unwrap();
         assert!(obtener(&pool, Ambito::institucion(1), id).await.unwrap().is_none());
         assert!(listar_por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().is_empty());
     }
@@ -622,7 +665,7 @@ mod pruebas {
     #[tokio::test]
     async fn la_historia_ajena_no_se_edita_ni_se_borra() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(2), &nueva(20)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(2), &nueva_con(20, 6)).await.unwrap().unwrap();
         assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &nueva(20)).await.unwrap(), Resultado::NoExiste);
         assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::NoExiste);
         // Y sigue existiendo para su dueña.
@@ -646,7 +689,7 @@ mod pruebas {
     #[tokio::test]
     async fn no_se_firma_ni_se_borra_la_ajena() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(2), &nueva(20)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(2), &nueva_con(20, 6)).await.unwrap().unwrap();
         assert!(!firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
         assert!(obtener(&pool, Ambito::institucion(2), id).await.unwrap().is_some());
     }

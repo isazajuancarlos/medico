@@ -61,7 +61,7 @@ const CAMPOS: &str = "h.id AS historia_id, h.codigo_historia, h.fecha AS fecha_c
     CASE WHEN h.dias_incapacidad >= 1 THEN h.dias_incapacidad ELSE 0 END AS dias, \
     CASE WHEN h.dias_incapacidad >= 1 THEN date(h.fecha) ELSE NULL END AS fecha_inicio, \
     CASE WHEN h.dias_incapacidad >= 1 THEN date(h.fecha, '+' || (h.dias_incapacidad - 1) || ' days') ELSE NULL END AS fecha_fin, \
-    h.diagnostico_principal AS diagnostico, u.nombre AS medico";
+    h.diagnostico_principal AS diagnostico, COALESCE(u.nombre, '') AS medico";
 
 fn where_filtros(ambito: Ambito, f: &Filtros) -> Option<(String, Vec<String>, Option<i64>)> {
     // (cláusula, binds de texto en orden, institucion opcional)
@@ -108,7 +108,7 @@ pub async fn listar(
     };
     let sql = format!(
         "SELECT {CAMPOS} FROM historia h JOIN paciente p ON p.id = h.paciente_id \
-         JOIN usuario u ON u.id = h.medico_id{clausula} ORDER BY h.fecha DESC"
+         LEFT JOIN usuario u ON u.id = h.medico_id AND u.institucion_id = p.institucion_id{clausula} ORDER BY h.fecha DESC"
     );
     let mut q = sqlx::query_as::<_, Incapacidad>(&sql);
     for t in &textos {
@@ -165,7 +165,8 @@ pub async fn detalle(
     let sql = format!(
         "SELECT {CAMPOS}, h.motivo_consulta, h.diagnostico_relacionado1 AS diagnostico_relacionado, \
          h.plan_tratamiento AS observaciones \
-         FROM historia h JOIN paciente p ON p.id = h.paciente_id JOIN usuario u ON u.id = h.medico_id \
+         FROM historia h JOIN paciente p ON p.id = h.paciente_id \
+         LEFT JOIN usuario u ON u.id = h.medico_id AND u.institucion_id = p.institucion_id \
          WHERE h.id = ? AND h.genera_incapacidad = 1 AND {inst}"
     );
     let mut q = sqlx::query_as::<_, Detalle>(&sql).bind(historia_id);
