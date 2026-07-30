@@ -13,9 +13,15 @@ use axum::{
 };
 use rust_embed::Embed;
 
-/// El resultado de `ng build`, copiado a `estaticos/` al empaquetar. La carpeta
-/// lleva un `.gitkeep` para que el binario compile en una copia limpia aunque
-/// nadie haya construido la interfaz todavía (el CI de Rust no la construye).
+/// El resultado de `ng build`, copiado a `estaticos/` por `construir.sh`. La
+/// carpeta lleva un `.gitkeep` para que el binario compile en una copia limpia
+/// aunque nadie haya construido la interfaz todavía (el CI de Rust no la
+/// construye, y corre en *debug*).
+///
+/// En *release* eso ya no puede ocurrir por descuido: `build.rs` rompe la
+/// compilación si falta `estaticos/index.html`. El 404 de abajo queda como red
+/// para el binario de *debug* y para el que se pidió a propósito con
+/// `MEDICO_SIN_INTERFAZ=1`.
 #[derive(Embed)]
 #[folder = "estaticos/"]
 struct Interfaz;
@@ -40,9 +46,8 @@ pub async fn servir(uri: Uri) -> Response {
         Some(index) => ([(header::CONTENT_TYPE, "text/html")], index.data).into_response(),
         None => (
             StatusCode::NOT_FOUND,
-            "La interfaz no está empaquetada en este binario. Construya con \
-             `ng build` en frontend/ y copie frontend/dist/frontend/browser/ a \
-             crates/medico-api/estaticos/.",
+            "La interfaz no está empaquetada en este binario. Construya el \
+             artefacto completo con `./construir.sh` en la raíz del repositorio.",
         )
             .into_response(),
     }
