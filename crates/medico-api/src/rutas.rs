@@ -459,7 +459,9 @@ async fn crear_historia(
     Autenticado(u): Autenticado,
     Json(h): Json<HistoriaNueva>,
 ) -> Response {
-    match historia::crear(&e.pool, u.ambito(), &h).await {
+    // Quién registra sale de la SESIÓN. El cuerpo dice a quién se ATRIBUYE
+    // (`medico_id`, ya validado contra la institución); quién teclea, no.
+    match historia::crear(&e.pool, u.ambito(), u.id, &h).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -536,9 +538,17 @@ async fn firmar_historia(
     Autenticado(u): Autenticado,
     Path(id): Path<i64>,
 ) -> StatusCode {
-    match historia::firmar(&e.pool, u.ambito(), id, e.clave_firma.as_deref()).await {
-        Ok(true) => StatusCode::NO_CONTENT,
-        Ok(false) => StatusCode::NOT_FOUND,
+    match historia::firmar(&e.pool, u.ambito(), id, u.id, e.clave_firma.as_deref()).await {
+        Ok(historia::ResultadoFirma::Firmada) => StatusCode::NO_CONTENT,
+        Ok(historia::ResultadoFirma::NoSePudo) => StatusCode::NOT_FOUND,
+        // Hay clave configurada y no sirve: es un fallo del DESPLIEGUE, no de la
+        // petición, y no se disfraza de 404. Antes esto marcaba la historia como
+        // firmada con `firma = NULL` y devolvía 204: una historia que afirmaba
+        // estar firmada sin estarlo.
+        Ok(historia::ResultadoFirma::ClaveInservible) => {
+            eprintln!("⚠️  MEDICO_SIGNING_KEY no sirve: la historia {id} NO se firmó");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
