@@ -7,6 +7,7 @@ mod estaticos;
 mod maestros;
 mod rutas;
 mod sesion;
+mod tipos;
 
 use std::process::ExitCode;
 

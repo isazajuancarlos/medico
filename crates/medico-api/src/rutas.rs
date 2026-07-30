@@ -35,6 +35,37 @@ use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 /// de sobra; por encima es casi seguro un error o un abuso.
 const MAX_SUBIDA: usize = 25 * 1024 * 1024;
 
+/// Cabeceras que van en TODA respuesta.
+///
+/// Es el respaldo sistémico que no había: `grep nosniff` sobre el repositorio no
+/// devolvía nada, así que la única defensa contra que el navegador reinterprete
+/// un tipo era que el tipo estuviera bien — y no lo estaba.
+///
+/// **Aquí van solo las que no pueden romper la interfaz.** Una CSP completa para
+/// la aplicación necesita probarse contra el Angular compilado (estilos en línea,
+/// trabajadores, fuentes) y no se pone a ciegas: una CSP que rompe la aplicación
+/// es peor que ninguna, porque la siguiente reacción es quitarla entera. La CSP
+/// estricta SÍ va, y máxima, en la respuesta que sirve archivos subidos — que es
+/// donde están los bytes de un tercero.
+async fn cabeceras_de_seguridad(
+    peticion: axum::extract::Request,
+    siguiente: axum::middleware::Next,
+) -> Response {
+    let mut r = siguiente.run(peticion).await;
+    let h = r.headers_mut();
+    // No reinterpretes el tipo que declaro.
+    h.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
+    // Nadie enmarca esta aplicación: sin esto, un sitio ajeno puede ponerla en un
+    // iframe y engañar a quien la usa para que pulse donde no cree.
+    h.insert(header::X_FRAME_OPTIONS, header::HeaderValue::from_static("DENY"));
+    // Y la ruta de una historia clínica no viaja como `Referer` a terceros.
+    h.insert(
+        header::REFERRER_POLICY,
+        header::HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    r
+}
+
 pub fn router(estado: Estado) -> Router {
     Router::new()
         .route("/api/acceso", post(acceso))
@@ -130,6 +161,9 @@ pub fn router(estado: Estado) -> Router {
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
         // los archivos del build y, para las rutas del SPA, el index.html.
         .fallback(crate::estaticos::servir)
+        // Después de `fallback` y antes de `with_state`: así cubre TODAS las
+        // respuestas, incluidas las de la interfaz y las de una ruta que no existe.
+        .layer(axum::middleware::from_fn(cabeceras_de_seguridad))
         .with_state(estado)
 }
 
@@ -1328,9 +1362,15 @@ async fn listar_imagenes(
 }
 
 /// Sube un archivo a una historia. Espera un `multipart/form-data` con el campo
-/// `archivo` (el binario) y, opcional, `descripcion`. El mime y el tamaño los
-/// mide el servidor sobre los bytes recibidos; el nombre y el tipo que declara
-/// el cliente no deciden dónde se guarda —la ruta la fija el id de la fila—.
+/// `archivo` (el binario) y, opcional, `descripcion`.
+///
+/// **El tipo lo decide el SERVIDOR mirando los bytes** (`tipos::tipo_real`), no
+/// el `Content-Type` que declara el cliente. Antes esta frase estaba escrita y no
+/// era cierta: el mime venía del cliente y se admitía cualquier cosa que empezara
+/// por `image/` — incluido `image/svg+xml`, que es un documento con guiones y se
+/// devolvía «en línea» desde el mismo origen que la aplicación. El nombre y el
+/// tipo que declara el cliente no deciden nada: ni el contenido, ni dónde se
+/// guarda —la ruta la fija el id de la fila—.
 async fn subir_imagen(
     State(e): State<Estado>,
     Autenticado(u): Autenticado,
@@ -1369,16 +1409,19 @@ async fn subir_imagen(
     if bytes.is_empty() {
         return StatusCode::BAD_REQUEST.into_response();
     }
-    // Solo imágenes y PDF: es una imagen diagnóstica, no un buzón de archivos.
-    if !(mime.starts_with("image/") || mime == "application/pdf") {
+    // El tipo, de los BYTES. Lo que el cliente declaró se descarta aquí mismo: no
+    // se compara siquiera con lo olfateado, porque no aporta nada — si coincide
+    // no añade garantía y si discrepa la buena es la nuestra.
+    let Some(tipo) = crate::tipos::tipo_real(&bytes) else {
         return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
-    }
+    };
+    let _ = mime;
 
     // `tamano_bytes` es el tamaño del ORIGINAL (lo que ve el usuario), no del
     // blob cifrado. Con clave de reposo el archivo va cifrado al disco.
     let meta = ImagenNueva {
         nombre_original: nombre,
-        tipo_mime: mime,
+        tipo_mime: tipo.to_string(),
         tamano_bytes: bytes.len() as i64,
         descripcion,
     };
@@ -1437,14 +1480,34 @@ async fn servir_imagen(
     } else {
         crudo
     };
+    // El tipo se vuelve a olfatear sobre los bytes que se van a servir, y NO se
+    // usa `img.tipo_mime`. Dos razones: las filas guardadas antes de esta
+    // corrección llevan el tipo que declaró el cliente, y confiar en un valor de
+    // la base porque «lo validamos al entrar» es confiar en la validación de una
+    // versión anterior del código.
+    let tipo = crate::tipos::tipo_real(&bytes).unwrap_or("application/octet-stream");
+    // Lo que el navegador no pinta se descarga. `inline` sobre algo que no
+    // reconoce es invitarle a adivinar qué es.
+    let modo = if crate::tipos::se_puede_mostrar(tipo) { "inline" } else { "attachment" };
     // El nombre para descargar se limpia: un nombre de archivo del usuario podría
     // llevar comillas o saltos de línea y romper la cabecera.
-    let disp = format!("inline; filename=\"{}\"", nombre_seguro(&img.nombre_original));
+    let disp = format!("{modo}; filename=\"{}\"", nombre_seguro(&img.nombre_original));
     (
         StatusCode::OK,
         [
-            (header::CONTENT_TYPE, img.tipo_mime),
+            (header::CONTENT_TYPE, tipo.to_string()),
             (header::CONTENT_DISPOSITION, disp),
+            // `nosniff` para que el navegador no reinterprete el tipo que acabamos
+            // de decidir, y una CSP que apaga TODO en esta respuesta: si algún día
+            // algo con guiones consiguiera llegar hasta aquí, no tendría de dónde
+            // cargar ni a dónde hablar. Va en esta respuesta y no en el router
+            // porque aquí puede ser máxima sin romper nada — la interfaz nunca
+            // sale por este extremo.
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
+            (
+                header::CONTENT_SECURITY_POLICY,
+                "default-src 'none'; sandbox; base-uri 'none'; form-action 'none'".to_string(),
+            ),
         ],
         bytes,
     )
@@ -1903,6 +1966,112 @@ mod pruebas {
             StatusCode::OK,
             "la dueña de la cuenta quedó fuera por culpa de otro"
         );
+    }
+
+    /// Un multipart mínimo con un archivo, hecho a mano para poder mentir en el
+    /// `Content-Type` de la parte — que es exactamente lo que hace el atacante.
+    fn multipart(nombre: &str, tipo: &str, bytes: &[u8]) -> (String, Vec<u8>) {
+        let sep = "----frontera-de-prueba";
+        let mut cuerpo = Vec::new();
+        cuerpo.extend_from_slice(
+            format!(
+                "--{sep}\r\nContent-Disposition: form-data; name=\"archivo\"; \
+                 filename=\"{nombre}\"\r\nContent-Type: {tipo}\r\n\r\n"
+            )
+            .as_bytes(),
+        );
+        cuerpo.extend_from_slice(bytes);
+        cuerpo.extend_from_slice(format!("\r\n--{sep}--\r\n").as_bytes());
+        (format!("multipart/form-data; boundary={sep}"), cuerpo)
+    }
+
+    async fn subir(estado: &Estado, cookie: &str, tipo: &str, bytes: &[u8]) -> StatusCode {
+        let (ct, cuerpo) = multipart("radiografia.svg", tipo, bytes);
+        router(estado.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/historias/1/imagenes")
+                    .header("content-type", ct)
+                    .header(header::COOKIE, cookie)
+                    .body(Body::from(cuerpo))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .status()
+    }
+
+    /// **El hallazgo HIGH de la revisión del 2026-07-30.** Un SVG declarado como
+    /// `image/svg+xml` pasaba la comprobación —empieza por `image/`— y se
+    /// devolvía «en línea» desde el mismo origen que la aplicación: guion
+    /// ejecutándose con la sesión de quien abriera el adjunto.
+    ///
+    /// La prueba va en la RUTA y no en el olfateador: el control es el cableado,
+    /// y el módulo puede estar perfecto mientras el handler no lo llama.
+    #[tokio::test]
+    async fn un_svg_no_entra_por_mucho_que_el_cliente_lo_llame_imagen() {
+        let e = estado_de_prueba(false).await;
+        let cookie = {
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/acceso")
+                        .header("content-type", "application/json")
+                        .body(Body::from(r#"{"email":"ruiz@x.co","clave":"clave123"}"#))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let c = r.headers().get(header::SET_COOKIE).unwrap().to_str().unwrap();
+            c.split(';').next().unwrap().to_string()
+        };
+
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>"#;
+        assert_eq!(
+            subir(&e, &cookie, "image/svg+xml", svg).await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "un SVG entró declarándose imagen"
+        );
+        // Y tampoco disfrazado de PNG: el tipo sale de los bytes, no del nombre
+        // ni de lo declarado.
+        assert_eq!(
+            subir(&e, &cookie, "image/png", svg).await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "un SVG entró disfrazado de PNG"
+        );
+        assert_eq!(
+            subir(&e, &cookie, "image/png", b"<html><script>alert(1)</script>").await,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "un HTML entró disfrazado de PNG"
+        );
+    }
+
+    /// Toda respuesta lleva las cabeceras que impiden reinterpretarla. Antes
+    /// `grep nosniff` sobre el repositorio no devolvía nada.
+    #[tokio::test]
+    async fn toda_respuesta_lleva_las_cabeceras_de_seguridad() {
+        let e = estado_de_prueba(false).await;
+        // Incluso una ruta que falla y una que no existe: si las cabeceras
+        // dependieran del camino feliz, no serían un respaldo sistémico.
+        for uri in ["/api/acceso", "/api/no-existe", "/"] {
+            let r = router(e.clone())
+                .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            let h = r.headers();
+            assert_eq!(
+                h.get(header::X_CONTENT_TYPE_OPTIONS).map(|v| v.to_str().unwrap()),
+                Some("nosniff"),
+                "«{uri}» salió sin nosniff"
+            );
+            assert_eq!(
+                h.get(header::X_FRAME_OPTIONS).map(|v| v.to_str().unwrap()),
+                Some("DENY"),
+                "«{uri}» se puede enmarcar"
+            );
+        }
     }
 
     #[test]
