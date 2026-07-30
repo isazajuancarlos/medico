@@ -24,11 +24,28 @@ pub struct Estado {
     pub clave_verificacion: Option<String>,
     /// Frase para cifrar en reposo los archivos. `None` = se guardan en claro.
     pub clave_reposo: Option<String>,
+    /// El despliegue AFIRMA estar detrás de un proxy inverso. Solo entonces se
+    /// cree `X-Forwarded-For` para identificar el origen de un intento de acceso:
+    /// esa cabecera la escribe quien llama, y creerla sin proxy convierte el
+    /// freno en un adorno que se salta cambiando un número.
+    pub tras_proxy: bool,
 }
 
 /// El login. Devuelve el valor de la cookie de sesión, o `None`. **Mismo
 /// resultado para «no existe», «inactivo» y «clave incorrecta»**: distinguirlos
 /// le diría a quien prueba qué correos existen.
+///
+/// # Y mismo TIEMPO, que es la mitad que faltaba
+///
+/// El mensaje era el mismo desde el principio; la duración no. Con un correo
+/// inexistente esto respondía en cuanto la consulta volvía vacía, mientras que
+/// con uno real gastaba los ~100 ms de Argon2. Esa diferencia es medible desde
+/// fuera con un `curl` en un bucle, así que la promesa de arriba se cumplía en
+/// la letra y se incumplía en la práctica: quien probara mil correos sabría
+/// cuáles existen.
+///
+/// Por eso, cuando no hay usuario o está inactivo, se verifica igualmente contra
+/// un hash de descarte. El trabajo se hace y se tira.
 pub async fn autenticar(
     pool: &medico_datos::Pool,
     secreto: &[u8],
@@ -36,14 +53,22 @@ pub async fn autenticar(
     email: &str,
     clave: &str,
 ) -> Option<String> {
-    let usuario = usuario::por_email(pool, email).await.ok().flatten()?;
-    if !usuario.activo {
-        return None;
+    let encontrado = usuario::por_email(pool, email).await.ok().flatten();
+
+    // El `Option` se resuelve ANTES de verificar, y las dos ramas verifican. Con
+    // un `?` aquí volveríamos a tener dos caminos de duración distinta.
+    let hash = match &encontrado {
+        Some(u) if u.activo => u.password_hash.clone(),
+        _ => claves::hash_de_descarte().to_string(),
+    };
+    let coincide = claves::verificar(clave, &hash);
+
+    match encontrado {
+        Some(u) if u.activo && coincide => {
+            Some(sesion::emitir(secreto, u.id, u.token_version, minutos))
+        }
+        _ => None,
     }
-    if !claves::verificar(clave, &usuario.password_hash) {
-        return None;
-    }
-    Some(sesion::emitir(secreto, usuario.id, usuario.token_version, minutos))
 }
 
 /// El usuario de una petición, a partir de sus cabeceras. Relee el usuario de la
@@ -133,7 +158,7 @@ mod pruebas {
     #[tokio::test]
     async fn usuario_de_una_cookie_valida_es_el_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
         let cookie = sesion::emitir(SECRETO, 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={cookie}").parse().unwrap());
@@ -144,7 +169,7 @@ mod pruebas {
     #[tokio::test]
     async fn sin_cookie_no_hay_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
         assert!(usuario_de(&estado, &HeaderMap::new()).await.is_none());
     }
 
@@ -153,7 +178,7 @@ mod pruebas {
     #[tokio::test]
     async fn una_cookie_de_otro_secreto_no_entra() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
         let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={ajena}").parse().unwrap());
@@ -169,6 +194,7 @@ mod pruebas {
             clave_firma: None,
             clave_verificacion: None,
             clave_reposo: None,
+            tras_proxy: false,
         }
     }
 

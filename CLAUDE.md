@@ -80,6 +80,24 @@ rancio: fija el orden Angular → copia → cargo.
 
 El CI corre clippy y test en perfil **debug**, así que el guardián no dispara ahí.
 
+**Freno al ensayo de contraseñas** (`medico_datos::freno`, siempre activo): cinco
+fallos seguidos del mismo origen contra el mismo correo se responden normal; a
+partir de ahí el intento siguiente recibe **429 con `Retry-After`**, empezando en
+15 s, doblando y topando en 5 minutos. Es un freno, **no un bloqueo**: se agota
+solo y nadie desbloquea a nadie — un bloqueo convierte cinco peticiones de un
+desconocido en una historia clínica inaccesible de madrugada.
+
+La clave es **(correo, origen)** y no solo el correo, para que quien insiste se
+frene a sí mismo en vez de dejar fuera al dueño de la cuenta. Un correo que no
+existe se frena igual: si solo se frenaran las cuentas reales, recibir el 429
+diría qué correos existen. `X-Forwarded-For` **solo** se lee con
+`MEDICO_TRAS_PROXY=true`, porque esa cabecera la escribe quien llama y creerla
+sin proxy deja el freno inservible.
+
+Y `autenticar` verifica contra un **hash de descarte** cuando el usuario no
+existe o está inactivo: sin eso respondía al instante con un correo falso y tras
+~100 ms con uno real, y esa diferencia se mide con un bucle de `curl`.
+
 Para arrancarlo hace falta `SECRET_KEY` (≥ 32 bytes, sin valores conocidos) y
 `DATABASE_URL`; el binario **no arranca sin secreto**, a propósito. Y abre la base
 relativa a su directorio de trabajo: arrancarlo desde otro sitio crea una base

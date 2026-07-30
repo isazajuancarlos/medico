@@ -1138,6 +1138,7 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
+ "tower",
 ]
 
 [[package]]
