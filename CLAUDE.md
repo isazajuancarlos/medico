@@ -20,6 +20,9 @@ El eje del trabajo actual es la **cadena RIPS → FEV-RIPS → MUV**: producir e
 de la Resolución 948 de 2026 y que el Mecanismo Único de Validación de MinSalud lo
 acepte y devuelva CUV. Ver [La cadena RIPS](#la-cadena-rips--fev-rips--muv).
 
+**Y hay un port a Rust en curso, que este archivo no describía.** Ver
+[El workspace Rust](#el-workspace-rust).
+
 ## Comandos
 
 ```bash
@@ -53,6 +56,40 @@ python reset_db.py && python seed.py             # PELIGRO: borra todo
 **Nunca canalizar `pytest` a `tail`/`head` sin `set -o pipefail`**: el código de
 salida se pierde y un fallo se lee como verde. Un hook global lo bloquea. Redirigir
 a archivo y comprobar `$?` es la forma limpia.
+
+## El workspace Rust
+
+Tres crates —`medico-dominio`, `medico-datos`, `medico-api`— con axum y SQLx sobre
+SQLite, y la interfaz Angular **empotrada en el binario** con `rust-embed`. Es el
+mismo modelo que informes: se entrega **un archivo**.
+
+```bash
+./construir.sh                    # interfaz → empotrado → binario. EL comando.
+cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
+cargo test  --workspace --all-targets                   # 144 pruebas
+```
+
+**`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
+empotra lo que haya en `crates/medico-api/estaticos/`, cuyo contenido está en
+`.gitignore`: en un clon limpio la carpeta está vacía, y el binario salía
+sirviendo la API con un 404 en la raíz **sin avisar**. Desde entonces
+`crates/medico-api/build.rs` rompe el release si falta `estaticos/index.html`; si
+de verdad se quiere un binario sin interfaz hay que pedirlo con
+`MEDICO_SIN_INTERFAZ=1`. `construir.sh` cubre el otro fallo, el del binario
+rancio: fija el orden Angular → copia → cargo.
+
+El CI corre clippy y test en perfil **debug**, así que el guardián no dispara ahí.
+
+Para arrancarlo hace falta `SECRET_KEY` (≥ 32 bytes, sin valores conocidos) y
+`DATABASE_URL`; el binario **no arranca sin secreto**, a propósito. Y abre la base
+relativa a su directorio de trabajo: arrancarlo desde otro sitio crea una base
+vacía y el acceso responde «credenciales incorrectas», que es indistinguible de
+«esta base no tiene a nadie». Ya costó una tarde.
+
+**Lo que el port todavía NO cubre**, para no confundir avance con paridad:
+FEV-RIPS no existe en Rust, y el ADR no autoriza apagar Python hasta que sea byte
+a byte idéntico al de Python. Las ramas Rust viven en `feat/cie11-mapeo-oms`;
+`main` y `master` siguen siendo el sistema Python, que es el producto vivo.
 
 ### Entorno
 
