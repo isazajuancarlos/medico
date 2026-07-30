@@ -369,8 +369,9 @@ async fn registrar_acceso(
         institucion_id: u.institucion_id,
         accion: accion.to_string(),
         recurso: recurso.to_string(),
-        recurso_id,
-        paciente_id,
+        recurso_id: Some(recurso_id),
+        paciente_id: Some(paciente_id),
+        alcance: None,
         ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     };
     if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {

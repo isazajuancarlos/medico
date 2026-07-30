@@ -21,25 +21,81 @@ use serde_json::Value;
 
 /// Un acceso que se va a registrar. `ts` en UTC (RFC 3339); el llamante lo pone
 /// para no atar el módulo al reloj.
+///
+/// El **objeto** del acceso tiene dos formas y nunca se mezclan (directiva #20:
+/// no se rellena el que no aplica con un valor falso):
+/// - **recurso único** (ver/editar una historia, un documento, una imagen):
+///   lleva `paciente_id = Some` y `recurso_id = Some`, con `alcance = None`.
+/// - **colección** (un listado o una exportación): lleva `alcance = Some`, con
+///   `paciente_id = None` y `recurso_id = None` — no hay UN paciente ni UN id.
+///
+/// Un evento de recurso único NO inserta la clave `alcance`, así que su contenido
+/// canónico es byte a byte el mismo de antes de existir las colecciones: las
+/// cadenas ya selladas siguen verificando.
 #[derive(Debug, Clone)]
 pub struct Evento {
     pub usuario_id: i64,
     pub rol: String,
     /// Institución del usuario, o `None` para el superadmin.
     pub institucion_id: Option<i64>,
-    /// `ver`, `editar`, `exportar`, `imprimir`…
+    /// `ver`, `editar`, `exportar`, `imprimir`, `listar`…
     pub accion: String,
-    /// `historia`, `documento`, `imagen`, `paciente`…
+    /// `historia`, `documento`, `imagen`, `paciente`, `pacientes`…
     pub recurso: String,
-    pub recurso_id: i64,
+    /// Id del recurso único; `None` en una colección (no hay uno solo).
+    pub recurso_id: Option<i64>,
     /// El paciente cuyo dato se tocó — la clave del rastro de la Ley 1581.
-    pub paciente_id: i64,
+    /// `None` en una colección (el conjunto va en `alcance`).
+    pub paciente_id: Option<i64>,
+    /// El alcance de una colección (listado o exportación); `None` en un recurso
+    /// único.
+    pub alcance: Option<Alcance>,
     pub ts: String,
 }
 
+/// El alcance de un acceso a una **colección**. Un **listado** guarda a qué
+/// ámbito se consultó, con qué filtro y cuántos resultados devolvió — pero NO los
+/// ids: ver un nombre en una lista filtrada no es acceder al expediente, y
+/// abanicar un eslabón por fila ahogaría la cadena. Una **exportación** guarda
+/// ADEMÁS los `pacientes` que sacó, porque el dato salió y el titular tiene
+/// derecho a saber si el suyo se exportó (Ley 1581); `por_paciente` los casa.
+#[derive(Debug, Clone)]
+pub struct Alcance {
+    /// Descripción del ámbito consultado, p. ej. `"institucion:1"` o `"superadmin"`.
+    pub ambito: String,
+    /// El filtro/búsqueda aplicado, si hubo.
+    pub filtro: Option<String>,
+    /// Cuántos resultados devolvió el acceso.
+    pub n: i64,
+    /// Los pacientes que el acceso cubrió — SOLO en una exportación (el dato
+    /// salió); vacío en un listado.
+    pub pacientes: Vec<i64>,
+}
+
+impl Alcance {
+    /// El objeto canónico anidado. Se construye con `serde_json::Map` (que sin
+    /// `preserve_order` es un `BTreeMap`: claves ordenadas → determinista).
+    fn a_valor(&self) -> Value {
+        let mut m = serde_json::Map::new();
+        m.insert("ambito".into(), Value::from(self.ambito.clone()));
+        m.insert(
+            "filtro".into(),
+            self.filtro.clone().map_or(Value::Null, Value::from),
+        );
+        m.insert("n".into(), Value::from(self.n));
+        m.insert("pacientes".into(), Value::from(self.pacientes.clone()));
+        Value::Object(m)
+    }
+}
+
 /// El contenido canónico que se hashea y firma. Única fuente: registrar y
-/// verificar lo construyen igual, o el hash no cuadraría.
+/// verificar lo construyen igual, o el hash no cuadraría. La clave `alcance` solo
+/// aparece en una colección — un recurso único produce el contenido de siempre.
 fn contenido_de(e: &Evento) -> BTreeMap<String, Value> {
+    debug_assert!(
+        e.paciente_id.is_some() != e.alcance.is_some(),
+        "un evento es de recurso único (paciente_id) O de colección (alcance), nunca ambos ni ninguno",
+    );
     let mut m = BTreeMap::new();
     m.insert("v".into(), Value::from(1));
     m.insert("usuario_id".into(), Value::from(e.usuario_id));
@@ -50,8 +106,17 @@ fn contenido_de(e: &Evento) -> BTreeMap<String, Value> {
     );
     m.insert("accion".into(), Value::from(e.accion.clone()));
     m.insert("recurso".into(), Value::from(e.recurso.clone()));
-    m.insert("recurso_id".into(), Value::from(e.recurso_id));
-    m.insert("paciente_id".into(), Value::from(e.paciente_id));
+    m.insert(
+        "recurso_id".into(),
+        e.recurso_id.map_or(Value::Null, Value::from),
+    );
+    m.insert(
+        "paciente_id".into(),
+        e.paciente_id.map_or(Value::Null, Value::from),
+    );
+    if let Some(a) = &e.alcance {
+        m.insert("alcance".into(), a.a_valor());
+    }
     m.insert("ts".into(), Value::from(e.ts.clone()));
     m
 }
@@ -214,9 +279,20 @@ pub async fn por_paciente(
     if !paciente_es_del_ambito(pool, ambito, paciente_id).await? {
         return Ok(Vec::new());
     }
+    // El rastro incluye DOS maneras de haber tocado al paciente: el acceso a un
+    // recurso suyo (`paciente_id`) y la exportación que lo cubrió (su id dentro de
+    // `alcance.pacientes`). Un listado no lo incluye — no guarda ids. El coalesce
+    // a '[]' evita que `json_each` falle en los eventos sin alcance.
     let filas: Vec<(String,)> = sqlx::query_as(
-        "SELECT contenido FROM acceso WHERE json_extract(contenido, '$.paciente_id') = ? ORDER BY secuencia ASC",
+        "SELECT contenido FROM acceso \
+         WHERE json_extract(contenido, '$.paciente_id') = ? \
+            OR EXISTS ( \
+                 SELECT 1 FROM json_each(coalesce(json_extract(contenido, '$.alcance.pacientes'), '[]')) \
+                 WHERE value = ? \
+               ) \
+         ORDER BY secuencia ASC",
     )
+    .bind(paciente_id)
     .bind(paciente_id)
     .fetch_all(pool)
     .await?;
@@ -249,8 +325,29 @@ mod pruebas {
             institucion_id: Some(1),
             accion: accion.into(),
             recurso: "historia".into(),
-            recurso_id: paciente,
-            paciente_id: paciente,
+            recurso_id: Some(paciente),
+            paciente_id: Some(paciente),
+            alcance: None,
+            ts: "2026-07-29T17:00:00Z".into(),
+        }
+    }
+
+    /// Un acceso a una COLECCIÓN. `pacientes` vacío = listado; con ids = export.
+    fn coleccion(usuario: i64, accion: &str, recurso: &str, n: i64, pacientes: Vec<i64>) -> Evento {
+        Evento {
+            usuario_id: usuario,
+            rol: "medico".into(),
+            institucion_id: Some(1),
+            accion: accion.into(),
+            recurso: recurso.into(),
+            recurso_id: None,
+            paciente_id: None,
+            alcance: Some(Alcance {
+                ambito: "institucion:1".into(),
+                filtro: Some("apellido=Ruiz".into()),
+                n,
+                pacientes,
+            }),
             ts: "2026-07-29T17:00:00Z".into(),
         }
     }
@@ -359,6 +456,71 @@ mod pruebas {
         registrar(&pool, &evento(2, 10, "editar"), Some(&sk)).await.unwrap();
         assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 2);
         assert_eq!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().len(), 1);
+    }
+
+    /// Un LISTADO no ensucia el rastro individual: se registra como colección
+    /// (sin ids) y no aparece en `por_paciente` de nadie, aunque los haya visto en
+    /// la lista. Solo el acceso directo al expediente cuenta como rastro del titular.
+    #[tokio::test]
+    async fn un_listado_no_ensucia_el_rastro_individual() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        let (_, sk) = guaca::firma::generar_claves();
+        // El usuario lista pacientes (5 resultados) y luego abre el expediente de uno.
+        registrar(&pool, &coleccion(2, "listar", "pacientes", 5, vec![]), Some(&sk)).await.unwrap();
+        registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        // El rastro del paciente 10 trae SOLO el acceso directo, no el listado.
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 1, "el listado no debe aparecer en el rastro individual");
+        assert!(rastro[0].contains("\"accion\":\"ver\""));
+    }
+
+    /// Una EXPORTACIÓN sí aparece en el rastro de CADA paciente que cubrió — el
+    /// dato salió y el titular tiene derecho a saberlo (Ley 1581) — y NO en el de
+    /// quien no cubrió. Prueba que discrimina (directiva #8).
+    #[tokio::test]
+    async fn una_exportacion_aparece_en_el_rastro_de_cada_afectado() {
+        let pool = base().await;
+        for p in [10, 20, 30] {
+            sembrar_paciente(&pool, p, 1).await;
+        }
+        let (_, sk) = guaca::firma::generar_claves();
+        // Se exportan 10 y 20 (no 30).
+        registrar(&pool, &coleccion(2, "exportar", "rips", 2, vec![10, 20]), Some(&sk)).await.unwrap();
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 1);
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().len(), 1);
+        // 30 no se exportó: su rastro está vacío.
+        assert!(por_paciente(&pool, Ambito::institucion(1), 30).await.unwrap().is_empty());
+        // Y el export solo lo ve el ámbito dueño.
+        assert!(por_paciente(&pool, Ambito::institucion(2), 10).await.unwrap().is_empty());
+    }
+
+    /// El contenido de un recurso único no lleva la clave `alcance` y su
+    /// `paciente_id` es un número — la forma canónica de siempre, para que las
+    /// cadenas ya selladas antes de existir las colecciones sigan verificando.
+    #[tokio::test]
+    async fn el_recurso_unico_conserva_su_forma_canonica() {
+        let pool = base().await;
+        registrar(&pool, &evento(2, 10, "ver"), None).await.unwrap();
+        let (cont,): (String,) =
+            sqlx::query_as("SELECT contenido FROM acceso WHERE secuencia = 0")
+                .fetch_one(&pool).await.unwrap();
+        let v: Value = serde_json::from_str(&cont).unwrap();
+        assert!(v.get("alcance").is_none(), "un recurso único no debe insertar 'alcance'");
+        assert_eq!(v.get("paciente_id"), Some(&Value::from(10)));
+        assert_eq!(v.get("recurso_id"), Some(&Value::from(10)));
+    }
+
+    /// Una cadena que MEZCLA recurso único, listado y exportación verifica entera:
+    /// las tres formas conviven bajo el mismo sellado.
+    #[tokio::test]
+    async fn una_cadena_mixta_verifica() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        registrar(&pool, &coleccion(2, "listar", "pacientes", 5, vec![]), Some(&sk)).await.unwrap();
+        registrar(&pool, &coleccion(2, "exportar", "rips", 2, vec![10, 20]), Some(&sk)).await.unwrap();
+        assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
     }
 
     /// Directiva #8: 100+ accesos CONCURRENTES no bifurcan la cadena ni pierden
