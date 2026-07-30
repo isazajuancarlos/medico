@@ -186,30 +186,50 @@ struct Credenciales {
 /// De dónde viene la petición, para el freno de `/api/acceso`.
 ///
 /// Detrás de nginx la dirección del zócalo es siempre `127.0.0.1`, así que hace
-/// falta `X-Forwarded-For` — pero esa cabecera la escribe **quien llama**, y
-/// creerla sin más convierte el freno en un adorno: bastaría cambiar un número
-/// en cada intento para no acumular ninguno. Por eso solo se lee cuando el
-/// despliegue AFIRMA estar detrás de un proxy (`MEDICO_TRAS_PROXY`), que es
-/// exactamente el caso en que esa cabecera la pone nuestro nginx y no el cliente.
+/// falta una cabecera. **Cuál, decide si el freno funciona.**
 ///
-/// Sin proxy declarado, el origen es el del zócalo. Si tampoco lo hay —una
-/// prueba que llama al router sin red— queda `desconocido`, y entonces todos los
-/// intentos comparten cubo: el freno degrada a «por cuenta», que es la forma
-/// segura de degradar.
-fn origen_de(tras_proxy: bool, cabeceras: &header::HeaderMap, zocalo: Option<std::net::SocketAddr>) -> String {
+/// # Por qué `X-Real-IP` y no `X-Forwarded-For`
+///
+/// Esto leía el primer salto de `X-Forwarded-For`, razonando que con
+/// `MEDICO_TRAS_PROXY` esa cabecera «la pone nuestro nginx y no el cliente». La
+/// premisa era falsa. `frontend/nginx.conf` la escribe con
+/// `$proxy_add_x_forwarded_for`, que **añade**, no sobrescribe: es
+/// `$http_x_forwarded_for, $remote_addr`. Un cliente que mande
+/// `X-Forwarded-For: 1.2.3.4` produce `1.2.3.4, <su IP real>`, y el primer salto
+/// —el que se leía— es justo el valor que él eligió.
+///
+/// Es decir: en la única postura para la que se escribió (`tras_proxy` activo,
+/// detrás de nuestro nginx), bastaba cambiar un número por petición para no
+/// acumular ninguno. El control existía, estaba probado y documentado, y **no
+/// frenaba**. La prueba que lo cubría pasaba porque simulaba el valor que pone el
+/// proxy, no uno falsificado por el cliente.
+///
+/// `X-Real-IP` sí se escribe con `$remote_addr` (misma plantilla, línea de
+/// arriba): es un valor, no una lista, y nginx **pisa** lo que traiga el cliente.
+/// Es la misma elección que hace `informes` en su módulo `origen`.
+///
+/// # Y por qué ya no hay `desconocido`
+///
+/// Antes, si no había cabecera ni zócalo se devolvía `"desconocido"` y todos los
+/// intentos compartían cubo. Eso no es «degradar con seguridad»: es el freno por
+/// cuenta sola, que es la variante que este módulo rechazó al diseñarse porque
+/// deja que un desconocido eche al dueño de la cuenta. Ante el dato ausente se
+/// devuelve `None` y quien llama decide — y decide no dejar pasar.
+fn origen_de(
+    tras_proxy: bool,
+    cabeceras: &header::HeaderMap,
+    zocalo: Option<std::net::SocketAddr>,
+) -> Option<String> {
     if tras_proxy {
-        // El primero de la lista es el cliente; los siguientes, los saltos.
-        let primero = cabeceras
-            .get("x-forwarded-for")
+        return cabeceras
+            .get("x-real-ip")
             .and_then(|v| v.to_str().ok())
-            .and_then(|xff| xff.split(',').next())
             .map(str::trim)
-            .filter(|p| !p.is_empty());
-        if let Some(p) = primero {
-            return p.to_string();
-        }
+            .filter(|p| !p.is_empty())
+            .map(str::to_owned);
     }
-    zocalo.map(|s| s.ip().to_string()).unwrap_or_else(|| "desconocido".into())
+    // Sin proxy declarado, la dirección del zócalo: el cliente no la elige.
+    zocalo.map(|s| s.ip().to_string())
 }
 
 /// Login. 200 con la cookie de sesión, 401 si no, **429 si se está probando**.
@@ -233,7 +253,19 @@ async fn acceso(
     let zocalo = extensiones
         .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
         .map(|c| c.0);
-    let origen = origen_de(e.tras_proxy, &cabeceras, zocalo);
+    let Some(origen) = origen_de(e.tras_proxy, &cabeceras, zocalo) else {
+        // Mismo criterio que un fallo al leer el freno: si no se puede aplicar,
+        // no se deja pasar. Rellenarlo con un valor común pondría a todo el
+        // mundo en el mismo cubo, y entonces cinco peticiones de un desconocido
+        // dejan fuera a la doctora — el bloqueo que este freno existe para no
+        // tener.
+        eprintln!(
+            "⚠️  no se pudo determinar el origen de la petición. Con MEDICO_TRAS_PROXY \
+             activo hace falta que el proxy escriba X-Real-IP (proxy_set_header \
+             X-Real-IP $remote_addr)."
+        );
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    };
     let ahora = chrono::Utc::now();
 
     match medico_datos::freno::estado(&e.pool, &cred.email, &origen, ahora).await {
@@ -1834,13 +1866,35 @@ mod pruebas {
         }
     }
 
-    /// Un intento de acceso, como lo hace un cliente. `xff` simula la cabecera
-    /// que pondría un proxy — o que pondría un atacante.
-    async fn intentar(estado: &Estado, email: &str, clave: &str, xff: Option<&str>) -> StatusCode {
+    /// Un intento de acceso, como lo hace un cliente. `origen` simula el
+    /// `X-Real-IP` que escribe el proxy.
+    async fn intentar(estado: &Estado, email: &str, clave: &str, origen: Option<&str>) -> StatusCode {
+        intentar_con(estado, email, clave, origen, None).await
+    }
+
+    /// El mismo intento, pudiendo además falsificar `X-Forwarded-For` como haría
+    /// un cliente: nginx la **añade** (`$proxy_add_x_forwarded_for`), así que lo
+    /// que el cliente mande queda por delante de su IP real.
+    async fn intentar_con(
+        estado: &Estado,
+        email: &str,
+        clave: &str,
+        origen: Option<&str>,
+        xff: Option<&str>,
+    ) -> StatusCode {
         let mut peticion = Request::builder()
             .method("POST")
             .uri("/api/acceso")
-            .header("content-type", "application/json");
+            .header("content-type", "application/json")
+            // Lo que pone el servidor de verdad con
+            // `into_make_service_with_connect_info`. Sin esto no hay origen y el
+            // acceso se niega — a propósito.
+            .extension(axum::extract::ConnectInfo(
+                "127.0.0.1:5555".parse::<std::net::SocketAddr>().unwrap(),
+            ));
+        if let Some(v) = origen {
+            peticion = peticion.header("x-real-ip", v);
+        }
         if let Some(v) = xff {
             peticion = peticion.header("x-forwarded-for", v);
         }
@@ -1907,6 +1961,11 @@ mod pruebas {
                     .method("POST")
                     .uri("/api/acceso")
                     .header("content-type", "application/json")
+                    // El zócalo que pone el servidor real: sin él no hay origen
+                    // y el acceso se niega, a propósito.
+                    .extension(axum::extract::ConnectInfo(
+                        "127.0.0.1:5555".parse::<std::net::SocketAddr>().unwrap(),
+                    ))
                     .body(Body::from(r#"{"email":"ruiz@x.co","clave":"mal"}"#))
                     .unwrap(),
             )
@@ -1939,7 +1998,7 @@ mod pruebas {
         );
     }
 
-    /// **Sin proxy declarado, `X-Forwarded-For` no se cree.** Es la prueba que
+    /// **Sin proxy declarado, la cabecera no se cree.** Es la prueba que
     /// justifica la bandera: si se creyera siempre, bastaría cambiar el número de
     /// esa cabecera en cada intento para no acumular ninguno y el freno sería un
     /// adorno.
@@ -1953,6 +2012,58 @@ mod pruebas {
             intentar(&e, "ruiz@x.co", "mal", Some("203.0.113.99")).await,
             StatusCode::TOO_MANY_REQUESTS,
             "una cabecera que pone el propio cliente esquivó el freno"
+        );
+    }
+
+    /// **La prueba que faltaba, y por la que el freno no frenaba.**
+    ///
+    /// Con el proxy declarado —la postura de producción— esto leía el primer
+    /// salto de `X-Forwarded-For`. Nuestro nginx la escribe con
+    /// `$proxy_add_x_forwarded_for`, que AÑADE: lo que manda el cliente queda
+    /// delante de su IP real. Así que el atacante escogía su propio cubo en cada
+    /// petición y no acumulaba ni un fallo.
+    ///
+    /// La prueba anterior no lo veía porque simulaba el valor que pone el proxy,
+    /// nunca uno falsificado por el cliente: pasaba por la razón equivocada.
+    #[tokio::test]
+    async fn con_proxy_una_cabecera_falsificada_por_el_cliente_no_cambia_de_cubo() {
+        let e = estado_de_prueba(true).await;
+        // Lo que llega de verdad: X-Real-IP la pisa nginx con la IP real, y
+        // X-Forwarded-For trae delante lo que el cliente quiso poner.
+        for i in 0..=freno::UMBRAL {
+            intentar_con(
+                &e,
+                "ruiz@x.co",
+                "mal",
+                Some("203.0.113.9"),
+                Some(&format!("10.0.0.{i}, 203.0.113.9")),
+            )
+            .await;
+        }
+        assert_eq!(
+            intentar_con(
+                &e,
+                "ruiz@x.co",
+                "mal",
+                Some("203.0.113.9"),
+                Some("10.0.0.250, 203.0.113.9"),
+            )
+            .await,
+            StatusCode::TOO_MANY_REQUESTS,
+            "el cliente eligió su propio cubo cambiando X-Forwarded-For: el freno no frena"
+        );
+    }
+
+    /// Con el proxy declarado y sin `X-Real-IP`, el origen NO SE SABE — y no se
+    /// rellena con un valor común, que pondría a todos en el mismo cubo y
+    /// dejaría que un desconocido echase al dueño de la cuenta.
+    #[tokio::test]
+    async fn con_proxy_y_sin_cabecera_no_se_deja_pasar() {
+        let e = estado_de_prueba(true).await;
+        assert_eq!(
+            intentar(&e, "ruiz@x.co", "clave123", None).await,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "sin saber de dónde viene, el acceso siguió adelante"
         );
     }
 
@@ -2029,6 +2140,9 @@ mod pruebas {
                         .method("POST")
                         .uri("/api/acceso")
                         .header("content-type", "application/json")
+                        .extension(axum::extract::ConnectInfo(
+                            "127.0.0.1:5555".parse::<std::net::SocketAddr>().unwrap(),
+                        ))
                         .body(Body::from(r#"{"email":"ruiz@x.co","clave":"clave123"}"#))
                         .unwrap(),
                 )
@@ -2088,17 +2202,32 @@ mod pruebas {
     fn el_origen_sale_del_zocalo_salvo_que_haya_proxy() {
         let zocalo: std::net::SocketAddr = "198.51.100.7:44444".parse().unwrap();
         let mut c = header::HeaderMap::new();
-        c.insert("x-forwarded-for", "203.0.113.1, 10.0.0.1".parse().unwrap());
+        c.insert("x-real-ip", "203.0.113.1".parse().unwrap());
+        // La que el cliente puede escribir, y que nginx solo AÑADE.
+        c.insert("x-forwarded-for", "9.9.9.9, 203.0.113.1".parse().unwrap());
 
-        assert_eq!(origen_de(false, &c, Some(zocalo)), "198.51.100.7");
-        assert_eq!(origen_de(true, &c, Some(zocalo)), "203.0.113.1");
+        // Sin proxy manda el zócalo, y ninguna cabecera lo cambia. El puerto no
+        // entra: con él, cada conexión sería un cubo nuevo y el freno no llegaría
+        // al umbral ni siendo aporreado.
+        assert_eq!(origen_de(false, &c, Some(zocalo)).as_deref(), Some("198.51.100.7"));
+        // Con proxy manda `X-Real-IP`, NUNCA el primer salto de X-Forwarded-For:
+        // ese lo elige el cliente (`9.9.9.9` de arriba).
+        assert_eq!(origen_de(true, &c, Some(zocalo)).as_deref(), Some("203.0.113.1"));
 
-        // Con proxy declarado pero cabecera vacía o ausente, se vuelve al zócalo
-        // en vez de inventarse un origen.
+        // Con proxy declarado y sin la cabecera, el dato NO ESTÁ. No se vuelve al
+        // zócalo —que sería el del proxy, o sea el mismo para todos— ni se
+        // inventa un valor: quien llama decide, y decide no dejar pasar.
         let vacia = header::HeaderMap::new();
-        assert_eq!(origen_de(true, &vacia, Some(zocalo)), "198.51.100.7");
-        // Y sin zócalo —una prueba que llama al router sin red— queda un valor
-        // único y explícito, no una cadena vacía que se confunda con un origen.
-        assert_eq!(origen_de(true, &vacia, None), "desconocido");
+        assert_eq!(origen_de(true, &vacia, Some(zocalo)), None);
+        assert_eq!(origen_de(true, &vacia, None), None);
+        // Y la otra mitad, que es la que dejaba pasar el relleno viejo: SIN proxy
+        // y sin zócalo tampoco se inventa un `desconocido`. Faltaba este caso, y
+        // por eso una mutación que devolvía el relleno seguía verde.
+        assert_eq!(origen_de(false, &vacia, None), None);
+        assert_eq!(origen_de(false, &c, None), None);
+        // Vacía es lo mismo que ausente.
+        let mut blanca = header::HeaderMap::new();
+        blanca.insert("x-real-ip", "   ".parse().unwrap());
+        assert_eq!(origen_de(true, &blanca, Some(zocalo)), None);
     }
 }

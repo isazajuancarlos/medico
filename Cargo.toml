@@ -32,7 +32,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # Fijada por commit inmutable (= tag v0.3.0), no por el tag: un tag es mutable, y
 # mover `v0.3.0` a un commit malicioso nos lo traería al construir (la lección del
 # ataque Atomic Arch a AUR). El Cargo.lock ya lo fijaba, esto lo hace explícito.
-guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "9d26cceccc95cbe146f3e6a0cac7b44b04ef7cfb" }
+guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "2ffe1346b706f5fbb8f5eaaea1c37375682c807d" }
 
 [profile.release]
 lto = true
