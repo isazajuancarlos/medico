@@ -4,6 +4,7 @@ mod auth;
 mod claves;
 mod config;
 mod estaticos;
+mod maestros;
 mod rutas;
 mod sesion;
 
@@ -38,6 +39,42 @@ async fn main() -> ExitCode {
             }
             None => {
                 eprintln!("no se pudo generar el hash");
+                ExitCode::FAILURE
+            }
+        };
+    }
+
+    // `cargar-maestros <ruta.csv>`: llena el catálogo de medicamentos (CUM del
+    // INVIMA) desde su export. Se corre una vez al instalar y al actualizar el
+    // maestro. NO pide SECRET_KEY —no firma nada—; solo la base (DATABASE_URL),
+    // con el mismo defecto que el servidor.
+    if std::env::args().nth(1).as_deref() == Some("cargar-maestros") {
+        let ruta = match std::env::args().nth(2) {
+            Some(r) if !r.trim().is_empty() => r,
+            _ => {
+                eprintln!("uso: medico-api cargar-maestros <ruta-cum.csv>");
+                return ExitCode::FAILURE;
+            }
+        };
+        let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://medico.db".into());
+        let pool = match medico_datos::abrir(&url).await {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("no se pudo abrir la base ({url}): {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        return match maestros::cargar(&pool, std::path::Path::new(&ruta)).await {
+            Ok(r) => {
+                println!(
+                    "maestro CUM: {} filas leídas · {} medicamentos distintos · \
+                     {} filas insertadas/actualizadas · {} omitidas (sin CUM o sin nombre)",
+                    r.filas, r.medicamentos, r.cargadas, r.omitidas
+                );
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("cargar-maestros: {e}");
                 ExitCode::FAILURE
             }
         };

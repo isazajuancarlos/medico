@@ -50,6 +50,51 @@ pub async fn buscar_medicamentos(pool: &crate::Pool, q: &str) -> Result<Vec<Medi
     .await
 }
 
+/// Una fila lista para cargar en el maestro de medicamentos. `codigo_cum` es la
+/// clave: recargar el mismo CUM ACTUALIZA la fila, no la duplica ni falla, para
+/// que volver a correr un maestro corregido sea idempotente.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MedicamentoNuevo {
+    pub codigo_cum: String,
+    pub nombre: String,
+    pub concentracion: String,
+    pub forma_farmaceutica: String,
+    pub titular: Option<String>,
+}
+
+/// Carga (o actualiza) un lote de medicamentos en UNA sola transacción: el
+/// maestro entra entero o no entra. Si una fila falla, se revierte todo y el
+/// catálogo queda como estaba, nunca a medio cargar. Devuelve cuántas filas se
+/// insertaron o actualizaron.
+pub async fn cargar_medicamentos(
+    pool: &crate::Pool,
+    lote: &[MedicamentoNuevo],
+) -> Result<u64, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    let mut n = 0u64;
+    for m in lote {
+        let r = sqlx::query(
+            "INSERT INTO medicamento (codigo_cum, nombre, concentracion, forma_farmaceutica, titular) \
+             VALUES (?1, ?2, ?3, ?4, ?5) \
+             ON CONFLICT(codigo_cum) DO UPDATE SET \
+               nombre = excluded.nombre, \
+               concentracion = excluded.concentracion, \
+               forma_farmaceutica = excluded.forma_farmaceutica, \
+               titular = excluded.titular",
+        )
+        .bind(&m.codigo_cum)
+        .bind(&m.nombre)
+        .bind(&m.concentracion)
+        .bind(&m.forma_farmaceutica)
+        .bind(&m.titular)
+        .execute(&mut *tx)
+        .await?;
+        n += r.rows_affected();
+    }
+    tx.commit().await?;
+    Ok(n)
+}
+
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct UnidadDispensacion {
     pub codigo: i64,
@@ -109,6 +154,38 @@ mod pruebas {
         .execute(&pool).await.unwrap();
         // Un '%' escrito por el usuario busca un '%' real: no debe traer todo.
         assert!(buscar_medicamentos(&pool, "%").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn cargar_medicamentos_no_duplica_y_actualiza_el_mismo_cum() {
+        let pool = crate::abrir("sqlite::memory:").await.unwrap();
+        let lote = vec![MedicamentoNuevo {
+            codigo_cum: "20048021-41".into(),
+            nombre: "CARDIK 3".into(),
+            concentracion: String::new(),
+            forma_farmaceutica: "TABLETA".into(),
+            titular: Some("LEGRAND".into()),
+        }];
+        assert_eq!(cargar_medicamentos(&pool, &lote).await.unwrap(), 1);
+
+        // Recargar el MISMO CUM con datos corregidos: no crea una segunda fila,
+        // actualiza la que hay (upsert idempotente).
+        let corregido = vec![MedicamentoNuevo {
+            codigo_cum: "20048021-41".into(),
+            nombre: "CARDIK 3 CORREGIDO".into(),
+            concentracion: String::new(),
+            forma_farmaceutica: "TABLETA RECUBIERTA".into(),
+            titular: None,
+        }];
+        cargar_medicamentos(&pool, &corregido).await.unwrap();
+
+        let r = buscar_medicamentos(&pool, "cardik").await.unwrap();
+        assert_eq!(r.len(), 1, "el mismo CUM no se duplica al recargar");
+        assert_eq!(r[0].nombre, "CARDIK 3 CORREGIDO");
+        assert_eq!(r[0].forma_farmaceutica, "TABLETA RECUBIERTA");
+        // Y se encuentra también tecleando el propio código CUM.
+        let por_cum = buscar_medicamentos(&pool, "20048021-41").await.unwrap();
+        assert_eq!(por_cum.len(), 1);
     }
 
     #[tokio::test]
