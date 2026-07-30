@@ -2,11 +2,13 @@
 //! paciente no ve su historia (el aislamiento se sigue por esa cadena, como en el
 //! sistema original — la historia no lleva institucion_id).
 
+use chrono::{SecondsFormat, Utc};
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 
 /// Las columnas de `historia`, en el orden en que se leen y se escriben.
 const COLUMNAS: &str = "id, fecha, codigo_historia, paciente_id, medico_id, cita_id, \
+    creado_por, firmado_por, firmado_en, \
     acomp_nombre, acomp_parentesco, acomp_telefono, acomp_documento, \
     motivo_consulta, enfermedad_actual, \
     tension_arterial, pam, frecuencia_cardiaca, frecuencia_respiratoria, pulso, temperatura, \
@@ -94,10 +96,20 @@ pub struct Historia {
     pub dias_incapacidad: i64,
     pub plan_tratamiento: String,
     /// Una historia firmada queda cerrada: no se edita ni se borra.
+    /// Quién REGISTRÓ la historia. Lo pone el servidor desde la sesión; el
+    /// cliente no lo manda. Distinto de `medico_id`, que es a quién se ATRIBUYE
+    /// el acto: un auxiliar que transcribe la nota del médico es una operación
+    /// real, y con un solo campo había que mentir en uno de los dos.
+    pub creado_por: Option<i64>,
     pub firmada: bool,
     /// Firma criptográfica (post-cuántica) del contenido al firmarse. `None` si
     /// se cerró sin clave configurada. Verificarla detecta cualquier alteración.
     pub firma: Option<String>,
+    /// Quién firmó, y cuándo. Van DENTRO de lo firmado (`firmable` serializa la
+    /// historia entera y solo quita `firma` y `firmada`), así que cambiarlos
+    /// rompe la firma. Una firma que no dice quién firmó no acredita a nadie.
+    pub firmado_por: Option<i64>,
+    pub firmado_en: Option<String>,
 }
 
 /// Lo que llega para crear una historia. Los campos con defecto en la base son
@@ -183,7 +195,14 @@ async fn paciente_es_del_ambito(pool: &crate::Pool, ambito: Ambito, paciente_id:
 
 /// Crea una historia. El paciente debe pertenecer a la institución del ámbito
 /// (una historia no cruza fronteras). `None` si no le pertenece o no existe.
-pub async fn crear(pool: &crate::Pool, ambito: Ambito, h: &HistoriaNueva) -> Result<Option<i64>, sqlx::Error> {
+pub async fn crear(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    // Quién la registra: sale de la SESIÓN, nunca del cuerpo. Es lo que hace que
+    // el registro diga lo que pasó cuando quien teclea no es a quien se atribuye.
+    creado_por: i64,
+    h: &HistoriaNueva,
+) -> Result<Option<i64>, sqlx::Error> {
     if !paciente_es_del_ambito(pool, ambito, h.paciente_id).await? {
         return Ok(None);
     }
@@ -199,6 +218,7 @@ pub async fn crear(pool: &crate::Pool, ambito: Ambito, h: &HistoriaNueva) -> Res
         _ => format!("HC-{}-{}", h.paciente_id, chrono::Utc::now().timestamp()),
     };
     let sql = "INSERT INTO historia (\
+        creado_por, \
         codigo_historia, paciente_id, medico_id, cita_id, \
         acomp_nombre, acomp_parentesco, acomp_telefono, acomp_documento, \
         motivo_consulta, enfermedad_actual, \
@@ -214,9 +234,10 @@ pub async fn crear(pool: &crate::Pool, ambito: Ambito, h: &HistoriaNueva) -> Res
         diagnostico_principal, diagnostico_relacionado1, diagnostico_relacionado2, \
         diagnostico_relacionado3, impresion_diagnostica, diagnostico_principal_cie11, \
         diagnostico_principal_uri, procedencias, genera_incapacidad, dias_incapacidad, plan_tratamiento) \
-        VALUES (?,?,?,?, ?,?,?,?, ?,?, ?,?,?,?,?,?, ?,?,?,?,?,?,?, \
+        VALUES (?, ?,?,?,?, ?,?,?,?, ?,?, ?,?,?,?,?,?, ?,?,?,?,?,?,?, \
         ?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?, ?,?,?,?,?,?,?,?, ?,?, ?)";
     let r = sqlx::query(sql)
+        .bind(creado_por)
         .bind(codigo)
         .bind(h.paciente_id)
         .bind(h.medico_id)
@@ -463,21 +484,68 @@ pub async fn firmar(
     pool: &crate::Pool,
     ambito: Ambito,
     id: i64,
+    // Quién firma: de la SESIÓN, nunca del cuerpo.
+    firmante_id: i64,
     sk_hex: Option<&str>,
-) -> Result<bool, sqlx::Error> {
-    let Some(h) = obtener(pool, ambito, id).await? else {
-        return Ok(false);
+) -> Result<ResultadoFirma, sqlx::Error> {
+    let Some(mut h) = obtener(pool, ambito, id).await? else {
+        return Ok(ResultadoFirma::NoSePudo);
     };
     if h.firmada {
-        return Ok(false);
+        return Ok(ResultadoFirma::NoSePudo);
     }
-    let firma = sk_hex.and_then(|s| guaca::firma::firmar(&firmable(&h), s));
-    let r = sqlx::query("UPDATE historia SET firmada = 1, firma = ? WHERE id = ? AND firmada = 0")
-        .bind(&firma)
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(r.rows_affected() > 0)
+
+    // El firmante y el instante se ponen ANTES de calcular la firma, porque
+    // `firmable` serializa la historia entera: así quedan DENTRO de lo firmado y
+    // cambiarlos después la rompe. Puestos después, la firma no diría nada sobre
+    // quién firmó — que es justo lo que se está arreglando.
+    h.firmado_por = Some(firmante_id);
+    h.firmado_en = Some(Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true));
+
+    // Dos ausencias que NO son la misma:
+    //
+    //   sin clave configurada  -> cerrar sin firma criptográfica es una postura
+    //                             válida y documentada: la falta de firma nunca
+    //                             impide cerrar una historia.
+    //   clave configurada pero ILEGIBLE -> antes daba `firma = NULL` y aun así
+    //                             marcaba `firmada = 1`. Una historia marcada como
+    //                             firmada sin firma es peor que una sin firmar:
+    //                             afirma algo que no ocurrió. Ahora se para.
+    let firma = match sk_hex {
+        None => None,
+        Some(sk) => match guaca::firma::firmar(&firmable(&h), sk) {
+            Some(f) => Some(f),
+            None => return Ok(ResultadoFirma::ClaveInservible),
+        },
+    };
+
+    let r = sqlx::query(
+        "UPDATE historia SET firmada = 1, firma = ?, firmado_por = ?, firmado_en = ? \
+         WHERE id = ? AND firmada = 0",
+    )
+    .bind(&firma)
+    .bind(firmante_id)
+    .bind(&h.firmado_en)
+    .bind(id)
+    .execute(pool)
+    .await?;
+    Ok(if r.rows_affected() > 0 {
+        ResultadoFirma::Firmada
+    } else {
+        ResultadoFirma::NoSePudo
+    })
+}
+
+/// Qué pasó al firmar. Un `bool` no bastaba: «no se pudo porque es ajena» y «no
+/// se firmó porque la clave del despliegue está rota» piden respuestas distintas
+/// —404 y 500—, y con un solo `false` la segunda se leía como la primera.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResultadoFirma {
+    Firmada,
+    /// No existe, es ajena, o ya estaba firmada.
+    NoSePudo,
+    /// Hay clave configurada y no sirve. NO se marcó nada.
+    ClaveInservible,
 }
 
 /// Verifica la firma de una historia contra su contenido actual. `None` si no
@@ -566,7 +634,7 @@ mod pruebas {
     #[tokio::test]
     async fn crear_y_obtener_conserva_los_campos_y_aplica_defectos() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
         let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
         assert_eq!(h.motivo_consulta, "Dolor");
         assert_eq!(h.diagnostico_principal, "J00");
@@ -586,7 +654,7 @@ mod pruebas {
     #[tokio::test]
     async fn listar_por_paciente_devuelve_las_suyas() {
         let pool = base().await;
-        crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap();
+        crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap();
         assert_eq!(listar_por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 1);
     }
 
@@ -599,16 +667,95 @@ mod pruebas {
     /// una firma criptográfica sobre un contenido que NOMBRA al profesional. Una
     /// institución podía dejar firmado un acto clínico a nombre de un médico de
     /// otra — que no puede verlo ni negarlo.
+    /// Quién REGISTRA sale de la sesión y no del cuerpo, y es un dato distinto de
+    /// a quién se ATRIBUYE el acto. Con un solo campo había que mentir en uno de
+    /// los dos escenarios: el médico que escribe su nota, y el auxiliar que la
+    /// transcribe por él.
+    #[tokio::test]
+    async fn se_guarda_quien_registro_aunque_no_sea_a_quien_se_atribuye() {
+        let pool = base().await;
+        // La 5 atiende; la registra otro usuario de la misma institución.
+        let id = crear(&pool, Ambito::institucion(1), 7, &nueva_con(10, 5))
+            .await
+            .unwrap()
+            .unwrap();
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert_eq!(h.medico_id, 5, "se atribuye a quien atendió");
+        assert_eq!(h.creado_por, Some(7), "y consta quién la escribió");
+    }
+
+    /// **El segundo hallazgo.** `firmar` no registraba al firmante: una firma que
+    /// no dice quién firmó no acredita a nadie. Y no basta con guardarlo en una
+    /// columna: tiene que ir DENTRO de lo firmado, o cambiarlo después no rompería
+    /// nada y la firma seguiría sin atar el documento a su autor.
+    #[tokio::test]
+    async fn la_firma_dice_quien_firmo_y_alterarlo_la_rompe() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
+
+        assert_eq!(
+            firmar(&pool, Ambito::institucion(1), id, 5, Some(&sk)).await.unwrap(),
+            ResultadoFirma::Firmada
+        );
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert_eq!(h.firmado_por, Some(5), "la firma no dice quién firmó");
+        assert!(h.firmado_en.is_some(), "ni cuándo");
+
+        // Con el firmante intacto, verifica.
+        assert_eq!(
+            verificar(&pool, Ambito::institucion(1), id, &vk).await.unwrap(),
+            Some(guaca::firma::Verificacion::Valida)
+        );
+
+        // Y si alguien cambia el firmante en la base, la firma se delata. Esto es
+        // lo que separa «guardar quién firmó» de «que la firma lo acredite».
+        sqlx::query("UPDATE historia SET firmado_por = 6 WHERE id = ?")
+            .bind(id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            verificar(&pool, Ambito::institucion(1), id, &vk).await.unwrap(),
+            Some(guaca::firma::Verificacion::Alterada),
+            "cambiar el firmante no rompió la firma: entonces no lo acreditaba"
+        );
+    }
+
+    /// Una clave configurada e ilegible NO deja la historia marcada como firmada.
+    /// Antes daba `firma = NULL` con `firmada = 1`: un registro que afirmaba estar
+    /// firmado sin estarlo, que es peor que uno sin firmar.
+    #[tokio::test]
+    async fn una_clave_rota_no_marca_la_historia_como_firmada() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
+
+        assert_eq!(
+            firmar(&pool, Ambito::institucion(1), id, 5, Some("no-es-una-clave")).await.unwrap(),
+            ResultadoFirma::ClaveInservible
+        );
+        let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert!(!h.firmada, "quedó marcada como firmada sin firma");
+        assert!(h.firma.is_none());
+
+        // Y sin clave configurada sí se cierra: la ausencia de firma nunca impide
+        // cerrar una historia. Son dos ausencias distintas y se distinguen.
+        assert_eq!(
+            firmar(&pool, Ambito::institucion(1), id, 5, None).await.unwrap(),
+            ResultadoFirma::Firmada
+        );
+    }
+
     #[tokio::test]
     async fn no_se_atribuye_una_historia_a_un_medico_ajeno() {
         let pool = base().await;
         // Paciente propio (10, de la 1) y médico de la OTRA institución (6).
         assert!(
-            crear(&pool, Ambito::institucion(1), &nueva_con(10, 6)).await.unwrap().is_none(),
+            crear(&pool, Ambito::institucion(1), 5, &nueva_con(10, 6)).await.unwrap().is_none(),
             "se creó una historia a nombre de un médico de otra institución"
         );
         // Y con el suyo, sí.
-        assert!(crear(&pool, Ambito::institucion(1), &nueva_con(10, 5)).await.unwrap().is_some());
+        assert!(crear(&pool, Ambito::institucion(1), 5, &nueva_con(10, 5)).await.unwrap().is_some());
     }
 
     #[tokio::test]
@@ -616,10 +763,10 @@ mod pruebas {
         let pool = base().await;
         // El 7 es de la institución 1 pero está inactivo: crear un registro nuevo
         // a nombre de quien ya no ejerce no es un caso legítimo de nadie.
-        assert!(crear(&pool, Ambito::institucion(1), &nueva_con(10, 7)).await.unwrap().is_none());
+        assert!(crear(&pool, Ambito::institucion(1), 5, &nueva_con(10, 7)).await.unwrap().is_none());
         // Y un id que no existe da lo MISMO que uno ajeno, no un error distinto:
         // si se distinguieran, esto sería un oráculo de qué ids existen.
-        assert!(crear(&pool, Ambito::institucion(1), &nueva_con(10, 9999)).await.unwrap().is_none());
+        assert!(crear(&pool, Ambito::institucion(1), 5, &nueva_con(10, 9999)).await.unwrap().is_none());
     }
 
     /// No se crea ni se ve la historia de un paciente de otra institución.
@@ -627,9 +774,9 @@ mod pruebas {
     async fn el_paciente_ajeno_no_deja_crear_ni_ver() {
         let pool = base().await;
         // La 1 no puede crear una historia para el paciente 20 (de la 2).
-        assert!(crear(&pool, Ambito::institucion(1), &nueva(20)).await.unwrap().is_none());
+        assert!(crear(&pool, Ambito::institucion(1), 5, &nueva(20)).await.unwrap().is_none());
         // Creada por la 2, la 1 no la ve.
-        let id = crear(&pool, Ambito::institucion(2), &nueva_con(20, 6)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(2), 6, &nueva_con(20, 6)).await.unwrap().unwrap();
         assert!(obtener(&pool, Ambito::institucion(1), id).await.unwrap().is_none());
         assert!(listar_por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().is_empty());
     }
@@ -637,14 +784,14 @@ mod pruebas {
     #[tokio::test]
     async fn sin_ambito_no_ve_ni_crea() {
         let pool = base().await;
-        assert!(crear(&pool, Ambito::Ninguno, &nueva(10)).await.unwrap().is_none());
+        assert!(crear(&pool, Ambito::Ninguno, 5, &nueva(10)).await.unwrap().is_none());
         assert!(listar_por_paciente(&pool, Ambito::Ninguno, 10).await.unwrap().is_empty());
     }
 
     #[tokio::test]
     async fn una_historia_nueva_no_esta_firmada() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
         let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
         assert!(!h.firmada);
     }
@@ -652,7 +799,7 @@ mod pruebas {
     #[tokio::test]
     async fn actualizar_cambia_los_campos_editables() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
         let mut edit = nueva(10);
         edit.motivo_consulta = "Control".into();
         edit.diagnostico_principal = "I10".into();
@@ -665,7 +812,7 @@ mod pruebas {
     #[tokio::test]
     async fn la_historia_ajena_no_se_edita_ni_se_borra() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(2), &nueva_con(20, 6)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(2), 6, &nueva_con(20, 6)).await.unwrap().unwrap();
         assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &nueva(20)).await.unwrap(), Resultado::NoExiste);
         assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::NoExiste);
         // Y sigue existiendo para su dueña.
@@ -675,10 +822,10 @@ mod pruebas {
     #[tokio::test]
     async fn una_historia_firmada_es_inmutable() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
-        assert!(firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
+        assert_eq!(firmar(&pool, Ambito::institucion(1), id, 5, None).await.unwrap(), ResultadoFirma::Firmada);
         // Firmar de nuevo no cambia nada.
-        assert!(!firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
+        assert_eq!(firmar(&pool, Ambito::institucion(1), id, 5, None).await.unwrap(), ResultadoFirma::NoSePudo);
         // Ni se edita ni se borra: se responde Firmada, no NoExiste.
         assert_eq!(actualizar(&pool, Ambito::institucion(1), id, &nueva(10)).await.unwrap(), Resultado::Firmada);
         assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::Firmada);
@@ -689,15 +836,15 @@ mod pruebas {
     #[tokio::test]
     async fn no_se_firma_ni_se_borra_la_ajena() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(2), &nueva_con(20, 6)).await.unwrap().unwrap();
-        assert!(!firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
+        let id = crear(&pool, Ambito::institucion(2), 6, &nueva_con(20, 6)).await.unwrap().unwrap();
+        assert_eq!(firmar(&pool, Ambito::institucion(1), id, 5, None).await.unwrap(), ResultadoFirma::NoSePudo);
         assert!(obtener(&pool, Ambito::institucion(2), id).await.unwrap().is_some());
     }
 
     #[tokio::test]
     async fn eliminar_una_de_borrador_la_quita() {
         let pool = base().await;
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
         assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), Resultado::Hecho);
         assert!(obtener(&pool, Ambito::institucion(1), id).await.unwrap().is_none());
     }
@@ -709,8 +856,8 @@ mod pruebas {
     async fn la_firma_detecta_una_alteracion_directa_en_la_base() {
         let pool = base().await;
         let (vk, sk) = guaca::firma::generar_claves();
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
-        assert!(firmar(&pool, Ambito::institucion(1), id, Some(&sk)).await.unwrap());
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
+        assert_eq!(firmar(&pool, Ambito::institucion(1), id, 5, Some(&sk)).await.unwrap(), ResultadoFirma::Firmada);
 
         // Recién firmada: verifica.
         assert_eq!(
@@ -732,8 +879,8 @@ mod pruebas {
     async fn sin_clave_se_cierra_pero_no_hay_firma_que_verificar() {
         let pool = base().await;
         let (vk, _) = guaca::firma::generar_claves();
-        let id = crear(&pool, Ambito::institucion(1), &nueva(10)).await.unwrap().unwrap();
-        assert!(firmar(&pool, Ambito::institucion(1), id, None).await.unwrap());
+        let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
+        assert_eq!(firmar(&pool, Ambito::institucion(1), id, 5, None).await.unwrap(), ResultadoFirma::Firmada);
         let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
         assert!(h.firmada && h.firma.is_none());
         // Sin firma criptográfica, no hay nada que verificar.
