@@ -105,6 +105,54 @@ impl FromRequestParts<Estado> for Autenticado {
     }
 }
 
+/// Extractor que además de autenticar **exige una capacidad**.
+///
+/// # Por qué un extractor y no un `if` dentro del manejador
+///
+/// La comprobación que se pone a mano es la que se olvida en la ruta siguiente:
+/// de 62 rutas registradas, seis comprobaban el rol y ninguna sobre un recurso
+/// clínico. Con esto, lo que la ruta necesita queda **en su firma** —
+/// `Autorizado<Firmar>` en vez de `Autenticado`—, así que se lee en el listado
+/// del router y no hay que ir a mirar el cuerpo para saber qué protege.
+///
+/// Es el mismo argumento que ya hace `Ambito` siendo un parámetro obligatorio
+/// en vez de un filtro opcional: el control que se puede omitir, se omite.
+pub struct Autorizado<C: Exige>(pub Usuario, std::marker::PhantomData<C>);
+
+/// Qué capacidad exige un extractor. Un tipo por capacidad, sin datos: sirve
+/// para escribirla en la firma del manejador.
+pub trait Exige {
+    const QUE: medico_dominio::rol::Capacidad;
+}
+
+/// Firmar una historia o un documento clínico.
+pub struct Firmar;
+impl Exige for Firmar {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::FirmarClinico;
+}
+
+/// Borrar una historia o un documento clínico.
+pub struct Borrar;
+impl Exige for Borrar {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::BorrarClinico;
+}
+
+impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, estado: &Estado) -> Result<Self, StatusCode> {
+        let usuario = usuario_de(estado, &parts.headers).await.ok_or(StatusCode::UNAUTHORIZED)?;
+        // 403 y no 404: dentro de la propia institución la existencia del recurso
+        // no es secreto —el usuario puede listarlo—, y decirle «no existe» cuando
+        // lo que pasa es que no le corresponde manda a buscar un fallo que no hay.
+        // El 404 sigue siendo para lo AJENO, que es donde sí se oculta.
+        match usuario.rol() {
+            Some(rol) if rol.puede(C::QUE) => Ok(Autorizado(usuario, std::marker::PhantomData)),
+            _ => Err(StatusCode::FORBIDDEN),
+        }
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;

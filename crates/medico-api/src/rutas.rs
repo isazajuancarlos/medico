@@ -10,7 +10,7 @@ use axum::{Json, Router};
 use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{autenticar, Autenticado, Estado};
+use crate::auth::{autenticar, Autenticado, Autorizado, Borrar, Estado, Firmar};
 use crate::{claves, sesion};
 use medico_datos::acceso;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
@@ -535,9 +535,12 @@ async fn actualizar_historia(
 /// ajena o ya estaba firmada.
 async fn firmar_historia(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    // `Autorizado<Firmar>`: la firma afirma autoría clínica, así que la exige la
+    // FIRMA del manejador y no un `if` que la próxima ruta olvidará.
+    autorizado: Autorizado<Firmar>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match historia::firmar(&e.pool, u.ambito(), id, u.id, e.clave_firma.as_deref()).await {
         Ok(historia::ResultadoFirma::Firmada) => StatusCode::NO_CONTENT,
         Ok(historia::ResultadoFirma::NoSePudo) => StatusCode::NOT_FOUND,
@@ -593,9 +596,10 @@ async fn verificar_firma_historia(
 /// ajena; 409 si está firmada** —un documento legal cerrado no se elimina—.
 async fn eliminar_historia(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<Borrar>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match historia::eliminar(&e.pool, u.ambito(), id).await {
         Ok(historia::Resultado::Hecho) => StatusCode::NO_CONTENT,
         Ok(historia::Resultado::NoExiste) => StatusCode::NOT_FOUND,
@@ -1233,9 +1237,10 @@ async fn actualizar_documento(
 
 async fn firmar_documento(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<Firmar>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match documento::firmar(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1245,9 +1250,10 @@ async fn firmar_documento(
 
 async fn eliminar_documento(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<Borrar>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match documento::eliminar(&e.pool, u.ambito(), id).await {
         Ok(documento::Resultado::Hecho) => StatusCode::NO_CONTENT,
         Ok(documento::Resultado::NoExiste) => StatusCode::NOT_FOUND,
@@ -1831,6 +1837,130 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy,
+        }
+    }
+
+    /// Las capacidades por rol, ejercidas por el CABLEADO y no por el dominio.
+    ///
+    /// `rol.rs` ya prueba que un laboratorista no puede firmar. Eso no dice nada
+    /// sobre si la ruta se lo impide: el fallo que esto cierra era justamente que
+    /// la regla no estaba cableada en ninguna parte. Aquí se pide con una cookie
+    /// de verdad, por la ruta de verdad.
+    mod capacidades {
+        use super::*;
+
+        /// Una institución con un médico, un laboratorista y un paciente, todos
+        /// activos y de la misma institución. La historia 7 existe y no está
+        /// firmada, que es el único caso en que borrarla o firmarla es posible.
+        async fn con_tres_roles() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (5,'Lab','lab@x.co',?,'laboratorista',1,1),
+                        (6,'Paciente','pac@x.co',?,'paciente',1,1)",
+            )
+            .bind(&h)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            // La historia NO lleva `institucion_id`: cuelga del paciente, y de ahí
+            // sale el aislamiento (ver 0005_historia.sql).
+            sqlx::query(
+                "INSERT INTO paciente (id, tipo_documento, numero_documento, nombre1, apellido1,
+                                       fecha_nacimiento, sexo, institucion_id)
+                 VALUES (1,'CC','123','Quien','Sea','1990-01-01','F',1)",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO historia (id, codigo_historia, paciente_id, medico_id, creado_por,
+                                       motivo_consulta, enfermedad_actual,
+                                       diagnostico_principal, plan_tratamiento)
+                 VALUES (7,'H-7',1,2,2,'dolor','desde ayer','J00','reposo')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        /// La cookie de un usuario, sin pasar por el login (que aquí no se prueba).
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn pedir(e: &Estado, metodo: &str, uri: &str, cookie: &str) -> StatusCode {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .status()
+        }
+
+        /// El laboratorista está autenticado y es de la institución: el
+        /// aislamiento lo deja pasar. Lo que lo detiene es el ROL, que es lo que
+        /// no existía.
+        #[tokio::test]
+        async fn un_laboratorista_no_firma_ni_borra_una_historia() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+            assert_eq!(
+                pedir(&e, "POST", "/api/historias/7/firmar", &lab).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista firmó una historia clínica como si fuera el médico"
+            );
+            assert_eq!(
+                pedir(&e, "DELETE", "/api/historias/7", &lab).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista borró una historia clínica"
+            );
+            // Y la historia sigue ahí, que es lo que de verdad importa: un 403 que
+            // llegara después del borrado no serviría de nada.
+            let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM historia WHERE id = 7")
+                .fetch_one(&e.pool)
+                .await
+                .unwrap();
+            assert_eq!(n, 1, "la historia se borró pese al 403");
+        }
+
+        /// El reverso, y la mitad que evita el fallo con el signo cambiado: la
+        /// médica SÍ puede. Sin esto, un extractor que devolviera 403 siempre
+        /// pasaría la prueba de arriba.
+        #[tokio::test]
+        async fn la_medica_si_firma_su_historia() {
+            let e = con_tres_roles().await;
+            assert_eq!(
+                pedir(&e, "POST", "/api/historias/7/firmar", &cookie_de(2)).await,
+                StatusCode::NO_CONTENT,
+                "la médica no pudo firmar: el control dejó fuera a quien debe entrar"
+            );
+        }
+
+        /// Un paciente no ve la institución. Hoy su cuenta no tiene ninguna
+        /// pantalla —el portal no existe—, y antes tenía toda la historia clínica
+        /// de la clínica entera.
+        #[tokio::test]
+        async fn un_paciente_no_ve_la_clinica() {
+            let e = con_tres_roles().await;
+            let pac = cookie_de(6);
+            // 404 y no 403: para lo que no le corresponde, «no existe» — es el
+            // mismo criterio que ya usa el aislamiento entre instituciones.
+            assert_eq!(pedir(&e, "GET", "/api/historias/7", &pac).await, StatusCode::NOT_FOUND);
+            assert_eq!(
+                pedir(&e, "POST", "/api/historias/7/firmar", &pac).await,
+                StatusCode::FORBIDDEN,
+                "un paciente firmó una historia clínica"
+            );
         }
     }
 
