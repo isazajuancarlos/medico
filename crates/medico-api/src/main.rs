@@ -115,7 +115,7 @@ async fn main() -> ExitCode {
     };
     let app = rutas::router(estado);
 
-    let dir = format!("0.0.0.0:{}", cfg.puerto);
+    let dir = format!("{}:{}", cfg.escucha, cfg.puerto);
     let listener = match tokio::net::TcpListener::bind(&dir).await {
         Ok(l) => l,
         Err(e) => {

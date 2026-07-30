@@ -105,6 +105,12 @@ La REGLA (umbral, techo, qué borra la cuenta, marca ilegible) vive en
 `guaca::freno`, compartida con informes; `medico-datos/src/freno.rs` solo pone
 las dos consultas.
 
+Y la bandera arrastra **dónde escucha el binario** (`MEDICO_ESCUCHA`): sin valor,
+`127.0.0.1` si se declaró el proxy y `0.0.0.0` si no. Declarar el proxy y seguir
+abierto a todas las interfaces deja una puerta por detrás de él — quien alcance el
+puerto elige su propio `X-Real-IP` y el freno no engancha. Es un defecto, no una
+regla: con nginx en otra máquina o en otro contenedor se pone a mano.
+
 Y `autenticar` verifica contra un **hash de descarte** cuando el usuario no
 existe o está inactivo: sin eso respondía al instante con un correo falso y tras
 ~100 ms con uno real, y esa diferencia se mide con un bucle de `curl`.
