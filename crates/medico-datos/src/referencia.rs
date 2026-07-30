@@ -107,7 +107,7 @@ const REM_FROM: &str = "FROM orden o \
     JOIN paciente p ON p.id = h.paciente_id \
     LEFT JOIN especialidad esp ON esp.id = o.especialidad_destino_id \
     LEFT JOIN institucion idest ON idest.id = o.institucion_destino_id \
-    LEFT JOIN usuario um ON um.id = h.medico_id";
+    LEFT JOIN usuario um ON um.id = h.medico_id AND um.institucion_id = p.institucion_id";
 
 /// Remisiones (ordenes ESPECIALISTA) del ámbito, con filtros. De la más reciente
 /// a la más antigua.

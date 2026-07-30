@@ -26,7 +26,7 @@ const SELECT_VISTA: &str = "SELECT c.id, c.paciente_id, \
     c.medico_id, u.nombre AS medico_nombre, c.fecha, c.hora, c.estado, c.motivo, c.institucion_id \
     FROM cita c \
     JOIN paciente p ON p.id = c.paciente_id \
-    LEFT JOIN usuario u ON u.id = c.medico_id";
+    LEFT JOIN usuario u ON u.id = c.medico_id AND u.institucion_id = c.institucion_id";
 
 /// Lista las citas del ámbito, opcionalmente filtradas por fecha (YYYY-MM-DD).
 pub async fn listar(
@@ -80,6 +80,16 @@ pub async fn crear(
             .fetch_optional(pool)
             .await?;
     if del_paciente.map(|(i,)| i) != Some(institucion_id) {
+        return Ok(None);
+    }
+    // Y el MÉDICO también, CUANDO VIENE: una cita sin profesional asignado es un
+    // estado legítimo —se agenda y se asigna después—, así que `None` pasa. Lo
+    // que no puede pasar es un id ajeno: sin esto, `medico_id` solo tenía por
+    // freno la clave foránea a `usuario(id)`, que abarca todas las instituciones,
+    // y servía además para saber qué ids existen.
+    if let Some(medico_id) = nueva.medico_id
+        && !crate::usuario::es_del_ambito(pool, ambito, medico_id).await?
+    {
         return Ok(None);
     }
     let r = sqlx::query(

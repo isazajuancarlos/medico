@@ -767,10 +767,10 @@ async fn hosp_listar(
 
 async fn hosp_camas(
     State(e): State<Estado>,
-    Autenticado(_u): Autenticado,
+    Autenticado(u): Autenticado,
     Query(f): Query<FiltroCamas>,
 ) -> Response {
-    match hospitalizacion::listar_camas(&e.pool, f.estado.as_deref(), f.servicio.as_deref()).await {
+    match hospitalizacion::listar_camas(&e.pool, u.ambito(), f.estado.as_deref(), f.servicio.as_deref()).await {
         Ok(v) => Json(v).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
