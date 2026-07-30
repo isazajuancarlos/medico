@@ -43,7 +43,7 @@ pub async fn autenticar(
     if !claves::verificar(clave, &usuario.password_hash) {
         return None;
     }
-    Some(sesion::emitir(secreto, usuario.id, minutos))
+    Some(sesion::emitir(secreto, usuario.id, usuario.token_version, minutos))
 }
 
 /// El usuario de una petición, a partir de sus cabeceras. Relee el usuario de la
@@ -53,7 +53,16 @@ pub async fn usuario_de(estado: &Estado, cabeceras: &HeaderMap) -> Option<Usuari
     let cookie = sesion::de_cabeceras(cabeceras)?;
     let sesion = sesion::verificar(&estado.secreto, &cookie)?;
     let usuario = usuario::por_id(&estado.pool, sesion.usuario_id).await.ok().flatten()?;
-    usuario.activo.then_some(usuario)
+    if !usuario.activo {
+        return None;
+    }
+    // Revocación selectiva (M3): un token emitido antes de subir la versión queda
+    // por detrás. Se comprueba aquí, en la relectura del usuario que ya se hacía —
+    // sin estado nuevo en el servidor.
+    if sesion.token_version < usuario.token_version {
+        return None;
+    }
+    Some(usuario)
 }
 
 /// Extractor: una ruta que pide `Autenticado` solo se ejecuta con sesión válida;
@@ -125,7 +134,7 @@ mod pruebas {
     async fn usuario_de_una_cookie_valida_es_el_usuario() {
         let pool = base().await;
         let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None };
-        let cookie = sesion::emitir(SECRETO, 2, 60);
+        let cookie = sesion::emitir(SECRETO, 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={cookie}").parse().unwrap());
         let u = usuario_de(&estado, &cabeceras).await.unwrap();
@@ -145,9 +154,91 @@ mod pruebas {
     async fn una_cookie_de_otro_secreto_no_entra() {
         let pool = base().await;
         let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None };
-        let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 60);
+        let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={ajena}").parse().unwrap());
         assert!(usuario_de(&estado, &cabeceras).await.is_none());
+    }
+
+    fn estado_de(pool: medico_datos::Pool) -> Estado {
+        Estado {
+            pool,
+            secreto: SECRETO.to_vec(),
+            minutos: 60,
+            dir_imagenes: std::env::temp_dir(),
+            clave_firma: None,
+            clave_verificacion: None,
+            clave_reposo: None,
+        }
+    }
+
+    fn con_cookie(valor: &str) -> HeaderMap {
+        let mut c = HeaderMap::new();
+        c.insert(header::COOKIE, format!("medico_sesion={valor}").parse().unwrap());
+        c
+    }
+
+    /// El corazón de M3: revocar sube la versión, y la cookie emitida ANTES deja de
+    /// valer en la siguiente petición, mientras que un login posterior sí entra.
+    #[tokio::test]
+    async fn revocar_invalida_las_cookies_previas_pero_no_las_nuevas() {
+        let pool = base().await;
+        let estado = estado_de(pool.clone());
+        let previa = autenticar(&pool, SECRETO, 60, "ruiz@x.co", "clave123").await.unwrap();
+        assert!(usuario_de(&estado, &con_cookie(&previa)).await.is_some(), "válida antes de revocar");
+
+        assert!(medico_datos::usuario::revocar_sesiones(&pool, 2).await.unwrap());
+
+        assert!(usuario_de(&estado, &con_cookie(&previa)).await.is_none(), "la revocación invalida la cookie previa");
+        let nueva = autenticar(&pool, SECRETO, 60, "ruiz@x.co", "clave123").await.unwrap();
+        assert!(usuario_de(&estado, &con_cookie(&nueva)).await.is_some(), "el login posterior a la revocación vale");
+    }
+
+    /// Discrimina: revocar al usuario 2 no toca la sesión del 4.
+    #[tokio::test]
+    async fn revocar_a_uno_no_afecta_a_otro() {
+        let pool = base().await;
+        let h = claves::hashear("clave123").unwrap();
+        sqlx::query("INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) VALUES (4,'Otro','otro@x.co',?,'medico',1,1)")
+            .bind(&h).execute(&pool).await.unwrap();
+        let estado = estado_de(pool.clone());
+        let del_2 = sesion::emitir(SECRETO, 2, 0, 60);
+        let del_4 = sesion::emitir(SECRETO, 4, 0, 60);
+
+        assert!(medico_datos::usuario::revocar_sesiones(&pool, 2).await.unwrap());
+
+        assert!(usuario_de(&estado, &con_cookie(&del_2)).await.is_none(), "la del 2 cae");
+        assert!(usuario_de(&estado, &con_cookie(&del_4)).await.is_some(), "la del 4 sobrevive");
+    }
+
+    /// Directiva #8: bajo concurrencia, tras una revocación NINGUNA de 100 cookies
+    /// previas sobrevive y las 100 nuevas entran — no hay ventana en la que una
+    /// stale se cuele. Con timeout, para distinguir un interbloqueo de lentitud.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn cien_cookies_previas_caen_tras_revocar_bajo_concurrencia() {
+        let pool = base().await;
+        let estado = estado_de(pool.clone());
+        // 100 cookies a la versión 0 (de fábrica) y 100 a la versión 1 (post-revocación).
+        let previas: Vec<String> = (0..100).map(|_| sesion::emitir(SECRETO, 2, 0, 60)).collect();
+        let nuevas: Vec<String> = (0..100).map(|_| sesion::emitir(SECRETO, 2, 1, 60)).collect();
+
+        assert!(medico_datos::usuario::revocar_sesiones(&pool, 2).await.unwrap());
+
+        let plazo = std::time::Duration::from_secs(60);
+        let mut tareas = Vec::new();
+        for c in previas {
+            let e = estado.clone();
+            tareas.push(tokio::spawn(async move { (false, usuario_de(&e, &con_cookie(&c)).await.is_some()) }));
+        }
+        for c in nuevas {
+            let e = estado.clone();
+            tareas.push(tokio::spawn(async move { (true, usuario_de(&e, &con_cookie(&c)).await.is_some()) }));
+        }
+        for t in tareas {
+            let (deberia, entro) = tokio::time::timeout(plazo, t).await
+                .expect("una verificación no respondió a tiempo: ¿interbloqueo?")
+                .expect("la tarea no debía entrar en panic");
+            assert_eq!(entro, deberia, "una cookie previa se coló o una nueva se rechazó");
+        }
     }
 }

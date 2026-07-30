@@ -23,10 +23,14 @@ pub struct Usuario {
     /// «superadmin».
     pub institucion_id: Option<i64>,
     pub activo: bool,
+    /// Versión de sesión (M3). El token la lleva; `auth` rechaza el token con una
+    /// versión menor que esta. Subirla revoca todas las sesiones. Ver
+    /// [`revocar_sesiones`].
+    pub token_version: i64,
 }
 
 const COLUMNAS: &str =
-    "id, nombre, email, password_hash, rol, institucion_id, activo";
+    "id, nombre, email, password_hash, rol, institucion_id, activo, token_version";
 
 impl Usuario {
     /// El rol tipado, o `None` si la cadena de la base no nombra un rol conocido.
@@ -67,6 +71,20 @@ pub async fn por_email(pool: &crate::Pool, email: &str) -> Result<Option<Usuario
         .bind(email)
         .fetch_optional(pool)
         .await
+}
+
+/// Revoca TODAS las sesiones vivas de un usuario subiendo su `token_version` en
+/// uno: los tokens ya emitidos llevan la versión anterior y `auth::usuario_de` los
+/// rechaza en la siguiente petición. Es el "cerrar sesión en todos los
+/// dispositivos" y el sitio donde enganchar "invalidar sesiones tras cambiar la
+/// contraseña" cuando exista ese flujo. `false` si el usuario no existe (nada que
+/// revocar) — no se inventa un éxito sobre un id que no está.
+pub async fn revocar_sesiones(pool: &crate::Pool, id: i64) -> Result<bool, sqlx::Error> {
+    let r = sqlx::query("UPDATE usuario SET token_version = token_version + 1 WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(r.rows_affected() > 0)
 }
 
 /// Resumen de un usuario para listar. **No lleva `password_hash`** —ni siquiera
@@ -253,6 +271,18 @@ mod pruebas {
         assert_eq!(listar(&bd, Ambito::institucion(1)).await.unwrap().len(), 2);
         assert!(listar(&bd, Ambito::Ninguno).await.unwrap().is_empty());
         // El ResumenUsuario ni siquiera tiene campo de hash: es imposible filtrarlo.
+    }
+
+    #[tokio::test]
+    async fn revocar_sesiones_sube_la_version_solo_del_usuario() {
+        let pool = base().await;
+        assert_eq!(por_id(&pool, 2).await.unwrap().unwrap().token_version, 0, "de fábrica es 0");
+        assert!(revocar_sesiones(&pool, 2).await.unwrap(), "el usuario existe");
+        assert_eq!(por_id(&pool, 2).await.unwrap().unwrap().token_version, 1);
+        // No tocó a otro usuario.
+        assert_eq!(por_id(&pool, 1).await.unwrap().unwrap().token_version, 0);
+        // Revocar un id que no existe no inventa un éxito.
+        assert!(!revocar_sesiones(&pool, 999).await.unwrap());
     }
 
     fn nuevo(email: &str, inst: Option<i64>) -> UsuarioNuevo {
