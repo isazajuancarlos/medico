@@ -5,6 +5,7 @@ pub mod catalogo;
 pub mod cita;
 pub mod documento;
 pub mod formula;
+pub mod freno;
 pub mod historia;
 pub mod hospitalizacion;
 pub mod imagen;

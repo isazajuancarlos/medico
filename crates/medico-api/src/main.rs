@@ -110,6 +110,7 @@ async fn main() -> ExitCode {
         clave_firma: cfg.clave_firma,
         clave_verificacion: cfg.clave_verificacion,
         clave_reposo: cfg.clave_reposo,
+        tras_proxy: cfg.tras_proxy,
     };
     let app = rutas::router(estado);
 
@@ -123,6 +124,13 @@ async fn main() -> ExitCode {
     };
 
     println!("medico-api escuchando en http://{dir}");
+    // `with_connect_info` y no `serve(listener, app)` a secas: sin esto, el
+    // extractor `ConnectInfo` de `/api/acceso` no encuentra la dirección del
+    // cliente y el freno al ensayo de contraseñas mete todos los intentos en el
+    // mismo cubo. Seguiría frenando —degrada a «por cuenta»— pero un desconocido
+    // podría dejar fuera al dueño de la cuenta, que es justo lo que el freno
+    // está diseñado para no hacer.
+    let app = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
     if let Err(e) = axum::serve(listener, app).await {
         eprintln!("el servidor terminó con error: {e}");
         return ExitCode::FAILURE;

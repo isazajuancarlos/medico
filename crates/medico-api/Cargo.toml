@@ -31,3 +31,9 @@ rust-embed = { version = "8", features = ["mime-guess"] }
 # Lectura del maestro CUM del INVIMA (subcomando cargar-maestros). El export trae
 # comas dentro de campos entrecomillados; un parser a mano se rompe en silencio.
 csv = "1"
+
+[dev-dependencies]
+# Para ejercer las rutas como las ejerce un cliente: una petición entra, una
+# respuesta sale. Hasta ahora se probaban las funciones y no los handlers, así
+# que el cableado —extractores, códigos de estado, cabeceras— no lo miraba nadie.
+tower = { version = "0.5", features = ["util"] }

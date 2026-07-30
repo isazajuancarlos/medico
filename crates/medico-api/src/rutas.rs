@@ -149,10 +149,92 @@ struct Credenciales {
     clave: String,
 }
 
-/// Login. 200 con la cookie de sesión, o 401. Un solo mensaje para todos los
-/// fallos: no se dice si el correo existe.
-async fn acceso(State(e): State<Estado>, Json(cred): Json<Credenciales>) -> Response {
-    match autenticar(&e.pool, &e.secreto, e.minutos, &cred.email, &cred.clave).await {
+/// De dónde viene la petición, para el freno de `/api/acceso`.
+///
+/// Detrás de nginx la dirección del zócalo es siempre `127.0.0.1`, así que hace
+/// falta `X-Forwarded-For` — pero esa cabecera la escribe **quien llama**, y
+/// creerla sin más convierte el freno en un adorno: bastaría cambiar un número
+/// en cada intento para no acumular ninguno. Por eso solo se lee cuando el
+/// despliegue AFIRMA estar detrás de un proxy (`MEDICO_TRAS_PROXY`), que es
+/// exactamente el caso en que esa cabecera la pone nuestro nginx y no el cliente.
+///
+/// Sin proxy declarado, el origen es el del zócalo. Si tampoco lo hay —una
+/// prueba que llama al router sin red— queda `desconocido`, y entonces todos los
+/// intentos comparten cubo: el freno degrada a «por cuenta», que es la forma
+/// segura de degradar.
+fn origen_de(tras_proxy: bool, cabeceras: &header::HeaderMap, zocalo: Option<std::net::SocketAddr>) -> String {
+    if tras_proxy {
+        // El primero de la lista es el cliente; los siguientes, los saltos.
+        let primero = cabeceras
+            .get("x-forwarded-for")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|xff| xff.split(',').next())
+            .map(str::trim)
+            .filter(|p| !p.is_empty());
+        if let Some(p) = primero {
+            return p.to_string();
+        }
+    }
+    zocalo.map(|s| s.ip().to_string()).unwrap_or_else(|| "desconocido".into())
+}
+
+/// Login. 200 con la cookie de sesión, 401 si no, **429 si se está probando**.
+///
+/// Un solo mensaje para todos los fallos: no se dice si el correo existe. El
+/// freno se consulta ANTES de verificar la contraseña —si no, cada petición
+/// frenada seguiría costando su Argon2 y el ensayo seguiría avanzando— y el
+/// intento se anota SIEMPRE, acierte o falle, porque la cuenta de fallos se hace
+/// desde el último acierto.
+async fn acceso(
+    State(e): State<Estado>,
+    cabeceras: header::HeaderMap,
+    extensiones: axum::http::Extensions,
+    Json(cred): Json<Credenciales>,
+) -> Response {
+    // Se lee de las extensiones y no con el extractor `ConnectInfo` porque este
+    // último RECHAZA la petición cuando el servidor no se montó con
+    // `with_connect_info` — y así lo montan las pruebas, que llaman al router sin
+    // red. Un login que devuelve 500 en las pruebas por no tener zócalo sería un
+    // freno que impide probar el freno.
+    let zocalo = extensiones
+        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        .map(|c| c.0);
+    let origen = origen_de(e.tras_proxy, &cabeceras, zocalo);
+    let ahora = chrono::Utc::now();
+
+    match medico_datos::freno::estado(&e.pool, &cred.email, &origen, ahora).await {
+        Ok(f) if f.frenado() => {
+            // El intento frenado también se anota: si no, insistir durante la
+            // espera saldría gratis y la cuenta de fallos no crecería.
+            let _ = medico_datos::freno::anotar(&e.pool, &cred.email, &origen, false, ahora).await;
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                [(header::RETRY_AFTER, f.segundos_restantes().to_string())],
+            )
+                .into_response();
+        }
+        Ok(_) => {}
+        Err(err) => {
+            // No se puede leer el freno: NO se deja pasar. Un fallo de la base en
+            // el camino de autenticación que abriera la puerta sería el peor
+            // defecto posible, y «degradar con gracia» aquí significa exactamente
+            // eso. La historia clínica espera; la puerta abierta no se arregla.
+            eprintln!("⚠️  no se pudo consultar el freno de acceso: {err}");
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
+    }
+
+    let resultado = autenticar(&e.pool, &e.secreto, e.minutos, &cred.email, &cred.clave).await;
+    let _ = medico_datos::freno::anotar(
+        &e.pool,
+        &cred.email,
+        &origen,
+        resultado.is_some(),
+        ahora,
+    )
+    .await;
+
+    match resultado {
         Some(cookie) => (
             StatusCode::OK,
             [(header::SET_COOKIE, sesion::cabecera_abrir(&cookie, e.minutos))],
@@ -1638,4 +1720,206 @@ async fn listar_unidades_dispensacion(
         .await
         .map(Json)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+    use axum::body::Body;
+    // Solo lo usan las pruebas: el handler llama a `medico_datos::freno::…` por
+    // ruta completa, así que importarlo arriba sería un `use` muerto en el binario.
+    use medico_datos::freno;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    const SECRETO: &[u8] = b"un secreto de prueba de mas de treinta y dos bytes";
+
+    async fn estado_de_prueba(tras_proxy: bool) -> Estado {
+        let pool = medico_datos::abrir("sqlite::memory:").await.unwrap();
+        sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (1,'Uno','900')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let h = claves::hashear("clave123").unwrap();
+        sqlx::query(
+            "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+             VALUES (2,'Dra Ruiz','ruiz@x.co',?,'medico',1,1)",
+        )
+        .bind(&h)
+        .execute(&pool)
+        .await
+        .unwrap();
+        Estado {
+            pool,
+            secreto: SECRETO.to_vec(),
+            minutos: 60,
+            dir_imagenes: std::env::temp_dir(),
+            clave_firma: None,
+            clave_verificacion: None,
+            clave_reposo: None,
+            tras_proxy,
+        }
+    }
+
+    /// Un intento de acceso, como lo hace un cliente. `xff` simula la cabecera
+    /// que pondría un proxy — o que pondría un atacante.
+    async fn intentar(estado: &Estado, email: &str, clave: &str, xff: Option<&str>) -> StatusCode {
+        let mut peticion = Request::builder()
+            .method("POST")
+            .uri("/api/acceso")
+            .header("content-type", "application/json");
+        if let Some(v) = xff {
+            peticion = peticion.header("x-forwarded-for", v);
+        }
+        let cuerpo = format!(r#"{{"email":"{email}","clave":"{clave}"}}"#);
+        router(estado.clone())
+            .oneshot(peticion.body(Body::from(cuerpo)).unwrap())
+            .await
+            .unwrap()
+            .status()
+    }
+
+    #[tokio::test]
+    async fn la_clave_correcta_entra_y_la_incorrecta_da_401() {
+        let e = estado_de_prueba(false).await;
+        assert_eq!(intentar(&e, "ruiz@x.co", "clave123", None).await, StatusCode::OK);
+        assert_eq!(intentar(&e, "ruiz@x.co", "otra", None).await, StatusCode::UNAUTHORIZED);
+    }
+
+    /// El freno, ejercido por la ruta y no por el módulo: seis fallos seguidos y
+    /// el séptimo intento recibe 429. Es la prueba que faltaba en tunjo —la
+    /// lógica probada y el cableado no—, y aquí el cableado ES el control.
+    #[tokio::test]
+    async fn tras_pasarse_del_umbral_la_ruta_responde_429() {
+        let e = estado_de_prueba(false).await;
+        for i in 1..=freno::UMBRAL {
+            assert_eq!(
+                intentar(&e, "ruiz@x.co", "mal", None).await,
+                StatusCode::UNAUTHORIZED,
+                "el intento {i} ya frenaba: eso castiga a quien teclea mal"
+            );
+        }
+        assert_eq!(
+            intentar(&e, "ruiz@x.co", "mal", None).await,
+            StatusCode::TOO_MANY_REQUESTS,
+            "pasado el umbral la ruta no frenó"
+        );
+    }
+
+    /// Y frena AUNQUE la clave sea correcta: si dejara pasar la buena, el freno
+    /// no limitaría el ritmo de ensayo, que es lo único que hace.
+    #[tokio::test]
+    async fn el_freno_no_hace_excepcion_con_la_clave_buena() {
+        let e = estado_de_prueba(false).await;
+        for _ in 0..=freno::UMBRAL {
+            intentar(&e, "ruiz@x.co", "mal", None).await;
+        }
+        assert_eq!(
+            intentar(&e, "ruiz@x.co", "clave123", None).await,
+            StatusCode::TOO_MANY_REQUESTS
+        );
+    }
+
+    /// La respuesta frenada lleva `Retry-After` con segundos, y nunca cero: un
+    /// cero invita a reintentar ya mismo, que es lo contrario de lo que se pide.
+    #[tokio::test]
+    async fn el_429_dice_cuanto_hay_que_esperar() {
+        let e = estado_de_prueba(false).await;
+        for _ in 0..=freno::UMBRAL {
+            intentar(&e, "ruiz@x.co", "mal", None).await;
+        }
+        let r = router(e.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/acceso")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"email":"ruiz@x.co","clave":"mal"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::TOO_MANY_REQUESTS);
+        let segundos: u64 = r
+            .headers()
+            .get(header::RETRY_AFTER)
+            .expect("falta Retry-After")
+            .to_str()
+            .unwrap()
+            .parse()
+            .expect("Retry-After no es un número de segundos");
+        assert!(segundos >= 1, "Retry-After: {segundos}");
+    }
+
+    /// Un correo que NO existe se frena igual. Si solo se frenaran las cuentas
+    /// reales, recibir el 429 diría que el correo existe — el mismo oráculo que
+    /// el 401 único evita.
+    #[tokio::test]
+    async fn un_correo_inexistente_tambien_se_frena() {
+        let e = estado_de_prueba(false).await;
+        for _ in 0..=freno::UMBRAL {
+            intentar(&e, "nadie@x.co", "mal", None).await;
+        }
+        assert_eq!(
+            intentar(&e, "nadie@x.co", "mal", None).await,
+            StatusCode::TOO_MANY_REQUESTS
+        );
+    }
+
+    /// **Sin proxy declarado, `X-Forwarded-For` no se cree.** Es la prueba que
+    /// justifica la bandera: si se creyera siempre, bastaría cambiar el número de
+    /// esa cabecera en cada intento para no acumular ninguno y el freno sería un
+    /// adorno.
+    #[tokio::test]
+    async fn sin_proxy_declarado_la_cabecera_no_permite_esquivar_el_freno() {
+        let e = estado_de_prueba(false).await;
+        for i in 0..=freno::UMBRAL {
+            intentar(&e, "ruiz@x.co", "mal", Some(&format!("203.0.113.{i}"))).await;
+        }
+        assert_eq!(
+            intentar(&e, "ruiz@x.co", "mal", Some("203.0.113.99")).await,
+            StatusCode::TOO_MANY_REQUESTS,
+            "una cabecera que pone el propio cliente esquivó el freno"
+        );
+    }
+
+    /// Con proxy declarado sí se lee, que es para lo que existe: detrás de nginx
+    /// todos los intentos comparten zócalo y sin la cabecera el freno degradaría
+    /// a «por cuenta», que es justo lo que deja fuera al dueño de la cuenta.
+    #[tokio::test]
+    async fn con_proxy_declarado_cada_origen_lleva_su_propia_cuenta() {
+        let e = estado_de_prueba(true).await;
+        for _ in 0..=freno::UMBRAL {
+            intentar(&e, "ruiz@x.co", "mal", Some("203.0.113.9")).await;
+        }
+        assert_eq!(
+            intentar(&e, "ruiz@x.co", "mal", Some("203.0.113.9")).await,
+            StatusCode::TOO_MANY_REQUESTS,
+            "el origen que insiste no quedó frenado"
+        );
+        // Y la doctora, desde su estación, entra con su clave correcta.
+        assert_eq!(
+            intentar(&e, "ruiz@x.co", "clave123", Some("10.0.0.5")).await,
+            StatusCode::OK,
+            "la dueña de la cuenta quedó fuera por culpa de otro"
+        );
+    }
+
+    #[test]
+    fn el_origen_sale_del_zocalo_salvo_que_haya_proxy() {
+        let zocalo: std::net::SocketAddr = "198.51.100.7:44444".parse().unwrap();
+        let mut c = header::HeaderMap::new();
+        c.insert("x-forwarded-for", "203.0.113.1, 10.0.0.1".parse().unwrap());
+
+        assert_eq!(origen_de(false, &c, Some(zocalo)), "198.51.100.7");
+        assert_eq!(origen_de(true, &c, Some(zocalo)), "203.0.113.1");
+
+        // Con proxy declarado pero cabecera vacía o ausente, se vuelve al zócalo
+        // en vez de inventarse un origen.
+        let vacia = header::HeaderMap::new();
+        assert_eq!(origen_de(true, &vacia, Some(zocalo)), "198.51.100.7");
+        // Y sin zócalo —una prueba que llama al router sin red— queda un valor
+        // único y explícito, no una cadena vacía que se confunda con un origen.
+        assert_eq!(origen_de(true, &vacia, None), "desconocido");
+    }
 }

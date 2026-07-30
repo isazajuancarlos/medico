@@ -51,6 +51,8 @@ pub struct Config {
     /// Frase para cifrar en reposo los archivos (imágenes). `None` los guarda en
     /// claro (histórico / sin cifrado). Es un secreto de despliegue.
     pub clave_reposo: Option<String>,
+    /// `MEDICO_TRAS_PROXY=true` cuando hay nginx delante. Ver `Estado::tras_proxy`.
+    pub tras_proxy: bool,
 }
 
 fn opcional(clave: &str) -> Option<String> {
@@ -102,6 +104,14 @@ impl Config {
             clave_firma: opcional("MEDICO_SIGNING_KEY"),
             clave_verificacion: opcional("MEDICO_VERIFYING_KEY"),
             clave_reposo: opcional("MEDICO_STORAGE_KEY"),
+            // Solo `true` explícito. Cualquier otra cosa —vacío, «1», «si», un
+            // dedazo— vale `false`, y `false` es el lado seguro: se ignora
+            // `X-Forwarded-For` y el freno degrada a «por cuenta». Al revés,
+            // un valor mal escrito haría creer una cabecera que escribe quien
+            // llama.
+            tras_proxy: opcional("MEDICO_TRAS_PROXY")
+                .map(|v| v.trim().eq_ignore_ascii_case("true"))
+                .unwrap_or(false),
         })
     }
 }
