@@ -39,6 +39,7 @@ pub fn router(estado: Estado) -> Router {
     Router::new()
         .route("/api/acceso", post(acceso))
         .route("/api/salir", post(salir))
+        .route("/api/salir-todo", post(salir_todo))
         .route("/api/yo", get(yo))
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
         .route("/api/pacientes/{id}", get(obtener_paciente).put(actualizar_paciente))
@@ -171,6 +172,34 @@ async fn salir() -> Response {
         Json(Ok2 { ok: true }),
     )
         .into_response()
+}
+
+/// Cierra la sesión en TODOS los dispositivos (M3): sube el `token_version` del
+/// usuario, con lo que toda cookie ya emitida —incluida la de este dispositivo—
+/// deja de valer en la siguiente petición. Borra además la cookie de aquí. Actúa
+/// sobre el usuario AUTENTICADO (nunca sobre un id que venga del cliente), así que
+/// nadie revoca las sesiones de otro. Si la revocación falla, responde 500: no se
+/// finge un cierre que no ocurrió (directiva de fallar en vez de suponer).
+async fn salir_todo(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match medico_datos::usuario::revocar_sesiones(&e.pool, u.id).await {
+        Ok(true) => (
+            StatusCode::OK,
+            [(header::SET_COOKIE, sesion::cabecera_cerrar())],
+            Json(Ok2 { ok: true }),
+        )
+            .into_response(),
+        // `false` = la sentencia no tocó ninguna fila: el usuario que acabamos de
+        // autenticar ya no está. No hubo revocación, así que tampoco hay 200 —
+        // descartar este booleano era justo fingir el cierre que el doc promete no fingir.
+        Ok(false) => {
+            eprintln!("⚠️  revocación sin efecto: el usuario {} ya no existe", u.id);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+        Err(err) => {
+            eprintln!("⚠️  no se pudieron revocar las sesiones de {}: {err}", u.id);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 #[derive(Serialize)]

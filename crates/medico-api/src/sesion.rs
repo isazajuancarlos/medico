@@ -6,10 +6,11 @@
 //! `localStorage` sería lo contrario: cualquier XSS lo exfiltra y el servidor no
 //! puede invalidarlo antes de que caduque.
 //!
-//! La cookie lleva `id|caducidad|firma` (HMAC-SHA256, comparada en tiempo
-//! constante). NO lleva el rol ni la institución: esos se leen de la base en
-//! cada petición, porque un rol dentro de la cookie sobrevive a que un
-//! administrador lo revoque.
+//! La cookie lleva `id|token_version|caducidad|firma` (HMAC-SHA256, comparada en
+//! tiempo constante). NO lleva el rol ni la institución: esos se leen de la base
+//! en cada petición, porque un rol dentro de la cookie sobrevive a que un
+//! administrador lo revoque. El `token_version` es la revocación selectiva (M3):
+//! `auth` lo compara con el de la base y rechaza el que quedó por detrás.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -25,6 +26,9 @@ type HmacSha256 = Hmac<Sha256>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Sesion {
     pub usuario_id: i64,
+    /// La versión de sesión con la que se emitió el token (M3). `auth` la compara
+    /// con la del usuario en la base: si quedó por detrás, el token está revocado.
+    pub token_version: i64,
     pub caduca_en: i64,
 }
 
@@ -41,10 +45,12 @@ fn firmar(secreto: &[u8], carga: &str) -> String {
     URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes())
 }
 
-/// Construye el valor de la cookie para un usuario.
-pub fn emitir(secreto: &[u8], usuario_id: i64, minutos: i64) -> String {
+/// Construye el valor de la cookie para un usuario, atada a su `token_version`
+/// actual (M3). Si luego se revoca (sube la versión en la base), este token queda
+/// por detrás y `auth` lo rechaza.
+pub fn emitir(secreto: &[u8], usuario_id: i64, token_version: i64, minutos: i64) -> String {
     let caduca = ahora() + minutos * 60;
-    let carga = format!("{usuario_id}|{caduca}");
+    let carga = format!("{usuario_id}|{token_version}|{caduca}");
     let firma = firmar(secreto, &carga);
     format!("{carga}|{firma}")
 }
@@ -58,10 +64,11 @@ pub fn verificar(secreto: &[u8], valor: &str) -> Option<Sesion> {
     if !constante_iguales(esperada.as_bytes(), firma.as_bytes()) {
         return None;
     }
-    let (id, caduca) = carga.split_once('|')?;
+    let mut campos = carga.splitn(3, '|');
     let sesion = Sesion {
-        usuario_id: id.parse().ok()?,
-        caduca_en: caduca.parse().ok()?,
+        usuario_id: campos.next()?.parse().ok()?,
+        token_version: campos.next()?.parse().ok()?,
+        caduca_en: campos.next()?.parse().ok()?,
     };
     if sesion.caduca_en <= ahora() {
         return None;
@@ -107,28 +114,40 @@ mod pruebas {
 
     #[test]
     fn una_sesion_emitida_se_verifica() {
-        let v = emitir(SECRETO, 42, 60);
-        assert_eq!(verificar(SECRETO, &v).unwrap().usuario_id, 42);
+        let v = emitir(SECRETO, 42, 7, 60);
+        let s = verificar(SECRETO, &v).unwrap();
+        assert_eq!(s.usuario_id, 42);
+        assert_eq!(s.token_version, 7, "la versión viaja en el token y se recupera");
     }
 
     /// La prueba que discrimina: sin ella, un verificador que siempre devuelve
     /// `Some` pasaría la anterior.
     #[test]
     fn cambiar_el_usuario_invalida_la_firma() {
-        let v = emitir(SECRETO, 42, 60);
+        let v = emitir(SECRETO, 42, 0, 60);
         let manipulada = v.replacen("42|", "1|", 1);
+        assert!(verificar(SECRETO, &manipulada).is_none());
+    }
+
+    /// Subir la versión en el token sin re-firmar no cuela: la versión va DENTRO
+    /// de la carga firmada, así que un atacante no puede fabricarse una sesión a
+    /// la versión nueva para sortear una revocación.
+    #[test]
+    fn manipular_la_version_invalida_la_firma() {
+        let v = emitir(SECRETO, 42, 0, 60);
+        let manipulada = v.replacen("42|0|", "42|9|", 1);
         assert!(verificar(SECRETO, &manipulada).is_none());
     }
 
     #[test]
     fn otro_secreto_no_vale() {
-        let v = emitir(SECRETO, 42, 60);
+        let v = emitir(SECRETO, 42, 0, 60);
         assert!(verificar(b"otro secreto igualmente largo de 32+", &v).is_none());
     }
 
     #[test]
     fn una_sesion_caducada_no_entra() {
-        let v = emitir(SECRETO, 42, -1);
+        let v = emitir(SECRETO, 42, 0, -1);
         assert!(verificar(SECRETO, &v).is_none());
     }
 }

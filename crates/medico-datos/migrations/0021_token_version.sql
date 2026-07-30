@@ -1,0 +1,11 @@
+-- Revocación selectiva de sesión (M3 del análisis de seguridad). `token_version`
+-- por usuario: el token de sesión lleva la versión con la que se emitió, y `auth`
+-- rechaza el token cuya versión sea MENOR que la actual del usuario. Subir el
+-- entero = revocar TODAS las sesiones vivas de ese usuario ("cerrar sesión en
+-- todos los dispositivos", "invalidar sesiones tras cambiar la contraseña"). La
+-- comprobación va en la MISMA relectura del usuario que cada petición ya hace
+-- (auth::usuario_de) — sin estado nuevo en el servidor ni denylist de tokens; la
+-- caducidad corta del token acota el resto. Importa con datos de paciente (Ley
+-- 1581): poder cortar el acceso de un dispositivo comprometido sin esperar a que
+-- caduque.
+ALTER TABLE usuario ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0;
