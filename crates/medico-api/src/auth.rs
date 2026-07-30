@@ -25,9 +25,15 @@ pub struct Estado {
     /// Frase para cifrar en reposo los archivos. `None` = se guardan en claro.
     pub clave_reposo: Option<String>,
     /// El despliegue AFIRMA estar detrás de un proxy inverso. Solo entonces se
-    /// cree `X-Forwarded-For` para identificar el origen de un intento de acceso:
-    /// esa cabecera la escribe quien llama, y creerla sin proxy convierte el
-    /// freno en un adorno que se salta cambiando un número.
+    /// cree `X-Real-IP` para identificar el origen de un intento de acceso.
+    ///
+    /// **`X-Real-IP`, no `X-Forwarded-For`.** Nuestro nginx escribe la segunda
+    /// con `$proxy_add_x_forwarded_for`, que AÑADE: lo que mande el cliente queda
+    /// delante de su IP real, así que su primer salto lo elige él. `X-Real-IP` se
+    /// escribe con `$remote_addr` y pisa lo que venga. Ver `rutas::origen_de`.
+    ///
+    /// Sin proxy declarado, el origen es la dirección del zócalo. Si se declara y
+    /// la cabecera no llega, el acceso responde 503 en vez de rellenar el dato.
     pub tras_proxy: bool,
 }
 

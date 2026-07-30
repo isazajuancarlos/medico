@@ -1,102 +1,38 @@
-//! El freno al ensayo de contraseñas.
+//! El freno al ensayo de contraseñas: aquí las dos consultas, la regla en guaca.
 //!
-//! # La regla, en una frase
+//! # Qué se movió y por qué
+//!
+//! Este módulo tenía la regla entera —umbral, techo, qué borra la cuenta de
+//! fallos, qué hacer con una marca de tiempo ilegible— y informes no tenía
+//! ninguna. Escribirla dos veces es garantizar que dentro de un año una de las
+//! dos tenga el techo y la otra no; es exactamente la constatación que dio origen
+//! a `guaca` («las copias YA habían divergido»).
+//!
+//! Así que la regla vive en [`guaca::freno`] y aquí queda lo que de verdad es de
+//! medico: dónde se guardan los intentos y cómo se podan. La app trae sus filas,
+//! `evaluar` decide.
+//!
+//! # La regla, para no tener que ir a buscarla
 //!
 //! Tras cinco fallos seguidos desde el mismo origen contra el mismo correo, el
 //! siguiente intento espera; la espera se dobla con cada fallo y se detiene a los
-//! cinco minutos. Un acierto lo borra todo.
+//! cinco minutos. Un acierto lo borra todo. **No bloquea la cuenta**: un bloqueo
+//! que exige a alguien desbloquear convierte cinco peticiones de un desconocido
+//! en una historia clínica inaccesible a las tres de la mañana.
 //!
-//! # Lo que se rechazó al diseñarla
-//!
-//! **Bloquear la cuenta.** Un bloqueo que exige a alguien desbloquear convierte
-//! cinco peticiones de un desconocido en una historia clínica inaccesible a las
-//! tres de la mañana. La regla se probó contra «¿qué cliente legítimo necesita
-//! justo esto?»: la respuesta es que ninguno necesita quedarse fuera, y todos
-//! necesitan que el diccionario no avance.
-//!
-//! **Contar solo por cuenta.** Con la cuenta sola, el atacante remoto elige a
-//! quién dejar fuera. Con el origen dentro de la clave se frena a sí mismo.
-//!
-//! **Un tope alto y creciente sin límite.** Doblar sin techo es un bloqueo con
-//! otro nombre: a los quince fallos serían horas. El techo son cinco minutos, y
-//! eso ya baja un diccionario a menos de trescientos intentos al día.
-//!
-//! # Lo que este freno NO resuelve, y no debe aparentar que sí
-//!
-//! El relleno de credenciales desde muchas máquinas contra muchas cuentas: cada
-//! par (correo, origen) falla una vez y ninguno llega al umbral. Contra eso la
-//! respuesta es el segundo factor, no un freno más agresivo — que solo añadiría
-//! el bloqueo que aquí se rechazó. Este módulo es el prerrequisito de ese
-//! segundo factor, no su sustituto.
+//! El razonamiento completo —y lo que se rechazó al diseñarla— está en el módulo
+//! de guaca, que es donde ahora se audita una sola vez.
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 
 use crate::Pool;
 
-/// Fallos seguidos que se admiten sin espera.
-///
-/// Cinco: equivocarse tres o cuatro veces al teclear es corriente, y a la quinta
-/// ya no lo es. El sexto intento espera quince segundos, que un humano ni
-/// registra como castigo y a un programa le arruina el ritmo.
-pub const UMBRAL: i64 = 5;
-
-/// Espera tras el primer fallo por encima del umbral. Se dobla con cada uno.
-pub const BASE_SEGUNDOS: i64 = 15;
-
-/// Techo de la espera. Ver el módulo: sin techo, el freno es un bloqueo.
-pub const TOPE_SEGUNDOS: i64 = 300;
-
-/// Cuánto se conserva un intento. Lo anterior no dice nada del ritmo actual y
-/// solo haría crecer la tabla sin límite.
-pub const RETENCION_HORAS: i64 = 24;
-
-/// El estado del freno para un (correo, origen) en un instante.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Estado {
-    /// Fallos seguidos desde el último acierto (o desde el borde de retención).
-    pub fallos: i64,
-    /// Cuánto falta para poder volver a probar. Cero = adelante.
-    pub espera: Duration,
-}
-
-impl Estado {
-    pub fn frenado(&self) -> bool {
-        self.espera > Duration::zero()
-    }
-
-    /// Segundos que faltan, redondeados hacia arriba, para la cabecera
-    /// `Retry-After`. Nunca cero cuando hay freno: un `Retry-After: 0` invita a
-    /// reintentar de inmediato, que es lo contrario de lo que se pide.
-    pub fn segundos_restantes(&self) -> u64 {
-        if !self.frenado() {
-            return 0;
-        }
-        // Redondeo hacia arriba a mano: `div_ceil` sobre enteros con signo
-        // todavía no está estabilizado y esto no justifica exigir una versión
-        // concreta del compilador.
-        let ms = self.espera.num_milliseconds().max(1);
-        ((ms + 999) / 1000).max(1) as u64
-    }
-}
-
-/// La espera que corresponde a `fallos` fallos seguidos. Función pura: es la
-/// regla, y se prueba sin base de datos.
-pub fn espera_de(fallos: i64) -> Duration {
-    // `<` y no `<=`: con `<=`, cinco fallos dejaban pasar un sexto intento libre
-    // y el freno no aparecía hasta el séptimo. La diferencia es un intento, pero
-    // era un intento entre lo que dice este módulo y lo que hacía — y dos
-    // maneras de contar la misma regla garantizan que dentro de un año nadie
-    // sepa cuál era. Lo cazó la prueba de la RUTA, no las de aquí.
-    if fallos < UMBRAL {
-        return Duration::zero();
-    }
-    // `saturating_*` y el techo antes de convertir: con 64 fallos, `1 << 63` ya
-    // es desbordamiento, y un desbordamiento aquí daría una espera negativa —
-    // es decir, ningún freno justo cuando más se está intentando.
-    let exceso = (fallos - UMBRAL).min(32) as u32;
-    let segundos = BASE_SEGUNDOS.saturating_mul(1i64 << exceso).min(TOPE_SEGUNDOS);
-    Duration::seconds(segundos)
-}
+// La regla se reexporta para que quien ya la usaba —`rutas.rs` cuenta con
+// `freno::UMBRAL` en sus pruebas— no tenga que saber que se mudó. Lo que NO se
+// hace es copiar los valores: son los de guaca o no son.
+pub use guaca::freno::{
+    espera_de, Estado, BASE_SEGUNDOS, RETENCION_HORAS, TOPE_SEGUNDOS, UMBRAL,
+};
 
 /// Anota un intento. Se llama SIEMPRE, con éxito o sin él.
 pub async fn anotar(
@@ -120,13 +56,15 @@ pub async fn anotar(
     // exactamente lo que esta llamada vuelve a escribir, y ni una fila más. Una
     // limpieza global aquí borraría el rastro de otras cuentas que nadie pidió
     // borrar, y eso no se vería hasta la segunda vuelta.
-    let corte = (ahora - Duration::hours(RETENCION_HORAS)).to_rfc3339();
+    //
+    // El borde sale de guaca y no de una resta local: con dos bordes de la misma
+    // regla, la poda acaba borrando lo que el conteo todavía cuenta, o al revés.
     sqlx::query(
         "DELETE FROM intento_acceso WHERE email = ? AND origen = ? AND momento < ?",
     )
     .bind(email)
     .bind(origen)
-    .bind(corte)
+    .bind(guaca::freno::corte_retencion(ahora).to_rfc3339())
     .execute(pool)
     .await?;
     Ok(())
@@ -139,85 +77,41 @@ pub async fn estado(
     origen: &str,
     ahora: DateTime<Utc>,
 ) -> Result<Estado, sqlx::Error> {
-    let corte = (ahora - Duration::hours(RETENCION_HORAS)).to_rfc3339();
-
-    // Desde cuándo se cuenta: el último acierto manda sobre el borde de
-    // retención. Entrar bien borra la cuenta de fallos, que es lo que hace que
-    // equivocarse un martes no penalice el miércoles.
-    let ultimo_exito: Option<String> = sqlx::query_scalar(
-        "SELECT MAX(momento) FROM intento_acceso \
-         WHERE email = ? AND origen = ? AND exito = 1 AND momento >= ?",
+    // Una sola consulta, sin `ORDER BY` ni filtro de fecha: antes eran dos —una
+    // para el último acierto y otra para los fallos posteriores—, y el criterio
+    // estaba repartido entre el SQL y el Rust. `evaluar` no depende del orden y
+    // aplica la retención por su cuenta, así que aquí no queda ninguna decisión.
+    let filas: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT momento, exito FROM intento_acceso WHERE email = ? AND origen = ?",
     )
     .bind(email)
     .bind(origen)
-    .bind(&corte)
-    .fetch_one(pool)
-    .await?;
-    let desde = ultimo_exito.unwrap_or(corte);
-
-    let filas: Vec<(String,)> = sqlx::query_as(
-        "SELECT momento FROM intento_acceso \
-         WHERE email = ? AND origen = ? AND exito = 0 AND momento > ? \
-         ORDER BY momento DESC",
-    )
-    .bind(email)
-    .bind(origen)
-    .bind(&desde)
     .fetch_all(pool)
     .await?;
 
-    let fallos = filas.len() as i64;
-    let espera = match filas.first() {
-        None => Duration::zero(),
-        Some((ultimo,)) => {
-            let castigo = espera_de(fallos);
-            if castigo.is_zero() {
-                Duration::zero()
-            } else {
-                // Una marca de tiempo ilegible no abre la puerta: se trata como
-                // «ahora mismo», es decir, se cumple la espera entera. El camino
-                // permisivo ante un dato roto es el que convierte un fallo de
-                // datos en una vía de entrada.
-                let cuando = DateTime::parse_from_rfc3339(ultimo)
-                    .map(|t| t.with_timezone(&Utc))
-                    .unwrap_or(ahora);
-                let libre = cuando + castigo;
-                if libre > ahora { libre - ahora } else { Duration::zero() }
-            }
-        }
-    };
-
-    Ok(Estado { fallos, espera })
+    let intentos: Vec<guaca::freno::Intento<'_>> = filas
+        .iter()
+        .map(|(momento, exito)| guaca::freno::Intento {
+            momento: momento.as_str(),
+            exito: *exito != 0,
+        })
+        .collect();
+    Ok(guaca::freno::evaluar(&intentos, ahora))
 }
 
 #[cfg(test)]
 mod pruebas {
     use super::*;
+    use chrono::Duration;
+
+    // Las pruebas de la REGLA pura —el borde del umbral, el techo, la marca de
+    // tiempo ilegible— se fueron con ella a guaca, donde se corren en su CI. Aquí
+    // se prueba lo que aquí se decide: que las filas se escriben, que la poda no
+    // se pasa de su pareja, y que el conjunto sigue frenando a quien insiste sin
+    // dejar fuera al dueño de la cuenta.
 
     async fn base() -> Pool {
         crate::abrir("sqlite::memory:").await.unwrap()
-    }
-
-    #[test]
-    fn hasta_el_umbral_no_hay_espera_y_despues_se_dobla() {
-        // Los cinco fallos admitidos se responden sin espera; a partir del
-        // quinto, el intento siguiente espera. El borde exacto está aquí y en la
-        // prueba de la ruta, y tienen que decir lo mismo.
-        for n in 0..UMBRAL {
-            assert!(espera_de(n).is_zero(), "{n} fallos no deberían esperar");
-        }
-        assert_eq!(espera_de(UMBRAL).num_seconds(), BASE_SEGUNDOS);
-        assert_eq!(espera_de(UMBRAL + 1).num_seconds(), BASE_SEGUNDOS * 2);
-        assert_eq!(espera_de(UMBRAL + 2).num_seconds(), BASE_SEGUNDOS * 4);
-    }
-
-    #[test]
-    fn la_espera_tiene_techo_y_no_se_desborda() {
-        assert_eq!(espera_de(100).num_seconds(), TOPE_SEGUNDOS);
-        // El caso que un `1 << n` sin cuidado convertiría en espera NEGATIVA, o
-        // sea en ausencia de freno justo con el atacante más insistente.
-        assert_eq!(espera_de(i64::MAX).num_seconds(), TOPE_SEGUNDOS);
-        assert!(espera_de(i64::MAX) > Duration::zero());
     }
 
     #[tokio::test]
@@ -338,6 +232,31 @@ mod pruebas {
         .await
         .unwrap();
         assert_eq!(ajenos, 1, "la poda se llevó filas de otra cuenta");
+    }
+
+    #[tokio::test]
+    async fn lo_que_la_poda_dejo_pasar_tampoco_lo_cuenta_el_freno() {
+        // Los dos bordes son uno. Si un día la poda falla —o alguien toca el
+        // `DELETE`—, el freno no debe empezar a contar fallos de anteayer: se
+        // escriben veinte fallos viejos SIN pasar por `anotar`, que es la única
+        // forma de que sobrevivan a la poda.
+        let pool = base().await;
+        let ahora = Utc::now();
+        let viejo = (ahora - Duration::hours(RETENCION_HORAS + 2)).to_rfc3339();
+        for _ in 0..20 {
+            sqlx::query(
+                "INSERT INTO intento_acceso (email, origen, momento, exito) VALUES (?,?,?,0)",
+            )
+            .bind("a@x.co")
+            .bind("1.2.3.4")
+            .bind(&viejo)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        let e = estado(&pool, "a@x.co", "1.2.3.4", ahora).await.unwrap();
+        assert_eq!(e.fallos, 0, "el freno contó fallos fuera de la retención");
+        assert!(!e.frenado());
     }
 
     /// Directiva #8: 120 intentos concurrentes contra la misma pareja no pierden

@@ -90,9 +90,20 @@ desconocido en una historia clínica inaccesible de madrugada.
 La clave es **(correo, origen)** y no solo el correo, para que quien insiste se
 frene a sí mismo en vez de dejar fuera al dueño de la cuenta. Un correo que no
 existe se frena igual: si solo se frenaran las cuentas reales, recibir el 429
-diría qué correos existen. `X-Forwarded-For` **solo** se lee con
-`MEDICO_TRAS_PROXY=true`, porque esa cabecera la escribe quien llama y creerla
-sin proxy deja el freno inservible.
+diría qué correos existen.
+
+El origen es **`X-Real-IP`** y solo con `MEDICO_TRAS_PROXY=true`; sin proxy, la
+dirección del zócalo. **No `X-Forwarded-For`**: nuestro nginx la escribe con
+`$proxy_add_x_forwarded_for`, que AÑADE, así que su primer salto es el valor que
+puso el cliente — leerlo dejaba elegir cubo en cada petición y el freno no
+frenaba nada en la única postura para la que se escribió. `X-Real-IP` sí la pisa
+nginx con `$remote_addr`. Si se declara el proxy y esa cabecera no llega, el
+acceso responde **503**: rellenar el origen pone a todos en el mismo cubo, que es
+el bloqueo por cuenta que este freno existe para no tener.
+
+La REGLA (umbral, techo, qué borra la cuenta, marca ilegible) vive en
+`guaca::freno`, compartida con informes; `medico-datos/src/freno.rs` solo pone
+las dos consultas.
 
 Y `autenticar` verifica contra un **hash de descarte** cuando el usuario no
 existe o está inactivo: sin eso respondía al instante con un correo falso y tras
