@@ -34,9 +34,18 @@ pub enum ErrorConfig {
 const MINIMO_SECRETO: usize = 32;
 
 /// Valores que NO pueden ser el secreto: los defectos que la gente deja puestos.
+///
+/// Es una lista negra, o sea una categoría abierta, y por eso NO es la defensa
+/// principal —lo es que `.env.example` no entregue nada que valide, atado por
+/// `el_ejemplo_no_entrega_un_secreto_que_sirva`—. Lo que sí hace bien una lista
+/// negra es lo de la última entrada: prohibir un valor que YA está publicado.
 const INSEGUROS: &[&str] = &[
     "changeme", "secret", "secret_key", "clave", "password", "cambiame",
     "SECRET_KEY_FINAL_V6", "dev", "test", "0000000000000000000000000000000000",
+    // El que `.env.example` traía hasta el 2026-07-31. Pasaba la validación (54
+    // caracteres) y está en el historial de git para siempre: quien copiara el
+    // ejemplo a su `.env` tiene que enterarse en el siguiente arranque.
+    "CAMBIE_ESTO_por_un_valor_aleatorio_de_32_o_mas_caracteres",
 ];
 
 #[derive(Debug, Clone)]
@@ -185,6 +194,32 @@ mod pruebas {
     #[test]
     fn un_secreto_propio_y_largo_pasa() {
         assert!(validar_secreto("una-clave-propia-de-mas-de-treinta-y-dos-bytes").is_ok());
+    }
+
+    /// El archivo de ejemplo NO puede entregar un secreto que valide.
+    ///
+    /// `INSEGUROS` es una lista negra, o sea una categoría abierta: prohíbe lo
+    /// que alguien alcanzó a prever y deja pasar todo lo demás. Por ahí se coló
+    /// durante meses `SECRET_KEY=CAMBIE_ESTO_por_un_valor_aleatorio_de_32_o_mas_caracteres`
+    /// —54 caracteres, ningún parecido con «changeme»—, de modo que copiar
+    /// `.env.example` a `.env` arrancaba el servidor firmando sesiones con una
+    /// clave publicada en el repositorio. Alargar la lista negra habría
+    /// arreglado ESE caso; esto arregla la regla: el ejemplo se comprueba contra
+    /// el mismo validador que el arranque, y cualquier valor plausible que
+    /// alguien escriba aquí «para que se vea el formato» pone la prueba en rojo.
+    #[test]
+    fn el_ejemplo_no_entrega_un_secreto_que_sirva() {
+        const EJEMPLO: &str = include_str!("../../../.env.example");
+        let valor = EJEMPLO
+            .lines()
+            .map(str::trim)
+            .find_map(|l| l.strip_prefix("SECRET_KEY="))
+            .expect("`.env.example` tiene que seguir documentando SECRET_KEY");
+        assert!(
+            validar_secreto(valor).is_err(),
+            "«{valor}» pasa la validación: quien copie .env.example a .env arranca con un \
+             secreto que está en el repositorio. Déjelo VACÍO."
+        );
     }
 
     fn ip(s: &str) -> std::net::IpAddr {

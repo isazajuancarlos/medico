@@ -16,6 +16,22 @@ Backend **FastAPI + SQLModel + PostgreSQL** en `backend/`, frontend **Angular 21
 PrimeNG 21** en `frontend/`. Multi-institucional, con licencia por institución que
 decide qué módulos se ven.
 
+> **PrimeNG AQUÍ ES DEUDA, NO EL ESTÁNDAR — y no se sube de versión.** El stack de
+> todos los desarrollos es Rust (axum + SQLx/SQLite) con Angular empotrado en el
+> binario y **`@angular/material`**. `informes` ya cumple (Material 22.0.6);
+> medico no, y es el único que no.
+>
+> **`primeng` NO se actualiza a la 22 bajo ningún concepto**: la 22 dejó de ser
+> MIT —es «PrimeUI», comercial, con clave obligatoria que sin ella estampa
+> *«Invalid PrimeUI License»* sobre la aplicación—. Un binario que va offline a
+> casa de un cliente no puede llevar dentro una clave que caduca; se probó entero
+> en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
+> no 21 → 22. Queda en 21.1.2 hasta que se migre.
+>
+> Tamaño medido el 2026-07-31: 34 archivos, ~20 componentes distintos, ~250
+> importaciones. El grueso es `button` (30), `table` (25), `inputtext` (25),
+> `tag` (25) y `toast` (21).
+
 El eje del trabajo actual es la **cadena RIPS → FEV-RIPS → MUV**: producir el JSON
 de la Resolución 948 de 2026 y que el Mecanismo Único de Validación de MinSalud lo
 acepte y devuelva CUV. Ver [La cadena RIPS](#la-cadena-rips--fev-rips--muv).
@@ -45,6 +61,10 @@ npm test                                         # vitest vía `ng test`: 5 spec
 npm run build
 
 # === DOCKER (pila completa) ===
+# Los tres secretos se EXIGEN del entorno: sin ellos compose aborta, a propósito.
+export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+export SECRET_KEY="$(openssl rand -hex 32)"
+export JWT_SECRET_KEY="$(openssl rand -hex 32)"
 docker-compose up -d                             # db 5432 + backend 8000 + nginx 80
 
 # === UTILIDADES DE BD ===
