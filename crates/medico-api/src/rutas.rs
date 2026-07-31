@@ -35,18 +35,48 @@ use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 /// de sobra; por encima es casi seguro un error o un abuso.
 const MAX_SUBIDA: usize = 25 * 1024 * 1024;
 
+/// La política de contenido de la APLICACIÓN. Ver [`cabeceras_de_seguridad`].
+const CSP: &str = "default-src 'self'; \
+                   script-src 'self'; \
+                   style-src 'self' 'unsafe-inline'; \
+                   img-src 'self' data:; \
+                   font-src 'self'; \
+                   connect-src 'self'; \
+                   object-src 'none'; \
+                   base-uri 'self'; \
+                   form-action 'self'; \
+                   frame-ancestors 'none'";
+
 /// Cabeceras que van en TODA respuesta.
 ///
 /// Es el respaldo sistémico que no había: `grep nosniff` sobre el repositorio no
 /// devolvía nada, así que la única defensa contra que el navegador reinterprete
 /// un tipo era que el tipo estuviera bien — y no lo estaba.
 ///
-/// **Aquí van solo las que no pueden romper la interfaz.** Una CSP completa para
-/// la aplicación necesita probarse contra el Angular compilado (estilos en línea,
-/// trabajadores, fuentes) y no se pone a ciegas: una CSP que rompe la aplicación
-/// es peor que ninguna, porque la siguiente reacción es quitarla entera. La CSP
-/// estricta SÍ va, y máxima, en la respuesta que sirve archivos subidos — que es
-/// donde están los bytes de un tercero.
+/// La CSP máxima —`default-src 'none'; sandbox`— sigue yendo aparte, en la
+/// respuesta que sirve archivos subidos: ahí están los bytes de un tercero y ahí
+/// puede cerrarse todo sin romper nada, porque la interfaz nunca sale por ese
+/// extremo. Lo de aquí es la política de la APLICACIÓN, que es otra cosa.
+///
+/// # La CSP: probada contra el Angular compilado, no copiada de una lista
+///
+/// - **`script-src 'self'`, sin `'unsafe-inline'` ni `'unsafe-eval'`.** Es la que
+///   para un XSS. Para que se pudiera poner hubo que apagar `inlineCritical` en
+///   `angular.json`: emitía `onload="this.media='all'"` en la hoja de estilos —un
+///   manejador en línea, o sea script—, y con esta directiva el navegador no lo
+///   ejecuta, la hoja se queda en `media="print"` y la aplicación se ve SIN
+///   ESTILOS *sin dar un solo error*.
+/// - **`style-src` lleva `'unsafe-inline'` y no es pereza.** Angular y PrimeNG
+///   escriben estilos en tiempo de ejecución y usan atributos `style="…"`. Un
+///   nonce no lo arreglaría: vale para elementos `<style>`, no para atributos
+///   `style`. El riesgo que deja —inyectar CSS— es mucho menor que ejecutar
+///   código.
+/// - **`default-src 'self'` se pudo cerrar porque el `index.html` dejó de salir a
+///   `fonts.googleapis.com`.** Inter viaja ahora dentro del paquete. Eso no era
+///   solo un problema de CSP: cada carga le contaba a un tercero que alguien está
+///   usando una historia clínica, desde qué IP y a qué hora.
+/// - **Nada de HSTS aquí**: el TLS termina en el proxy, que es quien puede
+///   prometerlo con conocimiento de causa.
 async fn cabeceras_de_seguridad(
     peticion: axum::extract::Request,
     siguiente: axum::middleware::Next,
@@ -63,6 +93,12 @@ async fn cabeceras_de_seguridad(
         header::REFERRER_POLICY,
         header::HeaderValue::from_static("strict-origin-when-cross-origin"),
     );
+    // La respuesta que sirve un archivo subido ya trae la suya, MÁS estricta
+    // (`default-src 'none'; sandbox`). No se le pisa: quien la puso sabía que ahí
+    // podía cerrar del todo, y esta es más permisiva por necesidad.
+    if !h.contains_key(header::CONTENT_SECURITY_POLICY) {
+        h.insert(header::CONTENT_SECURITY_POLICY, header::HeaderValue::from_static(CSP));
+    }
     r
 }
 

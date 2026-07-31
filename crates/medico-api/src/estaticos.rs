@@ -52,3 +52,56 @@ pub async fn servir(uri: Uri) -> Response {
             .into_response(),
     }
 }
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// El `index.html` empotrado **puede ejecutarse bajo `script-src 'self'`** y no
+    /// habla con nadie de fuera.
+    ///
+    /// Cierra dos fallos que no se ven mirando la pantalla en el portátil:
+    ///
+    /// 1. Con `inlineCritical` encendido, Angular emite
+    ///    `<link … media="print" onload="this.media='all'">`. Ese `onload` es
+    ///    script en línea: la CSP no lo ejecuta, la hoja se queda en «print» y la
+    ///    aplicación se ve sin estilos **sin un solo error**. Se apagó en
+    ///    `angular.json` — una opción que un `ng update` puede revertir en
+    ///    silencio.
+    /// 2. El index cargaba Inter de `fonts.googleapis.com`. En una historia
+    ///    clínica eso le contaba a un tercero quién usa el sistema y desde dónde;
+    ///    y en un consultorio sin internet la tipografía no llegaba. Ahora viaja
+    ///    dentro del paquete.
+    #[test]
+    fn el_index_empotrado_no_ejecuta_nada_en_linea_ni_llama_a_nadie() {
+        let Some(index) = Interfaz::get("index.html") else {
+            eprintln!("sin interfaz empaquetada: nada que comprobar");
+            return;
+        };
+        let html = String::from_utf8_lossy(&index.data);
+
+        for pista in [" onload=", " onclick=", " onerror=", " onchange=", " onsubmit="] {
+            assert!(
+                !html.contains(pista),
+                "el index trae «{}», que `script-src 'self'` NO ejecuta. \
+                 Casi seguro volvió `inlineCritical` en angular.json.",
+                pista.trim()
+            );
+        }
+        for trozo in html.split("<script").skip(1) {
+            let etiqueta = trozo.split('>').next().unwrap_or("");
+            assert!(etiqueta.contains("src="), "hay un <script> en línea en el index");
+        }
+        // Se mira el ATRIBUTO y no la cadena suelta, para que un comentario que
+        // explique por qué no hay enlaces externos no haga fallar la prueba que
+        // comprueba justo eso.
+        for atributo in ["href=\"http", "src=\"http"] {
+            assert!(
+                !html.contains(atributo),
+                "el index apunta fuera ({atributo}…): `default-src 'self'` lo bloquea, \
+                 en una instalación sin internet no cargaría, y es un tercero \
+                 enterándose de que se está usando una historia clínica"
+            );
+        }
+    }
+}
