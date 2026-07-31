@@ -22,29 +22,38 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 | **Entrega** | proceso + base de datos | **un archivo** |
 | **Ramas** | `main`, `master` | `feat/*` |
 
+> **PrimeNG aquí es DEUDA, no el estándar.** El estándar de todos los
+> desarrollos es Angular con `@angular/material`; medico es el único que no
+> cumple, y la migración está pendiente. **No se sube `primeng` a la 22**: dejó
+> de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un binario que
+> vive offline en casa de un cliente no puede llevar dentro una clave que caduca.
+
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
-contrario para que parezca más avanzado: FEV-RIPS no existe en Rust, el catálogo
-de módulos por licencia (`/api/modulos`) tampoco, y sin `/api/agenda/*` la
-pantalla de Agenda Médica no carga contra el binario. El ADR no autoriza apagar
-Python hasta que la generación del RIPS sea byte a byte idéntica.
+contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
+recolector de datos faltantes—, y sin él no hay facturación electrónica, que es
+por lo que le pagan al prestador. Siguen sin backend en Rust `/api/admin`,
+`/api/facturacion`, `/api/quirofano` y `/api/estadisticas`. El ADR no autoriza
+apagar Python hasta que la generación del RIPS sea byte a byte idéntica.
 
 Lo que el port **sí** cubre: pacientes, historia clínica con firma, urgencias,
 hospitalización, nutrición, rehabilitación, remisiones y contrarreferencia,
-incapacidades, citas, farmacia e inventario, proveedores, laboratorio, imágenes
-diagnósticas y ambulancias.
+incapacidades, citas y **agenda médica** (franjas, bloqueos, turnos libres e
+indicadores), catálogo de módulos por licencia, farmacia e inventario,
+proveedores, laboratorio, imágenes diagnósticas y ambulancias. Los cuatro
+maestros —CIE-10, CUPS, CUM y DIVIPOLA— van empotrados en el binario.
 
 ## Arrancar
 
 ```bash
 # --- Python (el producto vivo) ---
 cd backend
-.venv/bin/python -m pytest -q          # 645 pruebas
+.venv/bin/python -m pytest -q          # 665 pruebas
 python seed.py                         # base + datos de prueba (idempotente)
 uvicorn main:app --reload --port 8000  # Swagger en /docs
 
 # --- Rust (el port) ---
 ./construir.sh                         # interfaz → empotrado → binario. EL comando.
-cargo test  --workspace --all-targets  # 246 pruebas
+cargo test  --workspace --all-targets  # 392 pruebas
 cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---
