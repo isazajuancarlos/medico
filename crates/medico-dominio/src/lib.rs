@@ -6,6 +6,7 @@
 pub mod aislamiento;
 pub mod ajustes;
 pub mod modulo;
+pub mod rips;
 pub mod rol;
 
 pub use aislamiento::{Ambito, Visibilidad};
