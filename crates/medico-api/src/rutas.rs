@@ -270,9 +270,31 @@ async fn acceso(
 
     match medico_datos::freno::estado(&e.pool, &cred.email, &origen, ahora).await {
         Ok(f) if f.frenado() => {
-            // El intento frenado también se anota: si no, insistir durante la
-            // espera saldría gratis y la cuenta de fallos no crecería.
-            let _ = medico_datos::freno::anotar(&e.pool, &cred.email, &origen, false, ahora).await;
+            // EL INTENTO FRENADO NO SE ANOTA, y esto es lo contrario de lo que
+            // hacía antes. La razón que lo justificaba —«si no, insistir durante
+            // la espera saldría gratis»— suena bien y convierte el freno en lo
+            // único que el diseño dice no ser: un bloqueo.
+            //
+            // Con el intento anotado, cada reintento durante la espera suma un
+            // fallo, y como la espera dobla por fallo, quien insiste llega al
+            // techo de cinco minutos y SE QUEDA ahí mientras siga insistiendo: en
+            // cuanto vence, un clic lo devuelve arriba. Eso no le pasa a un
+            // atacante paciente —él espera—, le pasa a la doctora que pulsa tres
+            // veces porque cree que la página se colgó. El freno existe para
+            // limitar el RITMO de ensayo, no para castigar la impaciencia, y
+            // «nadie tiene que desbloquear a nadie» deja de ser cierto si la
+            // víctima puede encerrarse sola.
+            //
+            // Insistir tampoco sale gratis: se responde 429 y la espera no se
+            // acorta por pedirla más veces. Y hay una segunda razón, de la misma
+            // familia que el corte del correo largo: anotar aquí es UNA ESCRITURA
+            // EN LA BASE POR PETICIÓN NO AUTENTICADA. Justo lo que este camino
+            // debe evitar.
+            //
+            // informes hace esto mismo (`rutas.rs`, rama `freno.frenado()`), y las
+            // dos aplicaciones comparten la regla en `guaca::freno`. Diferir en
+            // quién la alimenta hacía que la misma regla se comportara distinto.
+            eprintln!("acceso frenado para «{}» desde {origen}", cred.email);
             return (
                 StatusCode::TOO_MANY_REQUESTS,
                 [(header::RETRY_AFTER, f.segundos_restantes().to_string())],
@@ -2075,6 +2097,69 @@ mod pruebas {
             intentar(&e, "ruiz@x.co", "clave123", None).await,
             StatusCode::TOO_MANY_REQUESTS
         );
+    }
+
+    /// Insistir durante la espera NO la alarga.
+    ///
+    /// Es la prueba del cambio, y la que distingue los dos comportamientos
+    /// posibles. Antes, el intento frenado se anotaba: cada reintento sumaba un
+    /// fallo, y como la espera dobla por fallo, tres clics de impaciencia
+    /// multiplicaban por ocho lo que había que esperar — y al vencer, otro clic
+    /// devolvía al techo. El freno dejaba de limitar el ritmo de ensayo para
+    /// convertirse en un bloqueo que la propia víctima se renueva.
+    ///
+    /// Se compara el `Retry-After` de la primera respuesta frenada con el de
+    /// después de insistir. No se exige que sean iguales —el tiempo corre y el
+    /// resto puede haber bajado un segundo—, se exige que NO HAYA CRECIDO.
+    #[tokio::test]
+    async fn insistir_durante_la_espera_no_alarga_la_espera() {
+        let e = estado_de_prueba(false).await;
+        for _ in 0..=freno::UMBRAL {
+            intentar(&e, "ruiz@x.co", "mal", None).await;
+        }
+        let espera_inicial = segundos_de_espera(&e, "ruiz@x.co").await;
+        assert!(espera_inicial >= 1, "no llegó a frenar: {espera_inicial}");
+
+        // Tres golpes más, ya frenado. Con el comportamiento anterior cada uno
+        // doblaba la espera.
+        for _ in 0..3 {
+            assert_eq!(
+                intentar(&e, "ruiz@x.co", "mal", None).await,
+                StatusCode::TOO_MANY_REQUESTS
+            );
+        }
+        let espera_despues = segundos_de_espera(&e, "ruiz@x.co").await;
+        assert!(
+            espera_despues <= espera_inicial,
+            "insistir alargó la espera de {espera_inicial}s a {espera_despues}s: \
+             el intento frenado se está anotando, y eso convierte el freno en un bloqueo"
+        );
+    }
+
+    /// El `Retry-After` de un intento frenado, en segundos.
+    async fn segundos_de_espera(estado: &Estado, email: &str) -> u64 {
+        let r = router(estado.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/acceso")
+                    .header("content-type", "application/json")
+                    .extension(axum::extract::ConnectInfo(
+                        "127.0.0.1:5555".parse::<std::net::SocketAddr>().unwrap(),
+                    ))
+                    .body(Body::from(format!(r#"{{"email":"{email}","clave":"mal"}}"#)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::TOO_MANY_REQUESTS, "se esperaba estar frenado");
+        r.headers()
+            .get(header::RETRY_AFTER)
+            .expect("falta Retry-After")
+            .to_str()
+            .unwrap()
+            .parse()
+            .expect("Retry-After no es un número de segundos")
     }
 
     /// La respuesta frenada lleva `Retry-After` con segundos, y nunca cero: un
