@@ -156,6 +156,32 @@ impl Exige for EscribirPaciente {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirPaciente;
 }
 
+/// Atender en urgencias y hospitalización: triage, ingreso, egreso.
+pub struct AtenderUrgencias;
+impl Exige for AtenderUrgencias {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::AtenderUrgenciasHospitalizacion;
+}
+
+/// Valoraciones y planes de nutrición.
+pub struct EscribirNutricion;
+impl Exige for EscribirNutricion {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirNutricion;
+}
+
+/// Planes y sesiones de rehabilitación.
+pub struct EscribirRehabilitacion;
+impl Exige for EscribirRehabilitacion {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::EscribirRehabilitacion;
+}
+
+/// Remisiones y contrarreferencia.
+pub struct GestionarRemision;
+impl Exige for GestionarRemision {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarRemision;
+}
+
 impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
     type Rejection = StatusCode;
 

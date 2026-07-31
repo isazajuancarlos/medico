@@ -11,7 +11,8 @@ use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{
-    autenticar, Autenticado, Autorizado, Borrar, EscribirClinico, EscribirPaciente, Estado, Firmar,
+    autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
+    EscribirNutricion, EscribirPaciente, EscribirRehabilitacion, Estado, Firmar, GestionarRemision,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
@@ -765,9 +766,10 @@ async fn urgencias_cola(State(e): State<Estado>, Autenticado(u): Autenticado) ->
 
 async fn urgencias_triage(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Json(n): Json<TriageNuevo>,
 ) -> Response {
+    let u = autorizado.0;
     match urgencias::registrar(&e.pool, u.ambito(), u.id, &n).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         // Paciente ajeno o triage inválido: no se distingue de «no se puede».
@@ -784,10 +786,11 @@ struct EgresoBody {
 
 async fn urgencias_egreso(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Path(id): Path<i64>,
     Json(b): Json<EgresoBody>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match urgencias::egreso(&e.pool, u.ambito(), id, &b.destino, b.observaciones.as_deref()).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND, // no existe, ajena, cerrada o destino inválido
@@ -839,9 +842,10 @@ async fn hosp_medicos(State(e): State<Estado>, Autenticado(u): Autenticado) -> R
 
 async fn hosp_ingresar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Json(i): Json<Ingreso>,
 ) -> Response {
+    let u = autorizado.0;
     match hospitalizacion::ingresar(&e.pool, u.ambito(), &i).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         // Cama no disponible, paciente ajeno, vía inválida o FK inexistente.
@@ -856,10 +860,11 @@ async fn hosp_ingresar(
 
 async fn hosp_egreso(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Path(id): Path<i64>,
     Json(eg): Json<Egreso>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match hospitalizacion::egreso(&e.pool, u.ambito(), id, &eg).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -895,9 +900,10 @@ async fn nutri_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Pat
 
 async fn nutri_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Json(v): Json<ValoracionCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match nutricion::crear_valoracion(&e.pool, u.ambito(), u.id, &v).await {
         Ok(Some(id)) => match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
             Ok(Some(val)) => (StatusCode::CREATED, Json(val)).into_response(),
@@ -910,10 +916,11 @@ async fn nutri_crear(
 
 async fn nutri_actualizar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Path(id): Path<i64>,
     Json(v): Json<ValoracionEditar>,
 ) -> Response {
+    let u = autorizado.0;
     match nutricion::actualizar_valoracion(&e.pool, u.ambito(), id, &v).await {
         Ok(true) => match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
             Ok(Some(val)) => Json(val).into_response(),
@@ -942,10 +949,11 @@ async fn nutri_plan(State(e): State<Estado>, Autenticado(u): Autenticado, Path(i
 
 async fn nutri_crear_plan(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Path(id): Path<i64>,
     Json(p): Json<PlanCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match nutricion::crear_plan(&e.pool, u.ambito(), id, u.id, &p).await {
         Ok(Some(_)) => match nutricion::obtener_plan(&e.pool, u.ambito(), id).await {
             Ok(Some(plan)) => (StatusCode::CREATED, Json(plan)).into_response(),
@@ -958,10 +966,11 @@ async fn nutri_crear_plan(
 
 async fn nutri_actualizar_plan(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Path(id): Path<i64>,
     Json(p): Json<PlanEditar>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match nutricion::actualizar_plan(&e.pool, u.ambito(), id, &p).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -992,9 +1001,10 @@ async fn rehab_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Pat
 
 async fn rehab_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Json(p): Json<rehabilitacion::PlanCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::crear_plan(&e.pool, u.ambito(), u.id, &p).await {
         Ok(Some(id)) => match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
             Ok(Some(plan)) => (StatusCode::CREATED, Json(plan)).into_response(),
@@ -1007,10 +1017,11 @@ async fn rehab_crear(
 
 async fn rehab_actualizar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Path(id): Path<i64>,
     Json(p): Json<rehabilitacion::PlanEditar>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::actualizar_plan(&e.pool, u.ambito(), id, &p).await {
         Ok(true) => match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
             Ok(Some(plan)) => Json(plan).into_response(),
@@ -1030,10 +1041,11 @@ async fn rehab_sesiones(State(e): State<Estado>, Autenticado(u): Autenticado, Pa
 
 async fn rehab_crear_sesion(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Path(id): Path<i64>,
     Json(s): Json<SesionCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::crear_sesion(&e.pool, u.ambito(), id, u.id, &s).await {
         Ok(Some(sid)) => match rehabilitacion::obtener_sesion(&e.pool, u.ambito(), sid).await {
             Ok(Some(ses)) => (StatusCode::CREATED, Json(ses)).into_response(),
@@ -1046,10 +1058,11 @@ async fn rehab_crear_sesion(
 
 async fn rehab_actualizar_sesion(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Path(id): Path<i64>,
     Json(s): Json<SesionEditar>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::actualizar_sesion(&e.pool, u.ambito(), id, &s).await {
         Ok(true) => match rehabilitacion::obtener_sesion(&e.pool, u.ambito(), id).await {
             Ok(Some(ses)) => Json(ses).into_response(),
@@ -1162,10 +1175,11 @@ struct EstadoBody {
 
 async fn rem_estado(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<GestionarRemision>,
     Path(id): Path<i64>,
     Json(b): Json<EstadoBody>,
 ) -> Response {
+    let u = autorizado.0;
     match referencia::remision_cambiar_estado(&e.pool, u.ambito(), id, &b.estado).await {
         Ok(Some(r)) => Json(r).into_response(),
         // No existe / ajena / transición no válida desde el estado actual.
@@ -1203,9 +1217,10 @@ async fn cr_rem_abiertas(State(e): State<Estado>, Autenticado(u): Autenticado) -
 
 async fn cr_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<GestionarRemision>,
     Json(c): Json<ContrarreferenciaCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match referencia::contrarref_crear(&e.pool, u.ambito(), u.id, u.institucion_id, &c).await {
         Ok(Some(id)) => match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(cr)) => (StatusCode::CREATED, Json(cr)).into_response(),
@@ -1225,7 +1240,12 @@ async fn cr_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(i
     }
 }
 
-async fn cr_recibir(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+async fn cr_recibir(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarRemision>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
     match referencia::contrarref_recibir(&e.pool, u.ambito(), id, u.id).await {
         Ok(Recepcion::Recibida) => match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(cr)) => Json(cr).into_response(),
@@ -2101,29 +2121,120 @@ mod pruebas {
             );
         }
 
-        /// LO QUE SIGUE ABIERTO, ESCRITO PARA QUE SEA UNA DECISIÓN Y NO UN OLVIDO.
+        /// La matriz de los módulos, con la respuesta de Juan del 2026-07-30.
         ///
-        /// urgencias, hospitalización, nutrición, rehabilitación, remisiones y
-        /// contrarreferencia no llevan `roleGuard` en `app.routes.ts`: el producto
-        /// **no ha decidido** quién escribe ahí, y siete de los quince roles no
-        /// aparecen en ninguna página de la matriz. Cerrarlo a ojo dejaría a una
-        /// nutricionista fuera del módulo de nutrición.
+        /// Cada caso comprueba LOS DOS LADOS: quien no debe entrar recibe 403 y
+        /// quien sí debe no lo recibe. Sin la segunda mitad, un extractor que
+        /// devolviera 403 siempre pasaría la prueba entera y habríamos cambiado un
+        /// agujero por una puerta tapiada — que en una historia clínica es igual
+        /// de grave, solo que se descubre antes.
         ///
-        /// Esta prueba NO celebra el hueco: lo fija. Si mañana se decide la matriz
-        /// y se cierran estos módulos, la prueba se pondrá roja y obligará a
-        /// borrarla a conciencia, en vez de dejar el hueco olvidado en un comentario.
+        /// SUSTITUYE a `los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito`,
+        /// que fijaba el hueco mientras la matriz no estuviera decidida. Se puso
+        /// roja al cerrar hospitalización, que es exactamente para lo que estaba,
+        /// y se borra aquí a conciencia.
         #[tokio::test]
-        async fn los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito() {
+        async fn la_matriz_de_los_modulos_deja_entrar_a_quien_atiende_y_no_a_quien_no() {
             let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            // Un profesional de cada oficio que la matriz nombra.
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (10,'Enf','enf2@x.co',?,'enfermeria',1,1),
+                        (11,'Nutri','nut@x.co',?,'nutricionista',1,1),
+                        (12,'Fisio','fis@x.co',?,'terapeuta',1,1)",
+            )
+            .bind(&h).bind(&h).bind(&h).execute(&e.pool).await.unwrap();
+
             let lab = cookie_de(5);
-            // Un laboratorista todavía puede dar ingreso de hospitalización. Es lo
-            // que hay, y está pendiente de decidir con el cliente.
-            assert_ne!(
-                pedir_con(&e, "POST", "/api/hospitalizacion/ingresar", &lab,
-                          r#"{"paciente_id":1,"cama":"101","motivo":"observación"}"#).await,
+            let enf = cookie_de(10);
+            let nutri = cookie_de(11);
+            let fisio = cookie_de(12);
+
+            // URGENCIAS Y HOSPITALIZACIÓN: «el médico, el especialista, los
+            // enfermeros, todos los profesionales que interactúan con el
+            // paciente». El laboratorista interactúa con la MUESTRA.
+            let ingreso = r#"{"paciente_id":1,"cama":"101","motivo":"observación"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/hospitalizacion/ingresar", &lab, ingreso).await,
                 StatusCode::FORBIDDEN,
-                "hospitalización ya exige rol: decídase la matriz, cámbiese la capacidad \
-                 y BÓRRESE esta prueba a conciencia"
+                "un laboratorista dio ingreso de hospitalización"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/hospitalizacion/ingresar", &enf, ingreso).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a enfermería el ingreso de hospitalización, que sí es suyo"
+            );
+
+            // NUTRICIÓN: «el nutriólogo o nutricionista».
+            let val = r#"{"paciente_id":1,"peso":70.0,"talla":1.70,"diagnostico":"normal"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/nutricion/valoraciones", &lab, val).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista hizo una valoración nutricional"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/nutricion/valoraciones", &nutri, val).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a la nutricionista el módulo de nutrición — el fallo con el signo cambiado"
+            );
+
+            // REHABILITACIÓN: «el fisioterapeuta», que en esta enumeración es
+            // `Terapeuta`.
+            let plan = r#"{"paciente_id":1,"diagnostico":"lumbalgia","objetivo":"movilidad","sesiones_totales":10}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/rehabilitacion/planes", &lab, plan).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista abrió un plan de rehabilitación"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/rehabilitacion/planes", &fisio, plan).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró al fisioterapeuta el módulo de rehabilitación"
+            );
+
+            // REMISIONES: «enfermeros o personal administrativo».
+            let cr = r#"{"remision_id":1,"resumen":"x","recomendaciones":"y"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/contrarreferencia", &lab, cr).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista creó una contrarreferencia"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/contrarreferencia", &enf, cr).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a enfermería la contrarreferencia"
+            );
+        }
+
+        /// SUBIR una imagen sigue abierto, y esta prueba lo fija igual que hacía
+        /// la anterior con hospitalización: el radiólogo es quien las sube y no
+        /// está en ninguna lista, así que cerrarlo a ojo lo dejaría sin trabajar.
+        /// El día que se decida, esto se pondrá rojo y habrá que borrarlo a
+        /// conciencia. BORRAR una imagen sí exige `BorrarClinico`.
+        #[tokio::test]
+        async fn subir_imagen_sigue_sin_exigir_rol_a_proposito() {
+            let e = con_tres_roles().await;
+            // Contenido ASCII: lo que se comprueba es que el ROL no cierra la
+            // puerta, no que la subida termine bien. Cualquier código que no sea
+            // 403 —incluido un 400 por imagen inválida— responde a la pregunta.
+            let cuerpo = "--x\r\nContent-Disposition: form-data; name=\"archivo\"; filename=\"r.png\"\r\nContent-Type: image/png\r\n\r\nno-es-una-imagen\r\n--x--\r\n";
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/historias/7/imagenes")
+                        .header("content-type", "multipart/form-data; boundary=x")
+                        .header(header::COOKIE, cookie_de(5))
+                        .body(Body::from(cuerpo))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_ne!(
+                r.status(),
+                StatusCode::FORBIDDEN,
+                "subir imagen ya exige rol: decídase quién sube y BÓRRESE esta prueba a conciencia"
             );
         }
 

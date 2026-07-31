@@ -46,24 +46,30 @@ pub enum RolUsuario {
 /// de `frontend/src/app/app.routes.ts` (que hoy vive únicamente en el navegador,
 /// o sea en ningún sitio) y las comprobaciones que las rutas ya hacían a mano.
 ///
-/// **No** está todavía el escribir de los MÓDULOS cuya página el producto deja
-/// entrar a cualquiera: urgencias, hospitalización, nutrición, rehabilitación,
-/// remisiones y contrarreferencia no llevan `roleGuard` en `app.routes.ts`, solo
-/// `moduloGuard` (que comprueba la licencia, no quién es usted).
+/// # Estas listas son DEFECTOS, y el destino es que las asigne un administrador
 ///
-/// No es un olvido, y tampoco es que dé igual: hoy significa que un laboratorista
-/// puede dar ingreso y egreso de hospitalización, o triar en urgencias. Es que
-/// **el producto no ha decidido la respuesta**, y siete de los quince roles
-/// —laboratorista, radiólogo, anestesiólogo, terapeuta, nutricionista, trabajo
-/// social, bacteriólogo— no aparecen en ninguna página de la matriz mientras que
-/// sí existen módulos suyos en la API. Inventar aquí una respuesta cerrada dejaría
-/// a una nutricionista fuera del módulo de nutrición, que es el mismo fallo con el
-/// signo cambiado.
+/// Juan, 2026-07-30: «creo que lo mejor es que un usuario administrador sea quien
+/// asigne esos perfiles». De acuerdo, y por una razón que va más allá de la
+/// comodidad: la planta de una IPS rural de tres personas y la de un hospital de
+/// tercer nivel no se parecen, y cualquier lista fija que se escriba aquí estará
+/// mal en una de las dos.
 ///
-/// Esa parte se decide con el cliente y se añade aquí. Mientras tanto esta
-/// enumeración **no finge** cubrirla, y la prueba
-/// `los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito` deja el hueco
-/// escrito para que sea una decisión pendiente y no un olvido silencioso.
+/// Pero un sistema de permisos configurable NECESITA defectos igualmente. Si una
+/// instalación nueva arranca sin nada asignado, nadie puede hacer nada, y lo
+/// primero que hace entonces todo cliente es darle todo a todos — que es peor que
+/// donde estábamos. Así que lo de aquí es la base sobre la que se configura, no
+/// una alternativa a configurar.
+///
+/// Lo que falta —y está en la tarea que acompaña a este cambio— es la tabla de
+/// asignación por institución que se superpone a esto: un administrador añade o
+/// quita roles de una capacidad PARA SU institución, y lo que no toque sigue el
+/// defecto. Ningún cliente configura lo que no usa; ninguno se queda sin camino.
+///
+/// **Lo que sigue sin cubrir**: SUBIR una imagen clínica (`POST
+/// /api/historias/{id}/imagenes`). Borrarla sí exige `BorrarClinico`, pero subir
+/// la hace el radiólogo, que no está en esa lista, y `/imagenes` no declara roles.
+/// Cerrarlo a ojo dejaría al radiólogo sin poder hacer su trabajo.
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Capacidad {
     /// Firmar una historia o un documento clínico.
@@ -94,6 +100,41 @@ pub enum Capacidad {
     /// escriban la nota médica. Son los seis roles que el producto declara para
     /// `/pacientes` en `app.routes.ts:31`.
     EscribirPaciente,
+    /// Atender en urgencias y en hospitalización: triage, egreso, ingreso.
+    ///
+    /// Respuesta de Juan (2026-07-30): «por lo general lo hace el médico general,
+    /// el especialista, los enfermeros, todos los profesionales que interactúan
+    /// con el paciente». Se toma su enumeración —médico, enfermería, auxiliar— y
+    /// se añade anestesiología, que atiende en urgencias y quirófano. NO entran
+    /// laboratorio ni bacteriología: interactúan con la MUESTRA, no con el
+    /// paciente en la camilla.
+    ///
+    /// El límite de esta lista es que es un DEFECTO nacional, no la planta de una
+    /// institución concreta. Ver la nota sobre asignación por administrador en la
+    /// cabecera de [`Capacidad`].
+    AtenderUrgenciasHospitalizacion,
+    /// Valoraciones y planes de nutrición.
+    ///
+    /// «El nutriólogo o nutricionista» (Juan). El rol `Medico` entra además, y no
+    /// por ampliar por ampliar: en una IPS pequeña sin nutricionista en planta, la
+    /// valoración la registra el médico tratante, y cerrarle la puerta dejaría el
+    /// módulo inservible justo donde más se nota. Un administrador puede quitarlo
+    /// cuando exista la asignación por institución.
+    EscribirNutricion,
+    /// Planes y sesiones de rehabilitación.
+    ///
+    /// «El fisioterapeuta» (Juan). En la enumeración de roles del sistema eso es
+    /// `Terapeuta`; no hay un `Fisioterapeuta` aparte, y no se inventa uno aquí
+    /// —cambiar la lista de roles toca la base y los tokens ya emitidos—. Se añade
+    /// `Medico` por lo mismo que en nutrición.
+    EscribirRehabilitacion,
+    /// Remisiones y contrarreferencia.
+    ///
+    /// «Puede ser enfermeros o personal administrativo» (Juan). Personal
+    /// administrativo es `Admin` en esta enumeración; enfermería y auxiliar
+    /// entran, y el médico también porque la remisión sale de su decisión
+    /// clínica.
+    GestionarRemision,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
@@ -126,6 +167,18 @@ impl RolUsuario {
             EscribirPaciente => matches!(
                 self,
                 Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria | Psicologo
+            ),
+            // Quien atiende al paciente en la camilla. Fuera laboratorio,
+            // radiología y bacteriología: interactúan con la muestra o la imagen.
+            AtenderUrgenciasHospitalizacion => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria | Anestesiologo
+            ),
+            EscribirNutricion => matches!(self, Superadmin | Admin | Medico | Nutricionista),
+            EscribirRehabilitacion => matches!(self, Superadmin | Admin | Medico | Terapeuta),
+            GestionarRemision => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
             ),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),
