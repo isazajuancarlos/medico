@@ -30,6 +30,18 @@ pub struct Medicamento {
 /// Busca medicamentos por nombre o por código CUM. Devuelve como máximo 50: es un
 /// autocompletar, no un volcado del maestro (que tiene decenas de miles de filas).
 /// Una consulta vacía devuelve vacío en vez de todo el catálogo.
+/// Busca medicamentos **para prescribir**: solo los ACTIVOS.
+///
+/// De los 65 997 del maestro, 15 046 están retirados. Ofrecerlos en el buscador
+/// de la fórmula sería poner delante del médico exactamente lo que el MUV va a
+/// rechazar — y el rechazo llega semanas después como glosa, cuando ya nadie
+/// recuerda esa consulta.
+///
+/// Leer una fórmula ANTIGUA no pasa por aquí: tiene el código y lo busca directo
+/// con [`crate::clinico::existe_cum`], que sí encuentra los retirados. Si algún
+/// día hace falta un buscador que los incluya, será otra función con otro
+/// nombre; una bandera en ésta invitaría a pasar la que toque y equivocarse en
+/// silencio.
 pub async fn buscar_medicamentos(pool: &crate::Pool, q: &str) -> Result<Vec<Medicamento>, sqlx::Error> {
     let q = q.trim();
     if q.is_empty() {
@@ -42,7 +54,8 @@ pub async fn buscar_medicamentos(pool: &crate::Pool, q: &str) -> Result<Vec<Medi
     sqlx::query_as::<_, Medicamento>(
         "SELECT id, codigo_cum, nombre, concentracion, forma_farmaceutica, titular \
          FROM medicamento \
-         WHERE nombre LIKE ?1 ESCAPE '\\' OR codigo_cum LIKE ?1 ESCAPE '\\' \
+         WHERE activo = 1 \
+           AND (nombre LIKE ?1 ESCAPE '\\' OR codigo_cum LIKE ?1 ESCAPE '\\') \
          ORDER BY nombre LIMIT 50",
     )
     .bind(&patron)
@@ -190,18 +203,45 @@ mod pruebas {
         }];
         cargar_medicamentos(&pool, &corregido).await.unwrap();
 
-        let r = buscar_medicamentos(&pool, "cardik").await.unwrap();
-        assert_eq!(r.len(), 1, "el mismo CUM no se duplica al recargar");
-        assert_eq!(r[0].nombre, "CARDIK 3 CORREGIDO");
-        assert_eq!(r[0].forma_farmaceutica, "TABLETA RECUBIERTA");
-        // El estado también se actualiza: era activo y dejó de serlo.
-        let (activo,): (i64,) =
-            sqlx::query_as("SELECT activo FROM medicamento WHERE codigo_cum = '20048021-41'")
-                .fetch_one(&pool).await.unwrap();
-        assert_eq!(activo, 0, "un medicamento retirado debe quedar marcado al recargar");
-        // Y se encuentra también tecleando el propio código CUM.
-        let por_cum = buscar_medicamentos(&pool, "20048021-41").await.unwrap();
-        assert_eq!(por_cum.len(), 1);
+        // Se consulta la TABLA y no el buscador: éste ya solo ofrece activos
+        // —correctamente— y aquí se recargó como retirado. Son dos conductas
+        // distintas y ambas ciertas; la prueba del upsert mira la tabla.
+        let filas: Vec<(String, String, i64)> = sqlx::query_as(
+            "SELECT nombre, forma_farmaceutica, activo FROM medicamento WHERE codigo_cum = ?",
+        )
+        .bind("20048021-41")
+        .fetch_all(&pool).await.unwrap();
+        assert_eq!(filas.len(), 1, "el mismo CUM no se duplica al recargar");
+        assert_eq!(filas[0].0, "CARDIK 3 CORREGIDO");
+        assert_eq!(filas[0].1, "TABLETA RECUBIERTA");
+        assert_eq!(filas[0].2, 0, "un medicamento retirado queda marcado al recargar");
+
+        // Y como quedó retirado, el buscador de la fórmula ya NO lo ofrece:
+        // el arreglo llega hasta donde el médico lo toca.
+        assert!(buscar_medicamentos(&pool, "cardik").await.unwrap().is_empty());
+        assert!(buscar_medicamentos(&pool, "20048021-41").await.unwrap().is_empty());
+    }
+
+    /// **El buscador de la fórmula no ofrece lo retirado.** Arreglar la columna
+    /// sin arreglar la búsqueda habría dejado el defecto justo donde el médico
+    /// lo toca: eligiendo de una lista un medicamento que el MUV rechaza.
+    #[tokio::test]
+    async fn el_buscador_no_ofrece_medicamentos_retirados() {
+        let pool = crate::abrir("sqlite::memory:").await.unwrap();
+        sqlx::query(
+            "INSERT INTO medicamento (codigo_cum, nombre, activo) VALUES \
+             ('1-1','ASPIRINA VIGENTE',1), ('2-1','ASPIRINA RETIRADA',0)",
+        )
+        .execute(&pool).await.unwrap();
+
+        let r = buscar_medicamentos(&pool, "aspirina").await.unwrap();
+        assert_eq!(r.len(), 1, "solo el vigente");
+        assert_eq!(r[0].nombre, "ASPIRINA VIGENTE");
+
+        // Y tampoco se cuela buscándolo por su código exacto.
+        assert!(buscar_medicamentos(&pool, "2-1").await.unwrap().is_empty());
+        // Pero SIGUE EXISTIENDO para leer una fórmula antigua.
+        assert!(crate::clinico::existe_cum(&pool, "2-1").await.unwrap());
     }
 
     #[tokio::test]
