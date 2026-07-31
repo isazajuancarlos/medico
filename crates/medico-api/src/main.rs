@@ -111,6 +111,18 @@ async fn main() -> ExitCode {
         }
     }
 
+    // Los maestros clínicos, por lo mismo y con el mismo coste medido (46 ms de
+    // parseo + 37 ms de escritura para las 26 063 filas). Sin ellos, el
+    // diagnóstico y el procedimiento vuelven a ser texto libre y el RIPS se
+    // rechaza tres semanas después.
+    match medico_datos::clinico::sembrar(&pool).await {
+        Ok((cie, cups)) => println!("CIE-10: {cie} diagnósticos · CUPS: {cups} procedimientos"),
+        Err(e) => {
+            eprintln!("no se pudieron sembrar los maestros clínicos: {e}");
+            return ExitCode::FAILURE;
+        }
+    }
+
     let dir_imagenes = std::path::PathBuf::from(&cfg.dir_imagenes);
     if let Err(e) = std::fs::create_dir_all(&dir_imagenes) {
         eprintln!("no se pudo crear la carpeta de imágenes ({}): {e}", dir_imagenes.display());
