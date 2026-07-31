@@ -182,6 +182,13 @@ impl Exige for GestionarRemision {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarRemision;
 }
 
+/// Farmacia: alta de items, entradas de stock y dispensación. **Leer** el
+/// inventario no la exige: basta estar autenticado.
+pub struct GestionarFarmacia;
+impl Exige for GestionarFarmacia {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarFarmacia;
+}
+
 impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
     type Rejection = StatusCode;
 

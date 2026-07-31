@@ -11,6 +11,7 @@ pub mod hospitalizacion;
 pub mod imagen;
 pub mod incapacidad;
 pub mod institucion;
+pub mod inventario;
 pub mod licencia;
 pub mod nutricion;
 pub mod orden;

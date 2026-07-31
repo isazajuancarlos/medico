@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::auth::{
     autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
-    EscribirNutricion, EscribirPaciente, EscribirRehabilitacion, Estado, Firmar, GestionarRemision,
+    EscribirNutricion, EscribirPaciente, EscribirRehabilitacion, Estado, Firmar, GestionarFarmacia,
+    GestionarRemision,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
@@ -29,6 +30,7 @@ use medico_datos::referencia::{self, ContrarreferenciaCrear, Recepcion};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
+use medico_datos::inventario;
 use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
 use medico_datos::paciente::{self, Antecedentes, InfoPaciente, Paciente, PacienteNuevo};
@@ -157,6 +159,18 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/medicos", get(listar_medicos))
         .route("/api/citas", get(listar_citas).post(crear_cita))
         .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
+        // Farmacia. Leer no exige capacidad; escribir sí (`GestionarFarmacia`).
+        .route("/api/farmacia/stats", get(farm_stats))
+        .route("/api/farmacia/inventario", get(farm_listar).post(farm_crear))
+        .route(
+            "/api/farmacia/inventario/{id}",
+            put(farm_actualizar).delete(farm_eliminar),
+        )
+        .route("/api/farmacia/inventario/{id}/entrada", post(farm_entrada))
+        .route("/api/farmacia/formulas-pendientes", get(farm_formulas_pendientes))
+        .route("/api/farmacia/dispensar", post(farm_dispensar))
+        .route("/api/farmacia/dispensaciones", get(farm_dispensaciones))
+        .route("/api/farmacia/movimientos", get(farm_movimientos))
         // Catálogos de referencia: los lee cualquier usuario autenticado.
         .route("/api/especialidades", get(listar_especialidades))
         .route("/api/medicamentos/buscar", get(buscar_medicamentos))
@@ -1368,12 +1382,20 @@ async fn eliminar_formula(
     State(e): State<Estado>,
     autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
-) -> StatusCode {
+) -> Response {
     let u = autorizado.0;
     match formula::eliminar(&e.pool, u.ambito(), id).await {
-        Ok(true) => StatusCode::NO_CONTENT,
-        Ok(false) => StatusCode::NOT_FOUND,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Ok(formula::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(formula::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(formula::ResultadoBorrado::YaDispensada { entregas }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Esta fórmula ya tiene {entregas} entrega(s) registradas en farmacia: borrarla \
+                 dejaría la dispensación sin prescripción que la respalde. Corríjala con una \
+                 fórmula nueva."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
@@ -1879,6 +1901,228 @@ async fn listar_unidades_dispensacion(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
+// --- Farmacia ----------------------------------------------------------------
+//
+// LEER el inventario solo pide sesión: enfermería necesita saber si queda
+// adrenalina antes de pedirla, y un 403 ahí no protege nada que el listado de
+// medicamentos no diga ya. ESCRIBIR —alta, edición, entrada, dispensación—
+// exige `GestionarFarmacia`, que en la firma del manejador se lee de un vistazo.
+
+/// El cuerpo con el que se rechaza una operación de farmacia, en el mismo
+/// formato (`detail`) que ya espera la interfaz.
+fn detalle(codigo: StatusCode, texto: String) -> Response {
+    (codigo, Json(serde_json::json!({ "detail": texto }))).into_response()
+}
+
+async fn farm_stats(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match inventario::stats(&e.pool, u.ambito(), &inventario::hoy()).await {
+        Ok(s) => Json(s).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<inventario::Filtros>,
+) -> Response {
+    match inventario::listar(&e.pool, u.ambito(), &f, &inventario::hoy()).await {
+        Ok(items) => Json(items).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// La institución del item sale de la del USUARIO, nunca del cuerpo.
+///
+/// Un superadmin no tiene institución (`institucion_id = NULL`), así que no
+/// puede dar de alta inventario: no hay respuesta correcta a «¿de quién es este
+/// medicamento?» y no se inventa una. Responde 400 diciéndolo, en vez de crear
+/// una fila huérfana que después no ve nadie (directiva 20).
+async fn farm_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Json(i): Json<inventario::ItemNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "El inventario pertenece a una institución y esta cuenta no está adscrita a ninguna."
+                .into(),
+        );
+    };
+    match inventario::crear(&e.pool, u.ambito(), institucion_id, &i).await {
+        Ok(Some(id)) => match inventario::obtener(&e.pool, u.ambito(), id, &inventario::hoy()).await {
+            Ok(Some(item)) => (StatusCode::CREATED, Json(item)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        // El único conflicto posible es el UNIQUE (institución, nombre, lote):
+        // dar de alta dos veces el mismo lote partiría el stock en dos filas.
+        Err(sqlx::Error::Database(err)) if err.is_unique_violation() => detalle(
+            StatusCode::CONFLICT,
+            "Ya existe un item con ese nombre y ese lote. Registre la remesa como ENTRADA sobre él."
+                .into(),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+    Json(cambios): Json<inventario::ItemEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match inventario::actualizar(&e.pool, u.ambito(), id, &cambios).await {
+        Ok(true) => match inventario::obtener(&e.pool, u.ambito(), id, &inventario::hoy()).await {
+            Ok(Some(item)) => Json(item).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match inventario::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(inventario::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(inventario::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(inventario::ResultadoBorrado::TieneHistorial { movimientos, dispensaciones }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Este item tiene {movimientos} movimiento(s) y {dispensaciones} dispensación(es) \
+                 registradas: borrarlo borraría el rastro de a quién se le entregó. \
+                 Para retirarlo del uso, déjelo en cero."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_entrada(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+    Json(entrada): Json<inventario::Entrada>,
+) -> Response {
+    let u = autorizado.0;
+    match inventario::entrada(&e.pool, u.ambito(), id, u.id, &entrada, &inventario::hoy()).await {
+        Ok(inventario::ResultadoEntrada::Hecha(item)) => Json(*item).into_response(),
+        Ok(inventario::ResultadoEntrada::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(inventario::ResultadoEntrada::CantidadInvalida) => detalle(
+            StatusCode::BAD_REQUEST,
+            "La cantidad que entra tiene que ser mayor que cero.".into(),
+        ),
+        Ok(inventario::ResultadoEntrada::LoteDistinto { actual, quedan }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Quedan {quedan} unidades del lote {actual}. Un lote nuevo no se suma al anterior: \
+                 vencen en fechas distintas y dejarían de poder rastrearse por separado. \
+                 Dé de alta el lote nuevo como item."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct BusquedaFormulas {
+    q: Option<String>,
+}
+
+async fn farm_formulas_pendientes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(b): Query<BusquedaFormulas>,
+) -> Response {
+    match inventario::formulas_pendientes(&e.pool, u.ambito(), b.q.as_deref()).await {
+        Ok(fs) => Json(fs).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// La entrega. Cada negativa lleva su motivo real: quien atiende el mostrador
+/// tiene que poder decirle al paciente por qué no se le entrega, y «error» no es
+/// una respuesta que se pueda dar en una farmacia.
+async fn farm_dispensar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Json(d): Json<inventario::DispensarNueva>,
+) -> Response {
+    use inventario::ResultadoDispensa as R;
+    let u = autorizado.0;
+    match inventario::dispensar(&e.pool, u.ambito(), u.id, &d, &inventario::hoy()).await {
+        Ok(R::Hecha(disp)) => (StatusCode::CREATED, Json(*disp)).into_response(),
+        Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(R::CantidadInvalida) => detalle(
+            StatusCode::BAD_REQUEST,
+            "La cantidad a dispensar tiene que ser mayor que cero.".into(),
+        ),
+        Ok(R::YaCompleta) => detalle(
+            StatusCode::CONFLICT,
+            "Esta fórmula ya se entregó completa.".into(),
+        ),
+        Ok(R::ExcedePrescrito { pendiente }) => detalle(
+            StatusCode::CONFLICT,
+            format!("De esta fórmula quedan {pendiente} por entregar; no se puede dispensar más de lo prescrito."),
+        ),
+        Ok(R::SinExistencias { disponible }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Solo quedan {disponible} unidades de ese item."),
+        ),
+        Ok(R::LoteVencido { vencio }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ese lote venció el {vencio}. No se dispensa: hay que darlo de baja por vencimiento."),
+        ),
+        Ok(R::LoteNoCoincide { del_item }) => detalle(
+            StatusCode::CONFLICT,
+            format!("El lote indicado no es el del item seleccionado, que es el {del_item}."),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct Pagina {
+    page: Option<i64>,
+}
+
+async fn farm_dispensaciones(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(p): Query<Pagina>,
+) -> Response {
+    match inventario::dispensaciones(&e.pool, u.ambito(), p.page.unwrap_or(1)).await {
+        Ok(ds) => Json(ds).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroMovimientos {
+    item_id: Option<i64>,
+    tipo: Option<String>,
+    page: Option<i64>,
+}
+
+async fn farm_movimientos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroMovimientos>,
+) -> Response {
+    match inventario::movimientos(&e.pool, u.ambito(), f.item_id, f.tipo.as_deref(), f.page.unwrap_or(1)).await {
+        Ok(ms) => Json(ms).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -2046,6 +2290,58 @@ mod pruebas {
                 sqlx::query_scalar("SELECT motivo_consulta FROM historia WHERE id = 7")
                     .fetch_one(&e.pool).await.unwrap();
             assert_eq!(motivo, "dolor", "la nota del médico se modificó pese al 403");
+        }
+
+        /// Farmacia: el que PRESCRIBE no es el que DISPENSA.
+        ///
+        /// La separación es la razón de ser del control: si el mismo médico que
+        /// firma la fórmula puede además marcarla entregada y bajar el stock, la
+        /// dispensación deja de ser una comprobación sobre la prescripción y pasa
+        /// a ser un segundo clic del mismo acto. Por eso `Medico` NO tiene
+        /// `GestionarFarmacia`, aunque sí tenga casi todo lo demás.
+        ///
+        /// Y la otra mitad, que es la que hace que esto no sea una regla que
+        /// cierra por cerrar: LEER el inventario sí puede cualquiera con sesión.
+        #[tokio::test]
+        async fn el_medico_que_receta_no_dispensa_pero_si_puede_mirar_el_stock() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (8,'Regente','reg@x.co',?,'regente_farmacia',1,1)",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            let medico = cookie_de(2);
+            let regente = cookie_de(8);
+            let alta = r#"{"nombre":"Acetaminofén 500mg","lote":"L-1","cantidad_actual":100}"#;
+
+            // El médico: puede mirar, no puede tocar.
+            assert_eq!(pedir(&e, "GET", "/api/farmacia/inventario", &medico).await, StatusCode::OK);
+            assert_eq!(pedir(&e, "GET", "/api/farmacia/stats", &medico).await, StatusCode::OK);
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/farmacia/inventario", &medico, alta).await,
+                StatusCode::FORBIDDEN,
+                "un médico dio de alta inventario"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/farmacia/dispensar", &medico,
+                          r#"{"formula_id":1,"item_inventario_id":1,"cantidad_dispensada":1}"#).await,
+                StatusCode::FORBIDDEN,
+                "EL MISMO QUE RECETA DISPENSÓ"
+            );
+            let items: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM item_inventario")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(items, 0, "se creó el item pese al 403");
+
+            // El regente sí: si esto fallara, la regla estaría cerrando de más y
+            // la prueba de arriba pasaría por el motivo equivocado.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/farmacia/inventario", &regente, alta).await,
+                StatusCode::CREATED
+            );
         }
 
         /// Borrar una IMAGEN clínica es borrar un registro clínico.

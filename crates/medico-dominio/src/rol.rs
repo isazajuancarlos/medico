@@ -135,6 +135,21 @@ pub enum Capacidad {
     /// entran, y el médico también porque la remisión sale de su decisión
     /// clínica.
     GestionarRemision,
+    /// Farmacia: dar de alta items, registrar entradas de stock y **dispensar**.
+    ///
+    /// Los tres roles son los que el producto ya declara para `/farmacia`
+    /// (`app.routes.ts:51` y el menú de `sidebar.component.ts`): regente de
+    /// farmacia, administración y superadmin. No se añade `Medico` —a diferencia
+    /// de nutrición y rehabilitación, donde sí se añadió porque en una IPS
+    /// pequeña no hay nutricionista en planta—: aquí la separación entre quien
+    /// PRESCRIBE y quien DISPENSA no es un detalle de plantilla, es la que
+    /// permite que la entrega sea un control sobre la prescripción y no un acto
+    /// del mismo que la firmó. Un consultorio sin regente no dispensa: remite a
+    /// una farmacia.
+    ///
+    /// Leer el inventario es cosa aparte y NO exige esta capacidad: enfermería
+    /// necesita saber si queda adrenalina antes de pedirla.
+    GestionarFarmacia,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
@@ -180,6 +195,7 @@ impl RolUsuario {
                 self,
                 Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
             ),
+            GestionarFarmacia => matches!(self, Superadmin | Admin | RegenteFarmacia),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),
             GestionarInstituciones => matches!(self, Superadmin),
