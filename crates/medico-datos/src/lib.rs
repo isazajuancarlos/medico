@@ -5,6 +5,7 @@ pub mod agenda;
 pub mod ambulancia;
 pub mod capacidad;
 pub mod catalogo;
+pub mod cie11;
 pub mod cita;
 pub mod clinico;
 pub mod diagnostico;

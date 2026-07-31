@@ -39,6 +39,8 @@
 //! ausencia. La regla deja de depender de que alguien se acuerde
 //! (ver [[afirmacion-necesita-su-prueba-en-el-tipo]]).
 
+pub mod documentos;
+
 use serde::Serialize;
 
 /// Un dato obligatorio que no está —o que está y no vale—, con dónde buscarlo.
@@ -152,6 +154,13 @@ impl Donde {
     }
     pub fn ah(registro_id: i64, campo: &'static str, etiqueta: &'static str) -> Self {
         Self::en("AH", registro_id, campo, etiqueta)
+    }
+    /// El bloque de identificación del usuario, que es común a los cinco
+    /// documentos. El `registro_id` es el del PACIENTE, no el de la atención:
+    /// quien va a corregir un municipio que falta lo corrige en la ficha del
+    /// paciente, y verlo repetido una vez por consulta sería ruido.
+    pub fn usuarios(registro_id: i64, campo: &'static str, etiqueta: &'static str) -> Self {
+        Self::en("usuarios", registro_id, campo, etiqueta)
     }
 
     fn en(
