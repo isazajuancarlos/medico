@@ -221,6 +221,44 @@ pub fn fecha(v: &str) -> String {
 mod pruebas {
     use super::*;
 
+    /// Un mapeo de juguete: el dominio no carga el maestro de 522 KB para
+    /// probar sus reglas.
+    fn cie11(c: Option<&str>) -> (String, String) {
+        match c.map(|s| s.trim().to_uppercase()) {
+            Some(ref s) if s == "J449" => ("CA22".into(), "Chronic obstructive pulmonary disease".into()),
+            _ => (String::new(), String::new()),
+        }
+    }
+
+    fn historia() -> DatosConsulta {
+        DatosConsulta {
+            id: 7,
+            paciente_id: 10,
+            fecha: "2026-08-03 09:15:44".into(),
+            num_autorizacion: None,
+            cod_consulta_cups: Some("890201".into()),
+            modalidad_grupo_servicio: Some("01".into()),
+            grupo_servicios: Some("01".into()),
+            cod_servicio: Some(328),
+            finalidad: Some("11".into()),
+            causa_externa: Some("13".into()),
+            diagnostico_principal: Some("J449".into()),
+            diagnostico_relacionado1: None,
+            diagnostico_relacionado2: None,
+            diagnostico_relacionado3: None,
+            tipo_diagnostico: Some("01".into()),
+            valor_servicio: Some(45000),
+            concepto_recaudo: Some("05".into()),
+            valor_pago_moderador: 0,
+            num_fev_pago_moderador: None,
+            genera_incapacidad: false,
+            medico: DatosProfesional {
+                tipo_documento: Some("CC".into()),
+                numero_documento: Some("71234567".into()),
+            },
+        }
+    }
+
     fn paciente() -> DatosPaciente {
         DatosPaciente {
             id: 10,
@@ -354,5 +392,352 @@ mod pruebas {
         }
         assert!(!TIPOS_DOCUMENTO_PROFESIONAL.contains(&"RC"));
         assert!(!TIPOS_DOCUMENTO_PROFESIONAL.contains(&"TI"));
+    }
+
+    /// LA PRUEBA QUE SOSTIENE EL «BYTE A BYTE».
+    ///
+    /// Fija los nombres de los campos Y su orden, que es lo que hay que poder
+    /// comparar contra la salida del Python antes de apagarlo. La lista de
+    /// abajo se lee al lado del diccionario `consulta` de
+    /// `backend/rips_completo.py:488`: si alguien reordena la estructura «para
+    /// agrupar mejor», esto se pone rojo — que es justo lo que tiene que pasar,
+    /// porque sería una diferencia de bytes sin diferencia semántica, la peor
+    /// clase.
+    #[test]
+    fn los_campos_de_ac_van_en_el_orden_de_la_norma() {
+        let mut rec = Recolector::estricto();
+        let c = consulta(&mut rec, &historia(), "0500112345", 1, &cie11);
+        let json = serde_json::to_string(&c).unwrap();
+        let claves: Vec<&str> = json
+            .split(",\"")
+            .map(|t| t.split('"').next().unwrap_or(""))
+            .collect();
+        // La primera va sin la coma de delante.
+        let mut orden: Vec<&str> = vec!["codPrestador"];
+        orden.extend(claves.into_iter().skip(1));
+
+        assert_eq!(
+            orden,
+            [
+                "codPrestador",
+                "fechaInicioAtencion",
+                "numAutorizacion",
+                "codConsulta",
+                "modalidadGrupoServicioTecSal",
+                "grupoServicios",
+                "codServicio",
+                "finalidadTecnologiaSalud",
+                "causaMotivoAtencion",
+                "codDiagnosticoPrincipal",
+                "codDiagnosticoRelacionado1",
+                "codDiagnosticoRelacionado2",
+                "codDiagnosticoRelacionado3",
+                "codDiagnosticoPrincipalCIE11",
+                "nomCodDiagnosticoPrincipalCIE11",
+                "codDiagnosticoRelacionado1CIE11",
+                "nomCodDiagnosticoRelacionado1CIE11",
+                "codDiagnosticoRelacionado2CIE11",
+                "nomCodDiagnosticoRelacionado2CIE11",
+                "codDiagnosticoRelacionado3CIE11",
+                "nomCodDiagnosticoRelacionado3CIE11",
+                "tipoDiagnosticoPrincipal",
+                "tipoDocumentoIdentificacion",
+                "numDocumentoIdentificacion",
+                "vrServicio",
+                "conceptoRecaudo",
+                "valorPagoModerador",
+                "numFEVPagoModerador",
+                "consecutivo",
+            ]
+        );
+    }
+
+    /// Una consulta completa no anota NADA: si esto fallara, las pruebas de
+    /// ausencia estarían pasando por la razón equivocada.
+    #[test]
+    fn una_consulta_completa_no_deja_faltantes() {
+        let mut rec = Recolector::estricto();
+        let c = consulta(&mut rec, &historia(), "0500112345", 1, &cie11);
+        assert!(rec.faltantes().is_empty(), "{:?}", rec.faltantes());
+        assert_eq!(c.cod_prestador, "0500112345");
+        assert_eq!(c.fecha_inicio_atencion, "2026-08-03 09:15", "no se quitaron los segundos");
+        assert_eq!(c.vr_servicio, Some(45000));
+        assert_eq!(c.consecutivo, 1);
+    }
+
+    /// El diagnóstico relacionado ausente va `null`, NUNCA `""`. El MUV rechaza
+    /// la cadena vacía porque la contrasta contra la tabla de la CIE.
+    #[test]
+    fn el_diagnostico_relacionado_ausente_va_nulo_y_no_cadena_vacia() {
+        let mut h = historia();
+        h.diagnostico_relacionado1 = Some("   ".into());
+        let mut rec = Recolector::estricto();
+        let c = consulta(&mut rec, &h, "0500112345", 1, &cie11);
+        assert_eq!(c.cod_diagnostico_relacionado1, None);
+        let json = serde_json::to_string(&c).unwrap();
+        assert!(
+            json.contains(r#""codDiagnosticoRelacionado1":null"#),
+            "salió cadena vacía en vez de null: {json}"
+        );
+    }
+
+    #[test]
+    fn el_cie11_se_deriva_del_diagnostico_y_lo_no_derivable_va_vacio() {
+        let mut rec = Recolector::estricto();
+        let c = consulta(&mut rec, &historia(), "0500112345", 1, &cie11);
+        assert_eq!(c.cod_diagnostico_principal_cie11, "CA22");
+        assert!(!c.nom_cod_diagnostico_principal_cie11.is_empty());
+        // Sin relacionados, los seis campos de los relacionados van vacíos.
+        assert_eq!(c.cod_diagnostico_relacionado1_cie11, "");
+        assert_eq!(c.nom_cod_diagnostico_relacionado3_cie11, "");
+    }
+
+    /// El CIE-11 sale del CIE-10 **de origen**, no del que se acaba emitiendo:
+    /// si el diagnóstico falta y entra el supuesto, derivar de él daría un
+    /// CIE-11 para un diagnóstico que nadie hizo.
+    #[test]
+    fn sin_diagnostico_no_hay_cie11_aunque_se_permitan_supuestos() {
+        let mut h = historia();
+        h.diagnostico_principal = None;
+        let mut rec = Recolector::permitiendo_supuestos();
+        let c = consulta(&mut rec, &h, "0500112345", 1, &cie11);
+        assert_eq!(c.cod_diagnostico_principal, None, "el diagnóstico NO tiene supuesto");
+        assert_eq!(c.cod_diagnostico_principal_cie11, "");
+        assert_eq!(rec.faltantes().len(), 1);
+    }
+
+    /// La historia vacía anota todo lo obligatorio y no emite nada inventado.
+    #[test]
+    fn una_historia_sin_datos_lo_anota_todo_y_no_inventa() {
+        let mut rec = Recolector::estricto();
+        let vacia = DatosConsulta { id: 7, ..Default::default() };
+        let c = consulta(&mut rec, &vacia, "0500112345", 1, &cie11);
+        assert_eq!(c.cod_consulta, None, "entró el CUPS 890201 que nadie afirmó");
+        assert_eq!(c.vr_servicio, None, "el valor del servicio salió en 0 sin serlo");
+        assert_eq!(c.tipo_documento_identificacion, None);
+        // 10 obligatorios del AC + los 2 del profesional.
+        assert_eq!(rec.faltantes().len(), 12, "{:#?}", rec.faltantes());
+        assert!(rec.faltantes().iter().all(|f| f.archivo == "AC"));
+        // Y el cierre NIEGA la generación, con la lista completa.
+        assert!(rec.cerrar().is_err());
+    }
+
+    /// Con supuestos sale entera, y queda escrito qué se supuso: es la
+    /// diferencia entre auditar y documentar la mentira.
+    #[test]
+    fn con_supuestos_sale_entera_y_queda_la_lista_de_lo_supuesto() {
+        let mut rec = Recolector::permitiendo_supuestos();
+        let vacia = DatosConsulta { id: 7, ..Default::default() };
+        let c = consulta(&mut rec, &vacia, "0500112345", 1, &cie11);
+        assert_eq!(c.cod_consulta.as_deref(), Some("890201"));
+        assert_eq!(c.cod_servicio, Some(328));
+        assert_eq!(c.vr_servicio, Some(0));
+        // El profesional NO tiene supuesto ni con el permiso puesto.
+        assert_eq!(c.tipo_documento_identificacion, None);
+        let faltantes = rec.cerrar().expect("con supuestos, cerrar no falla");
+        assert_eq!(faltantes.len(), 12);
+    }
+}
+
+// ─── AC · Consultas ─────────────────────────────────────────────────────────
+
+/// Una consulta del archivo AC, en el orden de campos de la Resolución 948.
+///
+/// El orden es el del diccionario `consulta` de `rips_completo.py:488`. Ver la
+/// nota del módulo sobre por qué no se reordena.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Consulta {
+    pub cod_prestador: String,
+    pub fecha_inicio_atencion: String,
+    pub num_autorizacion: String,
+    pub cod_consulta: Option<String>,
+    pub modalidad_grupo_servicio_tec_sal: Option<String>,
+    pub grupo_servicios: Option<String>,
+    pub cod_servicio: Option<i64>,
+    pub finalidad_tecnologia_salud: Option<String>,
+    pub causa_motivo_atencion: Option<String>,
+    pub cod_diagnostico_principal: Option<String>,
+    /// Los relacionados SÍ pueden no estar: son opcionales. Pero «no hay» se
+    /// escribe `null`, **no `""`**: el MUV rechaza la cadena vacía —«El campo
+    /// código diagnóstico relacionado [] no es válido»— porque la contrasta
+    /// contra la tabla de la CIE, y `""` no está en ninguna tabla.
+    pub cod_diagnostico_relacionado1: Option<String>,
+    pub cod_diagnostico_relacionado2: Option<String>,
+    pub cod_diagnostico_relacionado3: Option<String>,
+    #[serde(rename = "codDiagnosticoPrincipalCIE11")]
+    pub cod_diagnostico_principal_cie11: String,
+    #[serde(rename = "nomCodDiagnosticoPrincipalCIE11")]
+    pub nom_cod_diagnostico_principal_cie11: String,
+    #[serde(rename = "codDiagnosticoRelacionado1CIE11")]
+    pub cod_diagnostico_relacionado1_cie11: String,
+    #[serde(rename = "nomCodDiagnosticoRelacionado1CIE11")]
+    pub nom_cod_diagnostico_relacionado1_cie11: String,
+    #[serde(rename = "codDiagnosticoRelacionado2CIE11")]
+    pub cod_diagnostico_relacionado2_cie11: String,
+    #[serde(rename = "nomCodDiagnosticoRelacionado2CIE11")]
+    pub nom_cod_diagnostico_relacionado2_cie11: String,
+    #[serde(rename = "codDiagnosticoRelacionado3CIE11")]
+    pub cod_diagnostico_relacionado3_cie11: String,
+    #[serde(rename = "nomCodDiagnosticoRelacionado3CIE11")]
+    pub nom_cod_diagnostico_relacionado3_cie11: String,
+    pub tipo_diagnostico_principal: Option<String>,
+    pub tipo_documento_identificacion: Option<String>,
+    pub num_documento_identificacion: Option<String>,
+    pub vr_servicio: Option<i64>,
+    pub concepto_recaudo: Option<String>,
+    /// El pago moderador SÍ admite cero de verdad: la mayoría de las atenciones
+    /// no lo llevan. Cero aquí es un dato, no un hueco, y por eso NO pasa por el
+    /// recolector.
+    pub valor_pago_moderador: i64,
+    #[serde(rename = "numFEVPagoModerador")]
+    pub num_fev_pago_moderador: String,
+    pub consecutivo: i64,
+}
+
+/// Una historia clínica tal como se lee de la base, para armar su consulta.
+#[derive(Debug, Clone, Default)]
+pub struct DatosConsulta {
+    pub id: i64,
+    pub paciente_id: i64,
+    pub fecha: String,
+    pub num_autorizacion: Option<String>,
+    pub cod_consulta_cups: Option<String>,
+    pub modalidad_grupo_servicio: Option<String>,
+    pub grupo_servicios: Option<String>,
+    pub cod_servicio: Option<i64>,
+    pub finalidad: Option<String>,
+    pub causa_externa: Option<String>,
+    pub diagnostico_principal: Option<String>,
+    pub diagnostico_relacionado1: Option<String>,
+    pub diagnostico_relacionado2: Option<String>,
+    pub diagnostico_relacionado3: Option<String>,
+    pub tipo_diagnostico: Option<String>,
+    pub valor_servicio: Option<i64>,
+    pub concepto_recaudo: Option<String>,
+    pub valor_pago_moderador: i64,
+    pub num_fev_pago_moderador: Option<String>,
+    pub genera_incapacidad: bool,
+    pub medico: DatosProfesional,
+}
+
+/// «Vacío» en el sentido del RIPS: `None` o cadena en blanco. Sirve para los
+/// campos OPCIONALES, que se escriben `null` y nunca `""`.
+fn o_nulo(v: Option<&str>) -> Option<String> {
+    match v {
+        Some(s) if !s.trim().is_empty() => Some(s.to_string()),
+        _ => None,
+    }
+}
+
+/// Arma la consulta de una historia clínica.
+///
+/// `derivar_cie11` se recibe como parámetro en vez de llamarse aquí para que el
+/// dominio no dependa del maestro empotrado: así estas reglas se prueban con un
+/// mapeo de tres códigos en vez de cargar 522 KB, y la capa de datos pasa el
+/// real.
+///
+/// **El CIE-11 se deriva del CIE-10 DE ORIGEN, no del que se acaba emitiendo.**
+/// Si el diagnóstico falta y entra un supuesto, derivar de él daría un CIE-11
+/// para un diagnóstico que nadie hizo.
+pub fn consulta(
+    rec: &mut Recolector,
+    h: &DatosConsulta,
+    cod_habilitacion: &str,
+    consecutivo: i64,
+    derivar_cie11: &dyn Fn(Option<&str>) -> (String, String),
+) -> Consulta {
+    let en = |campo, etiqueta| Donde::ac(h.id, campo, etiqueta);
+    let (dx_p_c11, dx_p_n11) = derivar_cie11(h.diagnostico_principal.as_deref());
+    let (dx_1_c11, dx_1_n11) = derivar_cie11(h.diagnostico_relacionado1.as_deref());
+    let (dx_2_c11, dx_2_n11) = derivar_cie11(h.diagnostico_relacionado2.as_deref());
+    let (dx_3_c11, dx_3_n11) = derivar_cie11(h.diagnostico_relacionado3.as_deref());
+
+    // El ORDEN de estas tres llamadas es el de `rips_completo.py`, y no es
+    // indiferente: define el orden de la lista de faltantes que ve quien cierra
+    // el mes. Van aquí, en `let`, porque los campos que las usan están al final
+    // de la estructura y Rust evalúa los campos en orden de escritura — dejarlas
+    // ahí abajo las movería DESPUÉS del diagnóstico, que no es donde van.
+    let prof = profesional(
+        rec,
+        &h.medico,
+        &en("medico.tipo_documento", "tipo de documento del profesional que atendió"),
+        &en("medico.numero_documento", "número de documento del profesional que atendió"),
+    );
+    let vr_servicio = entero(
+        rec,
+        h.valor_servicio,
+        &en("valor_servicio", "valor del servicio").supuesto("0"),
+    );
+    let concepto_recaudo = texto(
+        rec,
+        h.concepto_recaudo.as_deref(),
+        &en("concepto_recaudo", "concepto de recaudo").supuesto("05"),
+    );
+
+    Consulta {
+        cod_prestador: cod_habilitacion.to_string(),
+        fecha_inicio_atencion: fecha_hora(&h.fecha),
+        num_autorizacion: h.num_autorizacion.clone().unwrap_or_default(),
+        cod_consulta: texto(
+            rec,
+            h.cod_consulta_cups.as_deref(),
+            &en("cod_consulta_cups", "CUPS de la consulta").supuesto("890201"),
+        ),
+        modalidad_grupo_servicio_tec_sal: texto(
+            rec,
+            h.modalidad_grupo_servicio.as_deref(),
+            &en("modalidad_grupo_servicio", "modalidad del servicio").supuesto("01"),
+        ),
+        grupo_servicios: texto(
+            rec,
+            h.grupo_servicios.as_deref(),
+            &en("grupo_servicios", "grupo de servicios").supuesto("01"),
+        ),
+        cod_servicio: entero(
+            rec,
+            h.cod_servicio,
+            &en("cod_servicio", "código de servicio").supuesto("328"),
+        ),
+        finalidad_tecnologia_salud: texto(
+            rec,
+            h.finalidad.as_deref(),
+            // «10» no está en la tabla de referencia y el MUV lo rechaza; el
+            // ejemplo de la propia norma usa 11 en consultas.
+            &en("finalidad", "finalidad de la consulta").supuesto("11"),
+        ),
+        causa_motivo_atencion: texto(
+            rec,
+            h.causa_externa.as_deref(),
+            &en("causa_externa", "causa o motivo de la atención").supuesto("13"),
+        ),
+        cod_diagnostico_principal: texto(
+            rec,
+            h.diagnostico_principal.as_deref(),
+            &en("diagnostico_principal", "diagnóstico principal"),
+        ),
+        cod_diagnostico_relacionado1: o_nulo(h.diagnostico_relacionado1.as_deref()),
+        cod_diagnostico_relacionado2: o_nulo(h.diagnostico_relacionado2.as_deref()),
+        cod_diagnostico_relacionado3: o_nulo(h.diagnostico_relacionado3.as_deref()),
+        cod_diagnostico_principal_cie11: dx_p_c11,
+        nom_cod_diagnostico_principal_cie11: dx_p_n11,
+        cod_diagnostico_relacionado1_cie11: dx_1_c11,
+        nom_cod_diagnostico_relacionado1_cie11: dx_1_n11,
+        cod_diagnostico_relacionado2_cie11: dx_2_c11,
+        nom_cod_diagnostico_relacionado2_cie11: dx_2_n11,
+        cod_diagnostico_relacionado3_cie11: dx_3_c11,
+        nom_cod_diagnostico_relacionado3_cie11: dx_3_n11,
+        tipo_diagnostico_principal: texto(
+            rec,
+            h.tipo_diagnostico.as_deref(),
+            &en("tipo_diagnostico", "tipo de diagnóstico principal").supuesto("01"),
+        ),
+        tipo_documento_identificacion: prof.tipo_documento_identificacion,
+        num_documento_identificacion: prof.num_documento_identificacion,
+        vr_servicio,
+        concepto_recaudo,
+        valor_pago_moderador: h.valor_pago_moderador,
+        num_fev_pago_moderador: h.num_fev_pago_moderador.clone().unwrap_or_default(),
+        consecutivo,
     }
 }
