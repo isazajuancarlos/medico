@@ -1,0 +1,67 @@
+medico
+Copyright © 2026 Juan Carlos Isaza Arenas. Todos los derechos reservados.
+
+Autor y titular de los derechos patrimoniales:
+
+    Juan Carlos Isaza Arenas
+    isazajuancarlos@gmail.com
+    Medellín, Colombia
+
+«Xiliux» es el nombre comercial bajo el que se desarrolla y se ofrece este
+software. NO es una persona jurídica: el titular de los derechos es la persona
+natural nombrada arriba, y así debe constar en todo contrato, cesión o registro.
+
+--------------------------------------------------------------------------------
+OBRA PROPIA Y OBRA PREEXISTENTE
+--------------------------------------------------------------------------------
+
+Este sistema reimplementa la funcionalidad de un programa en Visual FoxPro que
+un prestador de servicios de salud usa en su operación. La reimplementación es
+obra nueva, escrita desde cero: no incorpora código, recursos ni bases de datos
+de aquel programa. Lo que se conserva son fórmulas de cálculo y estructuras de
+reporte que derivan de la NORMATIVA colombiana —Resoluciones 948 de 2026, 2275
+de 2023, 2706 y 2765 de 2025— y de catálogos oficiales, que no son obra
+protegida de nadie.
+
+Los catálogos empaquetados en `backend/datos/` (CIE-10, CIE-11, CUPS, CUM del
+INVIMA, DIVIPOLA, maestros del Mecanismo Único de Validación) son publicaciones
+oficiales del Ministerio de Salud y Protección Social, del INVIMA y del DANE. Se
+redistribuyen sin modificación de su contenido; su titularidad es de las
+entidades que los publican.
+
+--------------------------------------------------------------------------------
+BIBLIOTECAS PROPIAS, PUBLICADAS APARTE
+--------------------------------------------------------------------------------
+
+  Quipu   https://github.com/isazajuancarlos/quipu   AGPL-3.0-or-later
+          Códec criptográfico post-cuántico híbrido. Del mismo autor; se usa
+          aquí bajo licencia comercial del propio titular, y su publicación
+          libre no se ve afectada por la licencia propietaria de este sistema.
+
+  guaca   https://github.com/isazajuancarlos/guaca   AGPL-3.0-or-later
+          Cifrado en reposo, firma de registros y bitácora encadenada. Misma
+          relación que Quipu.
+
+--------------------------------------------------------------------------------
+BIBLIOTECAS DE TERCEROS
+--------------------------------------------------------------------------------
+
+Este software incorpora bibliotecas de terceros bajo sus propias licencias
+libres (MIT, Apache-2.0, BSD y equivalentes), que se conservan íntegras. El
+inventario vivo y sus licencias se obtienen de:
+
+    cargo tree           (Rust)
+    pip list             (Python)
+    npm ls               (interfaz Angular)
+
+y la política de licencias admitidas se aplica en cada integración continua con
+`cargo-deny` (`deny.toml`).
+
+--------------------------------------------------------------------------------
+DATOS DE PACIENTES
+--------------------------------------------------------------------------------
+
+Este repositorio NO contiene historias clínicas ni datos de pacientes reales. Los
+datos de prueba son sintéticos. La información de salud es categoría especial
+bajo la Ley 1581 de 2012, y su tratamiento corresponde a la institución
+prestadora que opera el sistema, en calidad de responsable.

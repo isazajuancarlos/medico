@@ -10,11 +10,18 @@ use axum::{Json, Router};
 use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{autenticar, Autenticado, Autorizado, Borrar, Estado, Firmar};
+use crate::auth::{
+    autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
+    EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
+    EscribirRehabilitacion, Estado, Firmar, GestionarAmbulancias, GestionarFarmacia,
+    GestionarRemision,
+};
 use crate::{claves, sesion};
 use medico_datos::acceso;
+use medico_datos::ambulancia;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
+use medico_datos::diagnostico;
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
@@ -26,9 +33,11 @@ use medico_datos::referencia::{self, ContrarreferenciaCrear, Recepcion};
 use medico_datos::historia::{self, Historia, HistoriaNueva};
 use medico_datos::imagen::{self, Imagen, ImagenNueva};
 use medico_datos::institucion::{self, Institucion, InstitucionNueva};
+use medico_datos::inventario;
 use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
 use medico_datos::paciente::{self, Antecedentes, InfoPaciente, Paciente, PacienteNuevo};
+use medico_datos::proveedor;
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
 /// Tope de una subida de imagen. Una radiografía o un PDF de laboratorio caben
@@ -77,6 +86,8 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
         .route("/api/pacientes/{id}/historias", get(listar_historias_paciente))
         .route("/api/pacientes/{id}/accesos", get(accesos_paciente))
+        // DIVIPOLA, para el selector de municipio (#16/#77).
+        .route("/api/municipios", get(listar_municipios))
         .route("/api/acceso/verificar", get(verificar_acceso))
         .route("/api/historias", post(crear_historia))
         .route(
@@ -148,12 +159,82 @@ pub fn router(estado: Estado) -> Router {
         )
         .route("/api/imagenes/{id}/archivo", get(servir_imagen))
         .route("/api/imagenes/{id}", axum::routing::delete(eliminar_imagen))
+        // Laboratorio. Las órdenes las crea la historia clínica; aquí se
+        // procesan. Leer es de cualquiera con sesión —el médico consulta el
+        // resultado de su paciente—; escribir exige `EscribirLaboratorio`.
+        .route("/api/laboratorio/ordenes", get(lab_ordenes))
+        .route("/api/laboratorio/ordenes/{id}", get(lab_orden))
+        .route("/api/laboratorio/ordenes/{id}/estado", put(lab_estado))
+        .route(
+            "/api/laboratorio/ordenes/{id}/resultado",
+            get(lab_resultado).post(lab_crear_resultado).put(lab_actualizar_resultado),
+        )
+        .route("/api/laboratorio/ordenes/{id}/resultado/validar", post(lab_validar))
+        .route("/api/laboratorio/paciente/{id}/resultados", get(lab_historial))
+        .route("/api/laboratorio/perfiles", get(lab_perfiles).post(lab_crear_perfil))
+        .route("/api/laboratorio/perfiles/{id}", axum::routing::delete(lab_eliminar_perfil))
+        // Imágenes diagnósticas. Conviven con `/api/imagenes/{id}` y
+        // `/api/imagenes/{id}/archivo`, que son los ADJUNTOS de la historia: los
+        // segmentos literales (`ordenes`, `paciente`) tienen prioridad sobre el
+        // parámetro, así que no se pisan. La prueba `las_rutas_de_imagenes_no_se_pisan`
+        // lo comprueba en vez de confiarlo al enrutador.
+        .route("/api/imagenes/ordenes", get(img_ordenes))
+        .route("/api/imagenes/ordenes/{id}", get(img_orden))
+        .route("/api/imagenes/ordenes/{id}/estado", put(img_estado))
+        .route(
+            "/api/imagenes/ordenes/{id}/informe",
+            get(img_informe).post(img_crear_informe).put(img_actualizar_informe),
+        )
+        .route("/api/imagenes/ordenes/{id}/informe/firmar", post(img_firmar))
+        .route(
+            "/api/imagenes/ordenes/{id}/informe/imagenes",
+            post(img_subir).layer(DefaultBodyLimit::max(MAX_SUBIDA)),
+        )
+        .route("/api/imagenes/paciente/{id}/informes", get(img_historial))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        // La matriz de capacidades de la institución (#235). Misma capacidad
+        // que gestionar usuarios: quién es quién y quién puede qué son la misma
+        // responsabilidad.
+        .route(
+            "/api/capacidades",
+            get(crate::capacidades::obtener).put(crate::capacidades::actualizar),
+        )
         .route("/api/medicos", get(listar_medicos))
         .route("/api/citas", get(listar_citas).post(crear_cita))
         .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
+        // Farmacia. Leer no exige capacidad; escribir sí (`GestionarFarmacia`).
+        .route("/api/farmacia/stats", get(farm_stats))
+        .route("/api/farmacia/inventario", get(farm_listar).post(farm_crear))
+        .route(
+            "/api/farmacia/inventario/{id}",
+            put(farm_actualizar).delete(farm_eliminar),
+        )
+        .route("/api/farmacia/inventario/{id}/entrada", post(farm_entrada))
+        .route("/api/farmacia/formulas-pendientes", get(farm_formulas_pendientes))
+        .route("/api/farmacia/dispensar", post(farm_dispensar))
+        .route("/api/farmacia/dispensaciones", get(farm_dispensaciones))
+        .route("/api/farmacia/movimientos", get(farm_movimientos))
+        .route(
+            "/api/farmacia/proveedores",
+            get(prov_listar).post(prov_crear),
+        )
+        .route(
+            "/api/farmacia/proveedores/{id}",
+            get(prov_obtener).put(prov_actualizar).delete(prov_eliminar),
+        )
+        // Ambulancias. `traslados` es un segmento literal y va antes que `{id}`,
+        // como en `/api/imagenes`.
+        .route("/api/ambulancias", get(amb_listar).post(amb_crear))
+        .route("/api/ambulancias/traslados", get(amb_traslados).post(amb_despachar))
+        .route("/api/ambulancias/traslados/{id}", get(amb_traslado))
+        .route("/api/ambulancias/traslados/{id}/finalizar", post(amb_finalizar))
+        .route("/api/ambulancias/traslados/{id}/cancelar", post(amb_cancelar))
+        .route(
+            "/api/ambulancias/{id}",
+            get(amb_obtener).put(amb_actualizar).delete(amb_eliminar),
+        )
         // Catálogos de referencia: los lee cualquier usuario autenticado.
         .route("/api/especialidades", get(listar_especialidades))
         .route("/api/medicamentos/buscar", get(buscar_medicamentos))
@@ -440,11 +521,39 @@ async fn verificar_acceso(
 
 /// Crea un paciente en la institución del usuario. 201 con su id; 403 si el
 /// ámbito no puede crear (superadmin sin institución, o sin ámbito).
+/// Comprueba que el municipio, si viene, EXISTE en DIVIPOLA.
+///
+/// `None` es válido: un paciente puede no tener el dato todavía, y eso se ve.
+/// Lo que no se acepta es un código inventado, que pasa la validación de
+/// estructura del RIPS y sale mal en el envío, lejos de donde se tecleó. **Y no
+/// se sustituye por ninguno**: el sistema viejo rellenaba con `"05001"` y
+/// reportaba a todo el país como residente en Medellín — un dato falso no se
+/// nota nunca, y eso es peor que un rechazo (directiva 20).
+async fn municipio_valido(e: &Estado, cod: &Option<String>) -> Result<(), Response> {
+    let Some(cod) = cod.as_deref() else { return Ok(()) };
+    if cod.trim().is_empty() {
+        return Ok(());
+    }
+    match medico_datos::divipola::existe(&e.pool, cod).await {
+        Ok(true) => Ok(()),
+        Ok(false) => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("el código de municipio «{cod}» no está en DIVIPOLA (van cinco dígitos, con el cero de la izquierda)"),
+        )
+            .into_response()),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+    }
+}
+
 async fn crear_paciente(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Json(nuevo): Json<PacienteNuevo>,
 ) -> Response {
+    let u = autorizado.0;
+    if let Err(r) = municipio_valido(&e, &nuevo.cod_municipio).await {
+        return r;
+    }
     match paciente::crear(&e.pool, u.ambito(), &nuevo).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -452,19 +561,52 @@ async fn crear_paciente(
     }
 }
 
+/// `GET /api/municipios?q=…&limite=…` — el selector de la pantalla.
+///
+/// Solo pide estar autenticado: la lista de municipios de Colombia es pública y
+/// no dice nada de ningún paciente. Exigirle una capacidad sería una regla que
+/// no protege nada y que habría que recordar para cada pantalla nueva.
+async fn listar_municipios(
+    State(e): State<Estado>,
+    _u: Autenticado,
+    Query(q): Query<BuscarMunicipio>,
+) -> Result<Json<Vec<medico_datos::divipola::Municipio>>, StatusCode> {
+    // 20 por defecto: lo que cabe en un desplegable sin que haya que
+    // desplazarse. El llamante puede pedir más; se acota a 500 para que un
+    // parámetro suelto no arrastre el país entero por la red en cada tecla.
+    let limite = q.limite.unwrap_or(20).clamp(1, 500);
+    medico_datos::divipola::buscar(&e.pool, q.q.as_deref().unwrap_or(""), limite)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(serde::Deserialize)]
+struct BuscarMunicipio {
+    q: Option<String>,
+    limite: Option<i64>,
+}
+
 /// Actualiza un paciente propio. 204 si se actualizó; **404 si no existe o no es
 /// suyo** —nunca 403: un 403 confirmaría que el id existe en otra institución, y
 /// eso ya enumera pacientes ajenos—.
 async fn actualizar_paciente(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Path(id): Path<i64>,
     Json(datos): Json<PacienteNuevo>,
-) -> StatusCode {
+) -> Response {
+    let u = autorizado.0;
+    // La misma comprobación que al crear. Sin esto, el municipio inválido entra
+    // por la puerta de la edición: cerrar solo una de las dos deja el agujero
+    // igual de abierto y encima parece cerrado.
+    if let Err(r) = municipio_valido(&e, &datos.cod_municipio).await {
+        return r;
+    }
     match paciente::actualizar(&e.pool, u.ambito(), id, &datos).await {
-        Ok(true) => StatusCode::NO_CONTENT,
-        Ok(false) => StatusCode::NOT_FOUND,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
@@ -473,10 +615,11 @@ async fn actualizar_paciente(
 /// Solo se escriben los bloques presentes: guardar unos no borra los otros.
 async fn actualizar_antecedentes_paciente(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Path(id): Path<i64>,
     Json(ant): Json<Antecedentes>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match paciente::actualizar_antecedentes(&e.pool, u.ambito(), id, &ant).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -488,9 +631,10 @@ async fn actualizar_antecedentes_paciente(
 
 async fn crear_historia(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Json(h): Json<HistoriaNueva>,
 ) -> Response {
+    let u = autorizado.0;
     // Quién registra sale de la SESIÓN. El cuerpo dice a quién se ATRIBUYE
     // (`medico_id`, ya validado contra la institución); quién teclea, no.
     match historia::crear(&e.pool, u.ambito(), u.id, &h).await {
@@ -548,10 +692,11 @@ async fn obtener_historia(
 /// no existe o es ajena; 409 si está firmada** —cerrada, no editable—.
 async fn actualizar_historia(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(h): Json<HistoriaNueva>,
 ) -> Response {
+    let u = autorizado.0;
     match historia::actualizar(&e.pool, u.ambito(), id, &h).await {
         Ok(historia::Resultado::Hecho) => match historia::obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(actualizada)) => (StatusCode::OK, Json(actualizada)).into_response(),
@@ -718,9 +863,10 @@ async fn listar_documentos(
 /// cliente—. 201 con su id; 403 si el paciente no es del ámbito.
 async fn crear_documento(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Json(d): Json<DocumentoNuevo>,
 ) -> Response {
+    let u = autorizado.0;
     match documento::crear(&e.pool, u.ambito(), u.id, &d).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -757,9 +903,10 @@ async fn urgencias_cola(State(e): State<Estado>, Autenticado(u): Autenticado) ->
 
 async fn urgencias_triage(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Json(n): Json<TriageNuevo>,
 ) -> Response {
+    let u = autorizado.0;
     match urgencias::registrar(&e.pool, u.ambito(), u.id, &n).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         // Paciente ajeno o triage inválido: no se distingue de «no se puede».
@@ -776,10 +923,11 @@ struct EgresoBody {
 
 async fn urgencias_egreso(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Path(id): Path<i64>,
     Json(b): Json<EgresoBody>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match urgencias::egreso(&e.pool, u.ambito(), id, &b.destino, b.observaciones.as_deref()).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND, // no existe, ajena, cerrada o destino inválido
@@ -831,9 +979,10 @@ async fn hosp_medicos(State(e): State<Estado>, Autenticado(u): Autenticado) -> R
 
 async fn hosp_ingresar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Json(i): Json<Ingreso>,
 ) -> Response {
+    let u = autorizado.0;
     match hospitalizacion::ingresar(&e.pool, u.ambito(), &i).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         // Cama no disponible, paciente ajeno, vía inválida o FK inexistente.
@@ -848,10 +997,11 @@ async fn hosp_ingresar(
 
 async fn hosp_egreso(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<AtenderUrgencias>,
     Path(id): Path<i64>,
     Json(eg): Json<Egreso>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match hospitalizacion::egreso(&e.pool, u.ambito(), id, &eg).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -887,9 +1037,10 @@ async fn nutri_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Pat
 
 async fn nutri_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Json(v): Json<ValoracionCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match nutricion::crear_valoracion(&e.pool, u.ambito(), u.id, &v).await {
         Ok(Some(id)) => match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
             Ok(Some(val)) => (StatusCode::CREATED, Json(val)).into_response(),
@@ -902,10 +1053,11 @@ async fn nutri_crear(
 
 async fn nutri_actualizar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Path(id): Path<i64>,
     Json(v): Json<ValoracionEditar>,
 ) -> Response {
+    let u = autorizado.0;
     match nutricion::actualizar_valoracion(&e.pool, u.ambito(), id, &v).await {
         Ok(true) => match nutricion::obtener_valoracion(&e.pool, u.ambito(), id).await {
             Ok(Some(val)) => Json(val).into_response(),
@@ -934,10 +1086,11 @@ async fn nutri_plan(State(e): State<Estado>, Autenticado(u): Autenticado, Path(i
 
 async fn nutri_crear_plan(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Path(id): Path<i64>,
     Json(p): Json<PlanCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match nutricion::crear_plan(&e.pool, u.ambito(), id, u.id, &p).await {
         Ok(Some(_)) => match nutricion::obtener_plan(&e.pool, u.ambito(), id).await {
             Ok(Some(plan)) => (StatusCode::CREATED, Json(plan)).into_response(),
@@ -950,10 +1103,11 @@ async fn nutri_crear_plan(
 
 async fn nutri_actualizar_plan(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirNutricion>,
     Path(id): Path<i64>,
     Json(p): Json<PlanEditar>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match nutricion::actualizar_plan(&e.pool, u.ambito(), id, &p).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -984,9 +1138,10 @@ async fn rehab_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Pat
 
 async fn rehab_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Json(p): Json<rehabilitacion::PlanCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::crear_plan(&e.pool, u.ambito(), u.id, &p).await {
         Ok(Some(id)) => match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
             Ok(Some(plan)) => (StatusCode::CREATED, Json(plan)).into_response(),
@@ -999,10 +1154,11 @@ async fn rehab_crear(
 
 async fn rehab_actualizar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Path(id): Path<i64>,
     Json(p): Json<rehabilitacion::PlanEditar>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::actualizar_plan(&e.pool, u.ambito(), id, &p).await {
         Ok(true) => match rehabilitacion::obtener_plan(&e.pool, u.ambito(), id).await {
             Ok(Some(plan)) => Json(plan).into_response(),
@@ -1022,10 +1178,11 @@ async fn rehab_sesiones(State(e): State<Estado>, Autenticado(u): Autenticado, Pa
 
 async fn rehab_crear_sesion(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Path(id): Path<i64>,
     Json(s): Json<SesionCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::crear_sesion(&e.pool, u.ambito(), id, u.id, &s).await {
         Ok(Some(sid)) => match rehabilitacion::obtener_sesion(&e.pool, u.ambito(), sid).await {
             Ok(Some(ses)) => (StatusCode::CREATED, Json(ses)).into_response(),
@@ -1038,10 +1195,11 @@ async fn rehab_crear_sesion(
 
 async fn rehab_actualizar_sesion(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirRehabilitacion>,
     Path(id): Path<i64>,
     Json(s): Json<SesionEditar>,
 ) -> Response {
+    let u = autorizado.0;
     match rehabilitacion::actualizar_sesion(&e.pool, u.ambito(), id, &s).await {
         Ok(true) => match rehabilitacion::obtener_sesion(&e.pool, u.ambito(), id).await {
             Ok(Some(ses)) => Json(ses).into_response(),
@@ -1154,10 +1312,11 @@ struct EstadoBody {
 
 async fn rem_estado(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<GestionarRemision>,
     Path(id): Path<i64>,
     Json(b): Json<EstadoBody>,
 ) -> Response {
+    let u = autorizado.0;
     match referencia::remision_cambiar_estado(&e.pool, u.ambito(), id, &b.estado).await {
         Ok(Some(r)) => Json(r).into_response(),
         // No existe / ajena / transición no válida desde el estado actual.
@@ -1195,9 +1354,10 @@ async fn cr_rem_abiertas(State(e): State<Estado>, Autenticado(u): Autenticado) -
 
 async fn cr_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<GestionarRemision>,
     Json(c): Json<ContrarreferenciaCrear>,
 ) -> Response {
+    let u = autorizado.0;
     match referencia::contrarref_crear(&e.pool, u.ambito(), u.id, u.institucion_id, &c).await {
         Ok(Some(id)) => match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(cr)) => (StatusCode::CREATED, Json(cr)).into_response(),
@@ -1217,7 +1377,12 @@ async fn cr_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(i
     }
 }
 
-async fn cr_recibir(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+async fn cr_recibir(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarRemision>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
     match referencia::contrarref_recibir(&e.pool, u.ambito(), id, u.id).await {
         Ok(Recepcion::Recibida) => match referencia::contrarref_obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(cr)) => Json(cr).into_response(),
@@ -1252,10 +1417,11 @@ async fn obtener_documento(
 /// no existe o es ajeno; 409 si está firmado**.
 async fn actualizar_documento(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(d): Json<DocumentoEdicion>,
 ) -> Response {
+    let u = autorizado.0;
     match documento::actualizar(&e.pool, u.ambito(), id, &d).await {
         Ok(documento::Resultado::Hecho) => match documento::obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(actualizado)) => (StatusCode::OK, Json(actualizado)).into_response(),
@@ -1309,10 +1475,11 @@ async fn listar_formulas(
 
 async fn crear_formula(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(historia_id): Path<i64>,
     Json(f): Json<FormulaNueva>,
 ) -> Response {
+    let u = autorizado.0;
     match formula::crear(&e.pool, u.ambito(), historia_id, &f).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -1322,10 +1489,11 @@ async fn crear_formula(
 
 async fn actualizar_formula(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(f): Json<FormulaNueva>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match formula::actualizar(&e.pool, u.ambito(), id, &f).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1335,13 +1503,22 @@ async fn actualizar_formula(
 
 async fn eliminar_formula(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
-) -> StatusCode {
+) -> Response {
+    let u = autorizado.0;
     match formula::eliminar(&e.pool, u.ambito(), id).await {
-        Ok(true) => StatusCode::NO_CONTENT,
-        Ok(false) => StatusCode::NOT_FOUND,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Ok(formula::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(formula::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(formula::ResultadoBorrado::YaDispensada { entregas }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Esta fórmula ya tiene {entregas} entrega(s) registradas en farmacia: borrarla \
+                 dejaría la dispensación sin prescripción que la respalde. Corríjala con una \
+                 fórmula nueva."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
@@ -1360,10 +1537,11 @@ async fn listar_ordenes(
 
 async fn crear_orden(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(historia_id): Path<i64>,
     Json(o): Json<OrdenNueva>,
 ) -> Response {
+    let u = autorizado.0;
     match orden::crear(&e.pool, u.ambito(), historia_id, &o).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -1373,10 +1551,11 @@ async fn crear_orden(
 
 async fn cambiar_estado_orden(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(req): Json<CambioEstado>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match orden::cambiar_estado(&e.pool, u.ambito(), id, &req.estado).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1386,9 +1565,10 @@ async fn cambiar_estado_orden(
 
 async fn eliminar_orden(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match orden::eliminar(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1423,47 +1603,71 @@ async fn subir_imagen(
     State(e): State<Estado>,
     Autenticado(u): Autenticado,
     Path(historia_id): Path<i64>,
-    mut multipart: Multipart,
+    multipart: Multipart,
 ) -> Response {
-    let mut archivo: Option<(String, String, Vec<u8>)> = None; // nombre, mime, bytes
-    let mut descripcion = String::new();
+    match guardar_imagen_de(&e, &u, historia_id, multipart, "").await {
+        Ok(id) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Err(codigo) => codigo.into_response(),
+    }
+}
+
+/// Guarda el archivo de un multipart como imagen de `historia_id` y devuelve su
+/// id. **Es el único camino por el que entran bytes al sistema**, y por eso lo
+/// comparten el adjunto de la historia clínica y la imagen de un informe
+/// radiológico: un segundo almacén con sus propias reglas sería el sitio por
+/// donde entrara el SVG que `tipos.rs` existe para no admitir.
+///
+/// Acepta el archivo venga en el campo que venga —se toma el primero que traiga
+/// nombre de archivo—. La pantalla de la historia lo llama `archivo` y la de
+/// imágenes `file`; exigir uno de los dos habría hecho que la otra fallara con
+/// un 400 que no dice nada, y el nombre del campo no es una comprobación de
+/// seguridad: la que cuenta es la de los bytes, dos párrafos más abajo.
+async fn guardar_imagen_de(
+    e: &Estado,
+    u: &Usuario,
+    historia_id: i64,
+    mut multipart: Multipart,
+    descripcion_por_defecto: &str,
+) -> Result<i64, StatusCode> {
+    let mut archivo: Option<(String, Vec<u8>)> = None; // nombre, bytes
+    let mut descripcion = descripcion_por_defecto.to_owned();
     loop {
         match multipart.next_field().await {
-            Ok(Some(campo)) => match campo.name() {
-                Some("archivo") => {
-                    let nombre = campo.file_name().unwrap_or("archivo").to_string();
-                    let mime = campo
-                        .content_type()
-                        .unwrap_or("application/octet-stream")
-                        .to_string();
-                    match campo.bytes().await {
-                        Ok(b) => archivo = Some((nombre, mime, b.to_vec())),
-                        // El único fallo esperable al leer el campo es que exceda
-                        // el tope del `DefaultBodyLimit`.
-                        Err(_) => return StatusCode::PAYLOAD_TOO_LARGE.into_response(),
-                    }
+            Ok(Some(campo)) => {
+                if campo.name() == Some("descripcion") {
+                    descripcion = campo.text().await.unwrap_or_default();
+                    continue;
                 }
-                Some("descripcion") => descripcion = campo.text().await.unwrap_or_default(),
-                _ => {}
-            },
+                let Some(nombre) = campo.file_name().map(str::to_owned) else {
+                    continue;
+                };
+                if archivo.is_some() {
+                    continue;
+                }
+                match campo.bytes().await {
+                    Ok(b) => archivo = Some((nombre, b.to_vec())),
+                    // El único fallo esperable al leer el campo es que exceda el
+                    // tope del `DefaultBodyLimit`.
+                    Err(_) => return Err(StatusCode::PAYLOAD_TOO_LARGE),
+                }
+            }
             Ok(None) => break,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+            Err(_) => return Err(StatusCode::BAD_REQUEST),
         }
     }
 
-    let Some((nombre, mime, bytes)) = archivo else {
-        return StatusCode::BAD_REQUEST.into_response();
+    let Some((nombre, bytes)) = archivo else {
+        return Err(StatusCode::BAD_REQUEST);
     };
     if bytes.is_empty() {
-        return StatusCode::BAD_REQUEST.into_response();
+        return Err(StatusCode::BAD_REQUEST);
     }
     // El tipo, de los BYTES. Lo que el cliente declaró se descarta aquí mismo: no
     // se compara siquiera con lo olfateado, porque no aporta nada — si coincide
     // no añade garantía y si discrepa la buena es la nuestra.
     let Some(tipo) = crate::tipos::tipo_real(&bytes) else {
-        return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
+        return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
     };
-    let _ = mime;
 
     // `tamano_bytes` es el tamaño del ORIGINAL (lo que ve el usuario), no del
     // blob cifrado. Con clave de reposo el archivo va cifrado al disco.
@@ -1479,17 +1683,17 @@ async fn subir_imagen(
     };
     let img = match imagen::registrar(&e.pool, u.ambito(), historia_id, &meta, cifrada).await {
         Ok(Some(img)) => img,
-        Ok(None) => return StatusCode::FORBIDDEN.into_response(),
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Ok(None) => return Err(StatusCode::FORBIDDEN),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
     };
     // Los bytes van al disco DESPUÉS de la fila: si la escritura falla, se
     // deshace la fila para no dejar una referencia a un archivo que no existe.
     let destino = e.dir_imagenes.join(&img.ruta_archivo);
     if tokio::fs::write(&destino, &para_disco).await.is_err() {
         let _ = imagen::eliminar(&e.pool, u.ambito(), img.id).await;
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
-    (StatusCode::CREATED, Json(Creado { id: img.id })).into_response()
+    Ok(img.id)
 }
 
 /// Devuelve los bytes de una imagen visible, con su mime. **404 si no existe o
@@ -1564,9 +1768,20 @@ async fn servir_imagen(
 
 async fn eliminar_imagen(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    // `Borrar`, igual que `eliminar_documento`. Escapó a la primera pasada: el
+    // producto ya había decidido que borrar un registro clínico es de
+    // superadmin, admin o médico, y por esta puerta un laboratorista sí podía
+    // borrar la radiografía de un paciente aunque no pudiera borrar un
+    // documento. Misma decisión, un camino que se había quedado fuera.
+    //
+    // SUBIR una imagen sigue pidiendo solo autenticación, y a propósito: el
+    // radiólogo es justo quien las sube y no está en esos tres roles. Borrar y
+    // subir no son el mismo acto, y `/imagenes` no lleva `roleGuard` en
+    // `app.routes.ts`, así que el producto no ha declarado quién sube.
+    autorizado: Autorizado<Borrar>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match imagen::eliminar(&e.pool, u.ambito(), id).await {
         Ok(Some(ruta)) => {
             // La fila ya no está; borrar el archivo es limpieza. Si falla (por
@@ -1833,6 +2048,871 @@ async fn listar_unidades_dispensacion(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
+// --- Laboratorio e imágenes diagnósticas -------------------------------------
+//
+// Las dos bandejas comparten forma: listar órdenes del servicio, abrir una,
+// mover su estado, y escribir la respuesta. Lo que cambia es la respuesta —
+// parámetros con referencias contra informe redactado— y la capacidad que se
+// exige. LEER no exige capacidad: el médico que pidió el examen tiene que poder
+// ver el resultado de su paciente.
+
+#[derive(Deserialize)]
+struct FiltroOrdenesDx {
+    estado: Option<String>,
+    paciente_id: Option<i64>,
+}
+
+/// Traduce el resultado de una escritura que puede chocar con algo cerrado.
+fn responder_escritura<T: Serialize>(
+    r: diagnostico::Escritura<T>,
+    creado: bool,
+    cerrado: &str,
+) -> Response {
+    match r {
+        diagnostico::Escritura::Hecho(v) => {
+            let codigo = if creado { StatusCode::CREATED } else { StatusCode::OK };
+            (codigo, Json(v)).into_response()
+        }
+        diagnostico::Escritura::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        diagnostico::Escritura::Cerrado => detalle(StatusCode::CONFLICT, cerrado.to_owned()),
+        diagnostico::Escritura::EstadoInvalido => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Estado no válido. Los del producto son: {}.",
+                diagnostico::ESTADOS.join(", ")
+            ),
+        ),
+    }
+}
+
+const LAB_CERRADO: &str = "Este resultado ya está validado y no se modifica: sobre él \
+    puede haberse decidido una conducta. Emita uno nuevo que lo corrija.";
+const INFORME_CERRADO: &str = "Este informe ya está firmado y no se modifica. Emita uno \
+    nuevo que lo corrija.";
+
+async fn lab_ordenes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroOrdenesDx>,
+) -> Response {
+    match diagnostico::listar_ordenes(
+        &e.pool, u.ambito(), diagnostico::Servicio::Laboratorio,
+        f.estado.as_deref(), f.paciente_id,
+    ).await {
+        Ok(os) => Json(os).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_orden(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::obtener_orden(&e.pool, u.ambito(), diagnostico::Servicio::Laboratorio, id).await {
+        Ok(Some(o)) => Json(o).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_estado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+    Json(c): Json<CambioEstado>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::cambiar_estado_orden(
+        &e.pool, u.ambito(), diagnostico::Servicio::Laboratorio, id, &c.estado,
+    ).await {
+        Ok(r) => responder_escritura(r, false, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_resultado(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::resultado_de_orden(&e.pool, u.ambito(), id).await {
+        Ok(Some(r)) => Json(r).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_crear_resultado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+    Json(r): Json<diagnostico::ResultadoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::crear_resultado(&e.pool, u.ambito(), id, u.id, &r).await {
+        Ok(res) => responder_escritura(res, true, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_actualizar_resultado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+    Json(r): Json<diagnostico::ResultadoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::actualizar_resultado(&e.pool, u.ambito(), id, &r).await {
+        Ok(res) => responder_escritura(res, false, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_validar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::validar_resultado(&e.pool, u.ambito(), id, u.id).await {
+        Ok(res) => responder_escritura(res, false, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::resultados_de_paciente(&e.pool, u.ambito(), id).await {
+        Ok(rs) => Json(rs).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_perfiles(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match diagnostico::listar_perfiles(&e.pool, u.ambito()).await {
+        Ok(ps) => Json(ps).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_crear_perfil(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Json(p): Json<diagnostico::PerfilNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "Los perfiles de examen son de una institución —sus referencias dependen del método y \
+             del equipo— y esta cuenta no está adscrita a ninguna."
+                .into(),
+        );
+    };
+    match diagnostico::crear_perfil(&e.pool, u.ambito(), institucion_id, &p).await {
+        Ok(diagnostico::ResultadoPerfil::Creado(perfil)) => {
+            (StatusCode::CREATED, Json(*perfil)).into_response()
+        }
+        Ok(diagnostico::ResultadoPerfil::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(diagnostico::ResultadoPerfil::SinNombre) => detalle(
+            StatusCode::BAD_REQUEST,
+            "El perfil necesita un nombre.".into(),
+        ),
+        Ok(diagnostico::ResultadoPerfil::NombreRepetido(n)) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ya hay un perfil llamado «{n}» en esta institución."),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_eliminar_perfil(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    let u = autorizado.0;
+    match diagnostico::eliminar_perfil(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn img_ordenes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroOrdenesDx>,
+) -> Response {
+    match diagnostico::listar_ordenes(
+        &e.pool, u.ambito(), diagnostico::Servicio::Imagenologia,
+        f.estado.as_deref(), f.paciente_id,
+    ).await {
+        Ok(os) => Json(os).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_orden(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::obtener_orden(&e.pool, u.ambito(), diagnostico::Servicio::Imagenologia, id).await {
+        Ok(Some(o)) => Json(o).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_estado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+    Json(c): Json<CambioEstado>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::cambiar_estado_orden(
+        &e.pool, u.ambito(), diagnostico::Servicio::Imagenologia, id, &c.estado,
+    ).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_informe(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::informe_de_orden(&e.pool, u.ambito(), id).await {
+        Ok(Some(i)) => Json(i).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_crear_informe(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+    Json(i): Json<diagnostico::InformeNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::crear_informe(&e.pool, u.ambito(), id, u.id, &i).await {
+        Ok(r) => responder_escritura(r, true, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_actualizar_informe(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+    Json(i): Json<diagnostico::InformeNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::actualizar_informe(&e.pool, u.ambito(), id, &i).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_firmar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::firmar_informe(&e.pool, u.ambito(), id, u.id).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::informes_de_paciente(&e.pool, u.ambito(), id).await {
+        Ok(is) => Json(is).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Adjunta una imagen al informe de una orden de imagenología.
+///
+/// Los bytes NO se guardan aquí de otra manera: se registran por el mismo camino
+/// que los adjuntos de la historia clínica —tipo deducido de la firma de los
+/// bytes, tope de tamaño, cifrado en reposo— y al informe solo llega la ruta que
+/// los sirve. Un segundo almacén, con sus propias reglas, habría sido el sitio
+/// por donde entrase el SVG que `tipos.rs` existe para no admitir.
+async fn img_subir(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(orden_id): Path<i64>,
+    multipart: Multipart,
+) -> Response {
+    let u = autorizado.0;
+    // La orden tiene que ser suya y de imagenología, y su informe estar abierto,
+    // ANTES de escribir nada en el disco.
+    let Ok(Some(orden)) =
+        diagnostico::obtener_orden(&e.pool, u.ambito(), diagnostico::Servicio::Imagenologia, orden_id).await
+    else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match diagnostico::informe_de_orden(&e.pool, u.ambito(), orden_id).await {
+        Ok(Some(i)) if i.firmado => return detalle(StatusCode::CONFLICT, INFORME_CERRADO.into()),
+        Ok(Some(_)) => {}
+        // Sin informe todavía no hay dónde colgar la imagen. Crearlo vacío aquí
+        // dejaría un informe sin técnica ni hallazgos que parece redactado.
+        Ok(None) => {
+            return detalle(
+                StatusCode::CONFLICT,
+                "Redacte el informe antes de adjuntarle imágenes: una imagen suelta no dice qué \
+                 se vio en ella."
+                    .into(),
+            )
+        }
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+
+    let id_imagen = match guardar_imagen_de(&e, &u, orden.historia_id, multipart, "Imagen diagnóstica").await {
+        Ok(id) => id,
+        Err(codigo) => return codigo.into_response(),
+    };
+    match diagnostico::adjuntar_imagen(&e.pool, u.ambito(), orden_id, &format!("/api/imagenes/{id_imagen}/archivo")).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Ambulancias y traslados -------------------------------------------------
+//
+// Ver el parque solo pide sesión: saber si hay una ambulancia disponible es lo
+// primero que necesita quien atiende una urgencia. Darlas de alta y despachar
+// exigen `GestionarAmbulancias`.
+
+fn respuesta_ambulancia(r: ambulancia::ResultadoAlta, creada: bool) -> Response {
+    match r {
+        ambulancia::ResultadoAlta::Hecho(a) => {
+            let codigo = if creada { StatusCode::CREATED } else { StatusCode::OK };
+            (codigo, Json(*a)).into_response()
+        }
+        ambulancia::ResultadoAlta::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        ambulancia::ResultadoAlta::SinPlaca => detalle(
+            StatusCode::BAD_REQUEST,
+            "La ambulancia necesita placa: es lo que la identifica ante el tránsito y ante el \
+             asegurador."
+                .into(),
+        ),
+        ambulancia::ResultadoAlta::TipoInvalido => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "El tipo tiene que ser {} — las dos modalidades del transporte asistencial.",
+                ambulancia::TIPOS.join(" o ")
+            ),
+        ),
+        ambulancia::ResultadoAlta::EstadoInvalido => detalle(
+            StatusCode::CONFLICT,
+            "«En Traslado» lo pone el despacho y lo quita el cierre del traslado, no la edición: \
+             si se pudiera fijar a mano, el estado dejaría de decir dónde está el vehículo."
+                .into(),
+        ),
+        ambulancia::ResultadoAlta::PlacaRepetida(p) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ya hay una ambulancia con placa {p} en esta institución."),
+        ),
+    }
+}
+
+async fn amb_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<ambulancia::FiltrosAmbulancia>,
+) -> Response {
+    match ambulancia::listar(&e.pool, u.ambito(), &f, &ambulancia::hoy()).await {
+        Ok(a) => Json(a).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match ambulancia::obtener(&e.pool, u.ambito(), id, &ambulancia::hoy()).await {
+        Ok(Some(a)) => Json(a).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Json(a): Json<ambulancia::AmbulanciaNueva>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "El parque de ambulancias es de una institución y esta cuenta no está adscrita a \
+             ninguna."
+                .into(),
+        );
+    };
+    match ambulancia::crear(&e.pool, u.ambito(), institucion_id, &a, &ambulancia::hoy()).await {
+        Ok(r) => respuesta_ambulancia(r, true),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+    Json(cambios): Json<ambulancia::AmbulanciaEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match ambulancia::actualizar(&e.pool, u.ambito(), id, &cambios, &ambulancia::hoy()).await {
+        Ok(r) => respuesta_ambulancia(r, false),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match ambulancia::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(ambulancia::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(ambulancia::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(ambulancia::ResultadoBorrado::TieneTraslados { traslados }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Esta ambulancia tiene {traslados} traslado(s) registrados y su historial respalda \
+                 cada uno. Désela de baja: dejará de poder despacharse y seguirá explicando los \
+                 que ya hizo."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_traslados(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<ambulancia::FiltrosTraslado>,
+) -> Response {
+    match ambulancia::listar_traslados(&e.pool, u.ambito(), &f).await {
+        Ok(t) => Json(t).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_traslado(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match ambulancia::obtener_traslado(&e.pool, u.ambito(), id).await {
+        Ok(Some(t)) => Json(t).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Despacha. Cada negativa dice qué hacer: qué traslado la tiene ocupada, en qué
+/// estado está, cuándo venció el SOAT. Quien coordina una urgencia no puede
+/// resolver nada con un «no se pudo».
+async fn amb_despachar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Json(t): Json<ambulancia::TrasladoNuevo>,
+) -> Response {
+    use ambulancia::ResultadoDespacho as R;
+    let u = autorizado.0;
+    match ambulancia::despachar(&e.pool, u.ambito(), u.id, &t, &ambulancia::hoy()).await {
+        Ok(R::Hecho(t)) => (StatusCode::CREATED, Json(*t)).into_response(),
+        Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(R::Ocupada { traslado_id }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Esa ambulancia está en el traslado #{traslado_id}. Ciérrelo o despache otra."),
+        ),
+        Ok(R::NoDisponible { estado }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Esa ambulancia está «{estado}» y no se puede despachar."),
+        ),
+        Ok(R::SoatVencido { vencio }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "El SOAT de esa ambulancia venció el {vencio}: no puede circular. Despache otra \
+                 mientras se renueva."
+            ),
+        ),
+        Ok(R::TipoInvalido) => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "El traslado es {} — primario desde el sitio del evento, secundario entre \
+                 prestadores.",
+                ambulancia::TIPOS_TRASLADO.join(" o ")
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cerrar_traslado(
+    e: &Estado,
+    u: &Usuario,
+    id: i64,
+    c: ambulancia::Cierre,
+    cancelado: bool,
+) -> Response {
+    use ambulancia::ResultadoCierre as R;
+    match ambulancia::cerrar(&e.pool, u.ambito(), id, &c, cancelado).await {
+        Ok(R::Hecho(t)) => Json(*t).into_response(),
+        Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(R::YaCerrado { estado }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ese traslado ya está «{estado}»."),
+        ),
+        Ok(R::LlegadaAntesDeSalida { salida }) => detalle(
+            StatusCode::BAD_REQUEST,
+            format!("La llegada no puede ser anterior a la salida, que fue el {salida}."),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_finalizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+    Json(c): Json<ambulancia::Cierre>,
+) -> Response {
+    cerrar_traslado(&e, &autorizado.0, id, c, false).await
+}
+
+async fn amb_cancelar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+    Json(c): Json<ambulancia::Cierre>,
+) -> Response {
+    cerrar_traslado(&e, &autorizado.0, id, c, true).await
+}
+
+// --- Farmacia ----------------------------------------------------------------
+//
+// LEER el inventario solo pide sesión: enfermería necesita saber si queda
+// adrenalina antes de pedirla, y un 403 ahí no protege nada que el listado de
+// medicamentos no diga ya. ESCRIBIR —alta, edición, entrada, dispensación—
+// exige `GestionarFarmacia`, que en la firma del manejador se lee de un vistazo.
+
+/// El cuerpo con el que se rechaza una operación de farmacia, en el mismo
+/// formato (`detail`) que ya espera la interfaz.
+fn detalle(codigo: StatusCode, texto: String) -> Response {
+    (codigo, Json(serde_json::json!({ "detail": texto }))).into_response()
+}
+
+async fn farm_stats(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match inventario::stats(&e.pool, u.ambito(), &inventario::hoy()).await {
+        Ok(s) => Json(s).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<inventario::Filtros>,
+) -> Response {
+    match inventario::listar(&e.pool, u.ambito(), &f, &inventario::hoy()).await {
+        Ok(items) => Json(items).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// La institución del item sale de la del USUARIO, nunca del cuerpo.
+///
+/// Un superadmin no tiene institución (`institucion_id = NULL`), así que no
+/// puede dar de alta inventario: no hay respuesta correcta a «¿de quién es este
+/// medicamento?» y no se inventa una. Responde 400 diciéndolo, en vez de crear
+/// una fila huérfana que después no ve nadie (directiva 20).
+async fn farm_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Json(i): Json<inventario::ItemNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "El inventario pertenece a una institución y esta cuenta no está adscrita a ninguna."
+                .into(),
+        );
+    };
+    match inventario::crear(&e.pool, u.ambito(), institucion_id, &i).await {
+        Ok(Some(id)) => match inventario::obtener(&e.pool, u.ambito(), id, &inventario::hoy()).await {
+            Ok(Some(item)) => (StatusCode::CREATED, Json(item)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(None) => StatusCode::FORBIDDEN.into_response(),
+        // El único conflicto posible es el UNIQUE (institución, nombre, lote):
+        // dar de alta dos veces el mismo lote partiría el stock en dos filas.
+        Err(sqlx::Error::Database(err)) if err.is_unique_violation() => detalle(
+            StatusCode::CONFLICT,
+            "Ya existe un item con ese nombre y ese lote. Registre la remesa como ENTRADA sobre él."
+                .into(),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+    Json(cambios): Json<inventario::ItemEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match inventario::actualizar(&e.pool, u.ambito(), id, &cambios).await {
+        Ok(true) => match inventario::obtener(&e.pool, u.ambito(), id, &inventario::hoy()).await {
+            Ok(Some(item)) => Json(item).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match inventario::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(inventario::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(inventario::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(inventario::ResultadoBorrado::TieneHistorial { movimientos, dispensaciones }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Este item tiene {movimientos} movimiento(s) y {dispensaciones} dispensación(es) \
+                 registradas: borrarlo borraría el rastro de a quién se le entregó. \
+                 Para retirarlo del uso, déjelo en cero."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn farm_entrada(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+    Json(entrada): Json<inventario::Entrada>,
+) -> Response {
+    let u = autorizado.0;
+    match inventario::entrada(&e.pool, u.ambito(), id, u.id, &entrada, &inventario::hoy()).await {
+        Ok(inventario::ResultadoEntrada::Hecha(item)) => Json(*item).into_response(),
+        Ok(inventario::ResultadoEntrada::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(inventario::ResultadoEntrada::CantidadInvalida) => detalle(
+            StatusCode::BAD_REQUEST,
+            "La cantidad que entra tiene que ser mayor que cero.".into(),
+        ),
+        Ok(inventario::ResultadoEntrada::LoteDistinto { actual, quedan }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Quedan {quedan} unidades del lote {actual}. Un lote nuevo no se suma al anterior: \
+                 vencen en fechas distintas y dejarían de poder rastrearse por separado. \
+                 Dé de alta el lote nuevo como item."
+            ),
+        ),
+        Ok(inventario::ResultadoEntrada::ProveedorNoValido) => detalle(
+            StatusCode::CONFLICT,
+            "Ese proveedor no es de esta institución o está inactivo. La entrada no se registró: \
+             guardarla sin procedencia habría dejado una remesa que usted cree tener rastreada."
+                .into(),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Proveedores -------------------------------------------------------------
+
+async fn prov_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<proveedor::FiltrosProveedor>,
+) -> Response {
+    match proveedor::listar(&e.pool, u.ambito(), &f).await {
+        Ok(ps) => Json(ps).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn prov_obtener(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    match proveedor::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => Json(p).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Traduce el resultado del alta o la edición, y devuelve el proveedor ya
+/// releído para que la interfaz no tenga que pedirlo otra vez.
+async fn respuesta_proveedor(
+    e: &Estado,
+    ambito: Ambito,
+    r: proveedor::ResultadoAlta,
+    creado: bool,
+) -> Response {
+    match r {
+        proveedor::ResultadoAlta::Creado(id) => match proveedor::obtener(&e.pool, ambito, id).await {
+            Ok(Some(p)) => {
+                let codigo = if creado { StatusCode::CREATED } else { StatusCode::OK };
+                (codigo, Json(p)).into_response()
+            }
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        proveedor::ResultadoAlta::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        proveedor::ResultadoAlta::SinRazonSocial => detalle(
+            StatusCode::BAD_REQUEST,
+            "El proveedor necesita una razón social: sin ella la fila no identifica a nadie.".into(),
+        ),
+        proveedor::ResultadoAlta::NitRepetido(nit) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ya hay un proveedor con el NIT {nit} en esta institución."),
+        ),
+    }
+}
+
+async fn prov_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Json(p): Json<proveedor::ProveedorNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "Los proveedores son de una institución y esta cuenta no está adscrita a ninguna."
+                .into(),
+        );
+    };
+    match proveedor::crear(&e.pool, u.ambito(), institucion_id, &p).await {
+        Ok(r) => respuesta_proveedor(&e, u.ambito(), r, true).await,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn prov_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+    Json(cambios): Json<proveedor::ProveedorEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match proveedor::actualizar(&e.pool, u.ambito(), id, &cambios).await {
+        Ok(r) => respuesta_proveedor(&e, u.ambito(), r, false).await,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn prov_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match proveedor::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(proveedor::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(proveedor::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(proveedor::ResultadoBorrado::TieneEntradas { entradas }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Este proveedor ya trajo {entradas} remesa(s): borrarlo dejaría esas entradas sin \
+                 procedencia. Desactívelo y dejará de aparecer al registrar una entrada."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct BusquedaFormulas {
+    q: Option<String>,
+}
+
+async fn farm_formulas_pendientes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(b): Query<BusquedaFormulas>,
+) -> Response {
+    match inventario::formulas_pendientes(&e.pool, u.ambito(), b.q.as_deref()).await {
+        Ok(fs) => Json(fs).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// La entrega. Cada negativa lleva su motivo real: quien atiende el mostrador
+/// tiene que poder decirle al paciente por qué no se le entrega, y «error» no es
+/// una respuesta que se pueda dar en una farmacia.
+async fn farm_dispensar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Json(d): Json<inventario::DispensarNueva>,
+) -> Response {
+    use inventario::ResultadoDispensa as R;
+    let u = autorizado.0;
+    match inventario::dispensar(&e.pool, u.ambito(), u.id, &d, &inventario::hoy()).await {
+        Ok(R::Hecha(disp)) => (StatusCode::CREATED, Json(*disp)).into_response(),
+        Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(R::CantidadInvalida) => detalle(
+            StatusCode::BAD_REQUEST,
+            "La cantidad a dispensar tiene que ser mayor que cero.".into(),
+        ),
+        Ok(R::YaCompleta) => detalle(
+            StatusCode::CONFLICT,
+            "Esta fórmula ya se entregó completa.".into(),
+        ),
+        Ok(R::ExcedePrescrito { pendiente }) => detalle(
+            StatusCode::CONFLICT,
+            format!("De esta fórmula quedan {pendiente} por entregar; no se puede dispensar más de lo prescrito."),
+        ),
+        Ok(R::SinExistencias { disponible }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Solo quedan {disponible} unidades de ese item."),
+        ),
+        Ok(R::LoteVencido { vencio }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ese lote venció el {vencio}. No se dispensa: hay que darlo de baja por vencimiento."),
+        ),
+        Ok(R::LoteNoCoincide { del_item }) => detalle(
+            StatusCode::CONFLICT,
+            format!("El lote indicado no es el del item seleccionado, que es el {del_item}."),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct Pagina {
+    page: Option<i64>,
+}
+
+async fn farm_dispensaciones(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(p): Query<Pagina>,
+) -> Response {
+    match inventario::dispensaciones(&e.pool, u.ambito(), p.page.unwrap_or(1)).await {
+        Ok(ds) => Json(ds).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroMovimientos {
+    item_id: Option<i64>,
+    tipo: Option<String>,
+    page: Option<i64>,
+}
+
+async fn farm_movimientos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroMovimientos>,
+) -> Response {
+    match inventario::movimientos(&e.pool, u.ambito(), f.item_id, f.tipo.as_deref(), f.page.unwrap_or(1)).await {
+        Ok(ms) => Json(ms).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -1847,6 +2927,10 @@ mod pruebas {
 
     async fn estado_de_prueba(tras_proxy: bool) -> Estado {
         let pool = medico_datos::abrir("sqlite::memory:").await.unwrap();
+        // Igual que el arranque de verdad (`main.rs`). Sin esto la tabla de
+        // municipios queda vacía y CUALQUIER código sería inválido: el banco
+        // dejaría de parecerse a producción justo en lo que se quiere probar.
+        medico_datos::divipola::sembrar(&pool).await.unwrap();
         sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (1,'Uno','900')")
             .execute(&pool)
             .await
@@ -1869,6 +2953,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy,
+            capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }
 
@@ -1937,6 +3022,415 @@ mod pruebas {
                 .await
                 .unwrap()
                 .status()
+        }
+
+        /// Con cuerpo, para las escrituras.
+        async fn pedir_con(e: &Estado, metodo: &str, uri: &str, cookie: &str, json: &str) -> StatusCode {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie)
+                        .header("content-type", "application/json")
+                        .body(Body::from(json.to_owned()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .status()
+        }
+
+        /// EL PEOR DE TODOS: un laboratorista RECETANDO.
+        ///
+        /// Firmar y borrar ya estaban cerrados, pero escribir no, y el agujero
+        /// ancho era ese: `POST /api/historias/{id}/formulas` solo pedía estar
+        /// autenticado. Cualquier usuario de la institución —laboratorista,
+        /// trabajo social, terapeuta— podía prescribir medicamentos a un paciente
+        /// y crear la nota clínica que los justifica. La firma protegía la AUTORÍA
+        /// del documento y dejaba abierto su CONTENIDO.
+        #[tokio::test]
+        async fn un_laboratorista_no_receta_ni_escribe_en_la_historia() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias/7/formulas", &lab,
+                          r#"{"medicamento":"Morfina","dosis":"10mg","frecuencia":"c/4h","duracion":"3d","cantidad":18}"#).await,
+                StatusCode::FORBIDDEN,
+                "UN LABORATORISTA RECETÓ MEDICAMENTOS"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias", &lab,
+                          r#"{"paciente_id":1,"motivo_consulta":"x","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista creó una nota clínica"
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/historias/7", &lab,
+                          r#"{"motivo_consulta":"otro","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista modificó la nota de un médico"
+            );
+
+            // Y no basta el 403: nada tuvo que escribirse. Un rechazo que llega
+            // después de la escritura no protege nada.
+            let formulas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM formula")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(formulas, 0, "se guardó la fórmula pese al 403");
+            let historias: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM historia")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(historias, 1, "se creó una historia pese al 403");
+            let motivo: String =
+                sqlx::query_scalar("SELECT motivo_consulta FROM historia WHERE id = 7")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(motivo, "dolor", "la nota del médico se modificó pese al 403");
+        }
+
+        /// Farmacia: el que PRESCRIBE no es el que DISPENSA.
+        ///
+        /// La separación es la razón de ser del control: si el mismo médico que
+        /// firma la fórmula puede además marcarla entregada y bajar el stock, la
+        /// dispensación deja de ser una comprobación sobre la prescripción y pasa
+        /// a ser un segundo clic del mismo acto. Por eso `Medico` NO tiene
+        /// `GestionarFarmacia`, aunque sí tenga casi todo lo demás.
+        ///
+        /// Y la otra mitad, que es la que hace que esto no sea una regla que
+        /// cierra por cerrar: LEER el inventario sí puede cualquiera con sesión.
+        #[tokio::test]
+        async fn el_medico_que_receta_no_dispensa_pero_si_puede_mirar_el_stock() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (8,'Regente','reg@x.co',?,'regente_farmacia',1,1)",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            let medico = cookie_de(2);
+            let regente = cookie_de(8);
+            let alta = r#"{"nombre":"Acetaminofén 500mg","lote":"L-1","cantidad_actual":100}"#;
+
+            // El médico: puede mirar, no puede tocar.
+            assert_eq!(pedir(&e, "GET", "/api/farmacia/inventario", &medico).await, StatusCode::OK);
+            assert_eq!(pedir(&e, "GET", "/api/farmacia/stats", &medico).await, StatusCode::OK);
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/farmacia/inventario", &medico, alta).await,
+                StatusCode::FORBIDDEN,
+                "un médico dio de alta inventario"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/farmacia/dispensar", &medico,
+                          r#"{"formula_id":1,"item_inventario_id":1,"cantidad_dispensada":1}"#).await,
+                StatusCode::FORBIDDEN,
+                "EL MISMO QUE RECETA DISPENSÓ"
+            );
+            let items: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM item_inventario")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(items, 0, "se creó el item pese al 403");
+
+            // El regente sí: si esto fallara, la regla estaría cerrando de más y
+            // la prueba de arriba pasaría por el motivo equivocado.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/farmacia/inventario", &regente, alta).await,
+                StatusCode::CREATED
+            );
+        }
+
+        /// `/api/imagenes/…` sirve dos cosas distintas y NO se pisan.
+        ///
+        /// `/api/imagenes/{id}` y `/api/imagenes/{id}/archivo` son los ADJUNTOS
+        /// de la historia clínica; `/api/imagenes/ordenes/…` y
+        /// `/api/imagenes/paciente/…` son la bandeja de imagenología. El
+        /// enrutador da prioridad al segmento literal sobre el parámetro, así que
+        /// `ordenes` no se interpreta como un id — pero eso es una propiedad del
+        /// enrutador, no una decisión de este código, y una versión que la
+        /// cambiara rompería la bandeja en silencio.
+        ///
+        /// Se comprueba pidiendo por las dos formas: la bandeja responde 200 y el
+        /// adjunto inexistente 404. Si `ordenes` se estuviera leyendo como id, la
+        /// primera daría 404 —o el router habría entrado en pánico al montarse,
+        /// que es el otro final posible y que esta prueba también caza—.
+        #[tokio::test]
+        async fn las_rutas_de_imagenes_no_se_pisan() {
+            let e = con_tres_roles().await;
+            let medico = cookie_de(2);
+            assert_eq!(pedir(&e, "GET", "/api/imagenes/ordenes", &medico).await, StatusCode::OK);
+            assert_eq!(
+                pedir(&e, "GET", "/api/imagenes/paciente/1/informes", &medico).await,
+                StatusCode::OK
+            );
+            // El adjunto por id sigue existiendo como ruta (404 porque no hay
+            // imagen 99, no porque la ruta se haya perdido).
+            assert_eq!(
+                pedir(&e, "GET", "/api/imagenes/99/archivo", &medico).await,
+                StatusCode::NOT_FOUND
+            );
+        }
+
+        /// Laboratorio e imágenes: quién escribe el resultado y quién no.
+        ///
+        /// Enfermería atiende al paciente y registra en la historia, pero no
+        /// valida un hemograma ni firma una radiografía. Y al revés, la prueba
+        /// tiene que mostrar que la regla DISCRIMINA: el bacteriólogo entra al
+        /// laboratorio y no a imagenología, y la radióloga al revés.
+        #[tokio::test]
+        async fn el_resultado_lo_escribe_quien_lo_procesa() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (10,'Bacterióloga','bac@x.co',?,'bacteriologo',1,1),
+                        (11,'Radióloga','rad@x.co',?,'radiologo',1,1),
+                        (12,'Enfermera','enf@x.co',?,'enfermeria',1,1)",
+            )
+            .bind(&h).bind(&h).bind(&h)
+            .execute(&e.pool).await.unwrap();
+            sqlx::query(
+                "INSERT INTO orden (id, historia_id, tipo, descripcion, justificacion)
+                 VALUES (1,7,'Laboratorio','Hemograma','Control'),
+                        (2,7,'Imagenología','Rx de tórax','Tos')",
+            )
+            .execute(&e.pool).await.unwrap();
+
+            let resultado = r#"{"resultados_json":{"hb":{"valor":"13","critico":false}},"valores_criticos":false}"#;
+            let informe = r#"{"tecnica":"PA","hallazgos":"Sin consolidaciones","impresion_diagnostica":"Normal"}"#;
+
+            // Enfermería no escribe ninguno de los dos.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/laboratorio/ordenes/1/resultado", &cookie_de(12), resultado).await,
+                StatusCode::FORBIDDEN
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe", &cookie_de(12), informe).await,
+                StatusCode::FORBIDDEN
+            );
+            // La bacterióloga, el laboratorio sí y el informe radiológico no.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/laboratorio/ordenes/1/resultado", &cookie_de(10), resultado).await,
+                StatusCode::CREATED
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe", &cookie_de(10), informe).await,
+                StatusCode::FORBIDDEN
+            );
+            // La radióloga, al revés.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe", &cookie_de(11), informe).await,
+                StatusCode::CREATED
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/laboratorio/ordenes/1/resultado/validar", &cookie_de(11), "{}").await,
+                StatusCode::FORBIDDEN
+            );
+            // Y enfermería SÍ puede leer el resultado de su paciente: la regla
+            // cierra la escritura, no la consulta.
+            assert_eq!(
+                pedir(&e, "GET", "/api/laboratorio/ordenes/1/resultado", &cookie_de(12)).await,
+                StatusCode::OK
+            );
+
+            // Firmado el informe, ni la propia radióloga lo reescribe.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe/firmar", &cookie_de(11), "{}").await,
+                StatusCode::OK
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/imagenes/ordenes/2/informe", &cookie_de(11), informe).await,
+                StatusCode::CONFLICT
+            );
+        }
+
+        /// Borrar una IMAGEN clínica es borrar un registro clínico.
+        ///
+        /// Este camino se había quedado fuera de la primera pasada: un
+        /// laboratorista no podía borrar un documento —eso ya exigía `Borrar`—
+        /// pero sí la radiografía del paciente. Misma decisión del producto, una
+        /// puerta que no la aplicaba.
+        #[tokio::test]
+        async fn un_laboratorista_no_borra_una_imagen_clinica() {
+            let e = con_tres_roles().await;
+            assert_eq!(
+                pedir(&e, "DELETE", "/api/imagenes/1", &cookie_de(5)).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista borró una imagen clínica"
+            );
+            // Y la médica no se queda fuera de lo suyo: aquí no hay imagen 1, así
+            // que lo que importa es que NO sea 403 —el rol la deja pasar y el 404
+            // lo pone el recurso—.
+            assert_ne!(
+                pedir(&e, "DELETE", "/api/imagenes/1", &cookie_de(2)).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a la médica el borrado de imágenes"
+            );
+        }
+
+        /// La otra mitad, sin la cual lo de arriba pasaría con un extractor que
+        /// devolviera 403 siempre: la MÉDICA sí receta y sí escribe.
+        #[tokio::test]
+        async fn la_medica_si_receta_y_si_escribe() {
+            let e = con_tres_roles().await;
+            let med = cookie_de(2);
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/historias/7/formulas", &med,
+                          r#"{"medicamento":"Acetaminofén","dosis":"500mg","frecuencia":"c/8h","duracion":"3d","cantidad":9}"#).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró la puerta a la médica: el arreglo sería peor que el fallo"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/historias", &med,
+                          r#"{"paciente_id":1,"motivo_consulta":"x","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "la médica no pudo crear una historia"
+            );
+        }
+
+        /// Escribir PACIENTE es un conjunto más ancho que escribir HISTORIA, y esa
+        /// diferencia es el sitio donde una regla mal puesta hace daño en silencio:
+        /// enfermería registra pacientes todos los días sin escribir la nota
+        /// médica. Se comprueban los dos lados con el mismo caso.
+        #[tokio::test]
+        async fn enfermeria_registra_pacientes_pero_no_escribe_la_nota() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (8,'Enf','enf@x.co',?,'enfermeria',1,1)",
+            )
+            .bind(&h).execute(&e.pool).await.unwrap();
+            let enf = cookie_de(8);
+
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/pacientes", &enf,
+                          r#"{"tipo_documento":"CC","numero_documento":"999","nombre1":"Nuevo","apellido1":"Paciente","fecha_nacimiento":"1990-01-01","sexo":"M"}"#).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a enfermería el registro de pacientes, que sí es suyo"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias", &enf,
+                          r#"{"paciente_id":1,"motivo_consulta":"x","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "enfermería escribió una nota médica"
+            );
+        }
+
+        /// La matriz de los módulos, con la respuesta de Juan del 2026-07-30.
+        ///
+        /// Cada caso comprueba LOS DOS LADOS: quien no debe entrar recibe 403 y
+        /// quien sí debe no lo recibe. Sin la segunda mitad, un extractor que
+        /// devolviera 403 siempre pasaría la prueba entera y habríamos cambiado un
+        /// agujero por una puerta tapiada — que en una historia clínica es igual
+        /// de grave, solo que se descubre antes.
+        ///
+        /// SUSTITUYE a `los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito`,
+        /// que fijaba el hueco mientras la matriz no estuviera decidida. Se puso
+        /// roja al cerrar hospitalización, que es exactamente para lo que estaba,
+        /// y se borra aquí a conciencia.
+        #[tokio::test]
+        async fn la_matriz_de_los_modulos_deja_entrar_a_quien_atiende_y_no_a_quien_no() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            // Un profesional de cada oficio que la matriz nombra.
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (10,'Enf','enf2@x.co',?,'enfermeria',1,1),
+                        (11,'Nutri','nut@x.co',?,'nutricionista',1,1),
+                        (12,'Fisio','fis@x.co',?,'terapeuta',1,1)",
+            )
+            .bind(&h).bind(&h).bind(&h).execute(&e.pool).await.unwrap();
+
+            let lab = cookie_de(5);
+            let enf = cookie_de(10);
+            let nutri = cookie_de(11);
+            let fisio = cookie_de(12);
+
+            // URGENCIAS Y HOSPITALIZACIÓN: «el médico, el especialista, los
+            // enfermeros, todos los profesionales que interactúan con el
+            // paciente». El laboratorista interactúa con la MUESTRA.
+            let ingreso = r#"{"paciente_id":1,"cama":"101","motivo":"observación"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/hospitalizacion/ingresar", &lab, ingreso).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista dio ingreso de hospitalización"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/hospitalizacion/ingresar", &enf, ingreso).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a enfermería el ingreso de hospitalización, que sí es suyo"
+            );
+
+            // NUTRICIÓN: «el nutriólogo o nutricionista».
+            let val = r#"{"paciente_id":1,"peso":70.0,"talla":1.70,"diagnostico":"normal"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/nutricion/valoraciones", &lab, val).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista hizo una valoración nutricional"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/nutricion/valoraciones", &nutri, val).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a la nutricionista el módulo de nutrición — el fallo con el signo cambiado"
+            );
+
+            // REHABILITACIÓN: «el fisioterapeuta», que en esta enumeración es
+            // `Terapeuta`.
+            let plan = r#"{"paciente_id":1,"diagnostico":"lumbalgia","objetivo":"movilidad","sesiones_totales":10}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/rehabilitacion/planes", &lab, plan).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista abrió un plan de rehabilitación"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/rehabilitacion/planes", &fisio, plan).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró al fisioterapeuta el módulo de rehabilitación"
+            );
+
+            // REMISIONES: «enfermeros o personal administrativo».
+            let cr = r#"{"remision_id":1,"resumen":"x","recomendaciones":"y"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/contrarreferencia", &lab, cr).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista creó una contrarreferencia"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/contrarreferencia", &enf, cr).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a enfermería la contrarreferencia"
+            );
+        }
+
+        /// SUBIR una imagen sigue abierto, y esta prueba lo fija igual que hacía
+        /// la anterior con hospitalización: el radiólogo es quien las sube y no
+        /// está en ninguna lista, así que cerrarlo a ojo lo dejaría sin trabajar.
+        /// El día que se decida, esto se pondrá rojo y habrá que borrarlo a
+        /// conciencia. BORRAR una imagen sí exige `BorrarClinico`.
+        #[tokio::test]
+        async fn subir_imagen_sigue_sin_exigir_rol_a_proposito() {
+            let e = con_tres_roles().await;
+            // Contenido ASCII: lo que se comprueba es que el ROL no cierra la
+            // puerta, no que la subida termine bien. Cualquier código que no sea
+            // 403 —incluido un 400 por imagen inválida— responde a la pregunta.
+            let cuerpo = "--x\r\nContent-Disposition: form-data; name=\"archivo\"; filename=\"r.png\"\r\nContent-Type: image/png\r\n\r\nno-es-una-imagen\r\n--x--\r\n";
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/historias/7/imagenes")
+                        .header("content-type", "multipart/form-data; boundary=x")
+                        .header(header::COOKIE, cookie_de(5))
+                        .body(Body::from(cuerpo))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_ne!(
+                r.status(),
+                StatusCode::FORBIDDEN,
+                "subir imagen ya exige rol: decídase quién sube y BÓRRESE esta prueba a conciencia"
+            );
         }
 
         /// El laboratorista está autenticado y es de la institución: el
@@ -2359,5 +3853,564 @@ mod pruebas {
         let mut blanca = header::HeaderMap::new();
         blanca.insert("x-real-ip", "   ".parse().unwrap());
         assert_eq!(origen_de(true, &blanca, Some(zocalo)), None);
+    }
+
+    /// DIVIPOLA por la ruta de verdad (#16/#77).
+    ///
+    /// `divipola.rs` ya prueba el catálogo. Lo que aquí se comprueba es que la
+    /// API lo EJERZA: hasta ahora `cod_municipio` era TEXT sin validación, así
+    /// que un código inventado entraba y el envío del RIPS se rompía después,
+    /// lejos de donde se tecleó.
+    mod municipios {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn crear_con_municipio(e: &Estado, cod: &str) -> Response {
+            let municipio = if cod.is_empty() {
+                "null".to_string()
+            } else {
+                format!("\"{cod}\"")
+            };
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/pacientes")
+                        .header(header::COOKIE, cookie_de(2))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(format!(
+                            r#"{{"tipo_documento":"CC","numero_documento":"{}",
+                                 "nombre1":"Ana","apellido1":"Ruiz",
+                                 "fecha_nacimiento":"1990-01-01","sexo":"F",
+                                 "cod_municipio":{municipio}}}"#,
+                            // Documento distinto por caso: el número es único.
+                            cod.len() * 7 + 1000
+                        )))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        #[tokio::test]
+        async fn un_municipio_real_entra() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(crear_con_municipio(&e, "05001").await.status(), StatusCode::CREATED);
+        }
+
+        /// El caso que justifica el cambio: antes esto entraba y salía mal en el
+        /// envío, lejos de donde se tecleó.
+        #[tokio::test]
+        async fn un_municipio_inventado_se_rechaza_aqui_y_no_en_el_envio() {
+            let e = estado_de_prueba(false).await;
+            let r = crear_con_municipio(&e, "99999").await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let b = axum::body::to_bytes(r.into_body(), 1 << 16).await.unwrap();
+            let texto = String::from_utf8(b.to_vec()).unwrap();
+            assert!(texto.contains("DIVIPOLA"), "el mensaje debe decir qué pasa: {texto}");
+        }
+
+        /// **La forma de cuatro dígitos que publica MinSalud no cuela.** Es el
+        /// error que más se comete y el que menos se ve: `5001` es Medellín leído
+        /// como número, y aceptarlo «siendo amables» haría imposible distinguir
+        /// después los que se arreglaron de los que se adivinaron.
+        #[tokio::test]
+        async fn el_codigo_sin_el_cero_de_la_izquierda_se_rechaza() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(
+                crear_con_municipio(&e, "5001").await.status(),
+                StatusCode::UNPROCESSABLE_ENTITY
+            );
+        }
+
+        /// Sin municipio SÍ se puede: un paciente puede no tener el dato todavía,
+        /// y eso se ve. Lo que no se acepta es uno falso — y no se sustituye por
+        /// ninguno (el sistema viejo rellenaba con «05001»).
+        #[tokio::test]
+        async fn sin_municipio_se_admite_y_no_se_rellena() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(crear_con_municipio(&e, "").await.status(), StatusCode::CREATED);
+            let cod: (Option<String>,) =
+                sqlx::query_as("SELECT cod_municipio FROM paciente ORDER BY id DESC LIMIT 1")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(cod.0, None, "un dato ausente se queda ausente");
+        }
+
+        /// La edición cierra por la misma puerta. Cerrar solo el alta deja el
+        /// agujero igual de abierto y encima parece cerrado.
+        #[tokio::test]
+        async fn la_edicion_valida_igual_que_el_alta() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(crear_con_municipio(&e, "05001").await.status(), StatusCode::CREATED);
+            let id: (i64,) = sqlx::query_as("SELECT id FROM paciente ORDER BY id DESC LIMIT 1")
+                .fetch_one(&e.pool).await.unwrap();
+
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("PUT")
+                        .uri(format!("/api/pacientes/{}", id.0))
+                        .header(header::COOKIE, cookie_de(2))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(
+                            r#"{"tipo_documento":"CC","numero_documento":"1000",
+                                "nombre1":"Ana","apellido1":"Ruiz",
+                                "fecha_nacimiento":"1990-01-01","sexo":"F",
+                                "cod_municipio":"99999"}"#,
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        }
+
+        #[tokio::test]
+        async fn el_selector_busca_y_respeta_el_limite() {
+            let e = estado_de_prueba(false).await;
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/municipios?q=MEDELL&limite=5")
+                        .header(header::COOKIE, cookie_de(2))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::OK);
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            let lista = v.as_array().unwrap();
+            assert!(!lista.is_empty() && lista.len() <= 5);
+            assert!(lista.iter().any(|m| m["codigo"] == "05001"));
+            assert_eq!(lista[0]["nombre_departamento"], "ANTIOQUIA");
+        }
+
+        /// Un `limite` disparatado no arrastra el país entero por la red.
+        #[tokio::test]
+        async fn el_limite_se_acota() {
+            let e = estado_de_prueba(false).await;
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/municipios?limite=999999")
+                        .header(header::COOKIE, cookie_de(2))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            assert_eq!(v.as_array().unwrap().len(), 500);
+        }
+
+        #[tokio::test]
+        async fn sin_cookie_no_hay_municipios() {
+            let e = estado_de_prueba(false).await;
+            let r = router(e.clone())
+                .oneshot(Request::builder().uri("/api/municipios").body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+        }
+    }
+
+    /// La matriz de capacidades por institución (#235), por la ruta de verdad.
+    ///
+    /// `ajustes.rs` ya prueba la regla y `capacidad.rs` la caché. Lo que aquí se
+    /// comprueba es lo que ninguno de los dos puede: que el cambio pedido por
+    /// HTTP **cambie de verdad lo que la siguiente petición puede hacer**. Ese
+    /// es el cableado, y es donde se cae una configuración que se guarda y no se
+    /// aplica.
+    mod matriz_por_institucion {
+        use super::*;
+
+        const ADMIN: i64 = 20;
+        const LAB: i64 = 21;
+
+        /// Institución 1 con un admin y un laboratorista; un paciente y una
+        /// historia sin firmar, para tener sobre qué ejercer `EscribirClinico`.
+        async fn con_admin_y_lab() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (?,'Admin','adm@x.co',?,'admin',1,1),
+                        (?,'Lab','lab2@x.co',?,'laboratorista',1,1)",
+            )
+            .bind(ADMIN)
+            .bind(&h)
+            .bind(LAB)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO paciente (id, tipo_documento, numero_documento, nombre1, apellido1,
+                                       fecha_nacimiento, sexo, institucion_id)
+                 VALUES (1,'CC','123','Quien','Sea','1990-01-01','F',1)",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn enviar(e: &Estado, metodo: &str, uri: &str, quien: i64, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn cuerpo_de(r: Response) -> String {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            String::from_utf8(b.to_vec()).unwrap()
+        }
+
+        /// Crear una historia: la acción que exige `EscribirClinico`, y que el
+        /// laboratorista NO puede por defecto.
+        async fn intenta_escribir(e: &Estado, quien: i64) -> StatusCode {
+            enviar(
+                e,
+                "POST",
+                "/api/historias",
+                quien,
+                r#"{"paciente_id":1,"medico_id":2,"motivo_consulta":"m","enfermedad_actual":"e",
+                    "diagnostico_principal":"J00","plan_tratamiento":"p"}"#,
+            )
+            .await
+            .status()
+        }
+
+        // === LA PRUEBA QUE JUSTIFICA TODO EL CAMBIO =======================
+
+        /// Antes de configurar, el laboratorista no escribe. Después de que el
+        /// administrador se lo conceda **por la API**, escribe. Sin esta prueba,
+        /// todo lo demás podría estar guardándose sin aplicarse nunca.
+        #[tokio::test]
+        async fn conceder_por_la_api_cambia_lo_que_la_siguiente_peticion_puede_hacer() {
+            let e = con_admin_y_lab().await;
+            assert_eq!(
+                intenta_escribir(&e, LAB).await,
+                StatusCode::FORBIDDEN,
+                "de partida el defecto no le deja"
+            );
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+
+            assert_eq!(
+                intenta_escribir(&e, LAB).await,
+                StatusCode::CREATED,
+                "tras concederlo, la MISMA ruta le deja: la caché se invalidó"
+            );
+        }
+
+        /// Y al revés, que es la mitad que se olvida: quitar una capacidad la
+        /// quita de verdad. El médico escribe por defecto; tras recortarlo, no.
+        #[tokio::test]
+        async fn recortar_por_la_api_tambien_surte_efecto() {
+            let e = con_admin_y_lab().await;
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::CREATED);
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"medico","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::FORBIDDEN);
+        }
+
+        /// Devolver al defecto es una tercera operación, no «poner el valor del
+        /// defecto»: borra la excepción y la casilla vuelve a seguir la regla.
+        #[tokio::test]
+        async fn devolver_al_defecto_restituye() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"medico","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::FORBIDDEN);
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"medico","permitido":null}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::CREATED);
+        }
+
+        // === QUIÉN PUEDE TOCARLA ==========================================
+
+        #[tokio::test]
+        async fn un_laboratorista_no_ve_ni_toca_la_matriz() {
+            let e = con_admin_y_lab().await;
+            assert_eq!(
+                enviar(&e, "GET", "/api/capacidades", LAB, "").await.status(),
+                StatusCode::FORBIDDEN
+            );
+            assert_eq!(
+                enviar(
+                    &e,
+                    "PUT",
+                    "/api/capacidades",
+                    LAB,
+                    r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#
+                )
+                .await
+                .status(),
+                StatusCode::FORBIDDEN,
+                "y menos concedérsela a sí mismo"
+            );
+        }
+
+        #[tokio::test]
+        async fn sin_cookie_no_hay_matriz() {
+            let e = con_admin_y_lab().await;
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/capacidades")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+        }
+
+        // === GUARDARRAÍLES ================================================
+
+        #[tokio::test]
+        async fn no_se_puede_tapiar_la_gestion_de_usuarios() {
+            let e = con_admin_y_lab().await;
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let texto = cuerpo_de(r).await;
+            assert!(texto.contains("sin ningún rol"), "mensaje poco útil: {texto}");
+
+            // Y no se aplicó nada: el admin sigue entrando.
+            assert_eq!(
+                enviar(&e, "GET", "/api/capacidades", ADMIN, "").await.status(),
+                StatusCode::OK
+            );
+        }
+
+        #[tokio::test]
+        async fn un_admin_no_se_quita_a_si_mismo_la_administracion() {
+            let e = con_admin_y_lab().await;
+            // Primero da relevo al laboratorista, así que el guardarraíl 1 no salta.
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+            // Pero el relevo SÍ puede hacérselo: el guardarraíl protege del
+            // despiste propio, no vuelve al rol intocable.
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                LAB,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+        }
+
+        /// El caso que la ficha original bloqueaba y la directiva 21 rescata:
+        /// una IPS sin ambulancias puede dejar esa capacidad sin nadie.
+        #[tokio::test]
+        async fn una_capacidad_que_la_ips_no_usa_puede_quedarse_sin_nadie() {
+            let e = con_admin_y_lab().await;
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[
+                    {"capacidad":"gestionar_ambulancias","rol":"admin","permitido":false},
+                    {"capacidad":"gestionar_ambulancias","rol":"medico","permitido":false},
+                    {"capacidad":"gestionar_ambulancias","rol":"enfermeria","permitido":false},
+                    {"capacidad":"gestionar_ambulancias","rol":"auxiliar_enfermeria","permitido":false}
+                ]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+        }
+
+        #[tokio::test]
+        async fn no_se_concede_la_gestion_de_instituciones_ni_se_toca_al_superadmin() {
+            let e = con_admin_y_lab().await;
+            for cuerpo in [
+                r#"{"cambios":[{"capacidad":"gestionar_instituciones","rol":"admin","permitido":true}]}"#,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"superadmin","permitido":false}]}"#,
+            ] {
+                let r = enviar(&e, "PUT", "/api/capacidades", ADMIN, cuerpo).await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "debería rechazarse: {cuerpo}"
+                );
+            }
+        }
+
+        // === LO QUE SE DEVUELVE Y LO QUE SE ANOTA ==========================
+
+        #[tokio::test]
+        async fn la_matriz_dice_lo_efectivo_y_lo_que_decia_el_defecto() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+
+            let texto = cuerpo_de(enviar(&e, "GET", "/api/capacidades", ADMIN, "").await).await;
+            let v: serde_json::Value = serde_json::from_str(&texto).unwrap();
+            let fila = v["capacidades"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|f| f["capacidad"] == "escribir_clinico")
+                .unwrap();
+            let casilla = fila["roles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["rol"] == "laboratorista")
+                .unwrap();
+            assert_eq!(casilla["permitido"], true, "lo efectivo");
+            assert_eq!(casilla["defecto"], false, "lo que decía el defecto");
+            assert_eq!(casilla["apartado"], true, "hay fila guardada");
+
+            // Y el superadmin sale marcado como no configurable, para que la
+            // pantalla no ofrezca una casilla que el servidor va a rechazar.
+            let sa = fila["roles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["rol"] == "superadmin")
+                .unwrap();
+            assert_eq!(sa["configurable"], false);
+        }
+
+        /// Punto 7 de la ficha: el cambio queda en la bitácora encadenada, y la
+        /// cadena sigue verificando después.
+        #[tokio::test]
+        async fn el_cambio_queda_en_la_bitacora_y_la_cadena_verifica() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+
+            let filas: Vec<(String,)> = sqlx::query_as(
+                "SELECT contenido FROM acceso WHERE contenido LIKE '%capacidad_rol%'",
+            )
+            .fetch_all(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(filas.len(), 1, "un eslabón por cambio");
+            assert!(
+                filas[0].0.contains("escribir_clinico:laboratorista=si"),
+                "el eslabón debe decir QUÉ se amplió, no solo que algo cambió: {}",
+                filas[0].0
+            );
+
+            assert_eq!(
+                medico_datos::acceso::verificar(&e.pool, None).await.unwrap(),
+                guaca::auditoria::Auditoria::Intacta
+            );
+        }
+
+        /// Y si el cambio se rechaza, NO se anota: una bitácora que registra lo
+        /// que no ocurrió es peor que una que no registra.
+        #[tokio::test]
+        async fn un_cambio_rechazado_no_deja_rastro() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            let n: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM acceso WHERE contenido LIKE '%capacidad_rol%'",
+            )
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(n.0, 0);
+        }
     }
 }

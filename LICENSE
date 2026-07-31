@@ -1,0 +1,38 @@
+Licencia propietaria — medico
+SPDX-License-Identifier: LicenseRef-Propietario
+
+Copyright © 2026 Juan Carlos Isaza Arenas. Todos los derechos reservados.
+
+Este software y su documentación son obra de Juan Carlos Isaza Arenas. No es
+software libre ni de código abierto: no se concede ninguna licencia por el mero
+acceso al código.
+
+QUEDA PROHIBIDO, salvo autorización previa, expresa y escrita del titular:
+
+  1. Usar, ejecutar o desplegar el software, en todo o en parte.
+  2. Copiarlo, reproducirlo o distribuirlo por cualquier medio.
+  3. Modificarlo, adaptarlo o crear obras derivadas.
+  4. Realizar ingeniería inversa, descompilarlo o desensamblarlo.
+  5. Sublicenciarlo, cederlo, arrendarlo o publicarlo.
+
+El uso por un prestador de servicios de salud se rige por el contrato de
+licencia comercial suscrito con el titular. A falta de contrato, no hay licencia.
+
+DEPENDENCIAS DE TERCEROS Y PROPIAS
+
+Este software incorpora bibliotecas de terceros con sus propias licencias
+libres, que se conservan íntegras y no se ven afectadas por este documento. Entre
+ellas, las bibliotecas propias del mismo autor —Quipu y guaca—, que se publican
+bajo licencia libre en sus repositorios y cuyos términos siguen rigiendo su uso
+por separado. Ver NOTICE.
+
+SIN GARANTÍA
+
+EL SOFTWARE SE ENTREGA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+IMPLÍCITA. Las garantías y responsabilidades frente a un cliente son las que
+establezca su contrato de licencia comercial, y solo esas.
+
+CONTACTO
+
+Juan Carlos Isaza Arenas — isazajuancarlos@gmail.com
+Medellín, Colombia

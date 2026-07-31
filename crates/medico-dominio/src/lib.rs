@@ -4,6 +4,7 @@
 //! Lo que decide quién ve qué vive en [`aislamiento`]; los roles, en [`rol`].
 
 pub mod aislamiento;
+pub mod ajustes;
 pub mod rol;
 
 pub use aislamiento::{Ambito, Visibilidad};
