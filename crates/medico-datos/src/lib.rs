@@ -6,6 +6,7 @@ pub mod capacidad;
 pub mod catalogo;
 pub mod cita;
 pub mod diagnostico;
+pub mod divipola;
 pub mod documento;
 pub mod formula;
 pub mod freno;

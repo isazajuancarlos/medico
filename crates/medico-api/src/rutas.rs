@@ -86,6 +86,8 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
         .route("/api/pacientes/{id}/historias", get(listar_historias_paciente))
         .route("/api/pacientes/{id}/accesos", get(accesos_paciente))
+        // DIVIPOLA, para el selector de municipio (#16/#77).
+        .route("/api/municipios", get(listar_municipios))
         .route("/api/acceso/verificar", get(verificar_acceso))
         .route("/api/historias", post(crear_historia))
         .route(
@@ -519,17 +521,70 @@ async fn verificar_acceso(
 
 /// Crea un paciente en la institución del usuario. 201 con su id; 403 si el
 /// ámbito no puede crear (superadmin sin institución, o sin ámbito).
+/// Comprueba que el municipio, si viene, EXISTE en DIVIPOLA.
+///
+/// `None` es válido: un paciente puede no tener el dato todavía, y eso se ve.
+/// Lo que no se acepta es un código inventado, que pasa la validación de
+/// estructura del RIPS y sale mal en el envío, lejos de donde se tecleó. **Y no
+/// se sustituye por ninguno**: el sistema viejo rellenaba con `"05001"` y
+/// reportaba a todo el país como residente en Medellín — un dato falso no se
+/// nota nunca, y eso es peor que un rechazo (directiva 20).
+async fn municipio_valido(e: &Estado, cod: &Option<String>) -> Result<(), Response> {
+    let Some(cod) = cod.as_deref() else { return Ok(()) };
+    if cod.trim().is_empty() {
+        return Ok(());
+    }
+    match medico_datos::divipola::existe(&e.pool, cod).await {
+        Ok(true) => Ok(()),
+        Ok(false) => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("el código de municipio «{cod}» no está en DIVIPOLA (van cinco dígitos, con el cero de la izquierda)"),
+        )
+            .into_response()),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+    }
+}
+
 async fn crear_paciente(
     State(e): State<Estado>,
     autorizado: Autorizado<EscribirPaciente>,
     Json(nuevo): Json<PacienteNuevo>,
 ) -> Response {
     let u = autorizado.0;
+    if let Err(r) = municipio_valido(&e, &nuevo.cod_municipio).await {
+        return r;
+    }
     match paciente::crear(&e.pool, u.ambito(), &nuevo).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+/// `GET /api/municipios?q=…&limite=…` — el selector de la pantalla.
+///
+/// Solo pide estar autenticado: la lista de municipios de Colombia es pública y
+/// no dice nada de ningún paciente. Exigirle una capacidad sería una regla que
+/// no protege nada y que habría que recordar para cada pantalla nueva.
+async fn listar_municipios(
+    State(e): State<Estado>,
+    _u: Autenticado,
+    Query(q): Query<BuscarMunicipio>,
+) -> Result<Json<Vec<medico_datos::divipola::Municipio>>, StatusCode> {
+    // 20 por defecto: lo que cabe en un desplegable sin que haya que
+    // desplazarse. El llamante puede pedir más; se acota a 500 para que un
+    // parámetro suelto no arrastre el país entero por la red en cada tecla.
+    let limite = q.limite.unwrap_or(20).clamp(1, 500);
+    medico_datos::divipola::buscar(&e.pool, q.q.as_deref().unwrap_or(""), limite)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(serde::Deserialize)]
+struct BuscarMunicipio {
+    q: Option<String>,
+    limite: Option<i64>,
 }
 
 /// Actualiza un paciente propio. 204 si se actualizó; **404 si no existe o no es
@@ -540,12 +595,18 @@ async fn actualizar_paciente(
     autorizado: Autorizado<EscribirPaciente>,
     Path(id): Path<i64>,
     Json(datos): Json<PacienteNuevo>,
-) -> StatusCode {
+) -> Response {
     let u = autorizado.0;
+    // La misma comprobación que al crear. Sin esto, el municipio inválido entra
+    // por la puerta de la edición: cerrar solo una de las dos deja el agujero
+    // igual de abierto y encima parece cerrado.
+    if let Err(r) = municipio_valido(&e, &datos.cod_municipio).await {
+        return r;
+    }
     match paciente::actualizar(&e.pool, u.ambito(), id, &datos).await {
-        Ok(true) => StatusCode::NO_CONTENT,
-        Ok(false) => StatusCode::NOT_FOUND,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
@@ -2866,6 +2927,10 @@ mod pruebas {
 
     async fn estado_de_prueba(tras_proxy: bool) -> Estado {
         let pool = medico_datos::abrir("sqlite::memory:").await.unwrap();
+        // Igual que el arranque de verdad (`main.rs`). Sin esto la tabla de
+        // municipios queda vacía y CUALQUIER código sería inválido: el banco
+        // dejaría de parecerse a producción justo en lo que se quiere probar.
+        medico_datos::divipola::sembrar(&pool).await.unwrap();
         sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (1,'Uno','900')")
             .execute(&pool)
             .await
@@ -3788,6 +3853,171 @@ mod pruebas {
         let mut blanca = header::HeaderMap::new();
         blanca.insert("x-real-ip", "   ".parse().unwrap());
         assert_eq!(origen_de(true, &blanca, Some(zocalo)), None);
+    }
+
+    /// DIVIPOLA por la ruta de verdad (#16/#77).
+    ///
+    /// `divipola.rs` ya prueba el catálogo. Lo que aquí se comprueba es que la
+    /// API lo EJERZA: hasta ahora `cod_municipio` era TEXT sin validación, así
+    /// que un código inventado entraba y el envío del RIPS se rompía después,
+    /// lejos de donde se tecleó.
+    mod municipios {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn crear_con_municipio(e: &Estado, cod: &str) -> Response {
+            let municipio = if cod.is_empty() {
+                "null".to_string()
+            } else {
+                format!("\"{cod}\"")
+            };
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/pacientes")
+                        .header(header::COOKIE, cookie_de(2))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(format!(
+                            r#"{{"tipo_documento":"CC","numero_documento":"{}",
+                                 "nombre1":"Ana","apellido1":"Ruiz",
+                                 "fecha_nacimiento":"1990-01-01","sexo":"F",
+                                 "cod_municipio":{municipio}}}"#,
+                            // Documento distinto por caso: el número es único.
+                            cod.len() * 7 + 1000
+                        )))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        #[tokio::test]
+        async fn un_municipio_real_entra() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(crear_con_municipio(&e, "05001").await.status(), StatusCode::CREATED);
+        }
+
+        /// El caso que justifica el cambio: antes esto entraba y salía mal en el
+        /// envío, lejos de donde se tecleó.
+        #[tokio::test]
+        async fn un_municipio_inventado_se_rechaza_aqui_y_no_en_el_envio() {
+            let e = estado_de_prueba(false).await;
+            let r = crear_con_municipio(&e, "99999").await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let b = axum::body::to_bytes(r.into_body(), 1 << 16).await.unwrap();
+            let texto = String::from_utf8(b.to_vec()).unwrap();
+            assert!(texto.contains("DIVIPOLA"), "el mensaje debe decir qué pasa: {texto}");
+        }
+
+        /// **La forma de cuatro dígitos que publica MinSalud no cuela.** Es el
+        /// error que más se comete y el que menos se ve: `5001` es Medellín leído
+        /// como número, y aceptarlo «siendo amables» haría imposible distinguir
+        /// después los que se arreglaron de los que se adivinaron.
+        #[tokio::test]
+        async fn el_codigo_sin_el_cero_de_la_izquierda_se_rechaza() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(
+                crear_con_municipio(&e, "5001").await.status(),
+                StatusCode::UNPROCESSABLE_ENTITY
+            );
+        }
+
+        /// Sin municipio SÍ se puede: un paciente puede no tener el dato todavía,
+        /// y eso se ve. Lo que no se acepta es uno falso — y no se sustituye por
+        /// ninguno (el sistema viejo rellenaba con «05001»).
+        #[tokio::test]
+        async fn sin_municipio_se_admite_y_no_se_rellena() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(crear_con_municipio(&e, "").await.status(), StatusCode::CREATED);
+            let cod: (Option<String>,) =
+                sqlx::query_as("SELECT cod_municipio FROM paciente ORDER BY id DESC LIMIT 1")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(cod.0, None, "un dato ausente se queda ausente");
+        }
+
+        /// La edición cierra por la misma puerta. Cerrar solo el alta deja el
+        /// agujero igual de abierto y encima parece cerrado.
+        #[tokio::test]
+        async fn la_edicion_valida_igual_que_el_alta() {
+            let e = estado_de_prueba(false).await;
+            assert_eq!(crear_con_municipio(&e, "05001").await.status(), StatusCode::CREATED);
+            let id: (i64,) = sqlx::query_as("SELECT id FROM paciente ORDER BY id DESC LIMIT 1")
+                .fetch_one(&e.pool).await.unwrap();
+
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("PUT")
+                        .uri(format!("/api/pacientes/{}", id.0))
+                        .header(header::COOKIE, cookie_de(2))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(
+                            r#"{"tipo_documento":"CC","numero_documento":"1000",
+                                "nombre1":"Ana","apellido1":"Ruiz",
+                                "fecha_nacimiento":"1990-01-01","sexo":"F",
+                                "cod_municipio":"99999"}"#,
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        }
+
+        #[tokio::test]
+        async fn el_selector_busca_y_respeta_el_limite() {
+            let e = estado_de_prueba(false).await;
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/municipios?q=MEDELL&limite=5")
+                        .header(header::COOKIE, cookie_de(2))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::OK);
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            let lista = v.as_array().unwrap();
+            assert!(!lista.is_empty() && lista.len() <= 5);
+            assert!(lista.iter().any(|m| m["codigo"] == "05001"));
+            assert_eq!(lista[0]["nombre_departamento"], "ANTIOQUIA");
+        }
+
+        /// Un `limite` disparatado no arrastra el país entero por la red.
+        #[tokio::test]
+        async fn el_limite_se_acota() {
+            let e = estado_de_prueba(false).await;
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/municipios?limite=999999")
+                        .header(header::COOKIE, cookie_de(2))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            assert_eq!(v.as_array().unwrap().len(), 500);
+        }
+
+        #[tokio::test]
+        async fn sin_cookie_no_hay_municipios() {
+            let e = estado_de_prueba(false).await;
+            let r = router(e.clone())
+                .oneshot(Request::builder().uri("/api/municipios").body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+        }
     }
 
     /// La matriz de capacidades por institución (#235), por la ruta de verdad.
