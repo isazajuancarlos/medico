@@ -14,7 +14,7 @@ use crate::auth::{
     autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
     EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
     EscribirRehabilitacion, Estado, Firmar, GestionarAmbulancias, GestionarFarmacia,
-    GestionarRemision,
+    GestionarRemision, GestionarUsuarios,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
@@ -284,10 +284,17 @@ pub fn router(estado: Estado) -> Router {
         .with_state(estado)
 }
 
-/// Quién puede gestionar usuarios e instituciones: administración del sistema.
-fn es_gestor(u: &Usuario) -> bool {
-    matches!(u.rol(), Some(RolUsuario::Admin | RolUsuario::Superadmin))
-}
+// `es_gestor` ya no existe. Comprobaba el rol A MANO —`Admin | Superadmin`— y
+// por tanto NO consultaba la matriz de capacidades por institución (#235): una
+// institución podía quitarle `gestionar_usuarios` a `admin`, la matriz lo
+// aceptaba, la pantalla lo pintaba revocado… y `/api/usuarios` seguía dejándole
+// entrar. Peor: la prueba `un_admin_no_se_quita_a_si_mismo_la_administracion`
+// BENDICE ese estado, así que había una prueba en verde sobre una promesa que
+// esa ruta no cumplía.
+//
+// Las dos rutas que lo usaban piden ahora `Autorizado<GestionarUsuarios>`, que
+// es el único sitio donde esa pregunta se responde. Quitar la copia débil es el
+// arreglo; dejarla y «acordarse» de sincronizarla, no (directiva 1).
 
 #[derive(Serialize)]
 struct Ok2 {
@@ -1126,7 +1133,27 @@ async fn nutri_actualizar(
     }
 }
 
-async fn nutri_eliminar(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> StatusCode {
+/// Borra una valoración nutricional. **Exige la misma capacidad que escribirla.**
+///
+/// Llevaba `Autenticado` pelado, y era el ÚNICO de los diez `delete(...)` del
+/// router con extractor sin capacidad: el commit que puso
+/// `Autorizado<EscribirNutricion>` en las cuatro escrituras hermanas se dejó el
+/// borrado. El resultado era que un laboratorista, un terapeuta o un regente de
+/// farmacia recibían 403 al crear o editar la valoración y **204 al
+/// destruirla** — recorriendo ids, la institución entera, y con cada valoración
+/// su plan detrás (`0018_nutricion.sql`: `ON DELETE CASCADE`). Irreversible.
+///
+/// Se exige `EscribirNutricion` y no `Borrar`: el criterio del resto del router
+/// es que borrar un recurso pide la capacidad de ESE recurso —laboratorio pide
+/// `EscribirLaboratorio`, farmacia `GestionarFarmacia`—, y `Borrar` está
+/// reservada a la historia y los documentos clínicos. Además así lo puede hacer
+/// el nutricionista, que es quien la escribió.
+async fn nutri_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirNutricion>,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    let u = autorizado.0;
     match nutricion::eliminar_valoracion(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1892,11 +1919,9 @@ async fn crear_institucion(
 
 async fn listar_usuarios(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<GestionarUsuarios>,
 ) -> Result<Json<Vec<ResumenUsuario>>, StatusCode> {
-    if !es_gestor(&u) {
-        return Err(StatusCode::FORBIDDEN);
-    }
+    let u = autorizado.0;
     usuario::listar(&e.pool, u.ambito())
         .await
         .map(Json)
@@ -1914,12 +1939,10 @@ struct CrearUsuario {
 
 async fn crear_usuario(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<GestionarUsuarios>,
     Json(req): Json<CrearUsuario>,
 ) -> Response {
-    if !es_gestor(&u) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
+    let u = autorizado.0;
     // El rol tiene que existir, y **solo un superadmin puede fabricar otro
     // superadmin**: si no, un admin se ascendería creando una cuenta.
     let Some(rol) = RolUsuario::desde_str(&req.rol) else {
@@ -3460,6 +3483,67 @@ mod pruebas {
             );
         }
 
+        /// **Borrar una valoración de nutrición pide lo mismo que escribirla.**
+        ///
+        /// Hallado por `security-review` el 2026-07-31: era el único borrado del
+        /// router con `Autenticado` pelado. Un laboratorista recibía 403 al
+        /// crear la valoración y **204 al destruirla**, y con ella el plan
+        /// (`ON DELETE CASCADE`). La prueba de autorización que había solo
+        /// ejercitaba el POST, así que el hueco quedaba fuera de su alcance.
+        ///
+        /// Discrimina en los dos sentidos: al que no le toca se le cierra, y al
+        /// que sí, se le deja. Sin la segunda mitad, un `403` para todo el mundo
+        /// pasaría igual.
+        #[tokio::test]
+        async fn borrar_nutricion_exige_la_misma_capacidad_que_escribirla() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (11,'Nutri','nut3@x.co',?,'nutricionista',1,1)",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+
+            // Una valoración real, creada por quien puede.
+            let val = r#"{"paciente_id":1,"peso":70.0,"talla":1.7,"imc":24.2,
+                          "diagnostico_nutricional":"eutrófico"}"#;
+            let creado =
+                pedir_con(&e, "POST", "/api/nutricion/valoraciones", &cookie_de(11), val).await;
+            assert!(
+                creado.is_success(),
+                "el nutricionista debería poder crearla, y devolvió {creado}"
+            );
+            let id: (i64,) =
+                sqlx::query_as("SELECT id FROM valoracion_nutricional ORDER BY id DESC LIMIT 1")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+            let uri = format!("/api/nutricion/valoraciones/{}", id.0);
+
+            // Al laboratorista se le cierra…
+            assert_eq!(
+                pedir_con(&e, "DELETE", &uri, &cookie_de(5), "").await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista borró una valoración nutricional"
+            );
+            // …y sigue ahí.
+            let quedan: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM valoracion_nutricional")
+                .fetch_one(&e.pool)
+                .await
+                .unwrap();
+            assert_eq!(quedan.0, 1, "el 403 no impidió el borrado");
+
+            // Y a quien le toca, se le deja.
+            assert_ne!(
+                pedir_con(&e, "DELETE", &uri, &cookie_de(11), "").await,
+                StatusCode::FORBIDDEN,
+                "al nutricionista no se le puede cerrar su propio recurso"
+            );
+        }
+
         /// SUBIR una imagen sigue abierto, y esta prueba lo fija igual que hacía
         /// la anterior con hospitalización: el radiólogo es quien las sube y no
         /// está en ninguna lista, así que cerrarlo a ojo lo dejaría sin trabajar.
@@ -3974,6 +4058,70 @@ mod pruebas {
         let mut blanca = header::HeaderMap::new();
         blanca.insert("x-real-ip", "   ".parse().unwrap());
         assert_eq!(origen_de(true, &blanca, Some(zocalo)), None);
+    }
+
+    /// **Ningún borrado se autoriza solo con estar autenticado.**
+    ///
+    /// Esta prueba mira el CÓDIGO FUENTE, no el comportamiento, y es a
+    /// propósito: la alternativa —probar ruta por ruta— es lo que ya falló dos
+    /// veces. `eliminar_imagen` lleva un comentario diciendo que «escapó a la
+    /// primera pasada», y el 2026-07-31 un `security-review` encontró que
+    /// `nutri_eliminar` había escapado a la segunda, porque el commit que puso
+    /// la capacidad en sus cuatro escrituras hermanas se dejó el borrado.
+    ///
+    /// Una prueba por caso habría hecho falta escribirla para el caso que nadie
+    /// vio. Ésta falla sola con el borrado número once (directiva 23: se
+    /// corrige la regla, no el caso).
+    ///
+    /// Qué exige exactamente: que todo manejador registrado con `delete(...)`
+    /// tome un `Autorizado<…>`. No dice CUÁL capacidad —eso es criterio de cada
+    /// recurso— sino que haya alguna.
+    #[test]
+    fn ningun_borrado_se_conforma_con_estar_autenticado() {
+        let fuente = include_str!("rutas.rs");
+
+        // Los nombres de manejador que aparecen dentro de un `delete(...)`.
+        let mut borradores: Vec<&str> = Vec::new();
+        for (i, _) in fuente.match_indices("delete(") {
+            let resto = &fuente[i + "delete(".len()..];
+            if let Some(fin) = resto.find(')') {
+                let nombre = resto[..fin].trim();
+                // `delete(...)` con una expresión dentro (rutas de otro módulo)
+                // se salta: aquí solo se comprueban los de este archivo.
+                if !nombre.is_empty() && nombre.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    borradores.push(nombre);
+                }
+            }
+        }
+        assert!(
+            borradores.len() >= 10,
+            "se esperaban al menos 10 borradores y se encontraron {}: ¿cambió la \
+             forma de registrar rutas y esta prueba dejó de mirar nada?",
+            borradores.len()
+        );
+
+        let mut pelados = Vec::new();
+        for nombre in &borradores {
+            let firma = format!("async fn {nombre}(");
+            let Some(i) = fuente.find(&firma) else {
+                panic!("no se encontró el manejador `{nombre}` que registra un delete(...)");
+            };
+            // El cuerpo empieza en el primer `{` tras la lista de parámetros;
+            // basta con mirar hasta ahí.
+            let resto = &fuente[i..];
+            let fin = resto.find(" {").unwrap_or(resto.len());
+            let parametros = &resto[..fin];
+            if !parametros.contains("Autorizado<") {
+                pelados.push(*nombre);
+            }
+        }
+
+        assert!(
+            pelados.is_empty(),
+            "estos borradores no exigen ninguna capacidad, solo estar autenticado: {pelados:?}.\n\
+             Un usuario cualquiera de la institución puede destruir el recurso. \
+             Ponles el `Autorizado<…>` que corresponda a SU recurso.",
+        );
     }
 
     /// DIVIPOLA por la ruta de verdad (#16/#77).
