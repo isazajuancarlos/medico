@@ -202,6 +202,13 @@ impl Exige for EscribirImagenologia {
         medico_dominio::rol::Capacidad::EscribirImagenologia;
 }
 
+/// Definir la agenda de un profesional: meses, franjas y bloqueos. **Leer** los
+/// turnos libres NO la exige: quien agenda desde el mostrador tiene que verlos.
+pub struct GestionarAgenda;
+impl Exige for GestionarAgenda {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarAgenda;
+}
+
 /// Parque de ambulancias y despacho de traslados.
 pub struct GestionarAmbulancias;
 impl Exige for GestionarAmbulancias {

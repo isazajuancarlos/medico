@@ -3,6 +3,7 @@
 //! Todo lo que hay aquí se prueba sin servidor, sin base y en microsegundos.
 //! Lo que decide quién ve qué vive en [`aislamiento`]; los roles, en [`rol`].
 
+pub mod agenda;
 pub mod aislamiento;
 pub mod ajustes;
 pub mod modulo;
