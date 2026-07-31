@@ -1,6 +1,7 @@
 //! El servidor de medico: lee la configuración, abre la base y sirve la API.
 
 mod auth;
+mod capacidades;
 mod claves;
 mod config;
 mod estaticos;
@@ -112,6 +113,7 @@ async fn main() -> ExitCode {
         clave_verificacion: cfg.clave_verificacion,
         clave_reposo: cfg.clave_reposo,
         tras_proxy: cfg.tras_proxy,
+        capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
     };
     let app = rutas::router(estado);
 

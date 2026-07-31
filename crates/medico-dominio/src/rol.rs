@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Ambito;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RolUsuario {
     Superadmin,
@@ -70,7 +70,8 @@ pub enum RolUsuario {
 /// la hace el radiólogo, que no está en esa lista, y `/imagenes` no declara roles.
 /// Cerrarlo a ojo dejaría al radiólogo sin poder hacer su trabajo.
 ///
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Capacidad {
     /// Firmar una historia o un documento clínico.
     ///
@@ -185,7 +186,116 @@ pub enum Capacidad {
     GestionarInstituciones,
 }
 
+impl Capacidad {
+    /// Todas las capacidades, para pintar la matriz y para recorrerlas al
+    /// validar. Escrita a mano y no derivada: si mañana se añade una variante,
+    /// `TODAS` se queda corta en silencio, y por eso existe
+    /// `todas_las_capacidades_estan_en_la_lista`, que compara contra un `match`
+    /// exhaustivo — el compilador obliga a tocarlo.
+    pub const TODAS: &'static [Capacidad] = &[
+        Capacidad::FirmarClinico,
+        Capacidad::BorrarClinico,
+        Capacidad::EscribirClinico,
+        Capacidad::EscribirPaciente,
+        Capacidad::AtenderUrgenciasHospitalizacion,
+        Capacidad::EscribirNutricion,
+        Capacidad::EscribirRehabilitacion,
+        Capacidad::GestionarRemision,
+        Capacidad::EscribirLaboratorio,
+        Capacidad::EscribirImagenologia,
+        Capacidad::GestionarFarmacia,
+        Capacidad::GestionarAmbulancias,
+        Capacidad::GestionarUsuarios,
+        Capacidad::GestionarInstituciones,
+    ];
+
+    /// De la cadena guardada en la base a la capacidad. Mismo `Deserialize`
+    /// (snake_case) con el que se serializa: una sola lista de nombres, que no
+    /// se puede desincronizar. `None` si no nombra ninguna conocida.
+    pub fn desde_str(s: &str) -> Option<Self> {
+        use serde::de::IntoDeserializer;
+        let de: serde::de::value::StrDeserializer<serde::de::value::Error> = s.into_deserializer();
+        <Self as serde::Deserialize>::deserialize(de).ok()
+    }
+
+    /// El nombre con el que viaja a la columna `capacidad` de la base.
+    ///
+    /// Es un `match` y no `serde_json::to_value` porque hace falta un
+    /// `&'static str` y aquello devuelve un `String` propio. Eso deja DOS
+    /// listas de nombres, que es justo lo que se quiere evitar, así que
+    /// `el_nombre_de_la_base_y_el_de_serde_son_el_mismo` las ata: recorre
+    /// `TODAS` y exige que coincidan una por una.
+    pub fn como_str(&self) -> &'static str {
+        match self {
+            Capacidad::FirmarClinico => "firmar_clinico",
+            Capacidad::BorrarClinico => "borrar_clinico",
+            Capacidad::EscribirClinico => "escribir_clinico",
+            Capacidad::EscribirPaciente => "escribir_paciente",
+            Capacidad::AtenderUrgenciasHospitalizacion => "atender_urgencias_hospitalizacion",
+            Capacidad::EscribirNutricion => "escribir_nutricion",
+            Capacidad::EscribirRehabilitacion => "escribir_rehabilitacion",
+            Capacidad::GestionarRemision => "gestionar_remision",
+            Capacidad::EscribirLaboratorio => "escribir_laboratorio",
+            Capacidad::EscribirImagenologia => "escribir_imagenologia",
+            Capacidad::GestionarFarmacia => "gestionar_farmacia",
+            Capacidad::GestionarAmbulancias => "gestionar_ambulancias",
+            Capacidad::GestionarUsuarios => "gestionar_usuarios",
+            Capacidad::GestionarInstituciones => "gestionar_instituciones",
+        }
+    }
+
+    /// ¿Puede un administrador de institución reconfigurar quién tiene esto?
+    ///
+    /// `GestionarInstituciones` NO: crea instituciones y les fija la licencia,
+    /// o sea que vive por encima de la institución. Dejar que el administrador
+    /// de una se lo concediera a un rol suyo sería una escalada, no una
+    /// configuración — se estaría dando la llave del piso de arriba.
+    ///
+    /// Todo lo demás sí, incluida `GestionarUsuarios`: quién administra la
+    /// planta es justo la clase de decisión que cambia entre una IPS de tres
+    /// personas y un hospital. Lo que se le impide es dejarla SIN NADIE, que es
+    /// lo irreparable; eso lo comprueba [`Ajustes::validar`].
+    pub fn configurable_por_institucion(&self) -> bool {
+        !matches!(self, Capacidad::GestionarInstituciones)
+    }
+}
+
 impl RolUsuario {
+    /// Todos los roles, para pintar la matriz.
+    pub const TODOS: &'static [RolUsuario] = &[
+        RolUsuario::Superadmin,
+        RolUsuario::Admin,
+        RolUsuario::Medico,
+        RolUsuario::Paciente,
+        RolUsuario::Enfermeria,
+        RolUsuario::AuxiliarEnfermeria,
+        RolUsuario::RegenteFarmacia,
+        RolUsuario::Laboratorista,
+        RolUsuario::Radiologo,
+        RolUsuario::Anestesiologo,
+        RolUsuario::Terapeuta,
+        RolUsuario::Nutricionista,
+        RolUsuario::Psicologo,
+        RolUsuario::TrabajoSocial,
+        RolUsuario::Bacteriologo,
+    ];
+
+    /// ¿Puede la matriz de una institución decir algo sobre este rol?
+    ///
+    /// **`Superadmin` no**: no pertenece a ninguna institución
+    /// (`institucion_id = NULL`), así que una fila suya en una matriz
+    /// per-institución no se aplicaría nunca. Aceptarla y no usarla sería
+    /// exactamente lo que la directiva 21 prohíbe —guardar algo que dice una
+    /// cosa y significa otra—, y además dejaría al administrador creyendo que
+    /// ha restringido al superadmin. Se rechaza al escribir.
+    ///
+    /// **`Paciente` tampoco**: su ámbito es `Ninguno` mientras no exista el
+    /// portal, de modo que concederle una capacidad no le abriría nada y
+    /// prometería lo contrario. Cuando el portal exista, esto se revisa junto
+    /// con `Ambito::Paciente`.
+    pub fn configurable_por_institucion(&self) -> bool {
+        !matches!(self, RolUsuario::Superadmin | RolUsuario::Paciente)
+    }
     /// ¿Este rol puede hacer esto?
     ///
     /// La lista es explícita y sin comodín: un rol nuevo no hereda nada por
@@ -282,11 +392,110 @@ impl RolUsuario {
         let de: serde::de::value::StrDeserializer<serde::de::value::Error> = s.into_deserializer();
         <Self as serde::Deserialize>::deserialize(de).ok()
     }
+
+    /// El nombre con el que el rol viaja a la base y a la pantalla.
+    ///
+    /// Mismo motivo que en [`Capacidad::como_str`]: hace falta un `&'static
+    /// str` y el `Serialize` da un `String` propio. Que las dos formas digan lo
+    /// mismo lo ata `el_nombre_de_la_base_y_el_de_serde_son_el_mismo`.
+    pub fn como_str(&self) -> &'static str {
+        match self {
+            RolUsuario::Superadmin => "superadmin",
+            RolUsuario::Admin => "admin",
+            RolUsuario::Medico => "medico",
+            RolUsuario::Paciente => "paciente",
+            RolUsuario::Enfermeria => "enfermeria",
+            RolUsuario::AuxiliarEnfermeria => "auxiliar_enfermeria",
+            RolUsuario::RegenteFarmacia => "regente_farmacia",
+            RolUsuario::Laboratorista => "laboratorista",
+            RolUsuario::Radiologo => "radiologo",
+            RolUsuario::Anestesiologo => "anestesiologo",
+            RolUsuario::Terapeuta => "terapeuta",
+            RolUsuario::Nutricionista => "nutricionista",
+            RolUsuario::Psicologo => "psicologo",
+            RolUsuario::TrabajoSocial => "trabajo_social",
+            RolUsuario::Bacteriologo => "bacteriologo",
+        }
+    }
 }
 
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    /// Las listas escritas a mano —`TODAS`, `TODOS` y los dos `como_str`— son
+    /// justo el sitio donde una variante nueva se olvida en silencio. Estas
+    /// cuatro pruebas las atan al `match` exhaustivo y al `serde`, que son lo
+    /// que el compilador sí vigila.
+    #[test]
+    fn todas_las_capacidades_estan_en_la_lista() {
+        for c in Capacidad::TODAS {
+            // Un `match` exhaustivo: añadir una variante rompe la compilación
+            // aquí, y entonces hay que tocar TODAS.
+            let _: () = match c {
+                Capacidad::FirmarClinico
+                | Capacidad::BorrarClinico
+                | Capacidad::EscribirClinico
+                | Capacidad::EscribirPaciente
+                | Capacidad::AtenderUrgenciasHospitalizacion
+                | Capacidad::EscribirNutricion
+                | Capacidad::EscribirRehabilitacion
+                | Capacidad::GestionarRemision
+                | Capacidad::EscribirLaboratorio
+                | Capacidad::EscribirImagenologia
+                | Capacidad::GestionarFarmacia
+                | Capacidad::GestionarAmbulancias
+                | Capacidad::GestionarUsuarios
+                | Capacidad::GestionarInstituciones => (),
+            };
+        }
+        assert_eq!(Capacidad::TODAS.len(), 14, "¿se añadió una capacidad?");
+        let unicas: std::collections::HashSet<_> = Capacidad::TODAS.iter().collect();
+        assert_eq!(unicas.len(), Capacidad::TODAS.len(), "hay una repetida");
+    }
+
+    #[test]
+    fn todos_los_roles_estan_en_la_lista() {
+        for r in RolUsuario::TODOS {
+            let _: () = match r {
+                RolUsuario::Superadmin
+                | RolUsuario::Admin
+                | RolUsuario::Medico
+                | RolUsuario::Paciente
+                | RolUsuario::Enfermeria
+                | RolUsuario::AuxiliarEnfermeria
+                | RolUsuario::RegenteFarmacia
+                | RolUsuario::Laboratorista
+                | RolUsuario::Radiologo
+                | RolUsuario::Anestesiologo
+                | RolUsuario::Terapeuta
+                | RolUsuario::Nutricionista
+                | RolUsuario::Psicologo
+                | RolUsuario::TrabajoSocial
+                | RolUsuario::Bacteriologo => (),
+            };
+        }
+        assert_eq!(RolUsuario::TODOS.len(), 15, "¿se añadió un rol?");
+        let unicas: std::collections::HashSet<_> = RolUsuario::TODOS.iter().collect();
+        assert_eq!(unicas.len(), RolUsuario::TODOS.len(), "hay uno repetido");
+    }
+
+    /// Que el nombre de la base y el de serde sean el MISMO, en los dos
+    /// sentidos. Si divergieran, una matriz guardada dejaría de leerse y todo
+    /// caería al defecto sin ruido: la peor forma de fallar aquí.
+    #[test]
+    fn el_nombre_de_la_base_y_el_de_serde_son_el_mismo() {
+        for c in Capacidad::TODAS {
+            let por_serde = serde_json::to_string(c).unwrap();
+            assert_eq!(por_serde, format!("\"{}\"", c.como_str()), "capacidad {c:?}");
+            assert_eq!(Capacidad::desde_str(c.como_str()), Some(*c));
+        }
+        for r in RolUsuario::TODOS {
+            let por_serde = serde_json::to_string(r).unwrap();
+            assert_eq!(por_serde, format!("\"{}\"", r.como_str()), "rol {r:?}");
+            assert_eq!(RolUsuario::desde_str(r.como_str()), Some(*r));
+        }
+    }
     use crate::Visibilidad;
 
     /// El superadmin tiene `institucion_id = NULL` y aun así lo ve todo.

@@ -35,6 +35,13 @@ pub struct Estado {
     /// Sin proxy declarado, el origen es la dirección del zócalo. Si se declara y
     /// la cabecera no llega, el acceso responde 503 en vez de rellenar el dato.
     pub tras_proxy: bool,
+    /// Las matrices de capacidades por institución, ya leídas.
+    ///
+    /// Va en el estado y no se abre por petición porque `Autorizado<C>` la
+    /// consulta en CADA ruta autorizada. `Arc` porque el estado se clona una vez
+    /// por petición y la caché tiene que ser la misma para todas — una copia por
+    /// petición no cachearía nada y, peor, no se enteraría de una invalidación.
+    pub capacidades: std::sync::Arc<medico_datos::capacidad::Cache>,
 }
 
 /// El login. Devuelve el valor de la cookie de sesión, o `None`. **Mismo
@@ -209,18 +216,57 @@ impl Exige for GestionarFarmacia {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarFarmacia;
 }
 
+/// Dar de alta al personal y decidir quién puede qué. Es la MISMA capacidad a
+/// propósito: partirlas crearía la figura del administrador que nombra pero no
+/// autoriza, que no existe en ninguna IPS.
+///
+/// Que esta capacidad se consulte contra la matriz —igual que las demás— es lo
+/// que la hace configurable, y también lo que obliga al guardarraíl de
+/// [`medico_dominio::ajustes::Ajustes::validar`]: dejarla sin ningún rol tapia
+/// la puerta desde la que se arregla todo lo demás.
+pub struct GestionarUsuarios;
+impl Exige for GestionarUsuarios {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarUsuarios;
+}
+
 impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, estado: &Estado) -> Result<Self, StatusCode> {
         let usuario = usuario_de(estado, &parts.headers).await.ok_or(StatusCode::UNAUTHORIZED)?;
+        let Some(rol) = usuario.rol() else {
+            return Err(StatusCode::FORBIDDEN);
+        };
+
+        // El defecto nacional, salvo que la institución del usuario lo haya
+        // apartado. Quien no pertenece a ninguna —el superadmin— no tiene
+        // matriz que consultar: su respuesta es el defecto, y esa es justo la
+        // razón de que se le deje fuera de la matriz (ver
+        // `RolUsuario::configurable_por_institucion`).
+        let permitido = match usuario.institucion_id {
+            Some(institucion_id) => {
+                // Si la matriz no se puede leer, la petición FALLA. Caer al
+                // defecto sería devolverle al rol justo lo que esta institución
+                // le había quitado, y sin que nadie se entere (directiva 20).
+                // 503 y no 403: el usuario no tiene nada que corregir.
+                let ajustes = estado
+                    .capacidades
+                    .ajustes(&estado.pool, institucion_id)
+                    .await
+                    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+                ajustes.puede(rol, C::QUE)
+            }
+            None => rol.puede(C::QUE),
+        };
+
         // 403 y no 404: dentro de la propia institución la existencia del recurso
         // no es secreto —el usuario puede listarlo—, y decirle «no existe» cuando
         // lo que pasa es que no le corresponde manda a buscar un fallo que no hay.
         // El 404 sigue siendo para lo AJENO, que es donde sí se oculta.
-        match usuario.rol() {
-            Some(rol) if rol.puede(C::QUE) => Ok(Autorizado(usuario, std::marker::PhantomData)),
-            _ => Err(StatusCode::FORBIDDEN),
+        if permitido {
+            Ok(Autorizado(usuario, std::marker::PhantomData))
+        } else {
+            Err(StatusCode::FORBIDDEN)
         }
     }
 }
@@ -278,7 +324,7 @@ mod pruebas {
     #[tokio::test]
     async fn usuario_de_una_cookie_valida_es_el_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         let cookie = sesion::emitir(SECRETO, 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={cookie}").parse().unwrap());
@@ -289,7 +335,7 @@ mod pruebas {
     #[tokio::test]
     async fn sin_cookie_no_hay_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         assert!(usuario_de(&estado, &HeaderMap::new()).await.is_none());
     }
 
@@ -298,7 +344,7 @@ mod pruebas {
     #[tokio::test]
     async fn una_cookie_de_otro_secreto_no_entra() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={ajena}").parse().unwrap());
@@ -315,6 +361,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy: false,
+            capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }
 

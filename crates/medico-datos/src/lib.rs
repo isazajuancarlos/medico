@@ -2,6 +2,7 @@
 
 pub mod acceso;
 pub mod ambulancia;
+pub mod capacidad;
 pub mod catalogo;
 pub mod cita;
 pub mod diagnostico;
