@@ -35,6 +35,13 @@ pub struct Estado {
     /// Sin proxy declarado, el origen es la dirección del zócalo. Si se declara y
     /// la cabecera no llega, el acceso responde 503 en vez de rellenar el dato.
     pub tras_proxy: bool,
+    /// Las matrices de capacidades por institución, ya leídas.
+    ///
+    /// Va en el estado y no se abre por petición porque `Autorizado<C>` la
+    /// consulta en CADA ruta autorizada. `Arc` porque el estado se clona una vez
+    /// por petición y la caché tiene que ser la misma para todas — una copia por
+    /// petición no cachearía nada y, peor, no se enteraría de una invalidación.
+    pub capacidades: std::sync::Arc<medico_datos::capacidad::Cache>,
 }
 
 /// El login. Devuelve el valor de la cookie de sesión, o `None`. **Mismo
@@ -111,6 +118,159 @@ impl FromRequestParts<Estado> for Autenticado {
     }
 }
 
+/// Extractor que además de autenticar **exige una capacidad**.
+///
+/// # Por qué un extractor y no un `if` dentro del manejador
+///
+/// La comprobación que se pone a mano es la que se olvida en la ruta siguiente:
+/// de 62 rutas registradas, seis comprobaban el rol y ninguna sobre un recurso
+/// clínico. Con esto, lo que la ruta necesita queda **en su firma** —
+/// `Autorizado<Firmar>` en vez de `Autenticado`—, así que se lee en el listado
+/// del router y no hay que ir a mirar el cuerpo para saber qué protege.
+///
+/// Es el mismo argumento que ya hace `Ambito` siendo un parámetro obligatorio
+/// en vez de un filtro opcional: el control que se puede omitir, se omite.
+pub struct Autorizado<C: Exige>(pub Usuario, std::marker::PhantomData<C>);
+
+/// Qué capacidad exige un extractor. Un tipo por capacidad, sin datos: sirve
+/// para escribirla en la firma del manejador.
+pub trait Exige {
+    const QUE: medico_dominio::rol::Capacidad;
+}
+
+/// Firmar una historia o un documento clínico.
+pub struct Firmar;
+impl Exige for Firmar {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::FirmarClinico;
+}
+
+/// Borrar una historia o un documento clínico.
+pub struct Borrar;
+impl Exige for Borrar {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::BorrarClinico;
+}
+
+/// Escribir en la historia clínica: crearla, modificarla, añadirle documentos,
+/// fórmulas u órdenes.
+pub struct EscribirClinico;
+impl Exige for EscribirClinico {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirClinico;
+}
+
+/// Crear o modificar el registro de un paciente y sus antecedentes.
+pub struct EscribirPaciente;
+impl Exige for EscribirPaciente {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirPaciente;
+}
+
+/// Atender en urgencias y hospitalización: triage, ingreso, egreso.
+pub struct AtenderUrgencias;
+impl Exige for AtenderUrgencias {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::AtenderUrgenciasHospitalizacion;
+}
+
+/// Valoraciones y planes de nutrición.
+pub struct EscribirNutricion;
+impl Exige for EscribirNutricion {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirNutricion;
+}
+
+/// Planes y sesiones de rehabilitación.
+pub struct EscribirRehabilitacion;
+impl Exige for EscribirRehabilitacion {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::EscribirRehabilitacion;
+}
+
+/// Remisiones y contrarreferencia.
+pub struct GestionarRemision;
+impl Exige for GestionarRemision {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarRemision;
+}
+
+/// Resultados de laboratorio y perfiles de examen.
+pub struct EscribirLaboratorio;
+impl Exige for EscribirLaboratorio {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirLaboratorio;
+}
+
+/// Informes de imágenes diagnósticas.
+pub struct EscribirImagenologia;
+impl Exige for EscribirImagenologia {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::EscribirImagenologia;
+}
+
+/// Parque de ambulancias y despacho de traslados.
+pub struct GestionarAmbulancias;
+impl Exige for GestionarAmbulancias {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::GestionarAmbulancias;
+}
+
+/// Farmacia: alta de items, entradas de stock y dispensación. **Leer** el
+/// inventario no la exige: basta estar autenticado.
+pub struct GestionarFarmacia;
+impl Exige for GestionarFarmacia {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarFarmacia;
+}
+
+/// Dar de alta al personal y decidir quién puede qué. Es la MISMA capacidad a
+/// propósito: partirlas crearía la figura del administrador que nombra pero no
+/// autoriza, que no existe en ninguna IPS.
+///
+/// Que esta capacidad se consulte contra la matriz —igual que las demás— es lo
+/// que la hace configurable, y también lo que obliga al guardarraíl de
+/// [`medico_dominio::ajustes::Ajustes::validar`]: dejarla sin ningún rol tapia
+/// la puerta desde la que se arregla todo lo demás.
+pub struct GestionarUsuarios;
+impl Exige for GestionarUsuarios {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarUsuarios;
+}
+
+impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, estado: &Estado) -> Result<Self, StatusCode> {
+        let usuario = usuario_de(estado, &parts.headers).await.ok_or(StatusCode::UNAUTHORIZED)?;
+        let Some(rol) = usuario.rol() else {
+            return Err(StatusCode::FORBIDDEN);
+        };
+
+        // El defecto nacional, salvo que la institución del usuario lo haya
+        // apartado. Quien no pertenece a ninguna —el superadmin— no tiene
+        // matriz que consultar: su respuesta es el defecto, y esa es justo la
+        // razón de que se le deje fuera de la matriz (ver
+        // `RolUsuario::configurable_por_institucion`).
+        let permitido = match usuario.institucion_id {
+            Some(institucion_id) => {
+                // Si la matriz no se puede leer, la petición FALLA. Caer al
+                // defecto sería devolverle al rol justo lo que esta institución
+                // le había quitado, y sin que nadie se entere (directiva 20).
+                // 503 y no 403: el usuario no tiene nada que corregir.
+                let ajustes = estado
+                    .capacidades
+                    .ajustes(&estado.pool, institucion_id)
+                    .await
+                    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+                ajustes.puede(rol, C::QUE)
+            }
+            None => rol.puede(C::QUE),
+        };
+
+        // 403 y no 404: dentro de la propia institución la existencia del recurso
+        // no es secreto —el usuario puede listarlo—, y decirle «no existe» cuando
+        // lo que pasa es que no le corresponde manda a buscar un fallo que no hay.
+        // El 404 sigue siendo para lo AJENO, que es donde sí se oculta.
+        if permitido {
+            Ok(Autorizado(usuario, std::marker::PhantomData))
+        } else {
+            Err(StatusCode::FORBIDDEN)
+        }
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -164,7 +324,7 @@ mod pruebas {
     #[tokio::test]
     async fn usuario_de_una_cookie_valida_es_el_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         let cookie = sesion::emitir(SECRETO, 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={cookie}").parse().unwrap());
@@ -175,7 +335,7 @@ mod pruebas {
     #[tokio::test]
     async fn sin_cookie_no_hay_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         assert!(usuario_de(&estado, &HeaderMap::new()).await.is_none());
     }
 
@@ -184,7 +344,7 @@ mod pruebas {
     #[tokio::test]
     async fn una_cookie_de_otro_secreto_no_entra() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={ajena}").parse().unwrap());
@@ -201,6 +361,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy: false,
+            capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }
 

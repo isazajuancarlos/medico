@@ -110,13 +110,38 @@ pub async fn actualizar(pool: &crate::Pool, ambito: Ambito, id: i64, f: &Formula
     Ok(r.rows_affected() > 0)
 }
 
-/// Elimina una fórmula visible. `false` si no existe o no es del ámbito.
-pub async fn eliminar(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<bool, sqlx::Error> {
+/// Qué pasó al borrar una fórmula.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResultadoBorrado {
+    Hecho,
+    /// No existe o no es del ámbito. Los dos casos dan lo mismo a propósito.
+    NoExiste,
+    /// **Ya se entregó al paciente.** Borrar la prescripción dejaría en el
+    /// sistema una entrega de medicamento sin nada que la respalde: la farmacia
+    /// habría dispensado «sin fórmula». La constancia de la entrega y su
+    /// prescripción se sostienen o caen juntas, y ninguna de las dos se corrige
+    /// borrando — se corrige con la fórmula nueva que el médico firme.
+    YaDispensada { entregas: i64 },
+}
+
+/// Elimina una fórmula visible que no se haya dispensado. Ver [`ResultadoBorrado`].
+pub async fn eliminar(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    id: i64,
+) -> Result<ResultadoBorrado, sqlx::Error> {
     if !formula_visible(pool, ambito, id).await? {
-        return Ok(false);
+        return Ok(ResultadoBorrado::NoExiste);
+    }
+    let entregas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM dispensacion WHERE formula_id = ?")
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+    if entregas > 0 {
+        return Ok(ResultadoBorrado::YaDispensada { entregas });
     }
     let r = sqlx::query("DELETE FROM formula WHERE id = ?").bind(id).execute(pool).await?;
-    Ok(r.rows_affected() > 0)
+    Ok(if r.rows_affected() > 0 { ResultadoBorrado::Hecho } else { ResultadoBorrado::NoExiste })
 }
 
 #[cfg(test)]
@@ -174,12 +199,35 @@ mod pruebas {
         let id = crear(&pool, Ambito::institucion(1), 100, &nueva()).await.unwrap().unwrap();
         // La 2 no puede tocarla.
         assert!(!actualizar(&pool, Ambito::institucion(2), id, &nueva()).await.unwrap());
-        assert!(!eliminar(&pool, Ambito::institucion(2), id).await.unwrap());
+        assert_eq!(eliminar(&pool, Ambito::institucion(2), id).await.unwrap(), ResultadoBorrado::NoExiste);
         // La 1 sí.
         let mut cambio = nueva();
         cambio.dosis = "1 cada 12h".into();
         assert!(actualizar(&pool, Ambito::institucion(1), id, &cambio).await.unwrap());
-        assert!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap());
+        assert_eq!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap(), ResultadoBorrado::Hecho);
         assert!(listar_por_historia(&pool, Ambito::institucion(1), 100).await.unwrap().is_empty());
+    }
+
+    /// Una fórmula ya entregada no se borra: dejaría una dispensación sin
+    /// prescripción que la respalde.
+    #[tokio::test]
+    async fn una_formula_ya_dispensada_no_se_borra() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), 100, &nueva()).await.unwrap().unwrap();
+        sqlx::query(
+            "INSERT INTO item_inventario (id, institucion_id, nombre, lote, cantidad_actual) \
+             VALUES (7, 1, 'Acetaminofén 500mg', 'L-1', 100)",
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO dispensacion \
+             (formula_id, item_inventario_id, paciente_id, regente_farmacia_id, \
+              cantidad_dispensada, lote_dispensado) VALUES (?, 7, 10, 5, 30, 'L-1')",
+        ).bind(id).execute(&pool).await.unwrap();
+
+        assert_eq!(
+            eliminar(&pool, Ambito::institucion(1), id).await.unwrap(),
+            ResultadoBorrado::YaDispensada { entregas: 1 }
+        );
+        assert_eq!(listar_por_historia(&pool, Ambito::institucion(1), 100).await.unwrap().len(), 1);
     }
 }

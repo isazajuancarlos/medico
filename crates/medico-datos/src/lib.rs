@@ -1,8 +1,12 @@
 //! Acceso a la base. Nadie de aquí para arriba escribe SQL.
 
 pub mod acceso;
+pub mod ambulancia;
+pub mod capacidad;
 pub mod catalogo;
 pub mod cita;
+pub mod diagnostico;
+pub mod divipola;
 pub mod documento;
 pub mod formula;
 pub mod freno;
@@ -11,10 +15,12 @@ pub mod hospitalizacion;
 pub mod imagen;
 pub mod incapacidad;
 pub mod institucion;
+pub mod inventario;
 pub mod licencia;
 pub mod nutricion;
 pub mod orden;
 pub mod paciente;
+pub mod proveedor;
 pub mod referencia;
 pub mod rehabilitacion;
 pub mod urgencias;
