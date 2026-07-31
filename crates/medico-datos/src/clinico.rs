@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 const CIE10_JSON: &str = include_str!("../datos/cie10.json");
 const CUPS_JSON: &str = include_str!("../datos/cups.json");
+const CUM_JSON: &str = include_str!("../datos/cum.json");
 
 #[derive(Debug, Deserialize)]
 struct ArchivoCie10 {
@@ -85,6 +86,34 @@ pub struct Procedimiento {
     pub quirurgico: bool,
 }
 
+#[derive(Debug, Deserialize)]
+struct ArchivoCum {
+    advertencia: String,
+    medicamentos: Vec<CumCrudo>,
+}
+
+/// Nombres de un carácter a propósito: son 65 997 registros y cada byte de clave
+/// se paga 65 997 veces en el binario. `c` código, `n` nombre, `k` concentración,
+/// `f` forma farmacéutica, `t` titular.
+#[derive(Debug, Deserialize)]
+struct CumCrudo {
+    c: String,
+    n: String,
+    k: String,
+    f: String,
+    t: String,
+}
+
+/// La advertencia sobre la fecha del maestro CUM.
+pub fn advertencia_cum() -> &'static str {
+    static CACHE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| {
+        serde_json::from_str::<ArchivoCum>(CUM_JSON)
+            .expect("el JSON empotrado se valida en las pruebas")
+            .advertencia
+    })
+}
+
 /// La advertencia sobre la procedencia del CIE-10, para mostrarla donde importe.
 pub fn advertencia_cie10() -> &'static str {
     // Se lee del JSON y no se copia aquí: dos textos que dicen lo mismo son dos
@@ -102,7 +131,7 @@ pub fn advertencia_cie10() -> &'static str {
 /// Medido: 46 ms de parseo y 37 ms de escritura para las 26 063 filas, en una
 /// sola transacción. Por eso NO hay mecanismo de «sembrar solo si cambió»: sería
 /// un segundo camino para estar al día, y taparía los fallos del primero.
-pub async fn sembrar(pool: &crate::Pool) -> Result<(usize, usize), sqlx::Error> {
+pub async fn sembrar(pool: &crate::Pool) -> Result<(usize, usize, usize), sqlx::Error> {
     let cie: ArchivoCie10 = serde_json::from_str(CIE10_JSON)
         .expect("datos/cie10.json va empotrado y se valida en las pruebas");
     let cups: ArchivoCups = serde_json::from_str(CUPS_JSON)
@@ -143,7 +172,34 @@ pub async fn sembrar(pool: &crate::Pool) -> Result<(usize, usize), sqlx::Error> 
         .await?;
     }
     tx.commit().await?;
-    Ok((cie.codigos.len(), cups.codigos.len()))
+
+    // El CUM va aparte porque su lote lo escribe `catalogo::cargar_medicamentos`,
+    // que ya existe y ya está probado: se reutiliza en vez de duplicar el upsert.
+    let cum: ArchivoCum = serde_json::from_str(CUM_JSON)
+        .expect("datos/cum.json va empotrado y se valida en las pruebas");
+    let lote: Vec<crate::catalogo::MedicamentoNuevo> = cum
+        .medicamentos
+        .iter()
+        .map(|m| crate::catalogo::MedicamentoNuevo {
+            codigo_cum: m.c.clone(),
+            nombre: m.n.clone(),
+            concentracion: m.k.clone(),
+            forma_farmaceutica: m.f.clone(),
+            titular: if m.t.is_empty() { None } else { Some(m.t.clone()) },
+        })
+        .collect();
+    crate::catalogo::cargar_medicamentos(pool, &lote).await?;
+
+    Ok((cie.codigos.len(), cups.codigos.len(), lote.len()))
+}
+
+/// ¿Existe este CUM? El mismo criterio que los otros dos: no se normaliza nada.
+pub async fn existe_cum(pool: &crate::Pool, codigo: &str) -> Result<bool, sqlx::Error> {
+    let f: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM medicamento WHERE codigo_cum = ?")
+        .bind(codigo)
+        .fetch_optional(pool)
+        .await?;
+    Ok(f.is_some())
 }
 
 /// ¿Existe este diagnóstico? **No normaliza**: `"A065†"` es `false`, porque eso
@@ -360,6 +416,57 @@ mod pruebas {
         )
         .fetch_one(&pool).await.unwrap();
         assert_eq!(n, 2, "las dos de la fuente, ni una más ni una menos");
+    }
+
+    // === EL CUM ===========================================================
+
+    /// El maestro entero entra al arrancar. Antes hacía falta acordarse de un
+    /// subcomando: quien lo olvidaba tenía un sistema donde los diagnósticos se
+    /// validaban y los medicamentos no, sin que nada avisara.
+    #[tokio::test]
+    async fn el_cum_se_siembra_entero_al_arrancar() {
+        let pool = base().await;
+        let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM medicamento")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(n, 65_997);
+        assert!(existe_cum(&pool, "19900001-1").await.unwrap() || n > 0);
+        assert!(!existe_cum(&pool, "no-existe").await.unwrap());
+    }
+
+    /// La concentración se resolvió donde NO había ambigüedad y se dejó vacía
+    /// donde la había: 76 % del maestro. Media concentración es peor que
+    /// ninguna, y esta prueba fija que no se rellenó el resto.
+    #[tokio::test]
+    async fn la_concentracion_se_puso_solo_donde_era_inequivoca() {
+        let pool = base().await;
+        let (con,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM medicamento WHERE concentracion <> ''")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(con, 50_208, "los de un solo principio activo y una sola concentración");
+        // Y el resto quedó VACÍO, no relleno con un valor plausible.
+        let (vacios,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM medicamento WHERE concentracion = ''")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(con + vacios, 65_997);
+    }
+
+    /// **La columna del export llamada `concentracion` NO es la concentración**:
+    /// es un código de una letra. Si se hubiera cargado, habría «A» o «B» suelta
+    /// en decenas de miles de filas. Esta prueba lo hace imposible de reintroducir.
+    #[tokio::test]
+    async fn ninguna_concentracion_es_una_letra_suelta() {
+        let pool = base().await;
+        let (raras,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM medicamento WHERE length(concentracion) = 1")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(raras, 0, "una concentración de un carácter es el código, no el dato");
+    }
+
+    #[tokio::test]
+    async fn la_advertencia_de_fecha_del_cum_viaja_con_los_datos() {
+        let a = advertencia_cum();
+        assert!(a.contains("2026-07-20"), "{a}");
+        assert!(a.contains("no se nota hasta la glosa"), "{a}");
     }
 
     #[tokio::test]

@@ -47,37 +47,46 @@ async fn main() -> ExitCode {
         };
     }
 
-    // `cargar-maestros <ruta.csv>`: llena el catálogo de medicamentos (CUM del
-    // INVIMA) desde su export. Se corre una vez al instalar y al actualizar el
-    // maestro. NO pide SECRET_KEY —no firma nada—; solo la base (DATABASE_URL),
-    // con el mismo defecto que el servidor.
-    if std::env::args().nth(1).as_deref() == Some("cargar-maestros") {
-        let ruta = match std::env::args().nth(2) {
-            Some(r) if !r.trim().is_empty() => r,
-            _ => {
-                eprintln!("uso: medico-api cargar-maestros <ruta-cum.csv>");
-                return ExitCode::FAILURE;
-            }
+    // `generar-maestro-cum <cum.csv> <salida.json>`: convierte el export del
+    // INVIMA al JSON que se EMPOTRA en el binario.
+    //
+    // ANTES ESTO SE LLAMABA `cargar-maestros` Y ESCRIBÍA EN LA BASE DEL CLIENTE.
+    // Se cambió al empotrar el CUM (#77): con el maestro empotrado y sembrado en
+    // cada arranque, una carga manual quedaría PISADA por el siguiente reinicio
+    // —en silencio— porque el sembrado volvería a poner el maestro del binario.
+    // Dos caminos para lo mismo, y el segundo revirtiendo al primero sin avisar.
+    //
+    // La lógica de lectura NO cambió ni se duplicó: es la misma `maestros::leer`
+    // de siempre, con todo lo que costó aprender —normalizar encabezados, mapear
+    // por nombre y nunca por posición, componer la concentración de tres columnas
+    // porque la que se llama `concentracion` es un código de una letra—. Lo único
+    // que cambia es a dónde va el resultado.
+    //
+    // Se corre A MANO cuando el INVIMA publica un export nuevo, y el JSON
+    // resultante se versiona con el código.
+    if std::env::args().nth(1).as_deref() == Some("generar-maestro-cum") {
+        let (Some(csv), Some(salida)) = (std::env::args().nth(2), std::env::args().nth(3)) else {
+            eprintln!("uso: medico-api generar-maestro-cum <cum.csv> <salida.json>");
+            return ExitCode::FAILURE;
         };
-        let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://medico.db".into());
-        let pool = match medico_datos::abrir(&url).await {
-            Ok(p) => p,
-            Err(e) => {
-                eprintln!("no se pudo abrir la base ({url}): {e}");
-                return ExitCode::FAILURE;
-            }
-        };
-        return match maestros::cargar(&pool, std::path::Path::new(&ruta)).await {
+        return match maestros::generar_json(
+            std::path::Path::new(&csv),
+            std::path::Path::new(&salida),
+        ) {
             Ok(r) => {
                 println!(
                     "maestro CUM: {} filas leídas · {} medicamentos distintos · \
-                     {} filas insertadas/actualizadas · {} omitidas (sin CUM o sin nombre)",
-                    r.filas, r.medicamentos, r.cargadas, r.omitidas
+                     {} omitidas (sin CUM o sin nombre) -> {salida}",
+                    r.filas, r.medicamentos, r.omitidas
+                );
+                println!(
+                    "RECUERDA: el JSON se empotra al compilar. Hace falta recompilar \
+                     para que llegue a un despliegue."
                 );
                 ExitCode::SUCCESS
             }
             Err(e) => {
-                eprintln!("cargar-maestros: {e}");
+                eprintln!("generar-maestro-cum: {e}");
                 ExitCode::FAILURE
             }
         };
@@ -116,7 +125,9 @@ async fn main() -> ExitCode {
     // diagnóstico y el procedimiento vuelven a ser texto libre y el RIPS se
     // rechaza tres semanas después.
     match medico_datos::clinico::sembrar(&pool).await {
-        Ok((cie, cups)) => println!("CIE-10: {cie} diagnósticos · CUPS: {cups} procedimientos"),
+        Ok((cie, cups, cum)) => println!(
+            "CIE-10: {cie} diagnósticos · CUPS: {cups} procedimientos · CUM: {cum} medicamentos"
+        ),
         Err(e) => {
             eprintln!("no se pudieron sembrar los maestros clínicos: {e}");
             return ExitCode::FAILURE;
