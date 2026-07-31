@@ -449,7 +449,7 @@ async fn acceso(
     match resultado {
         Some(cookie) => (
             StatusCode::OK,
-            [(header::SET_COOKIE, sesion::cabecera_abrir(&cookie, e.minutos))],
+            [(header::SET_COOKIE, sesion::cabecera_abrir(&cookie, e.minutos, e.tras_proxy))],
             Json(Ok2 { ok: true }),
         )
             .into_response(),
@@ -459,10 +459,13 @@ async fn acceso(
 
 /// Cierra la sesión borrando la cookie. No necesita estar autenticado: pedir
 /// salir sin sesión no es un error.
-async fn salir() -> Response {
+///
+/// Sí necesita el `Estado`, y solo por `tras_proxy`: la cookie de cierre lleva
+/// los mismos atributos que la de apertura para que de verdad la sustituya.
+async fn salir(State(e): State<Estado>) -> Response {
     (
         StatusCode::OK,
-        [(header::SET_COOKIE, sesion::cabecera_cerrar())],
+        [(header::SET_COOKIE, sesion::cabecera_cerrar(e.tras_proxy))],
         Json(Ok2 { ok: true }),
     )
         .into_response()
@@ -478,7 +481,7 @@ async fn salir_todo(State(e): State<Estado>, Autenticado(u): Autenticado) -> Res
     match medico_datos::usuario::revocar_sesiones(&e.pool, u.id).await {
         Ok(true) => (
             StatusCode::OK,
-            [(header::SET_COOKIE, sesion::cabecera_cerrar())],
+            [(header::SET_COOKIE, sesion::cabecera_cerrar(e.tras_proxy))],
             Json(Ok2 { ok: true }),
         )
             .into_response(),
