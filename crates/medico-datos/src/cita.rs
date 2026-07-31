@@ -1,6 +1,7 @@
 //! Citas. Toda consulta lleva el ámbito; una cita solo se ve, crea o cambia
-//! dentro de la institución de quien la maneja. La agenda (bloques, bloqueos,
-//! oportunidad) es un subsistema aparte, pendiente de portar.
+//! dentro de la institución de quien la maneja. La agenda —franjas, bloqueos,
+//! turnos libres e indicadores— vive en [`crate::agenda`], que lee de aquí para
+//! saber qué horas están cogidas.
 
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
@@ -18,12 +19,22 @@ pub struct CitaVista {
     pub hora: String,
     pub estado: String,
     pub motivo: Option<String>,
+    /// PRIMERA_VEZ / CONTROL / URGENCIA. `None` en las citas anteriores a la
+    /// migración 0035: significa **no se sabe**, y la pantalla lo deja vacío.
+    /// Hasta entonces el navegador rellenaba «Primera Vez» para todas.
+    pub tipo: Option<String>,
+    /// Igual: `None` es «no se registró», no media hora.
+    pub duracion_minutos: Option<i64>,
+    /// Cuándo la PIDIÓ el paciente (YYYY-MM-DD). Es el numerador del indicador
+    /// de oportunidad de la Resolución 256 de 2016.
+    pub solicitada_en: Option<String>,
     pub institucion_id: i64,
 }
 
 const SELECT_VISTA: &str = "SELECT c.id, c.paciente_id, \
     (p.nombre1 || ' ' || p.apellido1) AS paciente_nombre, \
-    c.medico_id, u.nombre AS medico_nombre, c.fecha, c.hora, c.estado, c.motivo, c.institucion_id \
+    c.medico_id, u.nombre AS medico_nombre, c.fecha, c.hora, c.estado, c.motivo, \
+    c.tipo, c.duracion_minutos, c.solicitada_en, c.institucion_id \
     FROM cita c \
     JOIN paciente p ON p.id = c.paciente_id \
     LEFT JOIN usuario u ON u.id = c.medico_id AND u.institucion_id = c.institucion_id";
@@ -58,6 +69,14 @@ pub struct CitaNueva {
     pub fecha: String,
     pub hora: String,
     pub motivo: Option<String>,
+    /// PRIMERA_VEZ / CONTROL / URGENCIA. Opcional porque una cita se puede
+    /// agendar por teléfono sin saberlo todavía; lo que NO se hace es
+    /// rellenarla, que era el defecto que corrige la migración 0035.
+    pub tipo: Option<String>,
+    pub duracion_minutos: Option<i64>,
+    /// Cuándo la pidió el paciente. Sin ella, esta cita no cuenta para el
+    /// indicador de oportunidad y el indicador lo dice.
+    pub solicitada_en: Option<String>,
 }
 
 /// Crea una cita EN la institución de quien la agenda; el paciente debe ser de
@@ -93,8 +112,9 @@ pub async fn crear(
         return Ok(None);
     }
     let r = sqlx::query(
-        "INSERT INTO cita (institucion_id, paciente_id, medico_id, fecha, hora, motivo) \
-         VALUES (?,?,?,?,?,?)",
+        "INSERT INTO cita (institucion_id, paciente_id, medico_id, fecha, hora, motivo, \
+                           tipo, duracion_minutos, solicitada_en) \
+         VALUES (?,?,?,?,?,?,?,?,?)",
     )
     .bind(institucion_id)
     .bind(nueva.paciente_id)
@@ -102,9 +122,18 @@ pub async fn crear(
     .bind(&nueva.fecha)
     .bind(&nueva.hora)
     .bind(&nueva.motivo)
+    .bind(&nueva.tipo)
+    .bind(nueva.duracion_minutos)
+    .bind(&nueva.solicitada_en)
     .execute(pool)
-    .await?;
-    Ok(Some(r.last_insert_rowid()))
+    .await;
+    match r {
+        Ok(r) => Ok(Some(r.last_insert_rowid())),
+        // Un `tipo` fuera del CHECK o una duración imposible se rechazan; no se
+        // guardan «como vengan» ni se sustituyen por un valor válido.
+        Err(sqlx::Error::Database(_)) => Ok(None),
+        Err(e) => Err(e),
+    }
 }
 
 /// Cambia el estado de una cita **si es visible para el ámbito**. `false` si no
@@ -197,7 +226,7 @@ mod pruebas {
     #[tokio::test]
     async fn crear_para_paciente_propio_funciona() {
         let pool = base().await;
-        let nueva = CitaNueva { paciente_id: 10, medico_id: Some(5), fecha: "2026-08-05".into(), hora: "10:30".into(), motivo: Some("Control".into()) };
+        let nueva = CitaNueva { paciente_id: 10, medico_id: Some(5), fecha: "2026-08-05".into(), hora: "10:30".into(), motivo: Some("Control".into()), tipo: Some("CONTROL".into()), duracion_minutos: Some(30), solicitada_en: Some("2026-08-01".into()) };
         assert!(crear(&pool, Ambito::institucion(1), &nueva).await.unwrap().is_some());
     }
 
@@ -205,7 +234,7 @@ mod pruebas {
     #[tokio::test]
     async fn crear_para_paciente_ajeno_no_se_puede() {
         let pool = base().await;
-        let nueva = CitaNueva { paciente_id: 20, medico_id: None, fecha: "2026-08-05".into(), hora: "10:30".into(), motivo: None };
+        let nueva = CitaNueva { paciente_id: 20, medico_id: None, fecha: "2026-08-05".into(), hora: "10:30".into(), motivo: None, tipo: None, duracion_minutos: None, solicitada_en: None };
         assert!(crear(&pool, Ambito::institucion(1), &nueva).await.unwrap().is_none());
     }
 
@@ -215,6 +244,64 @@ mod pruebas {
         assert!(cambiar_estado(&pool, Ambito::institucion(1), 100, "ATENDIDA").await.unwrap());
         // La institución 2 no puede tocar la cita de la 1.
         assert!(!cambiar_estado(&pool, Ambito::institucion(2), 100, "CANCELADA").await.unwrap());
+    }
+
+    /// Las citas viejas NO traen tipo ni duración, y eso se lee como «no se
+    /// sabe». Antes el navegador rellenaba «Primera Vez» y 30 minutos para
+    /// todas, indistinguible de un dato registrado.
+    #[tokio::test]
+    async fn la_cita_anterior_a_la_migracion_no_finge_tipo_ni_duracion() {
+        let pool = base().await;
+        let c = &listar(&pool, Ambito::institucion(1), None).await.unwrap()[0];
+        assert_eq!(c.tipo, None);
+        assert_eq!(c.duracion_minutos, None);
+        assert_eq!(c.solicitada_en, None);
+    }
+
+    #[tokio::test]
+    async fn el_tipo_y_la_duracion_se_guardan_y_vuelven() {
+        let pool = base().await;
+        let nueva = CitaNueva {
+            paciente_id: 10, medico_id: Some(5), fecha: "2026-08-05".into(),
+            hora: "10:30".into(), motivo: None, tipo: Some("URGENCIA".into()),
+            duracion_minutos: Some(45), solicitada_en: Some("2026-08-04".into()),
+        };
+        crear(&pool, Ambito::institucion(1), &nueva).await.unwrap().unwrap();
+        let cs = listar(&pool, Ambito::institucion(1), Some("2026-08-05")).await.unwrap();
+        assert_eq!(cs[0].tipo.as_deref(), Some("URGENCIA"));
+        assert_eq!(cs[0].duracion_minutos, Some(45));
+        assert_eq!(cs[0].solicitada_en.as_deref(), Some("2026-08-04"));
+    }
+
+    /// Un tipo inventado se rechaza; no se guarda «como venga».
+    #[tokio::test]
+    async fn un_tipo_fuera_del_vocabulario_no_pasa() {
+        let pool = base().await;
+        let nueva = CitaNueva {
+            paciente_id: 10, medico_id: None, fecha: "2026-08-05".into(),
+            hora: "10:30".into(), motivo: None, tipo: Some("Primera Vez".into()),
+            duracion_minutos: None, solicitada_en: None,
+        };
+        assert!(
+            crear(&pool, Ambito::institucion(1), &nueva).await.unwrap().is_none(),
+            "entró el vocabulario de la pantalla en la columna"
+        );
+    }
+
+    #[tokio::test]
+    async fn una_duracion_imposible_no_pasa() {
+        let pool = base().await;
+        for d in [0i64, -30, 1441] {
+            let nueva = CitaNueva {
+                paciente_id: 10, medico_id: None, fecha: "2026-08-05".into(),
+                hora: "10:30".into(), motivo: None, tipo: None,
+                duracion_minutos: Some(d), solicitada_en: None,
+            };
+            assert!(
+                crear(&pool, Ambito::institucion(1), &nueva).await.unwrap().is_none(),
+                "se aceptó una duración de {d} minutos"
+            );
+        }
     }
 
     #[tokio::test]

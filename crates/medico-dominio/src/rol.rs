@@ -180,6 +180,20 @@ pub enum Capacidad {
     /// Quién: gestión, médico, enfermería y auxiliar — los que coordinan un
     /// traslado. Fuera laboratorio, imagenología, farmacia y terapias.
     GestionarAmbulancias,
+    /// Definir la agenda de un profesional: sus meses abiertos, las franjas que
+    /// atiende cada día y los ratos que bloquea (vacaciones, incapacidad).
+    ///
+    /// Quién: gestión y el propio médico. Declarar a qué horas atiende un
+    /// profesional es una decisión de él y de la administración; que la tome
+    /// cualquiera con cuenta significa que a un médico le pueden cerrar la
+    /// consulta del jueves sin que se entere.
+    ///
+    /// **LEER la agenda NO exige esto, y es deliberado.** Quien agenda una cita
+    /// —recepción, enfermería, el auxiliar que atiende el teléfono— tiene que
+    /// ver los turnos libres para poder darlos, y cerrarle esa consulta dejaría
+    /// el módulo de citas inservible justo en el mostrador. Se cierra escribir,
+    /// no mirar.
+    GestionarAgenda,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
@@ -205,6 +219,7 @@ impl Capacidad {
         Capacidad::EscribirImagenologia,
         Capacidad::GestionarFarmacia,
         Capacidad::GestionarAmbulancias,
+        Capacidad::GestionarAgenda,
         Capacidad::GestionarUsuarios,
         Capacidad::GestionarInstituciones,
     ];
@@ -239,6 +254,7 @@ impl Capacidad {
             Capacidad::EscribirImagenologia => "escribir_imagenologia",
             Capacidad::GestionarFarmacia => "gestionar_farmacia",
             Capacidad::GestionarAmbulancias => "gestionar_ambulancias",
+            Capacidad::GestionarAgenda => "gestionar_agenda",
             Capacidad::GestionarUsuarios => "gestionar_usuarios",
             Capacidad::GestionarInstituciones => "gestionar_instituciones",
         }
@@ -344,6 +360,10 @@ impl RolUsuario {
                 self,
                 Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
             ),
+            // Gestión y el propio profesional. Enfermería y auxiliar quedan
+            // fuera del DEFECTO —no del sistema—: la IPS que quiera que su
+            // auxiliar arme las agendas se lo concede en su matriz.
+            GestionarAgenda => matches!(self, Superadmin | Admin | Medico),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),
             GestionarInstituciones => matches!(self, Superadmin),
@@ -445,11 +465,12 @@ mod pruebas {
                 | Capacidad::EscribirImagenologia
                 | Capacidad::GestionarFarmacia
                 | Capacidad::GestionarAmbulancias
+                | Capacidad::GestionarAgenda
                 | Capacidad::GestionarUsuarios
                 | Capacidad::GestionarInstituciones => (),
             };
         }
-        assert_eq!(Capacidad::TODAS.len(), 14, "¿se añadió una capacidad?");
+        assert_eq!(Capacidad::TODAS.len(), 15, "¿se añadió una capacidad?");
         let unicas: std::collections::HashSet<_> = Capacidad::TODAS.iter().collect();
         assert_eq!(unicas.len(), Capacidad::TODAS.len(), "hay una repetida");
     }

@@ -13,11 +13,12 @@ use serde::{Deserialize, Serialize};
 use crate::auth::{
     autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
     EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
-    EscribirRehabilitacion, Estado, Firmar, GestionarAmbulancias, GestionarFarmacia,
-    GestionarRemision, GestionarUsuarios,
+    EscribirRehabilitacion, Estado, Firmar, GestionarAgenda, GestionarAmbulancias,
+    GestionarFarmacia, GestionarRemision, GestionarUsuarios,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
+use medico_datos::agenda::{self, AgendaNueva, BloqueNuevo, BloqueoNuevo};
 use medico_datos::ambulancia;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
@@ -247,6 +248,38 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/medicos", get(listar_medicos))
         .route("/api/citas", get(listar_citas).post(crear_cita))
         .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
+        // Agenda (#237). LEER es de cualquiera con sesión: quien agenda desde el
+        // mostrador tiene que ver los turnos libres para poder darlos. ESCRIBIR
+        // —definir las franjas de un profesional, bloquearle un rato— exige
+        // `GestionarAgenda`: a un médico no se le cierra la consulta del jueves
+        // sin que se entere.
+        //
+        // El orden importa: los segmentos literales (`medicos`, `turnos`,
+        // `bloqueos`, `indicadores`) van ANTES que `/api/agenda/{id}`, y
+        // `las_rutas_de_agenda_no_se_pisan` lo comprueba en vez de confiarlo.
+        .route("/api/agenda/medicos", get(agenda_medicos))
+        .route("/api/agenda/turnos", get(agenda_turnos))
+        .route("/api/agenda/indicadores", get(agenda_indicadores))
+        .route(
+            "/api/agenda/bloqueos",
+            get(agenda_listar_bloqueos).post(agenda_crear_bloqueo),
+        )
+        .route(
+            "/api/agenda/bloqueos/{id}",
+            axum::routing::delete(agenda_borrar_bloqueo),
+        )
+        .route("/api/agenda", get(agenda_listar).post(agenda_crear))
+        .route(
+            "/api/agenda/{id}",
+            get(agenda_obtener)
+                .put(agenda_actualizar)
+                .delete(agenda_borrar),
+        )
+        .route("/api/agenda/{id}/bloques", post(agenda_anadir_bloque))
+        .route(
+            "/api/agenda/{id}/bloques/{bloque_id}",
+            put(agenda_activar_bloque).delete(agenda_borrar_bloque),
+        )
         // Farmacia. Leer no exige capacidad; escribir sí (`GestionarFarmacia`).
         .route("/api/farmacia/stats", get(farm_stats))
         .route("/api/farmacia/inventario", get(farm_listar).post(farm_crear))
@@ -2079,6 +2112,245 @@ async fn crear_cita(
     }
 }
 
+// ─── Agenda (#237) ──────────────────────────────────────────────────────────
+//
+// Sin esto, «Agenda Médica» del menú no cargaba nada contra el binario y
+// `getSlots()` de `cita.service.ts` devolvía `of([])`: la hora de la cita se
+// tecleaba a mano, sin que nada comprobara que el profesional atiende ese día ni
+// que la hora estuviera libre.
+
+/// Los profesionales a los que se puede agendar. Cualquiera con sesión: es la
+/// lista del desplegable de «agendar cita».
+async fn agenda_medicos(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match agenda::medicos(&e.pool, u.ambito()).await {
+        Ok(ms) => Json(ms).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroTurnos {
+    medico_id: i64,
+    fecha: String,
+}
+
+/// Los turnos de un profesional un día. Lista vacía = **no atiende ese día**,
+/// que no es lo mismo que «está lleno»; el cliente lo distingue porque en el
+/// segundo caso vienen turnos con `disponible: false` y su motivo.
+async fn agenda_turnos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroTurnos>,
+) -> Response {
+    match agenda::turnos(&e.pool, u.ambito(), f.medico_id, &f.fecha).await {
+        Ok(ts) => Json(ts).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroIndicadores {
+    medico_id: Option<i64>,
+    desde: Option<String>,
+    hasta: Option<String>,
+}
+
+/// Indicadores del periodo. Sin fechas, el mes en curso hasta hoy.
+async fn agenda_indicadores(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroIndicadores>,
+) -> Response {
+    let hoy = chrono::Local::now().date_naive();
+    let desde = f.desde.unwrap_or_else(|| hoy.format("%Y-%m-01").to_string());
+    let hasta = f.hasta.unwrap_or_else(|| hoy.to_string());
+    match agenda::indicadores(&e.pool, u.ambito(), f.medico_id, &desde, &hasta).await {
+        Ok(i) => Json(i).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroAgendas {
+    medico_id: Option<i64>,
+    anio: Option<i64>,
+    mes: Option<i64>,
+}
+
+async fn agenda_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroAgendas>,
+) -> Response {
+    match agenda::listar(&e.pool, u.ambito(), f.medico_id, f.anio, f.mes).await {
+        Ok(a) => Json(a).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn agenda_obtener(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    match agenda::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(a)) => Json(a).into_response(),
+        // 404 y no 403: un 403 confirmaría que el id existe en otra institución.
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn agenda_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Json(nueva): Json<AgendaNueva>,
+) -> Response {
+    let u = autorizado.0;
+    match agenda::crear(&e.pool, u.ambito(), u.id, &nueva).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        // Médico ajeno, mes repetido, u hora ilegible. No se distinguen: las tres
+        // son «esta agenda no se puede crear» y separarlas diría qué ids existen.
+        Ok(None) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct AgendaEdicion {
+    activa: Option<bool>,
+    observaciones: Option<String>,
+}
+
+async fn agenda_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Path(id): Path<i64>,
+    Json(req): Json<AgendaEdicion>,
+) -> StatusCode {
+    match agenda::actualizar(
+        &e.pool,
+        autorizado.0.ambito(),
+        id,
+        req.activa,
+        req.observaciones.as_deref(),
+    )
+    .await
+    {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn agenda_borrar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match agenda::borrar(&e.pool, autorizado.0.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn agenda_anadir_bloque(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Path(id): Path<i64>,
+    Json(b): Json<BloqueNuevo>,
+) -> Response {
+    match agenda::anadir_bloque(&e.pool, autorizado.0.ambito(), id, &b).await {
+        Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(None) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct BloqueEdicion {
+    activo: bool,
+}
+
+async fn agenda_activar_bloque(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Path((id, bloque_id)): Path<(i64, i64)>,
+    Json(req): Json<BloqueEdicion>,
+) -> StatusCode {
+    match agenda::activar_bloque(&e.pool, autorizado.0.ambito(), id, bloque_id, req.activo).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn agenda_borrar_bloque(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Path((id, bloque_id)): Path<(i64, i64)>,
+) -> StatusCode {
+    match agenda::borrar_bloque(&e.pool, autorizado.0.ambito(), id, bloque_id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroBloqueos {
+    medico_id: Option<i64>,
+    desde: Option<String>,
+    hasta: Option<String>,
+}
+
+async fn agenda_listar_bloqueos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroBloqueos>,
+) -> Response {
+    match agenda::listar_bloqueos(
+        &e.pool,
+        u.ambito(),
+        f.medico_id,
+        f.desde.as_deref(),
+        f.hasta.as_deref(),
+    )
+    .await
+    {
+        Ok(bs) => Json(bs).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn agenda_crear_bloqueo(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Json(b): Json<BloqueoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match agenda::crear_bloqueo(&e.pool, u.ambito(), u.id, &b).await {
+        // Devuelve además cuántas citas quedan dentro: el bloqueo NO las
+        // cancela, y quien coordina tiene que reasignarlas.
+        Ok(Some(r)) => (StatusCode::CREATED, Json(r)).into_response(),
+        Ok(None) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn agenda_borrar_bloqueo(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAgenda>,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    match agenda::borrar_bloqueo(&e.pool, autorizado.0.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
 #[derive(Deserialize)]
 struct CambioEstado {
     estado: String,
@@ -3258,6 +3530,120 @@ mod pruebas {
             assert_eq!(
                 pedir(&e, "GET", "/api/imagenes/99/archivo", &medico).await,
                 StatusCode::NOT_FOUND
+            );
+        }
+
+        /// `/api/agenda/…` mezcla segmentos literales con `{id}` y NO se pisan.
+        ///
+        /// `medicos`, `turnos`, `indicadores` y `bloqueos` van al lado de
+        /// `/api/agenda/{id}`. Que el literal gane al parámetro es una propiedad
+        /// del enrutador, no una decisión de este código: una versión que la
+        /// cambiara dejaría «Agenda Médica» buscando un médico con id `medicos`.
+        #[tokio::test]
+        async fn las_rutas_de_agenda_no_se_pisan() {
+            let e = con_tres_roles().await;
+            let medico = cookie_de(2);
+            assert_eq!(pedir(&e, "GET", "/api/agenda/medicos", &medico).await, StatusCode::OK);
+            assert_eq!(
+                pedir(&e, "GET", "/api/agenda/turnos?medico_id=2&fecha=2026-08-03", &medico).await,
+                StatusCode::OK
+            );
+            assert_eq!(pedir(&e, "GET", "/api/agenda/indicadores", &medico).await, StatusCode::OK);
+            assert_eq!(pedir(&e, "GET", "/api/agenda/bloqueos", &medico).await, StatusCode::OK);
+            assert_eq!(pedir(&e, "GET", "/api/agenda", &medico).await, StatusCode::OK);
+            // La agenda por id sigue siendo una ruta viva (404 porque no hay
+            // agenda 99, no porque se haya perdido).
+            assert_eq!(pedir(&e, "GET", "/api/agenda/99", &medico).await, StatusCode::NOT_FOUND);
+        }
+
+        /// El control es el cableado: definir la agenda exige `GestionarAgenda`,
+        /// y **mirarla no**.
+        ///
+        /// Las dos mitades importan. Si solo se probara el 403, una regla que
+        /// cerrara TODO pasaría igual — y dejaría a la recepcionista sin poder
+        /// ver los turnos libres, que es el mismo fallo con el signo cambiado.
+        #[tokio::test]
+        async fn la_agenda_la_define_quien_debe_y_la_mira_cualquiera() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+            let medico = cookie_de(2);
+            let nueva = r#"{"medico_id":2,"anio":2026,"mes":8,
+                "bloques":[{"dia_semana":0,"hora_inicio":"08:00","hora_fin":"12:00"}]}"#;
+
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/agenda", &lab, nueva).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista definió la agenda de un médico"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/agenda", &medico, nueva).await,
+                StatusCode::CREATED
+            );
+            // Y el laboratorista SÍ puede consultarla: agendar una cita es
+            // trabajo de mostrador, no una decisión clínica.
+            assert_eq!(
+                pedir(&e, "GET", "/api/agenda/turnos?medico_id=2&fecha=2026-08-03", &lab).await,
+                StatusCode::OK
+            );
+            assert_eq!(pedir(&e, "GET", "/api/agenda", &lab).await, StatusCode::OK);
+        }
+
+        /// Los turnos salen de la agenda recién creada, y la cita los descuenta.
+        #[tokio::test]
+        async fn los_turnos_reflejan_la_agenda_y_las_citas() {
+            let e = con_tres_roles().await;
+            let medico = cookie_de(2);
+            let nueva = r#"{"medico_id":2,"anio":2026,"mes":8,
+                "bloques":[{"dia_semana":0,"hora_inicio":"08:00","hora_fin":"10:00",
+                            "duracion_slot_min":30}]}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/agenda", &medico, nueva).await,
+                StatusCode::CREATED
+            );
+
+            let turnos = |cookie: String| {
+                let e = e.clone();
+                async move {
+                    let r = router(e)
+                        .oneshot(
+                            Request::builder()
+                                .method("GET")
+                                .uri("/api/agenda/turnos?medico_id=2&fecha=2026-08-03")
+                                .header(header::COOKIE, cookie)
+                                .body(Body::empty())
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+                    let cuerpo = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+                    serde_json::from_slice::<serde_json::Value>(&cuerpo).unwrap()
+                }
+            };
+
+            let antes = turnos(medico.clone()).await;
+            assert_eq!(antes.as_array().unwrap().len(), 4);
+            assert!(antes.as_array().unwrap().iter().all(|t| t["disponible"] == true));
+
+            // Una cita de 45 minutos a las 08:30 tapa DOS turnos: el suyo y el de
+            // las 09:00, que todavía está ocurriendo.
+            let cita = r#"{"paciente_id":1,"fecha":"2026-08-03","hora":"08:30",
+                "medico_id":2,"tipo":"CONTROL","duracion_minutos":45}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/citas", &medico, cita).await,
+                StatusCode::CREATED
+            );
+            let despues = turnos(medico).await;
+            let libres: Vec<&str> = despues
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|t| t["disponible"] == true)
+                .map(|t| t["hora"].as_str().unwrap())
+                .collect();
+            assert_eq!(
+                libres,
+                ["08:00", "09:30"],
+                "una cita de 45 minutos dejó libre un turno que ya estaba ocupado"
             );
         }
 

@@ -84,7 +84,9 @@ import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from
         <td>{{ c.hora }}</td>
         <td>{{ c.paciente_nombre || c.paciente_id }}</td>
         <td>{{ c.medico_nombre || c.medico_id }}</td>
-        <td>{{ c.tipo }}</td>
+        <!-- «—» y no una celda vacía: la cita anterior a la migración 0035 no
+             trae tipo, y un hueco se lee como un fallo de la pantalla. -->
+        <td>{{ c.tipo || '—' }}</td>
         <td>{{ c.motivo }}</td>
         <td>
           <p-tag [value]="c.estado" [severity]="estadoSeverity(c.estado)" />

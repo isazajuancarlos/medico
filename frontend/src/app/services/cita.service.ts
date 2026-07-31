@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, of } from 'rxjs';
-import { Appointment, AppointmentCreate, EstadoCita, SlotDisponible, MedicoDisponible } from '../models/appointment.models';
+import { Observable, map } from 'rxjs';
+import { Appointment, AppointmentCreate, EstadoCita, SlotDisponible, MedicoDisponible, TipoCita, TipoCitaApi } from '../models/appointment.models';
 import { PaginatedResponse } from '../models/common.models';
 
 /** La cita como la devuelve el `medico-api` (Rust), con nombres resueltos. */
@@ -15,6 +15,11 @@ interface CitaRust {
   hora: string;
   estado: string;
   motivo: string | null;
+  /** null = no se registró. NO es 'Primera Vez'. */
+  tipo: TipoCitaApi | null;
+  /** null = no se registró. NO son 30 minutos. */
+  duracion_minutos: number | null;
+  solicitada_en: string | null;
   institucion_id: number;
 }
 
@@ -25,11 +30,24 @@ const A_ANGULAR: Record<string, EstadoCita> = {
   NO_ASISTIO: 'No Asistió',
 };
 
+/** El tipo se traduce en las dos direcciones: la columna guarda el vocabulario
+ *  de la base y la pantalla enseña el del usuario. Guardar el texto de la
+ *  interfaz en la columna es lo que dejó muerta la pantalla de laboratorio. */
+const TIPO_A_ANGULAR: Record<TipoCitaApi, TipoCita> = {
+  PRIMERA_VEZ: 'Primera Vez',
+  CONTROL: 'Control / Revisión',
+  URGENCIA: 'Urgencia',
+};
+
+const TIPO_A_API: Record<TipoCita, TipoCitaApi> = {
+  'Primera Vez': 'PRIMERA_VEZ',
+  'Control / Revisión': 'CONTROL',
+  Urgencia: 'URGENCIA',
+};
+
 /**
- * Citas contra el `medico-api`. Las CITAS ya están portadas (listar, agendar con
- * alta manual, cambiar estado). La AGENDA (slots, bloques, bloqueos, indicadores)
- * es un subsistema aún no portado: esos métodos siguen apuntando al backend
- * anterior y la página de agenda seguirá contra él hasta que se porte.
+ * Citas y agenda contra el `medico-api`. Los dos subsistemas están portados
+ * (#237): turnos, agendas mensuales, bloques, bloqueos e indicadores.
  */
 @Injectable({ providedIn: 'root' })
 export class CitaService {
@@ -44,11 +62,13 @@ export class CitaService {
       medico_id: c.medico_id ?? 0,
       fecha: c.fecha,
       hora: c.hora,
-      // El Rust no guarda tipo ni duración todavía; son valores de presentación.
-      tipo: 'Primera Vez',
+      // Sin dato registrado se deja VACÍO. Antes iba 'Primera Vez' fijo, que en
+      // la pantalla no se distinguía de algo que alguien hubiera escrito.
+      tipo: c.tipo ? TIPO_A_ANGULAR[c.tipo] : undefined,
       estado: A_ANGULAR[c.estado] ?? 'Pendiente',
       motivo: c.motivo ?? undefined,
-      duracion_minutos: 30,
+      duracion_minutos: c.duracion_minutos ?? undefined,
+      solicitada_en: c.solicitada_en ?? undefined,
       paciente_nombre: c.paciente_nombre,
       medico_nombre: c.medico_nombre ?? undefined,
     };
@@ -82,6 +102,11 @@ export class CitaService {
       fecha: data.fecha,
       hora: data.hora,
       motivo: data.motivo ?? null,
+      tipo: TIPO_A_API[data.tipo],
+      duracion_minutos: data.duracion_minutos,
+      // Si el mostrador no la captura, la cita simplemente no cuenta para el
+      // indicador de oportunidad — y el indicador dice cuántas quedaron fuera.
+      solicitada_en: data.solicitada_en ?? null,
     };
     return this.http.post<{ id: number }>(this.API, cuerpo).pipe(
       map((r) => ({
@@ -102,29 +127,34 @@ export class CitaService {
     return this.http.put(`${this.API}/${id}/estado`, { estado: 'ATENDIDA' });
   }
 
+  /** Los profesionales a los que se puede agendar. Sale de `/api/agenda/medicos`,
+   *  que filtra por los roles que ATIENDEN — al laboratorista no se le agenda una
+   *  cita, se le manda una orden. */
   getMedicos(): Observable<MedicoDisponible[]> {
-    return this.http.get<{ id: number; nombre: string }[]>('/api/medicos').pipe(
-      map((ms) => ms.map((m) => ({ id: m.id, nombre: m.nombre, rol: 'medico' }))),
-    );
+    return this.http.get<MedicoDisponible[]>(`${this.AGENDA_API}/medicos`);
   }
 
-  // --- Agenda: subsistema aún no portado; sigue contra el backend anterior. ---
+  // --- Agenda (#237) ---------------------------------------------------------
 
-  getSlots(_medicoId: number, _fecha: string): Observable<SlotDisponible[]> {
-    // El alta de citas es manual mientras la agenda no esté portada.
-    return of([]);
+  getSlots(medicoId: number, fecha: string): Observable<SlotDisponible[]> {
+    const params = new HttpParams().set('medico_id', medicoId).set('fecha', fecha);
+    return this.http.get<SlotDisponible[]>(`${this.AGENDA_API}/turnos`, { params });
   }
 
-  getAgendas(medicoId?: number, año?: number, mes?: number): Observable<any[]> {
+  getAgendas(medicoId?: number, anio?: number, mes?: number): Observable<any[]> {
     let params = new HttpParams();
     if (medicoId) params = params.set('medico_id', medicoId);
-    if (año) params = params.set('año', año);
+    if (anio) params = params.set('anio', anio);
     if (mes) params = params.set('mes', mes);
-    return this.http.get<any[]>(`${this.AGENDA_API}/`, { params });
+    return this.http.get<any[]>(this.AGENDA_API, { params });
+  }
+
+  getAgenda(id: number): Observable<any> {
+    return this.http.get<any>(`${this.AGENDA_API}/${id}`);
   }
 
   createAgenda(data: any): Observable<any> {
-    return this.http.post<any>(`${this.AGENDA_API}/`, data);
+    return this.http.post<any>(this.AGENDA_API, data);
   }
 
   updateAgenda(id: number, data: any): Observable<any> {
@@ -148,11 +178,11 @@ export class CitaService {
     if (medicoId) params = params.set('medico_id', medicoId);
     if (desde) params = params.set('desde', desde);
     if (hasta) params = params.set('hasta', hasta);
-    return this.http.get<any[]>(`${this.AGENDA_API}/bloqueos/lista`, { params });
+    return this.http.get<any[]>(`${this.AGENDA_API}/bloqueos`, { params });
   }
 
   createBloqueo(data: any): Observable<any> {
-    return this.http.post<any>(`${this.AGENDA_API}/bloqueos/crear`, data);
+    return this.http.post<any>(`${this.AGENDA_API}/bloqueos`, data);
   }
 
   deleteBloqueo(id: number): Observable<any> {
@@ -164,6 +194,6 @@ export class CitaService {
     if (medicoId) params = params.set('medico_id', medicoId);
     if (desde) params = params.set('desde', desde);
     if (hasta) params = params.set('hasta', hasta);
-    return this.http.get<any>(`${this.AGENDA_API}/indicadores/oportunidad`, { params });
+    return this.http.get<any>(`${this.AGENDA_API}/indicadores`, { params });
   }
 }

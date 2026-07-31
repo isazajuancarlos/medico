@@ -18,7 +18,32 @@ import { MedicoDisponible } from '../../models/appointment.models';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const TIPOS_BLOQUEO = ['Vacaciones','Capacitación','Incapacidad','Reunión','Día Libre','Otro'];
+/** El tipo de bloqueo se traduce en las dos direcciones, igual que el estado y
+ *  el tipo de la cita: la columna guarda el vocabulario de la base y la pantalla
+ *  enseña el del usuario. Guardar «Día Libre» con tilde y espacio en una columna
+ *  es lo que dejó muerta la pantalla de laboratorio (ver la migración 0027). */
+const TIPOS_BLOQUEO: Record<string, string> = {
+  Vacaciones: 'VACACIONES',
+  'Capacitación': 'CAPACITACION',
+  Incapacidad: 'INCAPACIDAD',
+  'Reunión': 'REUNION',
+  'Día Libre': 'DIA_LIBRE',
+  Otro: 'OTRO',
+};
+
+const TIPO_BLOQUEO_A_PANTALLA: Record<string, string> = Object.fromEntries(
+  Object.entries(TIPOS_BLOQUEO).map(([pantalla, api]) => [api, pantalla]),
+);
+
+/** `Date` → `YYYY-MM-DD HH:MM`, que es lo que guarda la columna. `toISOString()`
+ *  daba `2026-08-10T12:00:00.000Z`: además de otro formato, es UTC, y con eso un
+ *  bloqueo de la tarde en Colombia se guardaba al día siguiente. */
+function aInstante(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
+         `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 @Component({
   selector: 'app-agenda-medica',
@@ -136,9 +161,9 @@ const TIPOS_BLOQUEO = ['Vacaciones','Capacitación','Incapacidad','Reunión','D�
           <ng-template pTemplate="body" let-b>
             <tr>
               <td>{{ b.medico_nombre }}</td>
-              <td><p-tag [value]="b.tipo" severity="warn" /></td>
-              <td>{{ b.fecha_inicio | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ b.fecha_fin | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td><p-tag [value]="tipoEnPantalla(b.tipo)" severity="warn" /></td>
+              <td>{{ b.inicio }}</td>
+              <td>{{ b.fin }}</td>
               <td>{{ b.motivo }}</td>
               <td>
                 <p-button icon="pi pi-trash" size="small" severity="danger" [text]="true" (onClick)="deleteBloqueo(b.id)" />
@@ -180,21 +205,55 @@ const TIPOS_BLOQUEO = ['Vacaciones','Capacitación','Incapacidad','Reunión','D�
         @if (indicadores()) {
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
             <div class="kpi-card">
-              <div class="kpi-value">{{ indicadores().total_atendidas }}</div>
+              <div class="kpi-value">{{ indicadores().atendidas }}</div>
               <div class="kpi-label">Citas Atendidas</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-value" style="color:#f59e0b">{{ indicadores().total_canceladas }}</div>
+              <div class="kpi-value" style="color:#f59e0b">{{ indicadores().canceladas }}</div>
               <div class="kpi-label">Canceladas</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-value" style="color:#ef4444">{{ indicadores().total_no_asistio }}</div>
+              <div class="kpi-value" style="color:#ef4444">{{ indicadores().no_asistio }}</div>
               <div class="kpi-label">No Asistieron</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-value">{{ indicadores().total_programadas }}</div>
+              <div class="kpi-value">{{ indicadores().total }}</div>
               <div class="kpi-label">Total Programadas</div>
             </div>
+          </div>
+
+          <!-- LA OPORTUNIDAD, QUE HASTA HOY NO SE CALCULABA.
+               Este panel imprimía las metas de la Resolución 256 al lado de tres
+               indicadores que no son oportunidad, y quien lo leía entendía que su
+               IPS la estaba midiendo. Ya se mide —días entre la solicitud y la
+               cita— y se dice SOBRE CUÁNTAS: sin ninguna medible el número es
+               «sin datos», no un cero, que sería el mejor resultado posible. -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem">
+            <div class="ind-card"
+                 [class.ind-ok]="indicadores().oportunidad_dias_promedio !== null && indicadores().oportunidad_dias_promedio <= indicadores().meta_medicina_general_dias"
+                 [class.ind-warn]="indicadores().oportunidad_dias_promedio !== null && indicadores().oportunidad_dias_promedio > indicadores().meta_medicina_general_dias">
+              <div style="font-size:1.5rem;font-weight:700">
+                {{ indicadores().oportunidad_dias_promedio ?? 'sin datos' }}
+                @if (indicadores().oportunidad_dias_promedio !== null) { <span style="font-size:.9rem"> días</span> }
+              </div>
+              <div style="font-weight:600">Oportunidad promedio</div>
+              <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">
+                Medida sobre {{ indicadores().oportunidad_medidas }} de
+                {{ indicadores().oportunidad_medidas + indicadores().oportunidad_sin_dato }} citas
+                &middot; Meta: ≤ {{ indicadores().meta_medicina_general_dias }} días (general),
+                ≤ {{ indicadores().meta_especialista_dias }} (especialista)
+              </div>
+            </div>
+            @if (indicadores().oportunidad_sin_dato > 0) {
+              <div class="ind-card ind-warn">
+                <div style="font-size:1.5rem;font-weight:700">{{ indicadores().oportunidad_sin_dato }}</div>
+                <div style="font-weight:600">Sin fecha de solicitud</div>
+                <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">
+                  No cuentan para la oportunidad. Registre la fecha en que el
+                  paciente PIDIÓ la cita para que entren.
+                </div>
+              </div>
+            }
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
@@ -211,9 +270,7 @@ const TIPOS_BLOQUEO = ['Vacaciones','Capacitación','Incapacidad','Reunión','D�
           </div>
 
           <div style="margin-top:1rem;padding:.75rem;background:#eff6ff;border-radius:.5rem;font-size:.8rem;color:#1e40af">
-            <strong>Normativa aplicada:</strong> {{ indicadores().normativa }} |
-            Oportunidad med. general: ≤ {{ indicadores().meta_oportunidad_med_general_dias }} días |
-            Especialista: ≤ {{ indicadores().meta_oportunidad_especialista_dias }} días
+            <strong>Normativa aplicada:</strong> {{ indicadores().normativa }}
             (Decreto 780/2016, Ley 1438/2011)
           </div>
         } @else if (!loadingInd()) {
@@ -413,7 +470,7 @@ export class AgendaMedicaComponent implements OnInit {
   anioOpts = [new Date().getFullYear(), new Date().getFullYear() + 1];
   mesOpts = MESES.map((m, i) => ({ label: m, value: i + 1 }));
   diasOpts = DIAS.map((d, i) => ({ label: d, value: i }));
-  tiposBloqueo = TIPOS_BLOQUEO;
+  tiposBloqueo = Object.keys(TIPOS_BLOQUEO);
 
   ngOnInit(): void {
     this.svc.getMedicos().subscribe(m => this.medicos.set(m));
@@ -465,7 +522,12 @@ export class AgendaMedicaComponent implements OnInit {
     });
   }
 
-  getAnio(a: any): number { return a['año']; }
+  /** El binario manda `anio`, sin eñe: una columna con tilde en SQLite es una
+   *  fuente de líos de codificación y el Python la tenía por descuido, no por
+   *  decisión. El acceso por corchetes era el rodeo que hacía falta con `año`. */
+  getAnio(a: any): number { return a.anio; }
+
+  tipoEnPantalla(t: string): string { return TIPO_BLOQUEO_A_PANTALLA[t] ?? t; }
 
   openNewAgenda(): void {
     this.editingAgenda = null;
@@ -483,7 +545,7 @@ export class AgendaMedicaComponent implements OnInit {
     this.editingAgenda = agenda;
     this.agendaForm = {
       medico_id: agenda.medico_id,
-      anio: agenda['año'],
+      anio: agenda.anio,
       mes: agenda.mes,
       observaciones: agenda.observaciones ?? '',
       bloques: agenda.bloques.map((b: any) => ({
@@ -519,8 +581,7 @@ export class AgendaMedicaComponent implements OnInit {
         error: () => this.savingAgenda.set(false),
       });
     } else {
-      const payload = { ...this.agendaForm, año: this.agendaForm.anio };
-      this.svc.createAgenda(payload).subscribe({
+      this.svc.createAgenda(this.agendaForm).subscribe({
         next: () => {
           this.savingAgenda.set(false);
           this.showAgendaDialog = false;
@@ -553,17 +614,26 @@ export class AgendaMedicaComponent implements OnInit {
   saveBloqueo(): void {
     this.savingBloqueo.set(true);
     const payload = {
-      ...this.bloqueoForm,
-      fecha_inicio: this.bloqueoForm.fecha_inicio?.toISOString(),
-      fecha_fin: this.bloqueoForm.fecha_fin?.toISOString(),
+      medico_id: this.bloqueoForm.medico_id,
+      motivo: this.bloqueoForm.motivo,
+      tipo: TIPOS_BLOQUEO[this.bloqueoForm.tipo] ?? 'OTRO',
+      inicio: aInstante(this.bloqueoForm.fecha_inicio),
+      fin: aInstante(this.bloqueoForm.fecha_fin),
     };
     this.svc.createBloqueo(payload).subscribe({
       next: (r) => {
         this.savingBloqueo.set(false);
         this.showBloqueoDialog = false;
-        let detail = 'Bloqueo registrado';
-        if (r.advertencia) detail = r.advertencia;
-        this.msg.add({ severity: r.citas_conflicto > 0 ? 'warn' : 'success', summary: 'Bloqueo creado', detail });
+        // El bloqueo NO cancela las citas que quedan dentro: si las hay, hay que
+        // reasignarlas a mano, y por eso el aviso es `warn` y no `success`.
+        const enConflicto = r.citas_en_conflicto ?? 0;
+        this.msg.add({
+          severity: enConflicto > 0 ? 'warn' : 'success',
+          summary: 'Bloqueo creado',
+          detail: enConflicto > 0
+            ? `Hay ${enConflicto} cita(s) en ese período que requieren reasignación`
+            : 'Bloqueo registrado',
+        });
         this.loadBloqueos();
       },
       error: () => this.savingBloqueo.set(false),
