@@ -12,10 +12,10 @@ export interface PacienteInfo {
   edad: number;
   celular?: string;
   entidad_nombre?: string;
-  ant_familiares_struct?: Record<string, any>;
-  ant_personales_struct?: Record<string, any>;
-  ant_ginecologicos_struct?: Record<string, any>;
-  ant_obstetricos_struct?: Record<string, any>;
+  ant_familiares?: Record<string, any>;
+  ant_personales?: Record<string, any>;
+  ant_ginecologicos?: Record<string, any>;
+  ant_obstetricos?: Record<string, any>;
 }
 
 export interface MedicoInfo {
@@ -78,10 +78,10 @@ export interface PacienteContexto {
 }
 
 export interface AntecedentesUpdate {
-  ant_familiares_struct?: Record<string, any>;
-  ant_personales_struct?: Record<string, any>;
-  ant_ginecologicos_struct?: Record<string, any>;
-  ant_obstetricos_struct?: Record<string, any>;
+  ant_familiares?: Record<string, any>;
+  ant_personales?: Record<string, any>;
+  ant_ginecologicos?: Record<string, any>;
+  ant_obstetricos?: Record<string, any>;
 }
 
 export interface MedicamentoInfo {
@@ -101,9 +101,15 @@ export interface Formula {
   dosis: string;
   cantidad: number;
   unidad?: string;
+  dias_tratamiento?: number;
   observaciones?: string;
   fecha_formula: string;
   dispensada: boolean;
+}
+
+export interface UnidadDispensacion {
+  codigo: number;
+  nombre: string;
 }
 
 export interface FormulaCreate {
@@ -112,6 +118,8 @@ export interface FormulaCreate {
   dosis: string;
   cantidad: number;
   unidad?: string;
+  /** Campo M15 del RIPS: el MUV exige que sea mayor que cero. */
+  dias_tratamiento?: number;
   observaciones?: string;
 }
 
@@ -151,6 +159,8 @@ export interface ImagenDiagnostica {
   historia_id: number;
   ruta_archivo: string;
   nombre_original: string;
+  tipo_mime: string;
+  tamano_bytes: number;
   descripcion: string;
   fecha_subida: string;
 }
@@ -183,7 +193,7 @@ export class HistoriaService {
   }
 
   listByPaciente(pacienteId: number): Observable<Historia[]> {
-    return this.http.get<Historia[]>(`${this.API}/paciente/${pacienteId}`);
+    return this.http.get<Historia[]>(`${this.PACIENTES_API}/${pacienteId}/historias`);
   }
 
   delete(id: number): Observable<void> {
@@ -194,9 +204,9 @@ export class HistoriaService {
     return this.http.put(`${this.PACIENTES_API}/${pacienteId}/antecedentes`, data);
   }
 
-  // ── Medicamentos ────────────────────────────────────────────────
+  // ── Medicamentos (catálogo CUM, compartido) ─────────────────────
   buscarMedicamentos(q: string): Observable<MedicamentoInfo[]> {
-    return this.http.get<MedicamentoInfo[]>(`${this.API}/medicamentos/buscar`, { params: { q } });
+    return this.http.get<MedicamentoInfo[]>(`/api/medicamentos/buscar`, { params: { q } });
   }
 
   // ── Fórmulas médicas ────────────────────────────────────────────
@@ -204,21 +214,30 @@ export class HistoriaService {
     return this.http.get<Formula[]>(`${this.API}/${historiaId}/formulas`);
   }
 
+  /** Las presentaciones que el RIPS sabe traducir a su código M13.
+   *  Se piden al backend y no se copian aquí: una lista en dos sitios se
+   *  desincroniza, y de ese código dependen el valor unitario y la cantidad. */
+  getUnidadesDispensacion(): Observable<UnidadDispensacion[]> {
+    return this.http.get<UnidadDispensacion[]>(`/api/unidades-dispensacion`);
+  }
+
   createFormula(historiaId: number, data: FormulaCreate): Observable<Formula> {
     return this.http.post<Formula>(`${this.API}/${historiaId}/formulas`, data);
   }
 
-  updateFormula(historiaId: number, formulaId: number, data: FormulaUpdate): Observable<Formula> {
-    return this.http.put<Formula>(`${this.API}/${historiaId}/formulas/${formulaId}`, data);
+  // Las fórmulas se editan y borran por su propio id: la historia se comprueba
+  // en el backend siguiendo la cadena historia→paciente, no por la URL.
+  updateFormula(_historiaId: number, formulaId: number, data: FormulaUpdate): Observable<void> {
+    return this.http.put<void>(`/api/formulas/${formulaId}`, data);
   }
 
-  deleteFormula(historiaId: number, formulaId: number): Observable<void> {
-    return this.http.delete<void>(`${this.API}/${historiaId}/formulas/${formulaId}`);
+  deleteFormula(_historiaId: number, formulaId: number): Observable<void> {
+    return this.http.delete<void>(`/api/formulas/${formulaId}`);
   }
 
-  // ── Especialidades ───────────────────────────────────────────────
+  // ── Especialidades (catálogo compartido) ─────────────────────────
   listEspecialidades(): Observable<EspecialidadInfo[]> {
-    return this.http.get<EspecialidadInfo[]>(`${this.API}/especialidades`);
+    return this.http.get<EspecialidadInfo[]>(`/api/especialidades`);
   }
 
   // ── Órdenes médicas ──────────────────────────────────────────────
@@ -230,27 +249,31 @@ export class HistoriaService {
     return this.http.post<Orden>(`${this.API}/${historiaId}/ordenes`, data);
   }
 
-  updateOrden(historiaId: number, ordenId: number, data: Partial<OrdenCreate & { estado: string }>): Observable<Orden> {
-    return this.http.put<Orden>(`${this.API}/${historiaId}/ordenes/${ordenId}`, data);
+  deleteOrden(_historiaId: number, ordenId: number): Observable<void> {
+    return this.http.delete<void>(`/api/ordenes/${ordenId}`);
   }
 
-  deleteOrden(historiaId: number, ordenId: number): Observable<void> {
-    return this.http.delete<void>(`${this.API}/${historiaId}/ordenes/${ordenId}`);
-  }
-
-  // ── Imágenes diagnósticas ────────────────────────────────────────
+  // ── Imágenes diagnósticas (adjuntas a la historia) ───────────────
   listImagenes(historiaId: number): Observable<ImagenDiagnostica[]> {
-    return this.http.get<ImagenDiagnostica[]>(`${this.API}/${historiaId}/imagenes-diagnosticas`);
+    return this.http.get<ImagenDiagnostica[]>(`${this.API}/${historiaId}/imagenes`);
   }
 
-  uploadImagen(historiaId: number, file: File, descripcion: string): Observable<ImagenDiagnostica> {
+  /** Sube un archivo. El backend mide el mime y el tamaño sobre los bytes; el
+   *  campo debe llamarse `archivo`. Devuelve solo el id creado. */
+  uploadImagen(historiaId: number, file: File, descripcion: string): Observable<{ id: number }> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('archivo', file);
     formData.append('descripcion', descripcion);
-    return this.http.post<ImagenDiagnostica>(`${this.API}/${historiaId}/imagenes`, formData);
+    return this.http.post<{ id: number }>(`${this.API}/${historiaId}/imagenes`, formData);
   }
 
-  deleteImagen(historiaId: number, imagenId: number): Observable<void> {
-    return this.http.delete<void>(`${this.API}/${historiaId}/imagenes-diagnosticas/${imagenId}`);
+  /** URL para mostrar o descargar el archivo. Va en el `src` de un <img> o de
+   *  un enlace; el navegador manda la cookie de sesión con la petición. */
+  urlArchivo(imagenId: number): string {
+    return `/api/imagenes/${imagenId}/archivo`;
+  }
+
+  deleteImagen(imagenId: number): Observable<void> {
+    return this.http.delete<void>(`/api/imagenes/${imagenId}`);
   }
 }

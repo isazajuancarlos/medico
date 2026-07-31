@@ -87,6 +87,12 @@ export const routes: Routes = [
       { path: 'remisiones', loadComponent: () => import('./pages/remisiones/remisiones.component').then(m => m.RemisionesComponent), canActivate: [moduloGuard('REMISIONES')] },
       { path: 'laboratorio', loadComponent: () => import('./pages/laboratorio/laboratorio.component').then(m => m.LaboratorioComponent), canActivate: [moduloGuard('LABORATORIO')] },
       { path: 'imagenes', loadComponent: () => import('./pages/imagenes/imagenes.component').then(m => m.ImagenesComponent), canActivate: [moduloGuard('IMAGENES')] },
+      // Sin `moduloGuard`: AMBULANCIAS todavía no está en el catálogo de módulos
+      // —que hoy solo sirve el backend Python— y ponerle un guardián de un módulo
+      // inexistente lo haría invisible sin decir por qué. Cuando el catálogo se
+      // porte, esta ruta lo lleva como las demás.
+      { path: 'ambulancias', loadComponent: () => import('./pages/ambulancias/ambulancias.component').then(m => m.AmbulanciasComponent),
+        canActivate: [roleGuard], data: { roles: ['admin', 'superadmin', 'medico', 'enfermeria', 'auxiliar_enfermeria'] } },
       { path: 'banco-sangre', loadComponent: () => import('./pages/placeholder/placeholder.component').then(m => m.PlaceholderComponent), data: { title: 'Banco de Sangre' } },
       { path: 'quirofano', loadComponent: () => import('./pages/quirofano/quirofano.component').then(m => m.QuirofanoComponent), canActivate: [moduloGuard('QUIROFANO')] },
       { path: 'nota-operatoria', loadComponent: () => import('./pages/nota-operatoria/nota-operatoria.component').then(m => m.NotaOperatoriaComponent), canActivate: [moduloGuard('NOTA_OPERATORIA')] },

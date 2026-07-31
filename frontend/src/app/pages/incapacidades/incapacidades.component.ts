@@ -196,7 +196,7 @@ export class IncapacidadesComponent implements OnInit {
   cargar(): void {
     this.cargando.set(true);
     const params = this.parametros();
-    this.http.get<Incapacidad[]>('/api/incapacidades/', { params }).subscribe({
+    this.http.get<Incapacidad[]>('/api/incapacidades', { params }).subscribe({
       next: (r) => { this.filas.set(r); this.cargando.set(false); },
       error: () => { this.filas.set([]); this.cargando.set(false); },
     });

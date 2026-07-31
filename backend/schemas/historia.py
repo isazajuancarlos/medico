@@ -224,7 +224,17 @@ class FormulaCreate(BaseModel):
     codigo_cum: Optional[str] = None
     dosis: str
     cantidad: int
-    unidad: Optional[str] = "unidad"
+    #: Presentación en que se dispensa. El RIPS la pide como código numérico
+    #: (campo M13) y `GET /historias/unidades-dispensacion` sirve las que hoy
+    #: se saben traducir.
+    #:
+    #: Antes traía `"unidad"` por defecto. Eso no es una presentación: es la
+    #: ausencia de una, disfrazada de dato. Ahora se deja vacío para que la
+    #: falta se vea al cerrar el mes en vez de convertirse en un rechazo.
+    unidad: Optional[str] = None
+    #: Campo M15 del RIPS: el MUV exige que sea mayor que cero. No se deduce de
+    #: `dosis`, que es texto libre —«1 cada 8 horas» no dice cuántos días—.
+    dias_tratamiento: Optional[int] = None
     observaciones: Optional[str] = None
 
 
@@ -234,6 +244,7 @@ class FormulaUpdate(BaseModel):
     dosis: Optional[str] = None
     cantidad: Optional[int] = None
     unidad: Optional[str] = None
+    dias_tratamiento: Optional[int] = None
     observaciones: Optional[str] = None
 
 
@@ -245,6 +256,7 @@ class FormulaRead(BaseModel):
     dosis: str
     cantidad: int
     unidad: Optional[str] = None
+    dias_tratamiento: Optional[int] = None
     observaciones: Optional[str] = None
     fecha_formula: datetime
     dispensada: bool

@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict
 from datetime import date, datetime
+import maestros_muv
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, JSON
 from enum import Enum
@@ -227,6 +228,18 @@ class Usuario(SQLModel, table=True):
     registro_medico: Optional[str] = None  # Número de tarjeta profesional
     registro_rethus: Optional[str] = None  # Registro RETHUS obligatorio
     tarjeta_profesional: Optional[str] = None
+
+    # Documento de identidad DEL PROFESIONAL. Va en los campos P11/P12 de cada
+    # bloque de servicios del RIPS, y no es el del paciente: hasta que se añadió
+    # esto, el generador ponía ahí el del paciente y el MUV rechazaba las
+    # atenciones de menores. Ver TIPOS_DOCUMENTO_PROFESIONAL.
+    #
+    # Opcional en el modelo porque un `Usuario` puede ser recepcionista o
+    # administrador, que nunca aparecen en un RIPS. Quien SÍ aparece y no lo
+    # tenga hace fallar la exportación de forma ruidosa, que es lo correcto: el
+    # valor ausente no se sustituye.
+    tipo_documento: Optional[str] = None
+    numero_documento: Optional[str] = Field(default=None, index=True)
     firma_digital_path: Optional[str] = None  # Path a certificado digital
 
     # Seguridad
@@ -238,18 +251,20 @@ class Usuario(SQLModel, table=True):
 
     paciente_id: Optional[int] = Field(default=None, foreign_key="paciente.id")
 
-TIPOS_DOCUMENTO = {
-    "CC": "Cédula de Ciudadanía",
-    "TI": "Tarjeta de Identidad",
-    "RC": "Registro Civil",
-    "CE": "Cédula de Extranjería",
-    "PA": "Pasaporte",
-    "AS": "Adulto sin identificación",
-    "MS": "Menor sin identificación",
-    "NU": "NUIP",
-    "PE": "Permiso Especial de Permanencia",
-    "PT": "Permiso Temporal de Permanencia",
-}
+#: Tipos de documento, DERIVADOS del maestro del MUV (`REFs_TipoDoc`) y no
+#: escritos a mano. La lista anterior incluía `NU` (NUIP), que el MUV no admite
+#: —un paciente registrado así hacía rechazar la factura—, y le faltaban `CD`,
+#: `SC`, `DE` y, sobre todo, `CN`: certificado de nacido vivo, sin el cual un
+#: recién nacido no se puede registrar. El RIPS tiene un archivo entero para
+#: ellos.
+TIPOS_DOCUMENTO = maestros_muv.tipos_documento_paciente()
+
+#: Los que el MUV admite para quien REALIZA la atención (campos P11/P12).
+#: Ninguno es de menor ni de «sin identificar»: quien atiende es un adulto
+#: identificado. Es la regla que el MUV aplicó al rechazarnos las consultas de
+#: niños, cuando el documento del paciente iba en el campo del médico.
+TIPOS_DOCUMENTO_PROFESIONAL = maestros_muv.tipos_documento_profesional()
+
 
 class Paciente(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -379,7 +394,45 @@ class AutorizacionAcceso(SQLModel, table=True):
     activo: bool = True
     paciente: Paciente = Relationship(back_populates="autorizaciones")
 
-class Historia(SQLModel, table=True):
+class CamposRips(SQLModel):
+    """Lo que el RIPS exige de CUALQUIER servicio prestado.
+
+    Los seis archivos del RIPS —consultas, procedimientos, medicamentos,
+    urgencias, hospitalización— piden el mismo bloque: qué modalidad, qué grupo,
+    cuánto valió y bajo qué concepto se recaudó. Solo `Historia` lo tenía; los
+    demás generadores emitían constantes porque el dato no existía en ninguna
+    parte donde guardarlo, y una constante en el generador es indistinguible de
+    un dato real cuando se mira el archivo.
+
+    Va aquí, en un mixin, y no copiado en cada modelo, para que la lista de lo
+    que el RIPS necesita se declare UNA vez. Si mañana la resolución añade un
+    campo, se añade aquí y aparece en los cinco.
+
+    Todos nacen en `None` a propósito: `None` significa «no se registró» y el
+    generador se niega a inventarlo. Ver `rips_completo._Recolector`.
+    """
+
+    #: 01 intramural, 02 extramural…
+    modalidad_grupo_servicio: Optional[str] = Field(default=None)
+    #: 01 consulta externa, 02 apoyo diagnóstico…
+    grupo_servicios: Optional[str] = Field(default=None)
+    cod_servicio: Optional[int] = Field(default=None)
+    #: 01 ambulatorio, 02 urgencias, 03 hospitalización… Iba quemado en cada
+    #: generador según el archivo, lo que hacía imposible un procedimiento
+    #: ambulatorio dentro de una hospitalización, que es de lo más corriente.
+    via_ingreso_servicio: Optional[str] = Field(default=None)
+    #: 13 enfermedad general, 17 urgencia… El AU lo quemaba en "17" y el AH en
+    #: "13", así que un accidente de trabajo se reportaba como enfermedad.
+    causa_motivo: Optional[str] = Field(default=None)
+    #: El valor de lo prestado. De él depende el pago, e iba QUEMADO EN CERO.
+    #: `0` es un valor legítimo —hay servicios gratuitos—; `None` no lo es.
+    valor_servicio: Optional[int] = Field(default=None)
+    concepto_recaudo: Optional[str] = Field(default=None)
+    valor_pago_moderador: Optional[int] = Field(default=0)
+    num_fev_pago_moderador: Optional[str] = Field(default=None)
+
+
+class Historia(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     fecha: datetime = Field(default_factory=datetime.now)
     codigo_historia: str
@@ -458,13 +511,8 @@ class Historia(SQLModel, table=True):
     # funciona en el consultorio, pero ahora SON DATO: se pueden capturar y
     # `auditoria_rips.py` señala las atenciones que se quedaron con el valor
     # supuesto, en vez de reportarlo en silencio.
-    modalidad_grupo_servicio: Optional[str] = Field(default=None)  # 01 intramural
-    grupo_servicios: Optional[str] = Field(default=None)           # 01 consulta externa
-    cod_servicio: Optional[int] = Field(default=None)
-    valor_servicio: Optional[int] = Field(default=None)
-    concepto_recaudo: Optional[str] = Field(default=None)
-    valor_pago_moderador: Optional[int] = Field(default=0)
-    num_fev_pago_moderador: Optional[str] = Field(default=None)
+    # (Los siete campos que iban aquí viven ahora en `CamposRips`, del que
+    #  hereda esta clase, para no repetirlos en los otros cuatro modelos.)
 
     datos_dinamicos: Dict = Field(default={}, sa_column=Column(JSON))
 
@@ -474,6 +522,15 @@ class Historia(SQLModel, table=True):
     diagnostico_relacionado2: Optional[str] = None
     diagnostico_relacionado3: Optional[str] = None
     impresion_diagnostica: Optional[str] = None  # Texto libre del diagnóstico en anamnesis
+
+    # CIE-11 (Resolución 948 de 2026: periodo paralelo, van los DOS códigos).
+    # Se derivan del CIE-10 cuando la equivalencia es exacta y única; si no, se
+    # proponen y quedan vacíos hasta que alguien confirme. Ver `cie11.py`.
+    diagnostico_principal_cie11: Optional[str] = None
+    #: La FoundationURI de la OMS, que NO cambia entre versiones de la
+    #: clasificación —el código sí—. Sin ella, el registro deja de ser
+    #: interpretable cuando la OMS publique la siguiente revisión.
+    diagnostico_principal_uri: Optional[str] = None
 
     # INCAPACIDAD
 
@@ -501,7 +558,7 @@ class ImagenDiagnostica(SQLModel, table=True):
     descripcion: str
     fecha_subida: datetime = Field(default_factory=datetime.now)
 
-class Formula(SQLModel, table=True):
+class Formula(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     historia_id: int = Field(foreign_key="historia.id")
     historia: Optional["Historia"] = Relationship(back_populates="formulas")
@@ -513,8 +570,20 @@ class Formula(SQLModel, table=True):
     observaciones: Optional[str] = None
     fecha_formula: datetime = Field(default_factory=datetime.now)
     dispensada: bool = Field(default=False)
+    #: 01 medicamento, 02 biológico, 03 magistral, 04 fitoterapéutico. El
+    #: generador lo quemaba en "01" con un `if` que devolvía "01" en las dos
+    #: ramas: parecía clasificar y no clasificaba.
+    tipo_medicamento: Optional[str] = Field(default=None)
+    #: El precio de UNA unidad. `vrServicio` es el de la dispensación completa.
+    valor_unitario: Optional[int] = Field(default=None)
+    #: Días de tratamiento (campo M15 del RIPS). El MUV exige que sea mayor que
+    #: cero. No se deduce de `dosis`, que es texto libre: «1 cada 8 horas» no
+    #: dice cuántos días. Sin él, el archivo de medicamentos no se puede generar
+    #: —y esa es la conducta correcta: un número inventado aquí cambia lo que se
+    #: factura.
+    dias_tratamiento: Optional[int] = Field(default=None)
 
-class Orden(SQLModel, table=True):
+class Orden(CamposRips, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     historia_id: int = Field(foreign_key="historia.id")
     historia: Historia = Relationship(back_populates="ordenes")
@@ -727,7 +796,7 @@ class Epicrisis(SQLModel, table=True):
 # MÓDULO DE URGENCIAS (Obligatorio para IPS con servicio de urgencias)
 # ==============================================================================
 
-class AtencionUrgencias(SQLModel, table=True):
+class AtencionUrgencias(CamposRips, table=True):
     """
     Registro de atención en servicio de urgencias.
     Incluye triage, atención médica y destino de salida.
@@ -749,6 +818,16 @@ class AtencionUrgencias(SQLModel, table=True):
 
     # Atención médica
     medico_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    # La relación faltaba: solo estaba la clave. El RIPS necesita el documento
+    # del profesional que atendió (campos P11/P12), y sin esto no había forma de
+    # llegar a él desde la atención.
+    #
+    # `foreign_keys` es obligatorio: esta tabla apunta DOS veces a `usuario`
+    # —`enfermera_triage_id` y `medico_id`— y sin decir cuál, SQLAlchemy no
+    # puede resolver el join y revienta al mapear, no al consultar.
+    # Quien firma la atención en el RIPS es el médico, no quien hizo el triage.
+    medico: Optional["Usuario"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "AtencionUrgencias.medico_id"})
     hora_atencion_medica: Optional[datetime] = None
 
     # Diagnósticos
@@ -1027,7 +1106,7 @@ class Cama(SQLModel, table=True):
     tiene_monitor: bool = Field(default=False)
     es_aislamiento: bool = Field(default=False)
 
-class Hospitalizacion(SQLModel, table=True):
+class Hospitalizacion(CamposRips, table=True):
     """
     Registro de hospitalización de pacientes.
     """

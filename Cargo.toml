@@ -1,0 +1,40 @@
+[workspace]
+members = ["crates/medico-dominio", "crates/medico-datos", "crates/medico-api"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Juan Carlos Isaza Arenas <isazajuancarlos@gmail.com>"]
+license = "LicenseRef-Propietario"
+repository = "https://github.com/isazajuancarlos/medico"
+# App propietaria: NUNCA se publica en crates.io. Explícito, para que un
+# `cargo publish` accidental falle y para que cargo-deny la trate como privada.
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "migrate",
+    "macros",
+    "chrono",
+    "json",
+] }
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+# Protección con Quipu (cifrado en reposo + firma de registros). Repo público,
+# fijado por tag para builds reproducibles.
+# Fijada por commit inmutable (= tag v0.3.0), no por el tag: un tag es mutable, y
+# mover `v0.3.0` a un commit malicioso nos lo traería al construir (la lección del
+# ataque Atomic Arch a AUR). El Cargo.lock ya lo fijaba, esto lo hace explícito.
+guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "2ffe1346b706f5fbb8f5eaaea1c37375682c807d" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

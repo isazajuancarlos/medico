@@ -185,7 +185,7 @@ export class RemisionesComponent implements OnInit {
     this.cargando.set(true);
     this.error.set(null);
     const params = this.parametros();
-    this.http.get<Remision[]>('/api/remisiones/', { params }).subscribe({
+    this.http.get<Remision[]>('/api/remisiones', { params }).subscribe({
       next: (r) => { this.filas.set(r); this.cargando.set(false); },
       error: () => { this.filas.set([]); this.cargando.set(false); },
     });

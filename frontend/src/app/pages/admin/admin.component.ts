@@ -16,9 +16,10 @@ import { MessageService } from 'primeng/api';
 import {
   AdminService, Institucion, ConfiguracionInstitucion, PoliticaSeguridad,
   UsuarioAdmin, ConfigCampo, AuditoriaItem, Especialidad, EntidadEPS,
+  MatrizCapacidades, FilaCapacidad, CasillaCapacidad, CambioCapacidad,
 } from '../../services/admin.service';
 
-type Tab = 'institucion' | 'configuracion' | 'usuarios' | 'seguridad' | 'campos' | 'auditoria' | 'catalogos';
+type Tab = 'institucion' | 'configuracion' | 'usuarios' | 'seguridad' | 'campos' | 'auditoria' | 'catalogos' | 'capacidades';
 type CatTab = 'especialidades' | 'entidades';
 
 const ROLES = [
@@ -37,6 +38,26 @@ const ROLES = [
   { value: 'bacteriologo', label: 'Bacteriólogo' },
   { value: 'paciente', label: 'Paciente' },
 ];
+
+/// Los nombres de las capacidades para la pantalla. Solo es traducción: la lista
+/// de qué capacidades existen viene del servidor con la matriz, así que una que
+/// falte aquí se pinta con su nombre técnico en vez de desaparecer.
+const CAPACIDADES: Record<string, string> = {
+  firmar_clinico: 'Firmar historia o documento',
+  borrar_clinico: 'Borrar historia o documento',
+  escribir_clinico: 'Escribir historia y recetar',
+  escribir_paciente: 'Registrar paciente y antecedentes',
+  atender_urgencias_hospitalizacion: 'Urgencias y hospitalización',
+  escribir_nutricion: 'Nutrición',
+  escribir_rehabilitacion: 'Rehabilitación',
+  gestionar_remision: 'Remisiones y contrarreferencia',
+  escribir_laboratorio: 'Laboratorio',
+  escribir_imagenologia: 'Imágenes diagnósticas',
+  gestionar_farmacia: 'Farmacia y dispensación',
+  gestionar_ambulancias: 'Ambulancias y traslados',
+  gestionar_usuarios: 'Gestionar usuarios y permisos',
+  gestionar_instituciones: 'Crear instituciones',
+};
 
 const TIPOS_CAMPO = [
   { value: 'Texto', label: 'Texto' },
@@ -624,6 +645,85 @@ const DIAS_SEMANA = [
         }
       }
 
+      <!-- ══════════════════ PERMISOS (capacidad × rol) ══════════════════ -->
+      @if (tab() === 'capacidades') {
+        <div class="form-section">
+          <h3 class="section-title">Quién puede hacer qué, en esta institución</h3>
+          <p class="ayuda">
+            Cada casilla marcada permite esa acción a ese rol. Lo que no se toca sigue
+            el <strong>valor recomendado</strong>, que se mueve solo si el sistema lo
+            actualiza; lo que se aparta queda fijo y se marca en ámbar.
+          </p>
+
+          @if (cargandoCaps()) {
+            <div class="loading-state">Cargando…</div>
+          } @else if (matriz()) {
+            <div class="leyenda">
+              <span class="lg"><span class="pt recomendado"></span> sigue lo recomendado</span>
+              <span class="lg"><span class="pt apartado"></span> apartado por esta institución</span>
+              <span class="lg"><span class="pt bloqueado"></span> no configurable</span>
+            </div>
+
+            <div class="matriz-scroll">
+              <table class="matriz">
+                <thead>
+                  <tr>
+                    <th class="esq">Acción</th>
+                    @for (r of rolesMatriz(); track r) {
+                      <th class="rot"><span>{{ etiquetaRol(r) }}</span></th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (f of matriz()!.capacidades; track f.capacidad) {
+                    <tr [class.fila-bloqueada]="!f.configurable">
+                      <th class="cap">
+                        {{ etiquetaCapacidad(f.capacidad) }}
+                        @if (!f.configurable) {
+                          <i class="pi pi-lock" pTooltip="Se gobierna por encima de la institución"></i>
+                        }
+                      </th>
+                      @for (c of f.roles; track c.rol) {
+                        <td
+                          class="celda"
+                          [class.apartada]="c.apartado"
+                          [class.bloqueada]="!c.configurable"
+                          [pTooltip]="explicar(f, c)">
+                          <input
+                            type="checkbox"
+                            [checked]="c.permitido"
+                            [disabled]="!c.configurable || guardando()"
+                            (change)="marcar(f, c, $event)" />
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="form-actions" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+              <p-button label="Guardar cambios" icon="pi pi-save"
+                [disabled]="pendientes().length === 0" [loading]="guardando()"
+                (onClick)="guardarCapacidades()" />
+              <p-button label="Descartar" [text]="true"
+                [disabled]="pendientes().length === 0 || guardando()"
+                (onClick)="cargarCapacidades()" />
+              @if (seleccionApartada()) {
+                <p-button label="Devolver lo apartado a lo recomendado" [text]="true"
+                  icon="pi pi-undo" severity="secondary" [loading]="guardando()"
+                  (onClick)="devolverTodoAlDefecto()" />
+              }
+              @if (pendientes().length) {
+                <span class="pendientes">{{ pendientes().length }} sin guardar</span>
+              }
+            </div>
+          } @else {
+            <div class="loading-state">No se pudo cargar la matriz.</div>
+          }
+        </div>
+      }
+
     </div>
 
     <!-- ══ DIALOG: Usuario ══ -->
@@ -786,6 +886,37 @@ const DIAS_SEMANA = [
     .dialog-form { margin:.5rem 0 }
     .row-inactivo { opacity:.6 }
     .loading-state { text-align:center; padding:3rem; color:#94a3b8 }
+
+    /* Matriz de permisos (#235) */
+    .ayuda { font-size:.85rem; color:#64748b; margin:.25rem 0 1rem; max-width:60ch; line-height:1.5 }
+    .leyenda { display:flex; gap:1.25rem; flex-wrap:wrap; margin-bottom:.75rem; font-size:.8rem; color:#64748b }
+    .lg { display:flex; align-items:center; gap:.4rem }
+    .pt { width:.8rem; height:.8rem; border-radius:3px; border:1px solid #cbd5e1; display:inline-block }
+    .pt.recomendado { background:white }
+    .pt.apartado { background:#fef3c7; border-color:#f59e0b }
+    .pt.bloqueado { background:#f1f5f9; border-color:#e2e8f0 }
+
+    /* La tabla se desborda a lo ancho con 15 roles: scroll DENTRO de su caja,
+       nunca en la página. */
+    .matriz-scroll { overflow-x:auto; border:1px solid #e2e8f0; border-radius:8px }
+    .matriz { border-collapse:collapse; font-size:.82rem; min-width:100% }
+    .matriz th.esq { text-align:left; padding:.5rem .75rem; background:#f8fafc; position:sticky; left:0; z-index:2 }
+    .matriz th.cap { text-align:left; padding:.45rem .75rem; font-weight:500; color:#334155;
+                     white-space:nowrap; background:white; position:sticky; left:0; z-index:1;
+                     border-right:1px solid #e2e8f0 }
+    .matriz th.cap i { color:#94a3b8; margin-left:.35rem; font-size:.75rem }
+    .matriz th.rot { padding:.5rem .25rem; background:#f8fafc; vertical-align:bottom; height:8.5rem }
+    .matriz th.rot span { writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap;
+                          font-weight:500; color:#475569 }
+    .matriz tbody tr:nth-child(even) th.cap { background:#fcfdfe }
+    .matriz tbody tr:hover th.cap, .matriz tbody tr:hover .celda { background:#f0f9ff }
+    .celda { text-align:center; padding:.3rem; border-left:1px solid #f1f5f9; min-width:2.2rem }
+    .celda.apartada { background:#fef3c7 }
+    .celda.bloqueada { background:#f8fafc }
+    .celda input { cursor:pointer; width:1rem; height:1rem }
+    .celda input:disabled { cursor:not-allowed; opacity:.45 }
+    .fila-bloqueada th.cap { color:#94a3b8 }
+    .pendientes { font-size:.82rem; color:#b45309; font-weight:500 }
   `],
 })
 export class AdminComponent implements OnInit {
@@ -845,6 +976,7 @@ export class AdminComponent implements OnInit {
     { key: 'campos' as Tab, label: 'Campos HC', icon: 'pi pi-list' },
     { key: 'auditoria' as Tab, label: 'Auditoría', icon: 'pi pi-history' },
     { key: 'catalogos' as Tab, label: 'Catálogos', icon: 'pi pi-database' },
+    { key: 'capacidades' as Tab, label: 'Permisos', icon: 'pi pi-key' },
   ];
 
   audPages() { return Math.ceil(this.audTotal() / this.audSize) || 1; }
@@ -863,7 +995,131 @@ export class AdminComponent implements OnInit {
     this.cargarAuditoria();
   }
 
-  setTab(t: Tab): void { this.tab.set(t); }
+  setTab(t: Tab): void {
+    this.tab.set(t);
+    // La matriz se pide al entrar y no en ngOnInit: es la única pestaña cuya
+    // carga cuesta una consulta que la mayoría de las visitas a /admin no usa.
+    if (t === 'capacidades' && !this.matriz()) this.cargarCapacidades();
+  }
+
+  // ── Permisos: matriz capacidad × rol (#235) ───────────────────────────────
+
+  matriz = signal<MatrizCapacidades | null>(null);
+  cargandoCaps = signal(false);
+  /// Los cambios que el administrador ha marcado y aún no ha guardado, indexados
+  /// por `capacidad|rol`. `null` = devolver al defecto.
+  private cambios = signal<Map<string, boolean | null>>(new Map());
+
+  pendientes(): CambioCapacidad[] {
+    return [...this.cambios().entries()].map(([clave, permitido]) => {
+      const [capacidad, rol] = clave.split('|');
+      return { capacidad, rol, permitido };
+    });
+  }
+
+  /// Los roles, en el orden en que los devuelve el servidor. Se toman de la
+  /// primera fila en vez de de la constante ROLES de este archivo: el servidor
+  /// es quien sabe qué roles existen, y una segunda lista aquí se quedaría atrás
+  /// el día que se añada uno.
+  rolesMatriz(): string[] {
+    return this.matriz()?.capacidades[0]?.roles.map(c => c.rol) ?? [];
+  }
+
+  seleccionApartada(): boolean {
+    return (this.matriz()?.capacidades ?? []).some(f => f.roles.some(c => c.apartado));
+  }
+
+  cargarCapacidades(): void {
+    this.cargandoCaps.set(true);
+    this.cambios.set(new Map());
+    this.svc.getCapacidades().subscribe({
+      next: m => { this.matriz.set(m); this.cargandoCaps.set(false); },
+      error: () => { this.cargandoCaps.set(false); this.err('No se pudo cargar la matriz de permisos'); },
+    });
+  }
+
+  /// Marca una casilla en local. No se envía hasta «Guardar cambios» porque el
+  /// servidor valida el LOTE contra el estado resultante: quitarle la gestión de
+  /// usuarios a un rol es válido si el mismo lote se la da a otro, y enviar cada
+  /// casilla por separado haría que el orden de los clics decidiera si el cambio
+  /// pasa.
+  marcar(f: FilaCapacidad, c: CasillaCapacidad, ev: Event): void {
+    const valor = (ev.target as HTMLInputElement).checked;
+    // Optimista sobre la copia local, para que la casilla responda al clic; el
+    // servidor devuelve la matriz real al guardar y esto se sustituye.
+    c.permitido = valor;
+    c.apartado = valor !== c.defecto;
+    const m = new Map(this.cambios());
+    m.set(`${f.capacidad}|${c.rol}`, valor);
+    this.cambios.set(m);
+  }
+
+  guardarCapacidades(): void {
+    const cambios = this.pendientes();
+    if (!cambios.length) return;
+    this.guardando.set(true);
+    this.svc.updateCapacidades(cambios).subscribe({
+      next: m => {
+        this.matriz.set(m);
+        this.cambios.set(new Map());
+        this.guardando.set(false);
+        this.ok('Permisos actualizados');
+      },
+      error: e => {
+        this.guardando.set(false);
+        // El 422 trae el motivo del guardarraíl en texto plano; es el mensaje
+        // que el administrador necesita («dejaría a la institución sin ningún
+        // rol que pueda gestionar usuarios»), así que se muestra tal cual.
+        this.err(typeof e?.error === 'string' ? e.error : (e?.error?.detail ?? 'No se pudo guardar'));
+        // Y se relee, porque no se aplicó nada: dejar la pantalla con las
+        // casillas movidas haría creer que el cambio está puesto.
+        this.cargarCapacidades();
+      },
+    });
+  }
+
+  /// Borra TODAS las excepciones y devuelve la institución al defecto entero.
+  devolverTodoAlDefecto(): void {
+    const cambios: CambioCapacidad[] = [];
+    for (const f of this.matriz()?.capacidades ?? []) {
+      for (const c of f.roles) {
+        if (c.apartado && c.configurable) {
+          cambios.push({ capacidad: f.capacidad, rol: c.rol, permitido: null });
+        }
+      }
+    }
+    if (!cambios.length) return;
+    this.guardando.set(true);
+    this.svc.updateCapacidades(cambios).subscribe({
+      next: m => {
+        this.matriz.set(m);
+        this.cambios.set(new Map());
+        this.guardando.set(false);
+        this.ok('Todo vuelve a lo recomendado');
+      },
+      error: e => {
+        this.guardando.set(false);
+        this.err(typeof e?.error === 'string' ? e.error : 'No se pudo devolver al valor recomendado');
+        this.cargarCapacidades();
+      },
+    });
+  }
+
+  explicar(f: FilaCapacidad, c: CasillaCapacidad): string {
+    if (!f.configurable) return 'Esta acción se gobierna por encima de la institución';
+    if (!c.configurable) return 'Este rol no se configura por institución';
+    const base = c.defecto ? 'recomendado: permitido' : 'recomendado: no permitido';
+    return c.apartado ? `Apartado por esta institución (${base})` : base;
+  }
+
+  etiquetaRol(rol: string): string {
+    return ROLES.find(r => r.value === rol)?.label
+      ?? (rol === 'superadmin' ? 'Superadmin' : rol);
+  }
+
+  etiquetaCapacidad(cap: string): string {
+    return CAPACIDADES[cap] ?? cap;
+  }
 
   // ── Institución ───────────────────────────────────────────────────────────
   private cargarInstitucion() {

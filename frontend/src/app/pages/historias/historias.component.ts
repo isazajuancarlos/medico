@@ -20,11 +20,12 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { TabsModule } from 'primeng/tabs';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
-import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo } from '../../services/historia.service';
+import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo,
+         UnidadDispensacion } from '../../services/historia.service';
 import { PacienteService } from '../../services/paciente.service';
 import { Patient } from '../../models/patient.models';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { Subject } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -700,9 +701,24 @@ function defaultAntPrenatales(): AntPrenatales {
                           <p-inputNumber [(ngModel)]="fForm.cantidad" [min]="1" class="w-full" />
                         </div>
                         <div class="field">
-                          <label>Unidad</label>
-                          <input pInputText [(ngModel)]="fForm.unidad" class="w-full"
-                            placeholder="tabletas, cápsulas, ml, amp..." />
+                          <label>Unidad *</label>
+                          <p-select [(ngModel)]="fForm.unidad" [options]="unidades()"
+                            optionLabel="nombre" optionValue="nombre"
+                            placeholder="Elija la presentación" class="w-full"
+                            appendTo="body" />
+                          <small class="text-color-secondary">
+                            El RIPS la pide como código. Si la presentación no
+                            está en la lista, queda anotada al cerrar el mes.
+                          </small>
+                        </div>
+                        <div class="field">
+                          <label>Días de tratamiento *</label>
+                          <p-inputNumber [(ngModel)]="fForm.dias_tratamiento" [min]="1"
+                            class="w-full" placeholder="Ej: 7" />
+                          <small class="text-color-secondary">
+                            Obligatorio en el RIPS y mayor que cero. No se deduce
+                            de la dosis.
+                          </small>
                         </div>
                         <div class="field" style="grid-column:1/-1">
                           <label>Observaciones</label>
@@ -957,7 +973,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       <ng-template pTemplate="body" let-img>
                         <tr>
                           <td>
-                            <a [href]="img.ruta_archivo" target="_blank" style="color:#818cf8">
+                            <a [href]="urlImagen(img.id)" target="_blank" style="color:#818cf8">
                               <i class="pi pi-file" style="margin-right:0.4rem"></i>{{ img.nombre_original }}
                             </a>
                           </td>
@@ -1193,7 +1209,11 @@ export class HistoriasComponent implements OnInit {
   termMed = '';
   buscandoMed = signal(false);
   resultadosMed = signal<MedicamentoInfo[]>([]);
-  fForm: FormulaCreate = { medicamento: '', dosis: '', cantidad: 1, unidad: 'tabletas' };
+  // Sin `unidad: 'tabletas'`: era un dato inventado con aspecto de dato. Vacío,
+  // la falta se ve al cerrar el mes; relleno, se factura una presentación que
+  // nadie eligió y de la que dependen el valor unitario y la cantidad.
+  fForm: FormulaCreate = { medicamento: '', dosis: '', cantidad: 1 };
+  readonly unidades = signal<UnidadDispensacion[]>([]);
   private medSearch$ = new Subject<string>();
 
   // ── Órdenes médicas ──
@@ -1223,6 +1243,13 @@ export class HistoriasComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Las presentaciones vienen del backend, que es donde vive el mapa a los
+    // códigos del RIPS. Si falla, la lista queda vacía y el campo se ve vacío:
+    // preferible a ofrecer opciones que quizá ya no se sepan traducir.
+    this.svc.getUnidadesDispensacion()
+      .pipe(catchError(() => of([] as UnidadDispensacion[])))
+      .subscribe(u => this.unidades.set(u));
+
     // Búsqueda de medicamentos con debounce
     this.medSearch$.pipe(
       debounceTime(350),
@@ -1416,10 +1443,10 @@ export class HistoriasComponent implements OnInit {
 
   // ── Formulario ──
   private _loadAnt(p: PacienteInfo): void {
-    if (p.ant_familiares_struct) this.antFam = { ...defaultAntFam(), ...p.ant_familiares_struct } as AntFamiliares;
-    if (p.ant_personales_struct) this.antPers = { ...defaultAntPers(), ...p.ant_personales_struct } as AntPersonales;
-    if (p.ant_ginecologicos_struct) this.antGineco = { ...defaultAntGineco(), ...p.ant_ginecologicos_struct } as AntGineco;
-    if (p.ant_obstetricos_struct) this.antPrenatales = { ...defaultAntPrenatales(), ...p.ant_obstetricos_struct } as AntPrenatales;
+    if (p.ant_familiares) this.antFam = { ...defaultAntFam(), ...p.ant_familiares } as AntFamiliares;
+    if (p.ant_personales) this.antPers = { ...defaultAntPers(), ...p.ant_personales } as AntPersonales;
+    if (p.ant_ginecologicos) this.antGineco = { ...defaultAntGineco(), ...p.ant_ginecologicos } as AntGineco;
+    if (p.ant_obstetricos) this.antPrenatales = { ...defaultAntPrenatales(), ...p.ant_obstetricos } as AntPrenatales;
   }
 
   // ── Examen físico — checkboxes ───────────────────────────────
@@ -1502,8 +1529,8 @@ export class HistoriasComponent implements OnInit {
 
   private _antPayload() {
     return {
-      ant_familiares_struct: { ...this.antFam },
-      ant_personales_struct: {
+      ant_familiares: { ...this.antFam },
+      ant_personales: {
         hta: this.antPers.hta, diabetes: this.antPers.diabetes,
         coronarias: this.antPers.coronarias, acv: this.antPers.acv,
         tbc: this.antPers.tbc, asma: this.antPers.asma,
@@ -1513,8 +1540,8 @@ export class HistoriasComponent implements OnInit {
         otros: this.antPers.otros, habitos: this.antPers.habitos,
       },
       ...(this.esMujer() ? {
-        ant_ginecologicos_struct: { ...this.antGineco },
-        ant_obstetricos_struct: { ...this.antPrenatales },
+        ant_ginecologicos: { ...this.antGineco },
+        ant_obstetricos: { ...this.antPrenatales },
       } : {}),
     };
   }
@@ -1526,6 +1553,12 @@ export class HistoriasComponent implements OnInit {
 
     this.svc.updateAntecedentes(pacienteId, this._antPayload()).subscribe({
       next: () => {
+        if (!this.historia()?.id) {
+          // Al crear, el formulario debe llevar el paciente y el médico que
+          // atiende (el del contexto); la API los exige y no los inventa.
+          this.form.paciente_id = pacienteId;
+          if (this.medico()) this.form.medico_id = this.medico()!.id;
+        }
         const obs = this.historia()?.id
           ? this.svc.update(this.historia()!.id, this.form)
           : this.svc.create(this.form);
@@ -1562,6 +1595,12 @@ export class HistoriasComponent implements OnInit {
 
     this.svc.updateAntecedentes(pacienteId, this._antPayload()).subscribe({
       next: () => {
+        if (!this.historia()?.id) {
+          // Al crear, el formulario debe llevar el paciente y el médico que
+          // atiende (el del contexto); la API los exige y no los inventa.
+          this.form.paciente_id = pacienteId;
+          if (this.medico()) this.form.medico_id = this.medico()!.id;
+        }
         const obs = this.historia()?.id
           ? this.svc.update(this.historia()!.id, this.form)
           : this.svc.create(this.form);
@@ -1609,7 +1648,7 @@ export class HistoriasComponent implements OnInit {
   }
 
   private _resetFForm(): void {
-    this.fForm = { medicamento: '', dosis: '', cantidad: 1, unidad: 'tabletas' };
+    this.fForm = { medicamento: '', dosis: '', cantidad: 1 };
     this.termMed = '';
     this.resultadosMed.set([]);
     this.formulaEditando.set(null);
@@ -1645,6 +1684,7 @@ export class HistoriasComponent implements OnInit {
       dosis: f.dosis,
       cantidad: f.cantidad,
       unidad: f.unidad ?? '',
+      dias_tratamiento: f.dias_tratamiento,
       observaciones: f.observaciones,
     };
     this.termMed = f.medicamento;
@@ -1660,17 +1700,17 @@ export class HistoriasComponent implements OnInit {
     const historiaId = this.historia()!.id;
     this.savingFormula.set(true);
 
-    const obs = this.formulaEditando()
+    // Crear devuelve el id y actualizar 204: tipos distintos que aquí no se usan
+    // (se recarga la lista), por eso el observable se toma como `unknown`.
+    const obs: Observable<unknown> = this.formulaEditando()
       ? this.svc.updateFormula(historiaId, this.formulaEditando()!.id, this.fForm)
       : this.svc.createFormula(historiaId, this.fForm);
 
     obs.subscribe({
-      next: f => {
-        if (this.formulaEditando()) {
-          this.formulas.update(fs => fs.map(x => x.id === f.id ? f : x));
-        } else {
-          this.formulas.update(fs => [...fs, f]);
-        }
+      next: () => {
+        // Se recarga la lista para traer la fila completa tal como la guardó el
+        // servidor (crear devuelve solo el id; actualizar, 204 sin cuerpo).
+        this.svc.listFormulas(historiaId).subscribe({ next: fs => this.formulas.set(fs) });
         this.savingFormula.set(false);
         this.cerrarFormFormula();
         this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Medicamento guardado en la fórmula' });
@@ -1737,12 +1777,14 @@ export class HistoriasComponent implements OnInit {
       return;
     }
     this.savingOrden.set(true);
-    this.svc.createOrden(this.historia()!.id, this.oForm).subscribe({
-      next: o => {
-        this.ordenes.update(os => [...os, o]);
+    const historiaId = this.historia()!.id;
+    this.svc.createOrden(historiaId, this.oForm).subscribe({
+      next: () => {
+        // Se recarga la lista: crear devuelve solo el id, no la fila completa.
+        this.svc.listOrdenes(historiaId).subscribe({ next: os => this.ordenes.set(os) });
         this.cerrarFormOrden();
         this.savingOrden.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Orden creada', detail: `Orden de ${o.tipo} agregada` });
+        this.messageService.add({ severity: 'success', summary: 'Orden creada', detail: 'Orden agregada' });
       },
       error: err => {
         this.savingOrden.set(false);
@@ -1795,6 +1837,12 @@ export class HistoriasComponent implements OnInit {
     this.svc.listImagenes(historiaId).subscribe({ next: imgs => this.imagenes.set(imgs) });
   }
 
+  /** URL para ver o descargar el archivo. El navegador manda la cookie de
+   *  sesión, así que solo lo sirve a quien puede ver la historia. */
+  urlImagen(imagenId: number): string {
+    return this.svc.urlArchivo(imagenId);
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.imagenArchivoSeleccionado = input.files?.[0] ?? null;
@@ -1808,8 +1856,10 @@ export class HistoriasComponent implements OnInit {
       this.imagenArchivoSeleccionado,
       this.imagenDescripcion || this.imagenArchivoSeleccionado.name,
     ).subscribe({
-      next: img => {
-        this.imagenes.update(imgs => [...imgs, img]);
+      next: () => {
+        // La subida devuelve solo el id; se recarga la lista para traer la fila
+        // completa (mime, tamaño, fecha) tal como la guardó el servidor.
+        this._cargarImagenes(this.historia()!.id);
         this.imagenArchivoSeleccionado = null;
         this.imagenDescripcion = '';
         this.uploadingImagen.set(false);
@@ -1832,7 +1882,7 @@ export class HistoriasComponent implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.svc.deleteImagen(this.historia()!.id, img.id).subscribe({
+        this.svc.deleteImagen(img.id).subscribe({
           next: () => {
             this.imagenes.update(imgs => imgs.filter(x => x.id !== img.id));
             this.messageService.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada' });

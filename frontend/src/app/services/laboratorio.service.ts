@@ -36,10 +36,16 @@ export interface ResultadoLab {
   fecha_resultado: string;
   resultados_json: Record<string, ParametroResultado>;
   observaciones?: string;
+  /**
+   * Verdadero si quien procesó lo declaró **o** si algún parámetro viene marcado
+   * como crítico. Lo decide el servidor tomando la disyunción: un potasio de 7,2
+   * no puede pasar por normal porque nadie se acordó de marcar la casilla.
+   */
   valores_criticos: boolean;
-  notificado_medico: boolean;
   validado: boolean;
   fecha_validacion?: string;
+  /** Quién validó. Una afirmación sin autor no acredita nada (Ley 527/1999). */
+  validado_por_id?: number;
 }
 
 export interface ResultadoCreate {

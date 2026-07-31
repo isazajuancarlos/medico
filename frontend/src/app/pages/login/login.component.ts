@@ -26,21 +26,22 @@ import { MessageModule } from 'primeng/message';
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
           <div class="field">
-            <label for="username">Usuario</label>
+            <label for="email">Correo</label>
             <input
-              id="username"
+              id="email"
               pInputText
-              formControlName="username"
-              placeholder="Ingrese su usuario"
+              type="email"
+              formControlName="email"
+              placeholder="correo@institucion.co"
               class="w-full"
             />
           </div>
 
           <div class="field">
-            <label for="password">Contraseña</label>
+            <label for="clave">Contraseña</label>
             <p-password
-              id="password"
-              formControlName="password"
+              id="clave"
+              formControlName="clave"
               placeholder="Ingrese su contraseña"
               [feedback]="false"
               [toggleMask]="true"
@@ -92,8 +93,8 @@ export class LoginComponent {
   private router = inject(Router);
 
   form = this.fb.group({
-    username: ['', [Validators.required]],
-    password: ['', [Validators.required]],
+    email: ['', [Validators.required, Validators.email]],
+    clave: ['', [Validators.required]],
   });
 
   loading = false;
@@ -104,8 +105,8 @@ export class LoginComponent {
     this.loading = true;
     this.errorMessage = '';
 
-    const { username, password } = this.form.value;
-    this.authService.login({ username: username!, password: password! }).subscribe({
+    const { email, clave } = this.form.value;
+    this.authService.login({ email: email!, clave: clave! }).subscribe({
       next: () => {
         this.router.navigate([this.authService.getDefaultRoute()]);
       },

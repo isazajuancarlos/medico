@@ -1,0 +1,39 @@
+[package]
+name = "medico-api"
+description = "El servidor HTTP de medico (axum) y la autenticación."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+medico-dominio = { path = "../medico-dominio" }
+medico-datos = { path = "../medico-datos" }
+guaca = { workspace = true }
+axum = { workspace = true, features = ["multipart"] }
+tokio = { workspace = true, features = ["fs"] }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+# Verificación de contraseñas: Argon2, la misma familia que el sistema Python.
+argon2 = "0.5"
+password-hash = { version = "0.5", features = ["std"] }
+# Firma de la cookie de sesión: HMAC-SHA256, como en informes.
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+# La interfaz Angular viaja dentro del binario (como informes).
+rust-embed = { version = "8", features = ["mime-guess"] }
+# Lectura del maestro CUM del INVIMA (subcomando cargar-maestros). El export trae
+# comas dentro de campos entrecomillados; un parser a mano se rompe en silencio.
+csv = "1"
+
+[dev-dependencies]
+# Para ejercer las rutas como las ejerce un cliente: una petición entra, una
+# respuesta sale. Hasta ahora se probaban las funciones y no los handlers, así
+# que el cableado —extractores, códigos de estado, cabeceras— no lo miraba nadie.
+tower = { version = "0.5", features = ["util"] }

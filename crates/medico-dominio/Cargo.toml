@@ -1,0 +1,17 @@
+[package]
+name = "medico-dominio"
+description = "Reglas del dominio de medico que no tocan la base: ámbito de visibilidad y roles."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+# Solo para comprobar que los valores serializados de RolUsuario no cambian:
+# están escritos en la base y en los tokens ya emitidos.
+serde_json = { workspace = true }

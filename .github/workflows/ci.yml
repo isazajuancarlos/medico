@@ -1,0 +1,110 @@
+# CI de medico, a mitad de migración: el backend Python sigue siendo el producto
+# vivo y el workspace Rust crece al lado. El CI cubre LOS DOS —además del
+# frontend—: probar solo el Rust dejaría sin red el producto real, que es el
+# error inverso al que informes tuvo (probar solo el Python y no el port).
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  # Menor privilegio (supply-chain #203): este CI solo prueba, con checkout de
+  # solo lectura. Sin este bloque el GITHUB_TOKEN hereda permisos amplios.
+  contents: read
+
+jobs:
+  rust:
+    name: rust (test + clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cabeceras de SQLite
+        # `libsqlite3-sys` (0.30) enlaza el SQLite del sistema, no bundled: sin
+        # las cabeceras de desarrollo la compilación no encuentra sqlite3.h.
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy (el CI usa -D warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Pruebas del workspace
+        run: cargo test --workspace --all-targets
+
+  backend:
+    name: backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Dependencias (el freeze del venv que funciona)
+        # requirements-recuperado.txt es el freeze completo del entorno que
+        # corre las pruebas; backend/requirements.txt no trae las herramientas
+        # de prueba (pytest).
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-recuperado.txt
+      - name: Pruebas
+        # conftest.py fija DATABASE_URL a una SQLite temporal antes de importar
+        # nada: la suite es autocontenida, no toca ninguna base real.
+        working-directory: backend
+        run: pytest -q
+
+  frontend:
+    name: frontend (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar (los peers de PrimeNG obligan a --legacy-peer-deps)
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+      - name: Construir la interfaz
+        working-directory: frontend
+        run: npx ng build
+      - name: Pruebas (vitest vía ng test)
+        working-directory: frontend
+        run: npx ng test --watch=false
+
+  auditoria-deps:
+    name: cargo-audit (RustSec)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # RustSec: falla si alguna dependencia tiene un CVE publicado. El único
+      # ignore vive en .cargo/audit.toml, preciso y justificado. Cierra OWASP
+      # A03 (Software Supply Chain Failures). La lección de Ubuntu Forums (2016):
+      # el hueco entró por un componente de terceros sin parchear.
+      - name: cargo-audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+
+  cadena-suministro:
+    name: cargo-deny (supply chain)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # cargo-deny endurece la cadena de suministro más allá de los CVEs: exige
+      # que TODA dependencia venga de una fuente autorizada (crates.io o nuestro
+      # git), prohíbe comodines de versión externos y controla licencias. Es la
+      # defensa contra que una dep se traiga desde una fuente inesperada — el
+      # vector del ataque Atomic Arch a AUR. Config en deny.toml.
+      - name: cargo-deny
+        run: |
+          cargo install cargo-deny --locked
+          cargo deny check

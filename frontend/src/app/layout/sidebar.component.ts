@@ -118,6 +118,10 @@ export class SidebarComponent {
         { label: 'Historia Clínica', icon: 'pi-file-edit', route: '/historias', modulo: 'HISTORIA', roles: ['admin', 'medico', 'superadmin'] },
         { label: 'Urgencias', icon: 'pi-exclamation-circle', route: '/urgencias', modulo: 'URGENCIAS' },
         { label: 'Hospitalización', icon: 'pi-building', route: '/hospitalizacion', modulo: 'HOSPITALIZACION' },
+        // Sin `modulo`: ver la nota de `app.routes.ts`. Va en Clínico y no en
+        // Administrativo porque quien despacha una ambulancia está atendiendo una
+        // urgencia, no llevando una flota.
+        { label: 'Ambulancias', icon: 'pi-truck', route: '/ambulancias', roles: ['admin', 'superadmin', 'medico', 'enfermeria', 'auxiliar_enfermeria'] },
         { label: 'Evoluciones', icon: 'pi-list', route: '/evoluciones', modulo: 'EVOLUCIONES' },
         { label: 'Interconsultas', icon: 'pi-share-alt', route: '/interconsultas', modulo: 'INTERCONSULTAS' },
         { label: 'Epicrisis', icon: 'pi-file', route: '/epicrisis', modulo: 'EPICRISIS' },

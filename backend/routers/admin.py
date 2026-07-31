@@ -8,7 +8,8 @@ from models import (
     ConfigCampo, AuditoriaAcceso, Especialidad, Entidad,
     RolUsuario, TipoCampo,
 )
-from core.deps import get_db, get_current_active_user, require_role
+from core.deps import (get_db, get_current_active_user, require_role,
+                       licencia_vigente, hay_cupo, exigir_cupo_al_modificar)
 from core.aislamiento import obtener
 import bcrypt
 
@@ -317,6 +318,17 @@ def create_usuario_admin(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
+    # Esta ruta creaba usuarios SIN mirar la licencia, mientras `POST /usuarios`
+    # sí lo hacía. Era una puerta de atrás completa: bastaba usar la de admin
+    # para saltarse vigencia y cupos a la vez.
+    vigente, motivo = licencia_vigente(current_user, db)
+    if not vigente:
+        raise HTTPException(status_code=403, detail=motivo)
+    cabe, motivo = hay_cupo(current_user, db,
+                            para_medico=payload.rol == RolUsuario.MEDICO)
+    if not cabe:
+        raise HTTPException(status_code=403, detail=motivo)
+
     existing = db.exec(select(Usuario).where(Usuario.username == payload.username)).first()
     if existing:
         raise HTTPException(status_code=400, detail="El username ya existe")
@@ -343,6 +355,8 @@ def update_usuario_admin(
     usuario = obtener(db, Usuario, usuario_id, current_user, que="usuario")
     if current_user.rol != RolUsuario.SUPERADMIN and usuario.institucion_id != current_user.institucion_id:
         raise HTTPException(status_code=403, detail="Sin permisos")
+    exigir_cupo_al_modificar(usuario, payload.model_dump(exclude_none=True),
+                             current_user, db)
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(usuario, field, value)
     db.add(usuario)

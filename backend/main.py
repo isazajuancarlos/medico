@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from database import init_db
 
@@ -133,3 +134,70 @@ def health():
         return {"status": "ok", "db": "connected"}
     except Exception as e:
         return {"status": "error", "db": str(e)}
+
+
+# =====================================================================
+# EL FRONTEND COMPILADO, SERVIDO POR ESTE MISMO PROCESO
+# =====================================================================
+#
+# Es la decisión de la tarea #73, que hasta ahora estaba escrita y no hecha:
+# «el costo de Angular es de COMPILACIÓN, NO DE DESPLIEGUE — `ng build` produce
+# estáticos que sirve el mismo FastAPI; una instalación standalone sigue siendo
+# UN proceso, sin Node en ejecución».
+#
+# Lo que quita de en medio: hoy un consultorio necesita nginx además del API, y
+# el `docker-compose` monta tres servicios para una máquina que atiende a un
+# médico. Con esto el despliegue en sitio es un proceso y un directorio.
+#
+# En desarrollo NO se usa: `npm start` levanta el servidor de Angular en :4200
+# con su proxy a :8000, que es lo que da recarga en caliente. Por eso la
+# ausencia de `dist/` no es un error — pero sí se dice en el log cuál de los dos
+# modos quedó activo, porque «no se ve la interfaz» tiene causas muy distintas
+# en cada uno.
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist" / "frontend" / "browser"
+
+#: Prefijos que pertenecen al backend. El comodín del SPA NO los toca.
+#:
+#: Sin esta lista, `GET /api/pacintes` (con la errata) devolvería el index.html
+#: con un 200: el cliente recibiría HTML donde espera JSON y el error saldría a
+#: la luz mucho más tarde y en otro sitio. Una ruta de API que no existe tiene
+#: que dar 404, que es lo que ya hace FastAPI cuando nadie se interpone.
+PREFIJOS_DEL_BACKEND = ("/api", "/uploads", "/docs", "/redoc", "/openapi.json", "/health")
+
+
+class AngularSPA(StaticFiles):
+    """Estáticos de Angular, con `index.html` para las rutas del enrutador.
+
+    Angular resuelve `/pacientes/12` en el navegador: no hay archivo con ese
+    nombre y el servidor tiene que devolver el `index.html` para que el enrutador
+    haga el resto. Devolver 404 rompe recargar la página o abrir un enlace
+    directo — funciona navegando dentro de la aplicación y falla al compartir la
+    dirección, que es la forma más incómoda de fallar.
+    """
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404:
+                raise
+            # Una ruta del backend que llega hasta aquí es una que NO EXISTE:
+            # el montaje del SPA va después de los routers, así que todo lo que
+            # el backend reconoce ya se resolvió antes. Devolverle el index.html
+            # convertiría un 404 honesto en un 200 con HTML.
+            if scope.get("path", "").startswith(PREFIJOS_DEL_BACKEND):
+                raise
+            return await super().get_response("index.html", scope)
+
+
+if FRONTEND_DIR.is_dir():
+    app.mount("/", AngularSPA(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    logger.info("Frontend servido desde %s (un solo proceso)", FRONTEND_DIR)
+else:
+    logger.info(
+        "Sin frontend compilado en %s: solo API. En desarrollo es lo normal "
+        "(`npm start` sirve la interfaz en :4200). Para un solo proceso: "
+        "cd frontend && npm run build",
+        FRONTEND_DIR,
+    )

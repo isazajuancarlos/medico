@@ -11,7 +11,6 @@ import sys
 
 import pytest
 
-os.environ.setdefault("DATABASE_URL", "sqlite:///./test_muv.db")
 os.environ.setdefault("SECRET_KEY", "clave-de-prueba-con-mas-de-32-caracteres-ok")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -296,3 +295,62 @@ def test_el_transporte_verifica_TLS_por_defecto():
 
     inseguro = TransporteUrllib(verificar_tls=False)
     assert inseguro._contexto.verify_mode == __import__("ssl").CERT_NONE
+
+
+# ---------------------------------------------------------------------------
+# Un rechazo llega con HTTP 400 y el resultado dentro
+#
+# Observado contra el contenedor de stage el 2026-07-26. El cliente lo tomaba
+# por una avería —«el contenedor no respondió»— y descartaba los hallazgos, que
+# son justo lo que se fue a buscar.
+# ---------------------------------------------------------------------------
+
+RECHAZO_400 = {
+    "ResultState": False,
+    "ProcesoId": 0,
+    "Ambiente": "DockerStage",
+    "CodigoUnicoValidacion": "-",
+    "ResultadosValidacion": [
+        {"Clase": "RECHAZADO", "Codigo": "RVG01", "Descripcion": "prueba",
+         "PathFuente": "/usuarios/0", "Observaciones": ""},
+    ],
+}
+
+
+def _cliente_que_responde(codigo, cuerpo):
+    t = TransporteFalso({
+        RUTA_LOGIN: (200, json.dumps({"token": "t"})),
+        RUTA_CARGAR_SIN_FACTURA: (codigo, json.dumps(cuerpo)),
+    })
+    c = MuvClient("https://localhost:9443", t)
+    c.login(CREDS)
+    return c
+
+
+def test_un_400_con_resultado_es_un_RECHAZO_no_una_averia():
+    c = _cliente_que_responde(400, RECHAZO_400)
+    r = c.cargar({"rips": {}})          # no levanta
+    assert r.aceptado is False
+    assert r.cuv is None
+    assert [h.codigo for h in r.hallazgos] == ["RVG01"]
+    assert r.ambiente == "DockerStage"
+
+
+def test_un_400_que_NO_es_un_resultado_sigue_siendo_averia():
+    """Un proxy caído devuelve HTML con 400. Eso sí es indisponibilidad."""
+    t = TransporteFalso({
+        RUTA_LOGIN: (200, json.dumps({"token": "t"})),
+        RUTA_CARGAR_SIN_FACTURA: (400, "<html>Bad Request</html>"),
+    })
+    c = MuvClient("https://localhost:9443", t)
+    c.login(CREDS)
+    with pytest.raises(MuvNoDisponible):
+        c.cargar({"rips": {}})
+
+
+def test_un_401_sigue_siendo_credenciales_aunque_traiga_cuerpo():
+    """El orden importa: credenciales se comprueba ANTES que la forma."""
+    c = MuvClient("https://localhost:9443",
+                  TransporteFalso({RUTA_LOGIN: (401, json.dumps(RECHAZO_400))}))
+    with pytest.raises(MuvCredencialesInvalidas):
+        c.login(CREDS)

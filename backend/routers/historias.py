@@ -101,6 +101,24 @@ def create_historia(
     return _enrich_historia(historia, db)
 
 
+@router.get("/unidades-dispensacion")
+def unidades_dispensacion(
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Las presentaciones del catálogo del MUV (campo M13).
+
+    Se sirven desde aquí y no se copian al frontend: una lista repetida en dos
+    sitios se desincroniza, y de este código dependen el valor unitario y la
+    cantidad que el MUV valida al lado.
+
+    Son las 73 habilitadas de `REFs_UPR`, extraídas del propio validador. Antes
+    eran cinco escritas a mano y con los códigos equivocados.
+    """
+    import maestros_muv
+
+    return maestros_muv.nombres_presentacion()
+
+
 @router.get("/paciente/{paciente_id}", response_model=list[HistoriaRead])
 def list_historias_paciente(
     paciente_id: int,

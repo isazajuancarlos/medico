@@ -65,7 +65,7 @@ export class HospitalizacionService {
   listHospitalizaciones(estado?: string): Observable<Hospitalizacion[]> {
     const params: Record<string, string> = {};
     if (estado) params['estado'] = estado;
-    return this.http.get<Hospitalizacion[]>(`${this.API}/`, { params });
+    return this.http.get<Hospitalizacion[]>(`${this.API}`, { params });
   }
 
   listCamas(estado?: string): Observable<Cama[]> {
