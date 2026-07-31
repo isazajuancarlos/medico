@@ -46,14 +46,24 @@ pub enum RolUsuario {
 /// de `frontend/src/app/app.routes.ts` (que hoy vive únicamente en el navegador,
 /// o sea en ningún sitio) y las comprobaciones que las rutas ya hacían a mano.
 ///
-/// **No** están todavía «leer» y «escribir» por módulo. No es un olvido: la
-/// matriz del frontend cubre seis páginas, y siete de los quince roles
+/// **No** está todavía el escribir de los MÓDULOS cuya página el producto deja
+/// entrar a cualquiera: urgencias, hospitalización, nutrición, rehabilitación,
+/// remisiones y contrarreferencia no llevan `roleGuard` en `app.routes.ts`, solo
+/// `moduloGuard` (que comprueba la licencia, no quién es usted).
+///
+/// No es un olvido, y tampoco es que dé igual: hoy significa que un laboratorista
+/// puede dar ingreso y egreso de hospitalización, o triar en urgencias. Es que
+/// **el producto no ha decidido la respuesta**, y siete de los quince roles
 /// —laboratorista, radiólogo, anestesiólogo, terapeuta, nutricionista, trabajo
-/// social, bacteriólogo— no aparecen en ninguna, mientras que sí existen módulos
-/// suyos en la API. Inventar ahí una respuesta cerrada dejaría a una
-/// nutricionista fuera del módulo de nutrición, que es el mismo fallo con el
-/// signo cambiado. Esa parte se decide con el cliente y se añade aquí; mientras
-/// tanto esta enumeración **no finge** cubrirla.
+/// social, bacteriólogo— no aparecen en ninguna página de la matriz mientras que
+/// sí existen módulos suyos en la API. Inventar aquí una respuesta cerrada dejaría
+/// a una nutricionista fuera del módulo de nutrición, que es el mismo fallo con el
+/// signo cambiado.
+///
+/// Esa parte se decide con el cliente y se añade aquí. Mientras tanto esta
+/// enumeración **no finge** cubrirla, y la prueba
+/// `los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito` deja el hueco
+/// escrito para que sea una decisión pendiente y no un olvido silencioso.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Capacidad {
     /// Firmar una historia o un documento clínico.
@@ -64,6 +74,26 @@ pub enum Capacidad {
     FirmarClinico,
     /// Borrar una historia o un documento clínico no firmado.
     BorrarClinico,
+    /// **Escribir** en la historia clínica: crearla, modificarla, añadirle
+    /// documentos, fórmulas u órdenes.
+    ///
+    /// Firmar ya estaba cerrado, pero escribir no, y eso dejaba el agujero por el
+    /// lado ancho: cualquier usuario autenticado de la institución
+    /// —laboratorista, trabajo social, terapeuta— podía **crear una nota clínica
+    /// y RECETAR MEDICAMENTOS** (`POST /api/historias/{id}/formulas`). Cerrar solo
+    /// la firma protegía la autoría del documento y dejaba abierto su contenido.
+    ///
+    /// Los tres roles son los que el propio producto ya declara para `/historias`
+    /// en `app.routes.ts:42`. No se inventa nada: se aplica en el servidor la
+    /// respuesta que hasta ahora solo vivía en el navegador, o sea en ningún sitio.
+    EscribirClinico,
+    /// Crear o modificar el registro de un paciente y sus antecedentes.
+    ///
+    /// Conjunto más amplio que el de la historia, y a propósito: enfermería,
+    /// auxiliar y psicología SÍ registran y actualizan pacientes aunque no
+    /// escriban la nota médica. Son los seis roles que el producto declara para
+    /// `/pacientes` en `app.routes.ts:31`.
+    EscribirPaciente,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
@@ -84,6 +114,19 @@ impl RolUsuario {
             // firmando la nota de un médico no es un caso inusual: es uno que no
             // existe.
             FirmarClinico | BorrarClinico => matches!(self, Superadmin | Admin | Medico),
+            // Los mismos tres, y por el mismo `app.routes.ts:42`. Firmar sin
+            // poder escribir no tendría sentido, y escribir sin poder firmar es
+            // exactamente lo que había: la autoría cerrada y el contenido
+            // abierto.
+            EscribirClinico => matches!(self, Superadmin | Admin | Medico),
+            // Seis, no tres (`app.routes.ts:31`). Enfermería, auxiliar y
+            // psicología registran pacientes y actualizan antecedentes sin
+            // escribir la nota médica; cerrarles esto sería el fallo con el signo
+            // cambiado.
+            EscribirPaciente => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria | Psicologo
+            ),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),
             GestionarInstituciones => matches!(self, Superadmin),

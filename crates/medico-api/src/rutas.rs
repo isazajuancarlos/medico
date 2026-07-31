@@ -10,7 +10,9 @@ use axum::{Json, Router};
 use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{autenticar, Autenticado, Autorizado, Borrar, Estado, Firmar};
+use crate::auth::{
+    autenticar, Autenticado, Autorizado, Borrar, EscribirClinico, EscribirPaciente, Estado, Firmar,
+};
 use crate::{claves, sesion};
 use medico_datos::acceso;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
@@ -442,9 +444,10 @@ async fn verificar_acceso(
 /// ámbito no puede crear (superadmin sin institución, o sin ámbito).
 async fn crear_paciente(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Json(nuevo): Json<PacienteNuevo>,
 ) -> Response {
+    let u = autorizado.0;
     match paciente::crear(&e.pool, u.ambito(), &nuevo).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -457,10 +460,11 @@ async fn crear_paciente(
 /// eso ya enumera pacientes ajenos—.
 async fn actualizar_paciente(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Path(id): Path<i64>,
     Json(datos): Json<PacienteNuevo>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match paciente::actualizar(&e.pool, u.ambito(), id, &datos).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -473,10 +477,11 @@ async fn actualizar_paciente(
 /// Solo se escriben los bloques presentes: guardar unos no borra los otros.
 async fn actualizar_antecedentes_paciente(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Path(id): Path<i64>,
     Json(ant): Json<Antecedentes>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match paciente::actualizar_antecedentes(&e.pool, u.ambito(), id, &ant).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -488,9 +493,10 @@ async fn actualizar_antecedentes_paciente(
 
 async fn crear_historia(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Json(h): Json<HistoriaNueva>,
 ) -> Response {
+    let u = autorizado.0;
     // Quién registra sale de la SESIÓN. El cuerpo dice a quién se ATRIBUYE
     // (`medico_id`, ya validado contra la institución); quién teclea, no.
     match historia::crear(&e.pool, u.ambito(), u.id, &h).await {
@@ -548,10 +554,11 @@ async fn obtener_historia(
 /// no existe o es ajena; 409 si está firmada** —cerrada, no editable—.
 async fn actualizar_historia(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(h): Json<HistoriaNueva>,
 ) -> Response {
+    let u = autorizado.0;
     match historia::actualizar(&e.pool, u.ambito(), id, &h).await {
         Ok(historia::Resultado::Hecho) => match historia::obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(actualizada)) => (StatusCode::OK, Json(actualizada)).into_response(),
@@ -718,9 +725,10 @@ async fn listar_documentos(
 /// cliente—. 201 con su id; 403 si el paciente no es del ámbito.
 async fn crear_documento(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Json(d): Json<DocumentoNuevo>,
 ) -> Response {
+    let u = autorizado.0;
     match documento::crear(&e.pool, u.ambito(), u.id, &d).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -1252,10 +1260,11 @@ async fn obtener_documento(
 /// no existe o es ajeno; 409 si está firmado**.
 async fn actualizar_documento(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(d): Json<DocumentoEdicion>,
 ) -> Response {
+    let u = autorizado.0;
     match documento::actualizar(&e.pool, u.ambito(), id, &d).await {
         Ok(documento::Resultado::Hecho) => match documento::obtener(&e.pool, u.ambito(), id).await {
             Ok(Some(actualizado)) => (StatusCode::OK, Json(actualizado)).into_response(),
@@ -1309,10 +1318,11 @@ async fn listar_formulas(
 
 async fn crear_formula(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(historia_id): Path<i64>,
     Json(f): Json<FormulaNueva>,
 ) -> Response {
+    let u = autorizado.0;
     match formula::crear(&e.pool, u.ambito(), historia_id, &f).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -1322,10 +1332,11 @@ async fn crear_formula(
 
 async fn actualizar_formula(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(f): Json<FormulaNueva>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match formula::actualizar(&e.pool, u.ambito(), id, &f).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1335,9 +1346,10 @@ async fn actualizar_formula(
 
 async fn eliminar_formula(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match formula::eliminar(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1360,10 +1372,11 @@ async fn listar_ordenes(
 
 async fn crear_orden(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(historia_id): Path<i64>,
     Json(o): Json<OrdenNueva>,
 ) -> Response {
+    let u = autorizado.0;
     match orden::crear(&e.pool, u.ambito(), historia_id, &o).await {
         Ok(Some(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(None) => StatusCode::FORBIDDEN.into_response(),
@@ -1373,10 +1386,11 @@ async fn crear_orden(
 
 async fn cambiar_estado_orden(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(req): Json<CambioEstado>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match orden::cambiar_estado(&e.pool, u.ambito(), id, &req.estado).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1386,9 +1400,10 @@ async fn cambiar_estado_orden(
 
 async fn eliminar_orden(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match orden::eliminar(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -1564,9 +1579,20 @@ async fn servir_imagen(
 
 async fn eliminar_imagen(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    // `Borrar`, igual que `eliminar_documento`. Escapó a la primera pasada: el
+    // producto ya había decidido que borrar un registro clínico es de
+    // superadmin, admin o médico, y por esta puerta un laboratorista sí podía
+    // borrar la radiografía de un paciente aunque no pudiera borrar un
+    // documento. Misma decisión, un camino que se había quedado fuera.
+    //
+    // SUBIR una imagen sigue pidiendo solo autenticación, y a propósito: el
+    // radiólogo es justo quien las sube y no está en esos tres roles. Borrar y
+    // subir no son el mismo acto, y `/imagenes` no lleva `roleGuard` en
+    // `app.routes.ts`, así que el producto no ha declarado quién sube.
+    autorizado: Autorizado<Borrar>,
     Path(id): Path<i64>,
 ) -> StatusCode {
+    let u = autorizado.0;
     match imagen::eliminar(&e.pool, u.ambito(), id).await {
         Ok(Some(ruta)) => {
             // La fila ya no está; borrar el archivo es limpieza. Si falla (por
@@ -1937,6 +1963,168 @@ mod pruebas {
                 .await
                 .unwrap()
                 .status()
+        }
+
+        /// Con cuerpo, para las escrituras.
+        async fn pedir_con(e: &Estado, metodo: &str, uri: &str, cookie: &str, json: &str) -> StatusCode {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie)
+                        .header("content-type", "application/json")
+                        .body(Body::from(json.to_owned()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .status()
+        }
+
+        /// EL PEOR DE TODOS: un laboratorista RECETANDO.
+        ///
+        /// Firmar y borrar ya estaban cerrados, pero escribir no, y el agujero
+        /// ancho era ese: `POST /api/historias/{id}/formulas` solo pedía estar
+        /// autenticado. Cualquier usuario de la institución —laboratorista,
+        /// trabajo social, terapeuta— podía prescribir medicamentos a un paciente
+        /// y crear la nota clínica que los justifica. La firma protegía la AUTORÍA
+        /// del documento y dejaba abierto su CONTENIDO.
+        #[tokio::test]
+        async fn un_laboratorista_no_receta_ni_escribe_en_la_historia() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias/7/formulas", &lab,
+                          r#"{"medicamento":"Morfina","dosis":"10mg","frecuencia":"c/4h","duracion":"3d","cantidad":18}"#).await,
+                StatusCode::FORBIDDEN,
+                "UN LABORATORISTA RECETÓ MEDICAMENTOS"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias", &lab,
+                          r#"{"paciente_id":1,"motivo_consulta":"x","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista creó una nota clínica"
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/historias/7", &lab,
+                          r#"{"motivo_consulta":"otro","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista modificó la nota de un médico"
+            );
+
+            // Y no basta el 403: nada tuvo que escribirse. Un rechazo que llega
+            // después de la escritura no protege nada.
+            let formulas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM formula")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(formulas, 0, "se guardó la fórmula pese al 403");
+            let historias: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM historia")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(historias, 1, "se creó una historia pese al 403");
+            let motivo: String =
+                sqlx::query_scalar("SELECT motivo_consulta FROM historia WHERE id = 7")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(motivo, "dolor", "la nota del médico se modificó pese al 403");
+        }
+
+        /// Borrar una IMAGEN clínica es borrar un registro clínico.
+        ///
+        /// Este camino se había quedado fuera de la primera pasada: un
+        /// laboratorista no podía borrar un documento —eso ya exigía `Borrar`—
+        /// pero sí la radiografía del paciente. Misma decisión del producto, una
+        /// puerta que no la aplicaba.
+        #[tokio::test]
+        async fn un_laboratorista_no_borra_una_imagen_clinica() {
+            let e = con_tres_roles().await;
+            assert_eq!(
+                pedir(&e, "DELETE", "/api/imagenes/1", &cookie_de(5)).await,
+                StatusCode::FORBIDDEN,
+                "un laboratorista borró una imagen clínica"
+            );
+            // Y la médica no se queda fuera de lo suyo: aquí no hay imagen 1, así
+            // que lo que importa es que NO sea 403 —el rol la deja pasar y el 404
+            // lo pone el recurso—.
+            assert_ne!(
+                pedir(&e, "DELETE", "/api/imagenes/1", &cookie_de(2)).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a la médica el borrado de imágenes"
+            );
+        }
+
+        /// La otra mitad, sin la cual lo de arriba pasaría con un extractor que
+        /// devolviera 403 siempre: la MÉDICA sí receta y sí escribe.
+        #[tokio::test]
+        async fn la_medica_si_receta_y_si_escribe() {
+            let e = con_tres_roles().await;
+            let med = cookie_de(2);
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/historias/7/formulas", &med,
+                          r#"{"medicamento":"Acetaminofén","dosis":"500mg","frecuencia":"c/8h","duracion":"3d","cantidad":9}"#).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró la puerta a la médica: el arreglo sería peor que el fallo"
+            );
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/historias", &med,
+                          r#"{"paciente_id":1,"motivo_consulta":"x","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "la médica no pudo crear una historia"
+            );
+        }
+
+        /// Escribir PACIENTE es un conjunto más ancho que escribir HISTORIA, y esa
+        /// diferencia es el sitio donde una regla mal puesta hace daño en silencio:
+        /// enfermería registra pacientes todos los días sin escribir la nota
+        /// médica. Se comprueban los dos lados con el mismo caso.
+        #[tokio::test]
+        async fn enfermeria_registra_pacientes_pero_no_escribe_la_nota() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (8,'Enf','enf@x.co',?,'enfermeria',1,1)",
+            )
+            .bind(&h).execute(&e.pool).await.unwrap();
+            let enf = cookie_de(8);
+
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/pacientes", &enf,
+                          r#"{"tipo_documento":"CC","numero_documento":"999","nombre1":"Nuevo","apellido1":"Paciente","fecha_nacimiento":"1990-01-01","sexo":"M"}"#).await,
+                StatusCode::FORBIDDEN,
+                "se le cerró a enfermería el registro de pacientes, que sí es suyo"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias", &enf,
+                          r#"{"paciente_id":1,"motivo_consulta":"x","enfermedad_actual":"y","diagnostico_principal":"J00","plan_tratamiento":"z"}"#).await,
+                StatusCode::FORBIDDEN,
+                "enfermería escribió una nota médica"
+            );
+        }
+
+        /// LO QUE SIGUE ABIERTO, ESCRITO PARA QUE SEA UNA DECISIÓN Y NO UN OLVIDO.
+        ///
+        /// urgencias, hospitalización, nutrición, rehabilitación, remisiones y
+        /// contrarreferencia no llevan `roleGuard` en `app.routes.ts`: el producto
+        /// **no ha decidido** quién escribe ahí, y siete de los quince roles no
+        /// aparecen en ninguna página de la matriz. Cerrarlo a ojo dejaría a una
+        /// nutricionista fuera del módulo de nutrición.
+        ///
+        /// Esta prueba NO celebra el hueco: lo fija. Si mañana se decide la matriz
+        /// y se cierran estos módulos, la prueba se pondrá roja y obligará a
+        /// borrarla a conciencia, en vez de dejar el hueco olvidado en un comentario.
+        #[tokio::test]
+        async fn los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+            // Un laboratorista todavía puede dar ingreso de hospitalización. Es lo
+            // que hay, y está pendiente de decidir con el cliente.
+            assert_ne!(
+                pedir_con(&e, "POST", "/api/hospitalizacion/ingresar", &lab,
+                          r#"{"paciente_id":1,"cama":"101","motivo":"observación"}"#).await,
+                StatusCode::FORBIDDEN,
+                "hospitalización ya exige rol: decídase la matriz, cámbiese la capacidad \
+                 y BÓRRESE esta prueba a conciencia"
+            );
         }
 
         /// El laboratorista está autenticado y es de la institución: el

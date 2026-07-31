@@ -143,6 +143,19 @@ impl Exige for Borrar {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::BorrarClinico;
 }
 
+/// Escribir en la historia clínica: crearla, modificarla, añadirle documentos,
+/// fórmulas u órdenes.
+pub struct EscribirClinico;
+impl Exige for EscribirClinico {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirClinico;
+}
+
+/// Crear o modificar el registro de un paciente y sus antecedentes.
+pub struct EscribirPaciente;
+impl Exige for EscribirPaciente {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirPaciente;
+}
+
 impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
     type Rejection = StatusCode;
 
