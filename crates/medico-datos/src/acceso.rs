@@ -523,30 +523,58 @@ mod pruebas {
         assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
     }
 
-    /// Directiva #8: 100+ accesos CONCURRENTES no bifurcan la cadena ni pierden
-    /// registros. Con timeout, para distinguir un interbloqueo de lentitud.
+    /// Directiva #8: 100 accesos que compiten entre sí no bifurcan la cadena ni
+    /// pierden registros. Con timeout, para distinguir un interbloqueo de lentitud.
+    ///
+    /// **Ocho escritores a la vez, no cien**, y el número no es tímido: es el
+    /// tamaño del pool (`crate::abrir`). Lanzar las cien tareas de golpe NUNCA
+    /// produjo cien escritores concurrentes —SQLite tiene un solo escritor y el
+    /// pool, ocho conexiones—: las otras 92 hacían cola en `pool.acquire()`, que
+    /// trae un plazo POR DEFECTO de 30 s que nadie eligió. Medido el 2026-07-31,
+    /// esa cola tardaba 25,3 s en depuración, el 83 % del plazo; con la máquina
+    /// cargada lo pasaba y la prueba moría con `PoolTimedOut` — es decir,
+    /// anunciando que se había roto la cadena de auditoría cuando lo que faltó
+    /// fue una conexión. Dos plazos para la misma espera, y el que mandaba era
+    /// el que no estaba escrito.
+    ///
+    /// La carrera que aquí importa —dos escritores leen el mismo último eslabón
+    /// y ambos intentan insertar la secuencia N— se da con dos concurrentes y se
+    /// exprime con ocho. Los cien accesos siguen ocurriendo; lo que se quita es
+    /// la sala de espera de sqlx, que no forma parte de lo que se afirma.
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-    async fn cien_accesos_concurrentes_dejan_la_cadena_intacta() {
+    async fn cien_accesos_con_ocho_escritores_a_la_vez_dejan_la_cadena_intacta() {
+        /// Tantos como conexiones tiene el pool: más solo harían cola.
+        const ESCRITORES: usize = 8;
+        const TOTAL: usize = 100;
+
         let pool = base().await;
         let (vk, sk) = guaca::firma::generar_claves();
+
         let mut tareas = Vec::new();
-        for i in 0..100 {
+        for w in 0..ESCRITORES {
             let p = pool.clone();
             let s = sk.clone();
+            // Reparto exacto: los primeros `TOTAL % ESCRITORES` llevan uno más.
+            let cuantos = TOTAL / ESCRITORES + usize::from(w < TOTAL % ESCRITORES);
             tareas.push(tokio::spawn(async move {
-                registrar(&p, &evento(2, (i % 5) as i64, "ver"), Some(&s)).await
+                for i in 0..cuantos {
+                    registrar(&p, &evento(2, (i % 5) as i64, "ver"), Some(&s)).await?;
+                }
+                Ok::<(), sqlx::Error>(())
             }));
         }
+
         let plazo = std::time::Duration::from_secs(60);
         for t in tareas {
             let r = tokio::time::timeout(plazo, t).await
-                .expect("un acceso no respondió a tiempo: ¿interbloqueo?")
+                .expect("un escritor no respondió a tiempo: ¿interbloqueo?")
                 .expect("la tarea no debía entrar en panic");
             r.expect("cada acceso concurrente debe registrarse, con reintento si hubo carrera");
         }
+
         // 100 filas, secuencias 0..99 contiguas, cadena firmada íntegra.
         let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso").fetch_one(&pool).await.unwrap();
-        assert_eq!(n.0, 100, "faltaron registros bajo concurrencia");
+        assert_eq!(n.0 as usize, TOTAL, "faltaron registros bajo concurrencia");
         assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
     }
 }

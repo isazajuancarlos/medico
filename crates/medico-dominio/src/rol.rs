@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Ambito;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RolUsuario {
     Superadmin,
@@ -46,25 +46,32 @@ pub enum RolUsuario {
 /// de `frontend/src/app/app.routes.ts` (que hoy vive únicamente en el navegador,
 /// o sea en ningún sitio) y las comprobaciones que las rutas ya hacían a mano.
 ///
-/// **No** está todavía el escribir de los MÓDULOS cuya página el producto deja
-/// entrar a cualquiera: urgencias, hospitalización, nutrición, rehabilitación,
-/// remisiones y contrarreferencia no llevan `roleGuard` en `app.routes.ts`, solo
-/// `moduloGuard` (que comprueba la licencia, no quién es usted).
+/// # Estas listas son DEFECTOS, y el destino es que las asigne un administrador
 ///
-/// No es un olvido, y tampoco es que dé igual: hoy significa que un laboratorista
-/// puede dar ingreso y egreso de hospitalización, o triar en urgencias. Es que
-/// **el producto no ha decidido la respuesta**, y siete de los quince roles
-/// —laboratorista, radiólogo, anestesiólogo, terapeuta, nutricionista, trabajo
-/// social, bacteriólogo— no aparecen en ninguna página de la matriz mientras que
-/// sí existen módulos suyos en la API. Inventar aquí una respuesta cerrada dejaría
-/// a una nutricionista fuera del módulo de nutrición, que es el mismo fallo con el
-/// signo cambiado.
+/// Juan, 2026-07-30: «creo que lo mejor es que un usuario administrador sea quien
+/// asigne esos perfiles». De acuerdo, y por una razón que va más allá de la
+/// comodidad: la planta de una IPS rural de tres personas y la de un hospital de
+/// tercer nivel no se parecen, y cualquier lista fija que se escriba aquí estará
+/// mal en una de las dos.
 ///
-/// Esa parte se decide con el cliente y se añade aquí. Mientras tanto esta
-/// enumeración **no finge** cubrirla, y la prueba
-/// `los_modulos_sin_rol_declarado_siguen_abiertos_a_proposito` deja el hueco
-/// escrito para que sea una decisión pendiente y no un olvido silencioso.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Pero un sistema de permisos configurable NECESITA defectos igualmente. Si una
+/// instalación nueva arranca sin nada asignado, nadie puede hacer nada, y lo
+/// primero que hace entonces todo cliente es darle todo a todos — que es peor que
+/// donde estábamos. Así que lo de aquí es la base sobre la que se configura, no
+/// una alternativa a configurar.
+///
+/// Lo que falta —y está en la tarea que acompaña a este cambio— es la tabla de
+/// asignación por institución que se superpone a esto: un administrador añade o
+/// quita roles de una capacidad PARA SU institución, y lo que no toque sigue el
+/// defecto. Ningún cliente configura lo que no usa; ninguno se queda sin camino.
+///
+/// **Lo que sigue sin cubrir**: SUBIR una imagen clínica (`POST
+/// /api/historias/{id}/imagenes`). Borrarla sí exige `BorrarClinico`, pero subir
+/// la hace el radiólogo, que no está en esa lista, y `/imagenes` no declara roles.
+/// Cerrarlo a ojo dejaría al radiólogo sin poder hacer su trabajo.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Capacidad {
     /// Firmar una historia o un documento clínico.
     ///
@@ -94,13 +101,201 @@ pub enum Capacidad {
     /// escriban la nota médica. Son los seis roles que el producto declara para
     /// `/pacientes` en `app.routes.ts:31`.
     EscribirPaciente,
+    /// Atender en urgencias y en hospitalización: triage, egreso, ingreso.
+    ///
+    /// Respuesta de Juan (2026-07-30): «por lo general lo hace el médico general,
+    /// el especialista, los enfermeros, todos los profesionales que interactúan
+    /// con el paciente». Se toma su enumeración —médico, enfermería, auxiliar— y
+    /// se añade anestesiología, que atiende en urgencias y quirófano. NO entran
+    /// laboratorio ni bacteriología: interactúan con la MUESTRA, no con el
+    /// paciente en la camilla.
+    ///
+    /// El límite de esta lista es que es un DEFECTO nacional, no la planta de una
+    /// institución concreta. Ver la nota sobre asignación por administrador en la
+    /// cabecera de [`Capacidad`].
+    AtenderUrgenciasHospitalizacion,
+    /// Valoraciones y planes de nutrición.
+    ///
+    /// «El nutriólogo o nutricionista» (Juan). El rol `Medico` entra además, y no
+    /// por ampliar por ampliar: en una IPS pequeña sin nutricionista en planta, la
+    /// valoración la registra el médico tratante, y cerrarle la puerta dejaría el
+    /// módulo inservible justo donde más se nota. Un administrador puede quitarlo
+    /// cuando exista la asignación por institución.
+    EscribirNutricion,
+    /// Planes y sesiones de rehabilitación.
+    ///
+    /// «El fisioterapeuta» (Juan). En la enumeración de roles del sistema eso es
+    /// `Terapeuta`; no hay un `Fisioterapeuta` aparte, y no se inventa uno aquí
+    /// —cambiar la lista de roles toca la base y los tokens ya emitidos—. Se añade
+    /// `Medico` por lo mismo que en nutrición.
+    EscribirRehabilitacion,
+    /// Remisiones y contrarreferencia.
+    ///
+    /// «Puede ser enfermeros o personal administrativo» (Juan). Personal
+    /// administrativo es `Admin` en esta enumeración; enfermería y auxiliar
+    /// entran, y el médico también porque la remisión sale de su decisión
+    /// clínica.
+    GestionarRemision,
+    /// Registrar y validar resultados de laboratorio, y administrar los perfiles
+    /// de examen.
+    ///
+    /// Los roles del propio producto para `/laboratorio` (`sidebar.component.ts`)
+    /// son laboratorista, bacteriólogo, administración y superadmin — y el
+    /// médico. Se conserva el médico por el mismo motivo que en nutrición: la IPS
+    /// pequeña que manda las muestras a un laboratorio externo y transcribe el
+    /// resultado no tiene bacteriólogo en planta, y cerrarle la puerta dejaría el
+    /// módulo inservible donde más se usa. Cuando exista la asignación por
+    /// institución, un hospital con laboratorio propio se lo quita.
+    EscribirLaboratorio,
+    /// Redactar y firmar informes de imágenes diagnósticas.
+    ///
+    /// Radiología, médico y gestión. El informe radiológico es un acto médico
+    /// interpretativo: fuera enfermería, laboratorio y terapias, que no lo
+    /// emiten.
+    EscribirImagenologia,
+    /// Farmacia: dar de alta items, registrar entradas de stock y **dispensar**.
+    ///
+    /// Los tres roles son los que el producto ya declara para `/farmacia`
+    /// (`app.routes.ts:51` y el menú de `sidebar.component.ts`): regente de
+    /// farmacia, administración y superadmin. No se añade `Medico` —a diferencia
+    /// de nutrición y rehabilitación, donde sí se añadió porque en una IPS
+    /// pequeña no hay nutricionista en planta—: aquí la separación entre quien
+    /// PRESCRIBE y quien DISPENSA no es un detalle de plantilla, es la que
+    /// permite que la entrega sea un control sobre la prescripción y no un acto
+    /// del mismo que la firmó. Un consultorio sin regente no dispensa: remite a
+    /// una farmacia.
+    ///
+    /// Leer el inventario es cosa aparte y NO exige esta capacidad: enfermería
+    /// necesita saber si queda adrenalina antes de pedirla.
+    GestionarFarmacia,
+    /// Parque de ambulancias y despacho de traslados asistenciales.
+    ///
+    /// Une dos cosas que en un hospital grande hacen personas distintas —dar de
+    /// alta un vehículo es administrativo; despachar es operativo— y aquí van
+    /// juntas a propósito: en la IPS que tiene dos ambulancias las hace la misma
+    /// persona, y partirlo en dos capacidades obligaría a configurar una
+    /// distinción que ese cliente no usa. Cuando exista la asignación por
+    /// institución, el hospital que sí las separa lo hará ahí.
+    ///
+    /// Quién: gestión, médico, enfermería y auxiliar — los que coordinan un
+    /// traslado. Fuera laboratorio, imagenología, farmacia y terapias.
+    GestionarAmbulancias,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
     GestionarInstituciones,
 }
 
+impl Capacidad {
+    /// Todas las capacidades, para pintar la matriz y para recorrerlas al
+    /// validar. Escrita a mano y no derivada: si mañana se añade una variante,
+    /// `TODAS` se queda corta en silencio, y por eso existe
+    /// `todas_las_capacidades_estan_en_la_lista`, que compara contra un `match`
+    /// exhaustivo — el compilador obliga a tocarlo.
+    pub const TODAS: &'static [Capacidad] = &[
+        Capacidad::FirmarClinico,
+        Capacidad::BorrarClinico,
+        Capacidad::EscribirClinico,
+        Capacidad::EscribirPaciente,
+        Capacidad::AtenderUrgenciasHospitalizacion,
+        Capacidad::EscribirNutricion,
+        Capacidad::EscribirRehabilitacion,
+        Capacidad::GestionarRemision,
+        Capacidad::EscribirLaboratorio,
+        Capacidad::EscribirImagenologia,
+        Capacidad::GestionarFarmacia,
+        Capacidad::GestionarAmbulancias,
+        Capacidad::GestionarUsuarios,
+        Capacidad::GestionarInstituciones,
+    ];
+
+    /// De la cadena guardada en la base a la capacidad. Mismo `Deserialize`
+    /// (snake_case) con el que se serializa: una sola lista de nombres, que no
+    /// se puede desincronizar. `None` si no nombra ninguna conocida.
+    pub fn desde_str(s: &str) -> Option<Self> {
+        use serde::de::IntoDeserializer;
+        let de: serde::de::value::StrDeserializer<serde::de::value::Error> = s.into_deserializer();
+        <Self as serde::Deserialize>::deserialize(de).ok()
+    }
+
+    /// El nombre con el que viaja a la columna `capacidad` de la base.
+    ///
+    /// Es un `match` y no `serde_json::to_value` porque hace falta un
+    /// `&'static str` y aquello devuelve un `String` propio. Eso deja DOS
+    /// listas de nombres, que es justo lo que se quiere evitar, así que
+    /// `el_nombre_de_la_base_y_el_de_serde_son_el_mismo` las ata: recorre
+    /// `TODAS` y exige que coincidan una por una.
+    pub fn como_str(&self) -> &'static str {
+        match self {
+            Capacidad::FirmarClinico => "firmar_clinico",
+            Capacidad::BorrarClinico => "borrar_clinico",
+            Capacidad::EscribirClinico => "escribir_clinico",
+            Capacidad::EscribirPaciente => "escribir_paciente",
+            Capacidad::AtenderUrgenciasHospitalizacion => "atender_urgencias_hospitalizacion",
+            Capacidad::EscribirNutricion => "escribir_nutricion",
+            Capacidad::EscribirRehabilitacion => "escribir_rehabilitacion",
+            Capacidad::GestionarRemision => "gestionar_remision",
+            Capacidad::EscribirLaboratorio => "escribir_laboratorio",
+            Capacidad::EscribirImagenologia => "escribir_imagenologia",
+            Capacidad::GestionarFarmacia => "gestionar_farmacia",
+            Capacidad::GestionarAmbulancias => "gestionar_ambulancias",
+            Capacidad::GestionarUsuarios => "gestionar_usuarios",
+            Capacidad::GestionarInstituciones => "gestionar_instituciones",
+        }
+    }
+
+    /// ¿Puede un administrador de institución reconfigurar quién tiene esto?
+    ///
+    /// `GestionarInstituciones` NO: crea instituciones y les fija la licencia,
+    /// o sea que vive por encima de la institución. Dejar que el administrador
+    /// de una se lo concediera a un rol suyo sería una escalada, no una
+    /// configuración — se estaría dando la llave del piso de arriba.
+    ///
+    /// Todo lo demás sí, incluida `GestionarUsuarios`: quién administra la
+    /// planta es justo la clase de decisión que cambia entre una IPS de tres
+    /// personas y un hospital. Lo que se le impide es dejarla SIN NADIE, que es
+    /// lo irreparable; eso lo comprueba [`Ajustes::validar`].
+    pub fn configurable_por_institucion(&self) -> bool {
+        !matches!(self, Capacidad::GestionarInstituciones)
+    }
+}
+
 impl RolUsuario {
+    /// Todos los roles, para pintar la matriz.
+    pub const TODOS: &'static [RolUsuario] = &[
+        RolUsuario::Superadmin,
+        RolUsuario::Admin,
+        RolUsuario::Medico,
+        RolUsuario::Paciente,
+        RolUsuario::Enfermeria,
+        RolUsuario::AuxiliarEnfermeria,
+        RolUsuario::RegenteFarmacia,
+        RolUsuario::Laboratorista,
+        RolUsuario::Radiologo,
+        RolUsuario::Anestesiologo,
+        RolUsuario::Terapeuta,
+        RolUsuario::Nutricionista,
+        RolUsuario::Psicologo,
+        RolUsuario::TrabajoSocial,
+        RolUsuario::Bacteriologo,
+    ];
+
+    /// ¿Puede la matriz de una institución decir algo sobre este rol?
+    ///
+    /// **`Superadmin` no**: no pertenece a ninguna institución
+    /// (`institucion_id = NULL`), así que una fila suya en una matriz
+    /// per-institución no se aplicaría nunca. Aceptarla y no usarla sería
+    /// exactamente lo que la directiva 21 prohíbe —guardar algo que dice una
+    /// cosa y significa otra—, y además dejaría al administrador creyendo que
+    /// ha restringido al superadmin. Se rechaza al escribir.
+    ///
+    /// **`Paciente` tampoco**: su ámbito es `Ninguno` mientras no exista el
+    /// portal, de modo que concederle una capacidad no le abriría nada y
+    /// prometería lo contrario. Cuando el portal exista, esto se revisa junto
+    /// con `Ambito::Paciente`.
+    pub fn configurable_por_institucion(&self) -> bool {
+        !matches!(self, RolUsuario::Superadmin | RolUsuario::Paciente)
+    }
     /// ¿Este rol puede hacer esto?
     ///
     /// La lista es explícita y sin comodín: un rol nuevo no hereda nada por
@@ -126,6 +321,28 @@ impl RolUsuario {
             EscribirPaciente => matches!(
                 self,
                 Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria | Psicologo
+            ),
+            // Quien atiende al paciente en la camilla. Fuera laboratorio,
+            // radiología y bacteriología: interactúan con la muestra o la imagen.
+            AtenderUrgenciasHospitalizacion => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria | Anestesiologo
+            ),
+            EscribirNutricion => matches!(self, Superadmin | Admin | Medico | Nutricionista),
+            EscribirRehabilitacion => matches!(self, Superadmin | Admin | Medico | Terapeuta),
+            GestionarRemision => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
+            ),
+            EscribirLaboratorio => matches!(
+                self,
+                Superadmin | Admin | Medico | Laboratorista | Bacteriologo
+            ),
+            EscribirImagenologia => matches!(self, Superadmin | Admin | Medico | Radiologo),
+            GestionarFarmacia => matches!(self, Superadmin | Admin | RegenteFarmacia),
+            GestionarAmbulancias => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
             ),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),
@@ -175,11 +392,110 @@ impl RolUsuario {
         let de: serde::de::value::StrDeserializer<serde::de::value::Error> = s.into_deserializer();
         <Self as serde::Deserialize>::deserialize(de).ok()
     }
+
+    /// El nombre con el que el rol viaja a la base y a la pantalla.
+    ///
+    /// Mismo motivo que en [`Capacidad::como_str`]: hace falta un `&'static
+    /// str` y el `Serialize` da un `String` propio. Que las dos formas digan lo
+    /// mismo lo ata `el_nombre_de_la_base_y_el_de_serde_son_el_mismo`.
+    pub fn como_str(&self) -> &'static str {
+        match self {
+            RolUsuario::Superadmin => "superadmin",
+            RolUsuario::Admin => "admin",
+            RolUsuario::Medico => "medico",
+            RolUsuario::Paciente => "paciente",
+            RolUsuario::Enfermeria => "enfermeria",
+            RolUsuario::AuxiliarEnfermeria => "auxiliar_enfermeria",
+            RolUsuario::RegenteFarmacia => "regente_farmacia",
+            RolUsuario::Laboratorista => "laboratorista",
+            RolUsuario::Radiologo => "radiologo",
+            RolUsuario::Anestesiologo => "anestesiologo",
+            RolUsuario::Terapeuta => "terapeuta",
+            RolUsuario::Nutricionista => "nutricionista",
+            RolUsuario::Psicologo => "psicologo",
+            RolUsuario::TrabajoSocial => "trabajo_social",
+            RolUsuario::Bacteriologo => "bacteriologo",
+        }
+    }
 }
 
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    /// Las listas escritas a mano —`TODAS`, `TODOS` y los dos `como_str`— son
+    /// justo el sitio donde una variante nueva se olvida en silencio. Estas
+    /// cuatro pruebas las atan al `match` exhaustivo y al `serde`, que son lo
+    /// que el compilador sí vigila.
+    #[test]
+    fn todas_las_capacidades_estan_en_la_lista() {
+        for c in Capacidad::TODAS {
+            // Un `match` exhaustivo: añadir una variante rompe la compilación
+            // aquí, y entonces hay que tocar TODAS.
+            let _: () = match c {
+                Capacidad::FirmarClinico
+                | Capacidad::BorrarClinico
+                | Capacidad::EscribirClinico
+                | Capacidad::EscribirPaciente
+                | Capacidad::AtenderUrgenciasHospitalizacion
+                | Capacidad::EscribirNutricion
+                | Capacidad::EscribirRehabilitacion
+                | Capacidad::GestionarRemision
+                | Capacidad::EscribirLaboratorio
+                | Capacidad::EscribirImagenologia
+                | Capacidad::GestionarFarmacia
+                | Capacidad::GestionarAmbulancias
+                | Capacidad::GestionarUsuarios
+                | Capacidad::GestionarInstituciones => (),
+            };
+        }
+        assert_eq!(Capacidad::TODAS.len(), 14, "¿se añadió una capacidad?");
+        let unicas: std::collections::HashSet<_> = Capacidad::TODAS.iter().collect();
+        assert_eq!(unicas.len(), Capacidad::TODAS.len(), "hay una repetida");
+    }
+
+    #[test]
+    fn todos_los_roles_estan_en_la_lista() {
+        for r in RolUsuario::TODOS {
+            let _: () = match r {
+                RolUsuario::Superadmin
+                | RolUsuario::Admin
+                | RolUsuario::Medico
+                | RolUsuario::Paciente
+                | RolUsuario::Enfermeria
+                | RolUsuario::AuxiliarEnfermeria
+                | RolUsuario::RegenteFarmacia
+                | RolUsuario::Laboratorista
+                | RolUsuario::Radiologo
+                | RolUsuario::Anestesiologo
+                | RolUsuario::Terapeuta
+                | RolUsuario::Nutricionista
+                | RolUsuario::Psicologo
+                | RolUsuario::TrabajoSocial
+                | RolUsuario::Bacteriologo => (),
+            };
+        }
+        assert_eq!(RolUsuario::TODOS.len(), 15, "¿se añadió un rol?");
+        let unicas: std::collections::HashSet<_> = RolUsuario::TODOS.iter().collect();
+        assert_eq!(unicas.len(), RolUsuario::TODOS.len(), "hay uno repetido");
+    }
+
+    /// Que el nombre de la base y el de serde sean el MISMO, en los dos
+    /// sentidos. Si divergieran, una matriz guardada dejaría de leerse y todo
+    /// caería al defecto sin ruido: la peor forma de fallar aquí.
+    #[test]
+    fn el_nombre_de_la_base_y_el_de_serde_son_el_mismo() {
+        for c in Capacidad::TODAS {
+            let por_serde = serde_json::to_string(c).unwrap();
+            assert_eq!(por_serde, format!("\"{}\"", c.como_str()), "capacidad {c:?}");
+            assert_eq!(Capacidad::desde_str(c.como_str()), Some(*c));
+        }
+        for r in RolUsuario::TODOS {
+            let por_serde = serde_json::to_string(r).unwrap();
+            assert_eq!(por_serde, format!("\"{}\"", r.como_str()), "rol {r:?}");
+            assert_eq!(RolUsuario::desde_str(r.como_str()), Some(*r));
+        }
+    }
     use crate::Visibilidad;
 
     /// El superadmin tiene `institucion_id = NULL` y aun así lo ve todo.

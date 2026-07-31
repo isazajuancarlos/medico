@@ -122,7 +122,7 @@ mod pruebas {
 
     fn nueva() -> OrdenNueva {
         OrdenNueva {
-            tipo: "LABORATORIO".into(),
+            tipo: "Laboratorio".into(),
             descripcion: "Hemograma".into(),
             justificacion: "Control".into(),
             codigo_cups: Some("902210".into()),
@@ -138,7 +138,8 @@ mod pruebas {
         let os = listar_por_historia(&pool, Ambito::institucion(1), 100).await.unwrap();
         assert_eq!(os.len(), 1);
         assert_eq!(os[0].id, id);
-        assert_eq!(os[0].estado, "PENDIENTE");
+        // El defecto lo fija la 0027, y es el que compara la interfaz.
+        assert_eq!(os[0].estado, "Pendiente");
         assert_eq!(os[0].descripcion, "Hemograma");
     }
 
@@ -153,8 +154,8 @@ mod pruebas {
     async fn cambiar_estado_y_eliminar_respetan_el_ambito() {
         let pool = base().await;
         let id = crear(&pool, Ambito::institucion(1), 100, &nueva()).await.unwrap().unwrap();
-        assert!(!cambiar_estado(&pool, Ambito::institucion(2), id, "REALIZADA").await.unwrap());
-        assert!(cambiar_estado(&pool, Ambito::institucion(1), id, "REALIZADA").await.unwrap());
+        assert!(!cambiar_estado(&pool, Ambito::institucion(2), id, "Completada").await.unwrap());
+        assert!(cambiar_estado(&pool, Ambito::institucion(1), id, "Completada").await.unwrap());
         assert!(!eliminar(&pool, Ambito::institucion(2), id).await.unwrap());
         assert!(eliminar(&pool, Ambito::institucion(1), id).await.unwrap());
     }
