@@ -24,8 +24,6 @@ pub struct Resumen {
     pub medicamentos: usize,
     /// Filas descartadas por venir sin CUM o sin nombre.
     pub omitidas: u64,
-    /// Filas insertadas o actualizadas en la base.
-    pub cargadas: u64,
 }
 
 /// Normaliza un encabezado para compararlo sin depender de mayúsculas, acentos ni
@@ -186,22 +184,72 @@ fn leer(ruta: &Path) -> Result<(Vec<MedicamentoNuevo>, Resumen), String> {
     }
 
     let lote: Vec<MedicamentoNuevo> = mapa.into_values().collect();
-    let resumen = Resumen {
-        filas,
-        medicamentos: lote.len(),
-        omitidas,
-        cargadas: 0,
-    };
+    let resumen = Resumen { filas, medicamentos: lote.len(), omitidas };
     Ok((lote, resumen))
 }
 
-/// Lee el CSV y carga el maestro en la base en una sola transacción.
-pub async fn cargar(pool: &medico_datos::Pool, ruta: &Path) -> Result<Resumen, String> {
-    let (lote, mut resumen) = leer(ruta)?;
-    let n = medico_datos::catalogo::cargar_medicamentos(pool, &lote)
-        .await
-        .map_err(|e| format!("error cargando en la base: {e}"))?;
-    resumen.cargadas = n;
+/// Lee el CSV y escribe el JSON que se EMPOTRA en el binario.
+///
+/// Sustituye a la antigua `cargar`, que escribía directamente en la base de un
+/// cliente. Con el maestro empotrado y sembrado en cada arranque, aquella carga
+/// quedaba PISADA por el siguiente reinicio, en silencio. La lectura —y todo lo
+/// que costó aprender en ella— no cambia: solo el destino.
+///
+/// Las claves del JSON son de un carácter a propósito: son 65 997 registros y
+/// cada byte de clave se paga 65 997 veces dentro del binario.
+pub fn generar_json(csv: &Path, salida: &Path) -> Result<Resumen, String> {
+    let (lote, resumen) = leer(csv)?;
+    let medicamentos: Vec<serde_json::Value> = lote
+        .iter()
+        .map(|m| {
+            serde_json::json!({
+                "c": m.codigo_cum,
+                "n": m.nombre,
+                "k": m.concentracion,
+                "f": m.forma_farmaceutica,
+                "t": m.titular.clone().unwrap_or_default(),
+            })
+        })
+        .collect();
+    // La FECHA del archivo fuente, que es lo único que dice si el maestro está
+    // caducado. Se toma del sistema de archivos y no se teclea: un dato escrito a
+    // mano sobre la frescura de otro dato envejece el doble de rápido.
+    let fecha_fuente = std::fs::metadata(csv)
+        .and_then(|m| m.modified())
+        .map(|t| {
+            let secs = t
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            // Fecha civil desde el epoch, sin dependencias: el algoritmo de
+            // Howard Hinnant. Solo hace falta el día, no la hora.
+            let z = (secs / 86_400) as i64 + 719_468;
+            let era = z.div_euclid(146_097);
+            let doe = z.rem_euclid(146_097);
+            let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+            let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+            let mp = (5 * doy + 2) / 153;
+            let d = doy - (153 * mp + 2) / 5 + 1;
+            let m = if mp < 10 { mp + 3 } else { mp - 9 };
+            let y = yoe + era * 400 + i64::from(m <= 2);
+            format!("{y:04}-{m:02}-{d:02}")
+        })
+        .unwrap_or_else(|_| "desconocida".into());
+
+    let doc = serde_json::json!({
+        "fuente": csv.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default(),
+        "fecha_fuente": fecha_fuente,
+        "generado_por": "medico-api generar-maestro-cum",
+        "advertencia": format!(
+            "Export del {fecha_fuente}. Un maestro CUM caducado NO falla: deja pasar \
+             medicamentos que ya no existen y rechaza los nuevos, y eso no se nota \
+             hasta la glosa. Contrastar con el export vigente del INVIMA antes de \
+             facturar."
+        ),
+        "medicamentos": medicamentos,
+    });
+    std::fs::write(salida, serde_json::to_string(&doc).map_err(|e| e.to_string())?)
+        .map_err(|e| format!("no pude escribir {}: {e}", salida.display()))?;
     Ok(resumen)
 }
 
@@ -303,23 +351,59 @@ producto,consecutivocum,expedientecum,principioactivo,concentracion,cantidad,uni
         assert!(err.contains("Columnas encontradas"), "y lista las que sí vio: {err}");
     }
 
-    #[tokio::test]
-    async fn carga_de_punta_a_punta_en_memoria() {
+    /// De punta a punta por el camino de VERDAD: CSV -> JSON empotrable.
+    ///
+    /// Antes esta prueba iba CSV -> base, porque el subcomando cargaba en la
+    /// base del cliente. Al empotrar el CUM (#77) ese camino desapareció —una
+    /// carga manual quedaba pisada por el siguiente arranque—, así que la prueba
+    /// sigue al destino nuevo. Lo que va del JSON a la base lo cubren las
+    /// pruebas de `medico_datos::clinico`.
+    #[test]
+    fn de_punta_a_punta_el_csv_se_vuelve_json_empotrable() {
         let csv = "\
-producto,titular,consecutivocum,expedientecum,formafarmaceutica\n\
-\"ACETAMINOFEN 500MG\",\"GENFAR\",\"1\",\"19900001\",\"TABLETA\"\n";
+producto,titular,consecutivocum,expedientecum,formafarmaceutica,principioactivo,cantidad,unidadmedida\n\
+\"ACETAMINOFEN 500MG\",\"GENFAR\",\"1\",\"19900001\",\"TABLETA\",\"ACETAMINOFEN\",\"500\",\"mg\"\n";
         let ruta = csv_temporal("e2e", csv);
+        let salida = std::env::temp_dir().join("cum-prueba.json");
 
-        let pool = medico_datos::abrir("sqlite::memory:").await.unwrap();
-        let resumen = cargar(&pool, &ruta).await.unwrap();
+        let resumen = generar_json(&ruta, &salida).unwrap();
         std::fs::remove_file(&ruta).ok();
 
         assert_eq!(resumen.medicamentos, 1);
-        assert_eq!(resumen.cargadas, 1);
-        let r = medico_datos::catalogo::buscar_medicamentos(&pool, "acetaminofen")
-            .await
-            .unwrap();
-        assert_eq!(r.len(), 1);
-        assert_eq!(r[0].codigo_cum, "19900001-1");
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&salida).unwrap()).unwrap();
+        std::fs::remove_file(&salida).ok();
+
+        let m = &doc["medicamentos"][0];
+        assert_eq!(m["c"], "19900001-1", "el CUM es expediente-consecutivo");
+        assert_eq!(m["n"], "ACETAMINOFEN 500MG");
+        assert_eq!(m["f"], "TABLETA");
+        assert_eq!(m["t"], "GENFAR");
+        // Un principio activo y una concentración: se resuelve.
+        assert_eq!(m["k"], "500 mg");
+        // Y la advertencia sobre la caducidad del maestro viaja con los datos.
+        assert!(
+            doc["advertencia"].as_str().unwrap().contains("no se nota hasta la glosa"),
+            "{}", doc["advertencia"]
+        );
+    }
+
+    /// La concentración se deja VACÍA cuando el medicamento es combinado: el
+    /// valor por fila es de UN principio activo y presentarlo como el del
+    /// producto sería falso. Media concentración es peor que ninguna.
+    #[test]
+    fn un_combinado_se_queda_sin_concentracion() {
+        let csv = "\
+producto,consecutivocum,expedientecum,principioactivo,cantidad,unidadmedida\n\
+\"COMBINADO\",\"1\",\"200\",\"AMOXICILINA\",\"500\",\"mg\"\n\
+\"COMBINADO\",\"1\",\"200\",\"CLAVULANICO\",\"125\",\"mg\"\n";
+        let ruta = csv_temporal("combi", csv);
+        let salida = std::env::temp_dir().join("cum-combi.json");
+        generar_json(&ruta, &salida).unwrap();
+        std::fs::remove_file(&ruta).ok();
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&salida).unwrap()).unwrap();
+        std::fs::remove_file(&salida).ok();
+        assert_eq!(doc["medicamentos"][0]["k"], "", "dos principios activos: no se elige uno");
     }
 }
