@@ -39,6 +39,11 @@ def create_usuario(
     # hacerse — a diferencia de leer la historia clínica, que sigue abierta
     # aunque haya vencido: un asunto comercial no puede dejar a un hospital sin
     # sus registros.
+    # Antes que nada: solo un superadmin fabrica otro superadmin. Aquí el
+    # esquema trae `rol` con defecto MEDICO y sin techo, así que el alta era la
+    # vía MÁS cómoda de escalar — quien la usa elige además la contraseña.
+    exigir_ascenso_permitido({"rol": payload.rol}, current_user)
+
     vigente, motivo = licencia_vigente(current_user, db)
     if not vigente:
         raise HTTPException(status_code=403, detail=motivo)

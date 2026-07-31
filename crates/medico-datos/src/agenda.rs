@@ -14,7 +14,7 @@
 //! `ItemInventario`. Aquí toda consulta lleva el ámbito y toda fila nace con
 //! dueño. Los bloques cuelgan de su agenda y heredan el suyo por ahí.
 
-use medico_dominio::agenda::{minutos, Bloqueo, Franja, Ocupacion, Turno};
+use medico_dominio::agenda::{es_instante, minutos, Bloqueo, Franja, Ocupacion, Turno};
 use medico_dominio::Ambito;
 use serde::{Deserialize, Serialize};
 
@@ -88,16 +88,19 @@ pub async fn medicos(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<MedicoAge
         Ambito::Institucion(id) => ("institucion_id = ?", Some(id)),
         Ambito::Ninguno => return Ok(Vec::new()),
     };
-    let roles = ROLES_QUE_ATIENDEN
-        .iter()
-        .map(|r| format!("'{r}'"))
-        .collect::<Vec<_>>()
-        .join(",");
+    // Un `?` por rol en vez de interpolar las cadenas. Hoy los cinco son
+    // constantes de este archivo, así que interpolarlas era seguro — pero es el
+    // patrón que deja de serlo el día que la lista salga de la base o traiga un
+    // apóstrofo, y un marcador cuesta lo mismo que una comilla.
+    let huecos = vec!["?"; ROLES_QUE_ATIENDEN.len()].join(",");
     let sql = format!(
         "SELECT id, nombre, rol FROM usuario \
-         WHERE activo = 1 AND rol IN ({roles}) AND {cond} ORDER BY nombre"
+         WHERE activo = 1 AND rol IN ({huecos}) AND {cond} ORDER BY nombre"
     );
     let mut q = sqlx::query_as::<_, MedicoAgendable>(&sql);
+    for r in ROLES_QUE_ATIENDEN {
+        q = q.bind(*r);
+    }
     if let Some(i) = inst {
         q = q.bind(i);
     }
@@ -451,6 +454,15 @@ pub async fn crear_bloqueo(
     if !crate::usuario::es_del_ambito(pool, ambito, b.medico_id).await? {
         return Ok(None);
     }
+    // El formato se comprueba AQUÍ y no solo en la base: el `CHECK (inicio <
+    // fin)` de la migración compara TEXTO, así que `{"inicio":"0000",
+    // "fin":"9999"}` lo pasaba y dejaba al profesional con cero turnos libres
+    // cualquier día, para siempre. Y con el formato garantizado, `recortar` deja
+    // de necesitar una rama para instantes sin hora que la consulta que la
+    // alimenta nunca le entregaba.
+    if !es_instante(&b.inicio) || !es_instante(&b.fin) {
+        return Ok(None);
+    }
     let r = sqlx::query(
         "INSERT INTO bloqueo_agenda (institucion_id, medico_id, inicio, fin, motivo, tipo, creado_por_id) \
          VALUES (?,?,?,?,?,COALESCE(?,'OTRO'),?)",
@@ -573,7 +585,12 @@ pub async fn turnos(
                 Some(Franja {
                     inicio: minutos(i)?,
                     fin: minutos(f)?,
-                    duracion: u16::try_from(*d).ok()?,
+                    // Una duración de cero o negativa la impide el CHECK de la
+                    // migración, pero aquí se traduce a «esta franja no cuenta»
+                    // en vez de a un valor de relleno: si algún día una fila la
+                    // trajera, la franja desaparece —y se nota— en lugar de
+                    // colgar el servidor en un bucle infinito.
+                    duracion: std::num::NonZeroU16::new(u16::try_from(*d).ok()?)?,
                 })
             })
             .collect::<Vec<_>>(),
@@ -600,14 +617,22 @@ pub async fn turnos(
 }
 
 /// El minuto del día que le corresponde a un instante `YYYY-MM-DD HH:MM` visto
-/// desde `fecha`. Antes del día, `si_antes`; después, el otro extremo.
+/// desde `fecha`. Antes del día, el minuto 0; después, el 1439.
+///
+/// Solo entran instantes bien formados: `crear_bloqueo` los valida con
+/// [`es_instante`]. Antes había aquí una rama para instantes SIN hora, comentada
+/// «el día entero», y era una promesa que la consulta de arriba no podía
+/// cumplir: filtra `fin >= '{fecha} 00:00'` como texto, y `"2026-08-10"` es
+/// prefijo de `"2026-08-10 00:00"`, o sea MENOR — el bloqueo ni siquiera se
+/// devolvía, y su último día salía entero libre. Se quitó la rama en vez de
+/// arreglar la consulta: si la entrada no puede tener esa forma, el código que
+/// la contempla es un mecanismo que sostiene a otro.
 fn recortar(instante: &str, fecha: &str, si_fuera: u16) -> u16 {
     match instante.split_once(' ') {
         Some((d, h)) if d == fecha => minutos(h).unwrap_or(si_fuera),
         Some((d, _)) if d < fecha => 0,
         Some(_) => 1439,
-        // Sin hora (solo fecha): el día entero.
-        None if instante == fecha => si_fuera,
+        // Imposible con `es_instante` delante; se trata como «fuera del día».
         None => si_fuera,
     }
 }
@@ -640,6 +665,11 @@ pub struct Indicadores {
     pub oportunidad_medidas: i64,
     /// De cuántas NO se sabe, porque no tienen fecha de solicitud registrada.
     pub oportunidad_sin_dato: i64,
+    /// Cuántas traen una solicitud POSTERIOR a la cita. Es imposible —nadie pide
+    /// una cita después de que ocurra—, así que no se promedian: darían días
+    /// negativos que MEJORAN el indicador, o sea que un dato roto se leería como
+    /// buena gestión. Se cuentan aparte para que se vean y se corrijan.
+    pub oportunidad_incoherentes: i64,
     /// Promedio de días entre solicitud y cita. `None` si no hubo ninguna que
     /// medir; no se sustituye por 0.
     pub oportunidad_dias_promedio: Option<f64>,
@@ -666,6 +696,7 @@ pub async fn indicadores(
         tasa_cancelacion_pct: None,
         oportunidad_medidas: 0,
         oportunidad_sin_dato: 0,
+        oportunidad_incoherentes: 0,
         oportunidad_dias_promedio: None,
         meta_medicina_general_dias: 3,
         meta_especialista_dias: 5,
@@ -706,10 +737,11 @@ pub async fn indicadores(
             _ => {}
         }
         match solicitada.as_deref().and_then(|s| dias_entre(s, fecha)) {
-            Some(d) => {
+            Some(d) if d >= 0 => {
                 r.oportunidad_medidas += 1;
                 suma_dias += d;
             }
+            Some(_) => r.oportunidad_incoherentes += 1,
             None => r.oportunidad_sin_dato += 1,
         }
     }
@@ -994,6 +1026,27 @@ mod pruebas {
         assert_eq!(i.tasa_inasistencia_pct, Some(33.33));
     }
 
+    /// Una solicitud POSTERIOR a la cita es imposible. No se promedia: daría
+    /// días negativos que MEJORAN el indicador, o sea que un dato roto se leería
+    /// como buena gestión.
+    #[tokio::test]
+    async fn una_solicitud_posterior_a_la_cita_no_mejora_el_indicador() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO cita (institucion_id,paciente_id,medico_id,fecha,hora,estado,solicitada_en)
+             VALUES (1,10,5,'2026-08-10','08:00','ATENDIDA','2026-08-04'),
+                    (1,10,5,'2026-08-11','08:00','ATENDIDA','2026-09-30')",
+        ).execute(&pool).await.unwrap();
+        let i = indicadores(&pool, Ambito::institucion(1), None, "2026-08-01", "2026-08-31")
+            .await.unwrap();
+        assert_eq!(i.oportunidad_medidas, 1);
+        assert_eq!(i.oportunidad_incoherentes, 1, "la fecha imposible se promedió");
+        assert_eq!(
+            i.oportunidad_dias_promedio, Some(6.0),
+            "el promedio se movió: entraron días negativos"
+        );
+    }
+
     /// Sin nada que medir, el promedio es «no se sabe» y NO cero — que sería el
     /// mejor resultado posible, inventado.
     #[tokio::test]
@@ -1004,6 +1057,72 @@ mod pruebas {
         assert_eq!(i.total, 0);
         assert_eq!(i.oportunidad_dias_promedio, None);
         assert_eq!(i.tasa_inasistencia_pct, None);
+    }
+
+    /// EL SUPERADMIN NO CREA AGENDAS, y sí puede borrarlas. Queda fijado aquí
+    /// para que sea una decisión y no un accidente.
+    ///
+    /// Crear exige elegir institución —la agenda es de una— y el superadmin no
+    /// tiene ninguna; ninguna pantalla le ofrece escogerla, así que aceptarlo
+    /// pediría API nueva para un caso que nadie pide. Borrar y corregir sí
+    /// funcionan porque `puede_ver` le concede todo, y eso es lo que hace falta
+    /// para dar soporte a un cliente. Si algún día hace falta que cree, la
+    /// institución va en el cuerpo y de forma explícita.
+    #[tokio::test]
+    async fn el_superadmin_repara_agendas_pero_no_las_crea() {
+        let pool = base().await;
+        assert!(
+            crear(&pool, Ambito::Superadmin, 5, &agenda_de_agosto(5)).await.unwrap().is_none(),
+            "crear sin institución elegiría una por su cuenta"
+        );
+        let id = crear(&pool, Ambito::institucion(1), 5, &agenda_de_agosto(5)).await.unwrap().unwrap();
+        assert!(obtener(&pool, Ambito::Superadmin, id).await.unwrap().is_some());
+        assert!(actualizar(&pool, Ambito::Superadmin, id, Some(false), None).await.unwrap());
+        assert!(borrar(&pool, Ambito::Superadmin, id).await.unwrap());
+    }
+
+    /// Al superadmin no se le hace agenda: no atiende pacientes en ninguna
+    /// institución. Antes esto salía bien por casualidad —el NULL de su
+    /// `institucion_id` se decodificaba como 0—, y ahora se dice.
+    #[tokio::test]
+    async fn al_superadmin_no_se_le_hace_agenda() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+             VALUES (99,'Dueño','root@x.co','h','superadmin',NULL,1)",
+        ).execute(&pool).await.unwrap();
+        assert!(crear(&pool, Ambito::institucion(1), 5, &AgendaNueva {
+            medico_id: 99, anio: 2026, mes: 8, observaciones: None, bloques: vec![],
+        }).await.unwrap().is_none());
+        assert!(turnos(&pool, Ambito::institucion(1), 99, "2026-08-03").await.unwrap().is_empty());
+    }
+
+    /// El bloqueo con formato basura no entra. `{"inicio":"0000","fin":"9999"}`
+    /// pasaba el `CHECK (inicio < fin)` —que compara TEXTO— y dejaba al
+    /// profesional con cero turnos libres cualquier día, para siempre.
+    #[tokio::test]
+    async fn un_bloqueo_con_formato_basura_no_entra() {
+        let pool = base().await;
+        for (ini, fin) in [
+            ("0000", "9999"),
+            ("2026-08-10", "2026-08-11"),          // sin hora
+            ("2026-13-01 08:00", "2026-13-02 08:00"), // mes 13
+            ("2026-02-31 08:00", "2026-02-31 12:00"), // 31 de febrero
+            ("2026-08-10T08:00", "2026-08-10T12:00"), // ISO con T
+        ] {
+            assert!(
+                crear_bloqueo(&pool, Ambito::institucion(1), 5, &BloqueoNuevo {
+                    medico_id: 5, inicio: ini.into(), fin: fin.into(),
+                    motivo: "x".into(), tipo: None,
+                }).await.unwrap().is_none(),
+                "se aceptó el bloqueo «{ini}» → «{fin}»"
+            );
+        }
+        // Y el bien formado sigue entrando: la regla no cerró la operación.
+        assert!(crear_bloqueo(&pool, Ambito::institucion(1), 5, &BloqueoNuevo {
+            medico_id: 5, inicio: "2026-08-10 08:00".into(), fin: "2026-08-10 12:00".into(),
+            motivo: "Reunión".into(), tipo: Some("REUNION".into()),
+        }).await.unwrap().is_some());
     }
 
     #[tokio::test]

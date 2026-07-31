@@ -61,6 +61,13 @@ CONOCIDOS = frozenset({
     "change-me-in-production-use-64-random-characters",
     "medsys_docker_secret_key_cambie_en_produccion_2026",
     "medsys_jwt_secret_cambie_en_produccion_2026_muy_largo",
+    # El que `.env.example` traía hasta el 2026-07-31. Es el que MÁS gente pudo
+    # copiar, porque ese archivo invita a copiarse, y en la primera pasada del
+    # arreglo se añadió a la lista del binario Rust y NO a esta — dos listas que
+    # divergieron a las horas de nacer. Lo ata `test_config_secretos.py`, que
+    # comprueba el ejemplo contra ESTE validador, igual que hace la prueba
+    # `el_ejemplo_no_entrega_un_secreto_que_sirva` del lado Rust.
+    "cambie_esto_por_un_valor_aleatorio_de_32_o_mas_caracteres",
 })
 
 #: Un HS256 con menos de esto se ataca por fuerza bruta fuera de línea a partir

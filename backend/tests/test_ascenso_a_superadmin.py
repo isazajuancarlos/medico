@@ -1,5 +1,14 @@
 """Un ADMIN no puede fabricar un SUPERADMIN, y con ello salirse del aislamiento.
 
+LECCIÓN DE LA PRIMERA VERSIÓN DE ESTE ARCHIVO, que es el motivo de que ahora
+haya un caso por CADA extremo que escribe `rol`: la primera tanda probaba los dos
+`PUT`, salía verde, y dejaba abiertos los dos `POST` de alta — que son el camino
+MÁS fácil, porque quien crea la cuenta elige además la contraseña. El alcance de
+la prueba era el de la mitigación y no el de la amenaza, así que el verde no
+distinguía «cerrado» de «cerrado por un lado». Lo cazó una revisión de seguridad
+independiente el 2026-07-31.
+
+
 Los dos extremos de actualización de usuario —`PUT /api/usuarios/{id}` y
 `PUT /api/admin/usuarios/{id}`— hacían `setattr` de todos los campos del payload,
 y los dos esquemas exponen `rol`. El aislamiento por institución estaba bien
@@ -159,4 +168,99 @@ def test_degradar_a_un_superadmin_sigue_siendo_posible(entorno):
     crea autoridad, y prohibirlo dejaría al dueño sin poder retirar la suya."""
     _como_superadmin()
     r = entorno.put("/api/admin/usuarios/3", json={"rol": "admin"})
+    assert r.status_code == 200, f"devolvió {r.status_code}"
+
+
+# ─── El ALTA, que la primera versión de este archivo no probaba ──────────────
+#
+# Son los otros dos sitios donde `Usuario.rol` se escribe por HTTP. La tabla
+# completa de los cuatro está en el docstring de `exigir_ascenso_permitido`.
+
+
+def test_el_admin_NO_puede_crear_un_superadmin(entorno):
+    """El camino más fácil: se crea la cuenta Y se elige su contraseña."""
+    r = entorno.post("/api/usuarios/", json={
+        "username": "titere", "password": "unaclavecualquiera123",
+        "nombre_completo": "Títere", "rol": "superadmin",
+    })
+    assert r.status_code == 403, (
+        f"devolvió {r.status_code}: un admin se fabricó un superadmin dando de "
+        f"alta una cuenta, y además conoce su contraseña"
+    )
+
+
+def test_el_admin_NO_puede_crear_un_superadmin_por_administracion(entorno):
+    r = entorno.post("/api/admin/usuarios", json={
+        "username": "titere2", "password": "unaclavecualquiera123",
+        "nombre_completo": "Títere Dos", "rol": "superadmin",
+    })
+    assert r.status_code == 403, (
+        f"devolvió {r.status_code}: la escalada pasa por el alta de /api/admin"
+    )
+
+
+def test_el_admin_SI_puede_dar_de_alta_al_personal(entorno):
+    """Control. Dar de alta a una enfermera es el trabajo diario de un admin;
+    si esto fallara, la regla estaría cerrando la operación normal."""
+    r = entorno.post("/api/usuarios/", json={
+        "username": "enfermera", "password": "unaclavecualquiera123",
+        "nombre_completo": "Enfermera", "rol": "enfermeria",
+    })
+    assert r.status_code == 201, f"devolvió {r.status_code}: {r.text[:200]}"
+    assert r.json()["rol"] == "enfermeria"
+
+
+def test_el_superadmin_SI_puede_dar_de_alta_a_otro_superadmin(entorno):
+    _como_superadmin()
+    r = entorno.post("/api/usuarios/", json={
+        "username": "otrodueno", "password": "unaclavecualquiera123",
+        "nombre_completo": "Otro dueño", "rol": "superadmin",
+    })
+    assert r.status_code == 201, f"devolvió {r.status_code}: {r.text[:200]}"
+
+
+# ─── El dueño del sistema no es un registro público ──────────────────────────
+#
+# `SUPERADMIN` tiene `institucion_id = NULL` por diseño. Mientras «no se sabe de
+# quién es» y «es de todos» viajaron como el mismo `None`, cualquier ADMIN lo
+# leía, lo reescribía y —lo peor— le cambiaba la contraseña. De ahí a entrar como
+# dueño del sistema hay un login.
+
+
+def test_el_admin_NO_ve_al_superadmin(entorno):
+    r = entorno.get("/api/usuarios/3")
+    assert r.status_code == 404, (
+        f"devolvió {r.status_code}: un admin leyó la cuenta del dueño del "
+        f"sistema, con su rol a la vista, enumerando ids"
+    )
+
+
+def test_el_admin_NO_le_cambia_la_clave_al_superadmin(entorno):
+    r = entorno.post("/api/admin/usuarios/3/reset-password",
+                     json={"nueva_password": "lamiadeahora"})
+    assert r.status_code == 404, (
+        f"devolvió {r.status_code}: un admin le puso contraseña al superadmin y "
+        f"con ella entra como dueño del sistema"
+    )
+
+
+def test_el_admin_NO_desbloquea_al_superadmin(entorno):
+    r = entorno.post("/api/admin/usuarios/3/desbloquear")
+    assert r.status_code == 404, f"devolvió {r.status_code}"
+
+
+def test_el_admin_SI_gestiona_a_los_suyos(entorno):
+    """Control, y el que impide que esto sea «cerrar por cerrar»: el admin
+    sigue pudiendo resetear la clave del personal de SU institución."""
+    r = entorno.post("/api/admin/usuarios/2/reset-password",
+                     json={"nueva_password": "unaclavenueva"})
+    assert r.status_code == 200, (
+        f"devolvió {r.status_code}: la regla dejó al admin sin poder atender a "
+        f"su propio personal, que es el mismo fallo con el signo cambiado"
+    )
+
+
+def test_el_superadmin_SI_se_gestiona_a_si_mismo(entorno):
+    _como_superadmin()
+    r = entorno.get("/api/usuarios/3")
     assert r.status_code == 200, f"devolvió {r.status_code}"

@@ -129,8 +129,10 @@ pub async fn crear(
     .await;
     match r {
         Ok(r) => Ok(Some(r.last_insert_rowid())),
-        // Un `tipo` fuera del CHECK o una duración imposible se rechazan; no se
-        // guardan «como vengan» ni se sustituyen por un valor válido.
+        // Un `tipo` fuera del CHECK, una duración imposible, o **ese profesional
+        // ya tiene una cita a esa hora** (índice único de la migración 0036).
+        // Los tres se rechazan; no se guardan «como vengan» ni se sustituyen por
+        // un valor válido.
         Err(sqlx::Error::Database(_)) => Ok(None),
         Err(e) => Err(e),
     }
@@ -300,6 +302,53 @@ mod pruebas {
             assert!(
                 crear(&pool, Ambito::institucion(1), &nueva).await.unwrap().is_none(),
                 "se aceptó una duración de {d} minutos"
+            );
+        }
+    }
+
+    fn cita_de(hora: &str, medico_id: Option<i64>) -> CitaNueva {
+        CitaNueva {
+            paciente_id: 10, medico_id, fecha: "2026-08-05".into(), hora: hora.into(),
+            motivo: None, tipo: None, duracion_minutos: None, solicitada_en: None,
+        }
+    }
+
+    /// Una persona no puede atender a dos pacientes en el mismo instante. Es
+    /// imposible, no inusual, y por eso lo cierra un índice y no un consejo de
+    /// la pantalla — que además no sobrevive a dos peticiones simultáneas.
+    #[tokio::test]
+    async fn el_mismo_profesional_no_tiene_dos_citas_a_la_misma_hora() {
+        let pool = base().await;
+        let a = crear(&pool, Ambito::institucion(1), &cita_de("11:00", Some(5))).await.unwrap();
+        assert!(a.is_some());
+        let b = crear(&pool, Ambito::institucion(1), &cita_de("11:00", Some(5))).await.unwrap();
+        assert!(b.is_none(), "se agendaron dos pacientes con la misma médica a las 11:00");
+        // Otra hora sí.
+        assert!(crear(&pool, Ambito::institucion(1), &cita_de("11:30", Some(5))).await.unwrap().is_some());
+    }
+
+    /// La cancelada libera su hora: si contara, quien cancela dejaría el turno
+    /// inutilizable para siempre.
+    #[tokio::test]
+    async fn una_cita_cancelada_libera_su_hora() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), &cita_de("12:00", Some(5))).await.unwrap().unwrap();
+        cambiar_estado(&pool, Ambito::institucion(1), id, "CANCELADA").await.unwrap();
+        assert!(
+            crear(&pool, Ambito::institucion(1), &cita_de("12:00", Some(5))).await.unwrap().is_some(),
+            "la hora de una cita cancelada quedó bloqueada para siempre"
+        );
+    }
+
+    /// Sin profesional asignado es un estado legítimo, y muchas pueden compartir
+    /// hora: agendar primero y asignar después es como trabaja el mostrador.
+    #[tokio::test]
+    async fn varias_citas_sin_profesional_comparten_hora() {
+        let pool = base().await;
+        for _ in 0..3 {
+            assert!(
+                crear(&pool, Ambito::institucion(1), &cita_de("13:00", None)).await.unwrap().is_some(),
+                "el índice cerró las citas todavía sin asignar"
             );
         }
     }

@@ -15,6 +15,7 @@ por proceso y el resultado quedaría fijado por quien lo importara primero.
 """
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -139,3 +140,37 @@ def test_el_modulo_real_quedo_con_un_secreto_valido():
         assert valor, f"{nombre} vacía"
         assert valor.lower() not in CONOCIDOS, f"{nombre} es un valor de relleno"
         assert len(valor) >= LARGO_MINIMO, f"{nombre} demasiado corta"
+
+
+def test_el_ejemplo_no_entrega_un_secreto_que_sirva():
+    """`.env.example` NO puede entregar un valor que ESTE validador acepte.
+
+    Es la gemela de `el_ejemplo_no_entrega_un_secreto_que_sirva` de
+    `crates/medico-api/src/config.rs`, y existe porque tener solo aquella dejaba
+    a medias la regla: el 2026-07-31 el valor que el ejemplo publicaba se añadió
+    a la lista negra del binario Rust y NO a `CONOCIDOS`, de modo que un
+    despliegue Python que hubiera copiado el ejemplo seguía firmando sus JWT con
+    una clave que está en el historial de git. Con ella se fabrica un token de
+    superadmin y el aislamiento por institución deja de proteger nada.
+
+    `CONOCIDOS` es una lista negra, o sea una categoría abierta. La regla que sí
+    discrimina es esta: el archivo que se invita a copiar se comprueba contra el
+    validador del arranque, así que cualquier valor plausible que alguien escriba
+    ahí «para que se vea el formato» pone la prueba en rojo.
+    """
+    ejemplo = Path(__file__).resolve().parent.parent.parent / ".env.example"
+    assert ejemplo.exists(), f"no se encontró {ejemplo}"
+
+    valor = None
+    for linea in ejemplo.read_text(encoding="utf-8").splitlines():
+        if linea.strip().startswith("SECRET_KEY="):
+            valor = linea.strip().split("=", 1)[1]
+            break
+    assert valor is not None, ".env.example tiene que seguir documentando SECRET_KEY"
+
+    with pytest.raises(ConfiguracionInsegura):
+        os.environ["UNA_CLAVE_DE_EJEMPLO"] = valor
+        try:
+            _exigir("UNA_CLAVE_DE_EJEMPLO")
+        finally:
+            os.environ.pop("UNA_CLAVE_DE_EJEMPLO", None)

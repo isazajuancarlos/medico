@@ -295,14 +295,27 @@ def exigir_cupo_al_modificar(usuario, cambios: dict, user: "Usuario",
 def exigir_ascenso_permitido(cambios: dict, user: "Usuario") -> None:
     """**Solo un superadmin puede fabricar otro superadmin.**
 
-    Los dos extremos de actualización de usuario hacen `setattr` de todos los
-    campos del payload, y los dos esquemas —`UsuarioUpdate` y
-    `UsuarioUpdateAdmin`— exponen `rol`. Sin esta comprobación, un ADMIN ponía
-    `rol=SUPERADMIN` a cualquier cuenta de su institución (la suya incluida) y
-    con eso salía del aislamiento: `puede_ver()` no acota al superadmin, así que
-    el ascenso es una escalada de privilegios que CRUZA instituciones. El límite
-    de institución de `admin.py` no lo frena, porque el ascenso ocurre dentro de
-    la institución y el efecto ocurre fuera.
+    Va en LOS CUATRO sitios que escriben `Usuario.rol` por HTTP, y la lista se
+    mantiene aquí porque el fallo de la primera versión fue justamente cubrir la
+    mitad:
+
+        PUT  /api/usuarios/{id}        `usuarios.py`  setattr
+        PUT  /api/admin/usuarios/{id}  `admin.py`     setattr
+        POST /api/usuarios/            `usuarios.py`  Usuario(**payload)
+        POST /api/admin/usuarios       `admin.py`     Usuario(**payload)
+
+    Los dos primeros se cerraron y los dos ALTAS quedaron abiertas — que son el
+    camino más fácil, porque quien crea la cuenta elige además su contraseña y no
+    necesita suplantar a nadie. Las pruebas salieron verdes porque recorrían solo
+    los `PUT`: su alcance era el de la mitigación y no el de la amenaza. Lo cazó
+    una revisión de seguridad independiente el 2026-07-31. Si mañana aparece un
+    quinto sitio que escriba `rol`, va en esta lista y con su prueba.
+
+    Sin esta comprobación, un ADMIN pone `rol=SUPERADMIN` en una cuenta de su
+    institución (la suya incluida) y con eso sale del aislamiento: `puede_ver()`
+    no acota al superadmin, así que el ascenso es una escalada de privilegios que
+    CRUZA instituciones. El límite de institución de `admin.py` no lo frena,
+    porque el ascenso ocurre dentro de la institución y el efecto ocurre fuera.
 
     Se comprueba el DESTINO y no el origen: degradar a un superadmin no crea
     autoridad nueva, y prohibirlo dejaría al dueño del sistema sin poder retirar

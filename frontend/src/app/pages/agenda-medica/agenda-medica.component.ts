@@ -254,6 +254,17 @@ function aInstante(d: Date | null | undefined): string | null {
                 </div>
               </div>
             }
+            @if (indicadores().oportunidad_incoherentes > 0) {
+              <div class="ind-card ind-warn">
+                <div style="font-size:1.5rem;font-weight:700">{{ indicadores().oportunidad_incoherentes }}</div>
+                <div style="font-weight:600">Con solicitud posterior a la cita</div>
+                <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">
+                  Imposible: nadie pide una cita después de que ocurra. No se
+                  promedian —darían días negativos que MEJORAN el indicador— y
+                  hay que corregir la fecha en esas citas.
+                </div>
+              </div>
+            }
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">

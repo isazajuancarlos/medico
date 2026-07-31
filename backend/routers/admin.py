@@ -319,6 +319,11 @@ def create_usuario_admin(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(*ADMIN_ROLES)),
 ):
+    # Mismo techo que el alta de `/api/usuarios`: cerrar uno de los dos altas
+    # deja la escalada abierta al lado, que es exactamente lo que pasó con los
+    # dos `PUT` la primera vez.
+    exigir_ascenso_permitido({"rol": payload.rol}, current_user)
+
     # Esta ruta creaba usuarios SIN mirar la licencia, mientras `POST /usuarios`
     # sí lo hacía. Era una puerta de atrás completa: bastaba usar la de admin
     # para saltarse vigencia y cupos a la vez.

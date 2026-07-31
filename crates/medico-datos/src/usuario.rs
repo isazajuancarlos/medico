@@ -100,14 +100,27 @@ pub async fn es_del_ambito(
     ambito: Ambito,
     usuario_id: i64,
 ) -> Result<bool, sqlx::Error> {
-    let fila: Option<(i64,)> =
+    // `Option<(Option<i64>,)>` y no `Option<(i64,)>`, y la diferencia importa:
+    // `institucion_id` es NULL en el superadmin, y con el tipo anterior el
+    // driver de SQLite decodificaba ese NULL como **0** en silencio en vez de
+    // fallar. Hoy el resultado es el correcto por casualidad —ninguna
+    // institución tiene id 0, así que `puede_ver(Some(0))` niega—, pero es
+    // exactamente el mecanismo que la directiva 20 prohíbe: el dato ausente
+    // sustituido por un valor. Basta una institución con `id = 0` para que
+    // conceda. Aquí el NULL se llama por su nombre y se niega a propósito.
+    let fila: Option<(Option<i64>,)> =
         sqlx::query_as("SELECT institucion_id FROM usuario WHERE id = ? AND activo = 1")
             .bind(usuario_id)
             .fetch_optional(pool)
             .await?;
     Ok(match fila {
+        // No existe, o está inactivo.
         None => false,
-        Some((inst,)) => ambito.puede_ver(Some(inst)) == medico_dominio::Visibilidad::Si,
+        // Existe pero no pertenece a ninguna institución: es el superadmin. No
+        // es «de todas» a estos efectos — no se le agenda una cita ni se le hace
+        // agenda, porque no atiende pacientes en ninguna.
+        Some((None,)) => false,
+        Some((Some(inst),)) => ambito.puede_ver(Some(inst)) == medico_dominio::Visibilidad::Si,
     })
 }
 
