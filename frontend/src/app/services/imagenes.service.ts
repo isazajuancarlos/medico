@@ -31,8 +31,12 @@ export interface InformeImagen {
   impresion_diagnostica: string;
   recomendaciones?: string;
   clasificacion?: string;
+  /** Rutas que sirven las imágenes adjuntas, ya listas para un `src`. */
   imagenes_paths: string[];
   firmado: boolean;
+  fecha_firma?: string;
+  /** Quién firmó. Firmado es de solo lectura: para corregir se emite otro. */
+  firmado_por_id?: number;
 }
 
 export interface InformeCreate {

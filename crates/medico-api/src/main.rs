@@ -1,6 +1,7 @@
 //! El servidor de medico: lee la configuración, abre la base y sirve la API.
 
 mod auth;
+mod capacidades;
 mod claves;
 mod config;
 mod estaticos;
@@ -97,6 +98,18 @@ async fn main() -> ExitCode {
         }
     };
 
+    // DIVIPOLA en cada arranque: es idempotente y así regenerar el JSON basta
+    // para que el siguiente arranque lo aplique, sin migración nueva. Si falla,
+    // se para: sin el catálogo, `cod_municipio` volvería a ser texto libre y el
+    // RIPS saldría mal sin que nadie lo note.
+    match medico_datos::divipola::sembrar(&pool).await {
+        Ok(n) => println!("DIVIPOLA: {n} municipios al día"),
+        Err(e) => {
+            eprintln!("no se pudo sembrar DIVIPOLA: {e}");
+            return ExitCode::FAILURE;
+        }
+    }
+
     let dir_imagenes = std::path::PathBuf::from(&cfg.dir_imagenes);
     if let Err(e) = std::fs::create_dir_all(&dir_imagenes) {
         eprintln!("no se pudo crear la carpeta de imágenes ({}): {e}", dir_imagenes.display());
@@ -112,6 +125,7 @@ async fn main() -> ExitCode {
         clave_verificacion: cfg.clave_verificacion,
         clave_reposo: cfg.clave_reposo,
         tras_proxy: cfg.tras_proxy,
+        capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
     };
     let app = rutas::router(estado);
 

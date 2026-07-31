@@ -46,7 +46,34 @@ export interface EntradaStock {
   lote?: string;
   fecha_vencimiento?: string;
   costo_unitario?: number;
+  /**
+   * De quién viene la remesa. Opcional: hay entradas que no son una compra
+   * —donación, traslado entre sedes, ajuste de conteo— y obligar a poner un
+   * proveedor en esas produce un dato falso.
+   */
+  proveedor_id?: number;
+  /** Factura o remisión con la que llegó. */
+  documento_soporte?: string;
 }
+
+export interface Proveedor {
+  id: number;
+  razon_social: string;
+  nit?: string;
+  contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ciudad?: string;
+  suministra?: string;
+  observaciones?: string;
+  activo: boolean;
+  /** Remesas que ha traído. Con más de cero, no se puede borrar: se desactiva. */
+  entradas: number;
+}
+
+export type ProveedorCreate = Omit<Proveedor, 'id' | 'activo' | 'entradas'>;
+export type ProveedorUpdate = Partial<ProveedorCreate> & { activo?: boolean };
 
 export interface FormulaPendiente {
   id: number;
@@ -100,6 +127,9 @@ export interface Movimiento {
   formula_id?: number;
   usuario_nombre?: string;
   item_nombre?: string;
+  proveedor_id?: number;
+  proveedor_nombre?: string;
+  documento_soporte?: string;
 }
 
 export interface StatsInventario {
@@ -164,5 +194,28 @@ export class FarmaciaService {
     if (itemId) params['item_id'] = String(itemId);
     if (tipo) params['tipo'] = tipo;
     return this.http.get<Movimiento[]>(`${this.API}/movimientos`, { params });
+  }
+
+  // ── Proveedores ──────────────────────────────────────────────────
+  // Sin `activo` se devuelven todos, que es lo que quiere la pestaña de
+  // gestión; el selector de la entrada pide solo los activos.
+
+  listProveedores(q?: string, soloActivos = false): Observable<Proveedor[]> {
+    const params: Record<string, string> = {};
+    if (q) params['q'] = q;
+    if (soloActivos) params['activo'] = 'true';
+    return this.http.get<Proveedor[]>(`${this.API}/proveedores`, { params });
+  }
+
+  crearProveedor(data: ProveedorCreate): Observable<Proveedor> {
+    return this.http.post<Proveedor>(`${this.API}/proveedores`, data);
+  }
+
+  actualizarProveedor(id: number, data: ProveedorUpdate): Observable<Proveedor> {
+    return this.http.put<Proveedor>(`${this.API}/proveedores/${id}`, data);
+  }
+
+  eliminarProveedor(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.API}/proveedores/${id}`);
   }
 }

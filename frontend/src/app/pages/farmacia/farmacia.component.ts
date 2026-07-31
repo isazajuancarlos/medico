@@ -17,9 +17,10 @@ import {
   FarmaciaService, ItemInventario, ItemInventarioCreate,
   EntradaStock, FormulaPendiente, DispensarCreate,
   Dispensacion, Movimiento, StatsInventario,
+  Proveedor, ProveedorCreate,
 } from '../../services/farmacia.service';
 
-type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
+type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'proveedores';
 
 @Component({
   selector: 'app-farmacia',
@@ -37,6 +38,9 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
         <h2 class="page-title">Farmacia e Inventario</h2>
         @if (tab() === 'inventario') {
           <p-button label="Nuevo item" icon="pi pi-plus" (onClick)="abrirCrear()" />
+        }
+        @if (tab() === 'proveedores') {
+          <p-button label="Nuevo proveedor" icon="pi pi-plus" (onClick)="abrirCrearProveedor()" />
         }
       </div>
 
@@ -80,6 +84,9 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
         </button>
         <button class="tab-btn" [class.active]="tab() === 'movimientos'" (click)="cambiarTab('movimientos')">
           <i class="pi pi-arrow-right-arrow-left"></i> Movimientos
+        </button>
+        <button class="tab-btn" [class.active]="tab() === 'proveedores'" (click)="cambiarTab('proveedores')">
+          <i class="pi pi-truck"></i> Proveedores
         </button>
       </div>
 
@@ -298,6 +305,7 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
                 <th style="text-align:center">Tipo</th>
                 <th style="text-align:center">Cantidad</th>
                 <th>Motivo</th>
+                <th>Proveedor / Soporte</th>
                 <th>Usuario</th>
                 <th>Fecha</th>
               </tr>
@@ -314,6 +322,14 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
                   </span>
                 </td>
                 <td style="font-size:0.82rem">{{ m.motivo }}</td>
+                <td style="font-size:0.82rem;color:#94a3b8">
+                  <!-- Un guion, no un espacio en blanco: «no vino de una compra»
+                       y «se me olvidó registrarlo» se ven igual si no se dice. -->
+                  {{ m.proveedor_nombre || '—' }}
+                  @if (m.documento_soporte) {
+                    <div style="font-size:0.72rem;color:#64748b">{{ m.documento_soporte }}</div>
+                  }
+                </td>
                 <td style="font-size:0.82rem;color:#94a3b8">{{ m.usuario_nombre || '—' }}</td>
                 <td style="font-size:0.82rem">{{ m.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
               </tr>
@@ -321,7 +337,134 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
           </p-table>
         }
       }
+
+      <!-- ═══════════════════ TAB PROVEEDORES ═══════════════════ -->
+      @if (tab() === 'proveedores') {
+        <div class="filter-bar">
+          <span class="p-input-icon-left">
+            <i class="pi pi-search"></i>
+            <input pInputText [(ngModel)]="busqProveedores" placeholder="Razón social, NIT o contacto..."
+              (input)="cargarProveedores()" class="search-input" />
+          </span>
+        </div>
+
+        @if (cargandoProv()) {
+          <div class="cargando"><i class="pi pi-spin pi-spinner"></i> Cargando...</div>
+        } @else if (proveedores().length === 0) {
+          <div class="sin-resultados">
+            <i class="pi pi-truck" style="font-size:2rem;opacity:0.4"></i>
+            <p>No hay proveedores registrados.</p>
+            <small style="color:#64748b">
+              Sin ellos, una entrada dice cuánto entró pero no de quién vino.
+            </small>
+          </div>
+        } @else {
+          <p-table [value]="proveedores()" [rowHover]="true" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Razón social</th>
+                <th>NIT</th>
+                <th>Contacto</th>
+                <th>Suministra</th>
+                <th style="text-align:center">Remesas</th>
+                <th style="text-align:center">Estado</th>
+                <th style="width:110px"></th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-p>
+              <tr [style.opacity]="p.activo ? 1 : 0.55">
+                <td>
+                  <strong>{{ p.razon_social }}</strong>
+                  @if (p.ciudad) {
+                    <div style="font-size:0.75rem;color:#94a3b8">{{ p.ciudad }}</div>
+                  }
+                </td>
+                <td style="font-size:0.82rem;color:#94a3b8">{{ p.nit || '—' }}</td>
+                <td style="font-size:0.82rem">
+                  {{ p.contacto || '—' }}
+                  @if (p.telefono) {
+                    <div style="font-size:0.72rem;color:#64748b">{{ p.telefono }}</div>
+                  }
+                </td>
+                <td style="font-size:0.82rem;color:#94a3b8">{{ p.suministra || '—' }}</td>
+                <td style="text-align:center"><span class="dur-badge">{{ p.entradas }}</span></td>
+                <td style="text-align:center">
+                  <p-tag [value]="p.activo ? 'Activo' : 'Inactivo'"
+                    [severity]="p.activo ? 'success' : 'secondary'" />
+                </td>
+                <td style="text-align:right">
+                  <p-button icon="pi pi-pencil" [text]="true" size="small"
+                    pTooltip="Editar" (onClick)="abrirEditarProveedor(p)" />
+                  <!-- Con remesas registradas no se ofrece borrar: se desactiva.
+                       Ofrecer el botón para que el servidor conteste 409 es hacer
+                       que el usuario descubra la regla chocándose con ella. -->
+                  @if (p.entradas === 0) {
+                    <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
+                      pTooltip="Eliminar" (onClick)="eliminarProveedor(p)" />
+                  } @else {
+                    <p-button [icon]="p.activo ? 'pi pi-ban' : 'pi pi-check'" [text]="true" size="small"
+                      [severity]="p.activo ? 'warn' : 'success'"
+                      [pTooltip]="p.activo ? 'Desactivar' : 'Reactivar'"
+                      (onClick)="alternarProveedor(p)" />
+                  }
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      }
     </div>
+
+    <!-- ══ DIALOG CREAR / EDITAR PROVEEDOR ══ -->
+    <p-dialog [header]="editandoProveedor ? 'Editar proveedor' : 'Nuevo proveedor'"
+      [(visible)]="mostrarFormProveedor" [style]="{width:'620px'}" [modal]="true">
+      <div class="form-grid" style="gap:0.875rem">
+        <div class="field" style="grid-column:1/-1">
+          <label class="field-label">Razón social *</label>
+          <input pInputText [(ngModel)]="pForm.razon_social" class="w-full"
+            placeholder="Ej: Distribuidora Andina S.A.S." />
+        </div>
+        <div class="field">
+          <label class="field-label">NIT</label>
+          <input pInputText [(ngModel)]="pForm.nit" class="w-full"
+            placeholder="Opcional: no todo proveedor tiene NIT" />
+        </div>
+        <div class="field">
+          <label class="field-label">Suministra</label>
+          <input pInputText [(ngModel)]="pForm.suministra" class="w-full"
+            placeholder="Medicamentos, insumos, reactivos..." />
+        </div>
+        <div class="field">
+          <label class="field-label">Contacto</label>
+          <input pInputText [(ngModel)]="pForm.contacto" class="w-full" />
+        </div>
+        <div class="field">
+          <label class="field-label">Teléfono</label>
+          <input pInputText [(ngModel)]="pForm.telefono" class="w-full" />
+        </div>
+        <div class="field">
+          <label class="field-label">Correo</label>
+          <input pInputText [(ngModel)]="pForm.email" class="w-full" />
+        </div>
+        <div class="field">
+          <label class="field-label">Ciudad</label>
+          <input pInputText [(ngModel)]="pForm.ciudad" class="w-full" />
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label class="field-label">Dirección</label>
+          <input pInputText [(ngModel)]="pForm.direccion" class="w-full" />
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label class="field-label">Observaciones</label>
+          <textarea pTextarea [(ngModel)]="pForm.observaciones" rows="2" class="w-full"></textarea>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormProveedor = false" />
+        <p-button [label]="editandoProveedor ? 'Guardar' : 'Crear proveedor'" icon="pi pi-check"
+          [loading]="guardandoProv()" [disabled]="!pForm.razon_social"
+          (onClick)="guardarProveedor()" /></div>
+    </p-dialog>
 
     <!-- ══ DIALOG CREAR / EDITAR ITEM ══ -->
     <p-dialog [header]="editandoItem ? 'Editar Item' : 'Nuevo Item de Inventario'"
@@ -440,6 +583,18 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos';
             <label class="field-label">Nuevo costo unitario (opcional)</label>
             <input pInputText type="number" [(ngModel)]="eForm.costo_unitario"
               class="w-full" placeholder="Dejar vacío para mantener actual" />
+          </div>
+          <div class="field">
+            <label class="field-label">Proveedor</label>
+            <p-select [(ngModel)]="eForm.proveedor_id" [options]="proveedoresActivos()"
+              optionLabel="label" optionValue="value" [filter]="true" [showClear]="true"
+              placeholder="Sin proveedor (donación, traslado…)"
+              class="w-full" style="width:100%" />
+          </div>
+          <div class="field">
+            <label class="field-label">Factura / remisión</label>
+            <input pInputText [(ngModel)]="eForm.documento_soporte" class="w-full"
+              placeholder="Ej: FV-1024" />
           </div>
         </div>
       }
@@ -627,6 +782,24 @@ export class FarmaciaComponent implements OnInit {
   guardandoEntrada = signal(false);
   eForm: Partial<EntradaStock> = { motivo: 'Compra', cantidad: 0 };
 
+  // Proveedores
+  proveedores = signal<Proveedor[]>([]);
+  cargandoProv = signal(false);
+  busqProveedores = '';
+  mostrarFormProveedor = false;
+  editandoProveedor: Proveedor | null = null;
+  guardandoProv = signal(false);
+  pForm: Partial<ProveedorCreate> = { razon_social: '' };
+  private _provTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Solo los activos van al selector de la entrada: a un proveedor con el que
+   *  ya no se trabaja no se le apunta una remesa nueva. */
+  proveedoresActivos = computed(() =>
+    this.proveedores()
+      .filter(p => p.activo)
+      .map(p => ({ label: p.nit ? `${p.razon_social} — ${p.nit}` : p.razon_social, value: p.id }))
+  );
+
   // Dialog dispensar
   mostrarDispensar = false;
   formulaDispensar = signal<FormulaPendiente | null>(null);
@@ -683,6 +856,75 @@ export class FarmaciaComponent implements OnInit {
     if (t === 'formulas') this.cargarFormulas();
     if (t === 'dispensaciones') this.cargarDispensaciones();
     if (t === 'movimientos') this.cargarMovimientos();
+    if (t === 'proveedores') this.cargarProveedores();
+  }
+
+  // ── Proveedores ──────────────────────────────────────
+
+  cargarProveedores(): void {
+    clearTimeout(this._provTimer);
+    this._provTimer = setTimeout(() => {
+      this.cargandoProv.set(true);
+      this.svc.listProveedores(this.busqProveedores || undefined).subscribe({
+        next: ps => { this.proveedores.set(ps); this.cargandoProv.set(false); },
+        error: () => this.cargandoProv.set(false),
+      });
+    }, 300);
+  }
+
+  abrirCrearProveedor(): void {
+    this.editandoProveedor = null;
+    this.pForm = { razon_social: '' };
+    this.mostrarFormProveedor = true;
+  }
+
+  abrirEditarProveedor(p: Proveedor): void {
+    this.editandoProveedor = p;
+    this.pForm = {
+      razon_social: p.razon_social, nit: p.nit, contacto: p.contacto,
+      telefono: p.telefono, email: p.email, direccion: p.direccion,
+      ciudad: p.ciudad, suministra: p.suministra, observaciones: p.observaciones,
+    };
+    this.mostrarFormProveedor = true;
+  }
+
+  guardarProveedor(): void {
+    if (!this.pForm.razon_social) return;
+    this.guardandoProv.set(true);
+    const editando = this.editandoProveedor;
+    const peticion = editando
+      ? this.svc.actualizarProveedor(editando.id, this.pForm)
+      : this.svc.crearProveedor(this.pForm as ProveedorCreate);
+    peticion.subscribe({
+      next: () => {
+        this.guardandoProv.set(false);
+        this.mostrarFormProveedor = false;
+        this.ok(editando ? 'Proveedor actualizado' : 'Proveedor creado', this.pForm.razon_social!);
+        this.cargarProveedores();
+      },
+      error: err => {
+        this.guardandoProv.set(false);
+        this.err(err?.error?.detail ?? 'No se pudo guardar el proveedor');
+      },
+    });
+  }
+
+  /** Desactivar o reactivar. Es lo que sustituye al borrado cuando ya trajo remesas. */
+  alternarProveedor(p: Proveedor): void {
+    this.svc.actualizarProveedor(p.id, { activo: !p.activo }).subscribe({
+      next: () => {
+        this.ok(p.activo ? 'Proveedor desactivado' : 'Proveedor reactivado', p.razon_social);
+        this.cargarProveedores();
+      },
+      error: err => this.err(err?.error?.detail ?? 'No se pudo cambiar el estado'),
+    });
+  }
+
+  eliminarProveedor(p: Proveedor): void {
+    this.svc.eliminarProveedor(p.id).subscribe({
+      next: () => { this.ok('Proveedor eliminado', p.razon_social); this.cargarProveedores(); },
+      error: err => this.err(err?.error?.detail ?? 'No se pudo eliminar'),
+    });
   }
 
   cargarStats(): void {
@@ -804,6 +1046,10 @@ export class FarmaciaComponent implements OnInit {
   abrirEntrada(item: ItemInventario): void {
     this.itemEntrada.set(item);
     this.eForm = { motivo: 'Compra', cantidad: 0 };
+    // El selector de proveedor tiene que estar poblado antes de que se abra el
+    // diálogo: si llega vacío, el usuario concluye «no hay proveedores» y guarda
+    // la entrada sin procedencia.
+    if (this.proveedores().length === 0) this.cargarProveedores();
     this.mostrarEntrada = true;
   }
 
@@ -817,6 +1063,8 @@ export class FarmaciaComponent implements OnInit {
       lote: this.eForm.lote,
       fecha_vencimiento: this.eForm.fecha_vencimiento,
       costo_unitario: this.eForm.costo_unitario ? Number(this.eForm.costo_unitario) : undefined,
+      proveedor_id: this.eForm.proveedor_id ?? undefined,
+      documento_soporte: this.eForm.documento_soporte || undefined,
     };
     this.svc.entradaStock(item.id, payload).subscribe({
       next: updated => {

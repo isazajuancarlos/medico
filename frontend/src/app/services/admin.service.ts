@@ -234,4 +234,48 @@ export class AdminService {
   deleteEntidad(id: number): Observable<any> {
     return this.http.delete(`${this.API}/entidades/${id}`);
   }
+
+  // Matriz de capacidades por institución (#235)
+  getCapacidades(): Observable<MatrizCapacidades> {
+    return this.http.get<MatrizCapacidades>(`${this.API}/capacidades`);
+  }
+  updateCapacidades(cambios: CambioCapacidad[]): Observable<MatrizCapacidades> {
+    return this.http.put<MatrizCapacidades>(`${this.API}/capacidades`, { cambios });
+  }
+}
+
+/// Una casilla de la matriz, tal como la sirve el servidor.
+///
+/// `permitido` es la respuesta EFECTIVA y `defecto` lo que diría la regla
+/// nacional; la pantalla solo los compara para pintar. **No recalcula el
+/// defecto por su cuenta a propósito**: tenerlo escrito aquí y en Rust es cómo
+/// las dos copias se desincronizan, y la del navegador es la que no manda.
+export interface CasillaCapacidad {
+  rol: string;
+  permitido: boolean;
+  defecto: boolean;
+  /// Hay una fila guardada. No es lo mismo que `permitido !== defecto`: se
+  /// puede haber guardado una casilla que hoy coincide con el defecto, y esa
+  /// deja de seguirlo si el defecto cambia. Por eso existe «devolver al
+  /// defecto» como acción aparte.
+  apartado: boolean;
+  configurable: boolean;
+}
+
+export interface FilaCapacidad {
+  capacidad: string;
+  configurable: boolean;
+  roles: CasillaCapacidad[];
+}
+
+export interface MatrizCapacidades {
+  institucion_id: number;
+  capacidades: FilaCapacidad[];
+}
+
+/// `permitido: null` devuelve la casilla al defecto (borra la excepción).
+export interface CambioCapacidad {
+  capacidad: string;
+  rol: string;
+  permitido: boolean | null;
 }

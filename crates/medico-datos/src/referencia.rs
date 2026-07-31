@@ -3,7 +3,7 @@
 //!
 //! La REMISIÓN es una `orden` de tipo ESPECIALISTA con máquina de estados. La
 //! CONTRARREFERENCIA es la respuesta desde la institución de destino; al crearla
-//! se cierra la remisión (orden→COMPLETADA) si seguía abierta.
+//! se cierra la remisión (orden→Completada) si seguía abierta.
 //!
 //! Flujo INTER-institucional: el scoping va por la institución del PACIENTE
 //! (ajeno == inexistente), como el resto. La orden no lleva institucion propia;
@@ -14,22 +14,28 @@ use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-const TIPO_REMISION: &str = "ESPECIALISTA";
+/// El tipo de orden que ES una remisión.
+///
+/// Era `"ESPECIALISTA"`, y por eso una remisión creada desde la historia clínica
+/// —que la crea como «Remisión Especialista», ver `historias.component.ts:1228`—
+/// no aparecía jamás en esta bandeja. Ahora es el mismo valor en los dos sitios,
+/// y el CHECK de la 0027 impide que se vuelvan a separar.
+const TIPO_REMISION: &str = "Remisión Especialista";
 
 /// Estados a los que se puede pasar desde `estado`, en orden de la máquina (el
 /// camino normal primero). Vacío desde un estado final.
 pub fn destinos(estado: &str) -> Vec<String> {
     let posibles: &[&str] = match estado {
-        "PENDIENTE" => &["EN_PROCESO", "COMPLETADA", "CANCELADA"],
-        "EN_PROCESO" => &["COMPLETADA", "CANCELADA"],
-        _ => &[], // COMPLETADA, CANCELADA: finales
+        "Pendiente" => &["En Proceso", "Completada", "Cancelada"],
+        "En Proceso" => &["Completada", "Cancelada"],
+        _ => &[], // Completada, Cancelada: finales
     };
     posibles.iter().map(|s| s.to_string()).collect()
 }
 
 /// Si el estado cuenta como carga pendiente (no es final).
 pub fn esta_abierta(estado: &str) -> bool {
-    matches!(estado, "PENDIENTE" | "EN_PROCESO")
+    matches!(estado, "Pendiente" | "En Proceso")
 }
 
 fn ambito_sql(ambito: Ambito) -> Option<(&'static str, Option<i64>)> {
@@ -174,7 +180,7 @@ pub async fn remisiones_resumen(
 ) -> Result<ResumenRemisiones, sqlx::Error> {
     let lista = remisiones_listar(pool, ambito, None, desde, hasta, buscar).await?;
     let mut por_estado: BTreeMap<String, i64> = BTreeMap::new();
-    for e in ["PENDIENTE", "EN_PROCESO", "COMPLETADA", "CANCELADA"] {
+    for e in ["Pendiente", "En Proceso", "Completada", "Cancelada"] {
         por_estado.insert(e.to_string(), 0);
     }
     let mut abiertas = 0;
@@ -309,7 +315,7 @@ pub async fn remisiones_abiertas(
          (p.nombre1 || COALESCE(' '||p.nombre2,'') || ' ' || p.apellido1 || COALESCE(' '||p.apellido2,'')) AS paciente, \
          COALESCE(o.descripcion,'') AS descripcion, o.estado \
          FROM orden o JOIN historia h ON h.id = o.historia_id JOIN paciente p ON p.id = h.paciente_id \
-         WHERE o.tipo = ? AND o.estado IN ('PENDIENTE','EN_PROCESO') AND {filtro} \
+         WHERE o.tipo = ? AND o.estado IN ('Pendiente','En Proceso') AND {filtro} \
          ORDER BY o.fecha_orden DESC"
     );
     let mut q = sqlx::query_as::<_, (i64, String, String, String, String)>(&sql).bind(TIPO_REMISION);
@@ -347,7 +353,7 @@ async fn orden_remision_del_ambito(pool: &crate::Pool, ambito: Ambito, orden_id:
 
 /// Crea una contrarreferencia. Sella institución de origen desde el ámbito y el
 /// médico dado. Si trae `orden_id`, la orden debe ser una remisión del ámbito y
-/// del mismo paciente; al crear, se cierra la remisión (orden→COMPLETADA) si
+/// del mismo paciente; al crear, se cierra la remisión (orden→Completada) si
 /// seguía abierta. `None` si el paciente es ajeno o la remisión no cuadra.
 pub async fn contrarref_crear(
     pool: &crate::Pool,
@@ -396,7 +402,7 @@ pub async fn contrarref_crear(
     .await?;
     // Cierra la remisión si seguía abierta.
     if let Some(orden_id) = c.orden_id {
-        sqlx::query("UPDATE orden SET estado = 'COMPLETADA' WHERE id = ? AND estado IN ('PENDIENTE','EN_PROCESO')")
+        sqlx::query("UPDATE orden SET estado = 'Completada' WHERE id = ? AND estado IN ('Pendiente','En Proceso')")
             .bind(orden_id)
             .execute(&mut *tx)
             .await?;
@@ -482,7 +488,7 @@ mod pruebas {
     }
 
     async fn remision(pool: &crate::Pool, id: i64, historia: i64, estado: &str) {
-        sqlx::query("INSERT INTO orden (id,historia_id,fecha_orden,estado,tipo,descripcion,justificacion) VALUES (?,?,?,?,'ESPECIALISTA','ver cardiología','soplo')")
+        sqlx::query("INSERT INTO orden (id,historia_id,fecha_orden,estado,tipo,descripcion,justificacion) VALUES (?,?,?,?,'Remisión Especialista','ver cardiología','soplo')")
             .bind(id).bind(historia).bind("2026-06-10T10:00:00Z").bind(estado)
             .execute(pool).await.unwrap();
     }
@@ -490,13 +496,13 @@ mod pruebas {
     #[tokio::test]
     async fn lista_remisiones_scoped_con_estados_posibles() {
         let pool = base().await;
-        remision(&pool, 1, 100, "PENDIENTE").await;
-        remision(&pool, 2, 200, "PENDIENTE").await; // institución 2
+        remision(&pool, 1, 100, "Pendiente").await;
+        remision(&pool, 2, 200, "Pendiente").await; // institución 2
         let lista = remisiones_listar(&pool, Ambito::institucion(1), None, None, None, None).await.unwrap();
         assert_eq!(lista.len(), 1);
         assert_eq!(lista[0].paciente, "Ana Ruiz");
         assert!(lista[0].abierta);
-        assert_eq!(lista[0].estados_posibles, ["EN_PROCESO", "COMPLETADA", "CANCELADA"]);
+        assert_eq!(lista[0].estados_posibles, ["En Proceso", "Completada", "Cancelada"]);
         assert!(remisiones_listar(&pool, Ambito::institucion(2), None, None, None, None).await.unwrap().len() == 1);
         assert!(remisiones_listar(&pool, Ambito::Ninguno, None, None, None, None).await.unwrap().is_empty());
     }
@@ -504,18 +510,18 @@ mod pruebas {
     #[tokio::test]
     async fn cambiar_estado_valida_la_transicion() {
         let pool = base().await;
-        remision(&pool, 1, 100, "PENDIENTE").await;
-        // Transición inválida (PENDIENTE no salta a un estado inexistente).
+        remision(&pool, 1, 100, "Pendiente").await;
+        // Transición inválida (Pendiente no salta a un estado inexistente).
         assert!(remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "ARCHIVADA").await.unwrap().is_none());
         // Ajeno no cambia.
-        assert!(remision_cambiar_estado(&pool, Ambito::institucion(2), 1, "EN_PROCESO").await.unwrap().is_none());
+        assert!(remision_cambiar_estado(&pool, Ambito::institucion(2), 1, "En Proceso").await.unwrap().is_none());
         // Válida.
-        let r = remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "EN_PROCESO").await.unwrap().unwrap();
-        assert_eq!(r.estado, "EN_PROCESO");
-        assert_eq!(r.estados_posibles, ["COMPLETADA", "CANCELADA"]);
-        // Desde COMPLETADA (final) no hay a dónde ir.
-        remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "COMPLETADA").await.unwrap().unwrap();
-        assert!(remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "EN_PROCESO").await.unwrap().is_none());
+        let r = remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "En Proceso").await.unwrap().unwrap();
+        assert_eq!(r.estado, "En Proceso");
+        assert_eq!(r.estados_posibles, ["Completada", "Cancelada"]);
+        // Desde Completada (final) no hay a dónde ir.
+        remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "Completada").await.unwrap().unwrap();
+        assert!(remision_cambiar_estado(&pool, Ambito::institucion(1), 1, "En Proceso").await.unwrap().is_none());
     }
 
     fn contrarref(paciente_id: i64, orden_id: Option<i64>) -> ContrarreferenciaCrear {
@@ -534,12 +540,12 @@ mod pruebas {
     #[tokio::test]
     async fn crear_contrarreferencia_cierra_la_remision_abierta() {
         let pool = base().await;
-        remision(&pool, 1, 100, "PENDIENTE").await;
+        remision(&pool, 1, 100, "Pendiente").await;
         // Paciente ajeno: no se crea.
         assert!(contrarref_crear(&pool, Ambito::institucion(1), 5, Some(1), &contrarref(20, Some(1))).await.unwrap().is_none());
-        // Contra la remisión 1 (paciente 10): se crea y la remisión pasa a COMPLETADA.
+        // Contra la remisión 1 (paciente 10): se crea y la remisión pasa a Completada.
         let id = contrarref_crear(&pool, Ambito::institucion(1), 5, Some(1), &contrarref(10, Some(1))).await.unwrap().unwrap();
-        assert_eq!(remision_obtener(&pool, Ambito::institucion(1), 1).await.unwrap().unwrap().estado, "COMPLETADA");
+        assert_eq!(remision_obtener(&pool, Ambito::institucion(1), 1).await.unwrap().unwrap().estado, "Completada");
         // Ya no está entre las abiertas.
         assert!(remisiones_abiertas(&pool, Ambito::institucion(1)).await.unwrap().is_empty());
         // Se lista para su institución, enriquecida.
