@@ -4,11 +4,37 @@
 # error inverso al que informes tuvo (probar solo el Python y no el port).
 name: CI
 
+# CADA COMMIT SE PRUEBA UNA VEZ, no dos.
+#
+# Antes esto decía `push: branches: ["**"]` junto a `pull_request`, y una rama
+# con PR abierto disparaba LOS DOS eventos sobre el mismo commit: los cinco
+# checks corrían por duplicado. Se veía en `gh pr checks`, con dos identificadores
+# de ejecución por check y el mismo resultado. En un repositorio PRIVADO eso no es
+# solo ruido — los minutos de Actions se facturan, y el trabajo de Rust son entre
+# 3 y 4½ minutos por corrida.
+#
+# `push` se queda SOLO en `main`, que es lo que verifica el commit de fusión —el
+# resultado de un squash no lo ha probado nadie hasta que existe—. Las ramas de
+# trabajo las cubre `pull_request`, que además vuelve a correr en cada empuje a la
+# rama mientras el PR está abierto (`synchronize`).
+#
+# LO QUE ESTO DEJA FUERA, dicho para que no sorprenda: una rama empujada SIN PR ya
+# no tiene CI. Es deliberado — el flujo de este repositorio es rama → PR → merge,
+# y la protección de `main` exige el PR de todos modos, así que no hay camino por
+# el que un commit llegue a `main` sin haber pasado por aquí.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
     branches: [main]
+
+# Un empuje nuevo CANCELA la corrida anterior de la misma referencia. Sin esto,
+# corregir un PR tres veces seguidas deja tres corridas compitiendo y solo la
+# última importa. En `main` no se cancela: cada commit de esa rama es un estado
+# publicado y su resultado tiene que quedar registrado.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   # Menor privilegio (supply-chain #203): este CI solo prueba, con checkout de
