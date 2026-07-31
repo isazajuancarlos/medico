@@ -24,6 +24,8 @@
 //! turno y el solapamiento era invisible. Al guardar la duración de verdad
 //! (migración 0035), el cruce pasa a hacerse por INTERVALOS.
 
+use std::num::NonZeroU16;
+
 use serde::{Deserialize, Serialize};
 
 /// Minutos desde medianoche. `None` si el texto no es una hora `HH:MM` válida.
@@ -46,6 +48,48 @@ pub fn hhmm(min: u16) -> String {
     format!("{:02}:{:02}", min / 60, min % 60)
 }
 
+/// ¿Es esto un instante `YYYY-MM-DD HH:MM`?
+///
+/// Existe porque `bloqueo_agenda.inicio`/`fin` son `TEXT` con un único
+/// `CHECK (inicio < fin)`, que es una comparación TEXTUAL: `{"inicio":"0000",
+/// "fin":"9999"}` la pasa tan campante y deja al profesional con cero turnos
+/// libres **el día que sea, para siempre**. Hace falta `GestionarAgenda`, así
+/// que es sabotaje interno y no cruce de frontera — pero el `CHECK` daba una
+/// falsa sensación de validar, y el resto de la migración 0035 sí acota todo lo
+/// demás (`tipo`, `duracion_slot_min`, `dia_semana`, `anio`, `mes`).
+///
+/// Se rechaza lo IMPOSIBLE y nada más: un mes 13, un día 32, una hora 25. Una
+/// fecha lejana —un bloqueo programado para 2030— pasa, porque es inusual y no
+/// imposible.
+pub fn es_instante(s: &str) -> bool {
+    let Some((fecha, hora)) = s.split_once(' ') else {
+        return false;
+    };
+    if minutos(hora).is_none() {
+        return false;
+    }
+    let partes: Vec<&str> = fecha.split('-').collect();
+    let [a, m, d] = partes[..] else { return false };
+    if a.len() != 4 || m.len() != 2 || d.len() != 2 {
+        return false;
+    }
+    let (Ok(a), Ok(m), Ok(d)) = (a.parse::<u16>(), m.parse::<u8>(), d.parse::<u8>()) else {
+        return false;
+    };
+    // El día se comprueba contra el mes de verdad, no contra un 31 genérico: un
+    // 31 de febrero es imposible, y aceptarlo daría un bloqueo que no ocurre
+    // ningún día y que sin embargo la lista enseña como vigente.
+    let bisiesto = a % 4 == 0 && (a % 100 != 0 || a % 400 == 0);
+    let dias = match m {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if bisiesto => 29,
+        2 => 28,
+        _ => return false,
+    };
+    (1..=dias).contains(&d)
+}
+
 /// Una franja de atención de un día concreto, ya resuelta desde el bloque.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Franja {
@@ -53,7 +97,14 @@ pub struct Franja {
     pub fin: u16,
     /// Cuánto dura cada turno de esta franja. Lo declara la institución en el
     /// bloque; no es una constante del sistema.
-    pub duracion: u16,
+    ///
+    /// `NonZeroU16` y no `u16`: con duración cero, el `while` de [`turnos`] no
+    /// termina nunca. Hoy es inalcanzable porque el `CHECK` de la migración 0035
+    /// acota la columna a `1..=1440`, pero eso lo sabe la base y no el tipo, y
+    /// esta función es `pub`. Es el mismo argumento con el que este repositorio
+    /// justifica que `Ambito` sea un parámetro obligatorio en vez de un filtro
+    /// opcional: el control que se puede omitir, se omite.
+    pub duracion: NonZeroU16,
 }
 
 /// Un rato en que el médico NO atiende, recortado ya al día que se consulta.
@@ -109,15 +160,16 @@ pub fn turnos(franjas: &[Franja], bloqueos: &[Bloqueo], ocupadas: &[Ocupacion]) 
         // El Python usaba `current < fin`, así que una franja 08:00–09:00 con
         // turnos de 45 min ofrecía el de las 08:45, que termina a las 09:30 —
         // media hora después de que el médico se haya ido.
-        while t + f.duracion <= f.fin {
-            let fin_turno = t + f.duracion;
+        let duracion = f.duracion.get();
+        while t + duracion <= f.fin {
+            let fin_turno = t + duracion;
             let motivo = motivo_de(t, fin_turno, bloqueos, ocupadas);
             salida.push(Turno {
                 hora: hhmm(t),
                 disponible: motivo.is_none(),
                 motivo,
             });
-            t += f.duracion;
+            t += duracion;
         }
     }
     salida
@@ -164,7 +216,11 @@ mod pruebas {
     use super::*;
 
     fn franja(ini: &str, fin: &str, dur: u16) -> Franja {
-        Franja { inicio: minutos(ini).unwrap(), fin: minutos(fin).unwrap(), duracion: dur }
+        Franja {
+            inicio: minutos(ini).unwrap(),
+            fin: minutos(fin).unwrap(),
+            duracion: NonZeroU16::new(dur).expect("la duración de una franja no puede ser cero"),
+        }
     }
 
     fn horas(ts: &[Turno]) -> Vec<&str> {
@@ -192,6 +248,33 @@ mod pruebas {
         for m in [0u16, 1, 59, 60, 480, 1439] {
             assert_eq!(minutos(&hhmm(m)), Some(m), "{m} no sobrevive la ida y vuelta");
         }
+    }
+
+    #[test]
+    fn un_instante_se_reconoce_o_se_rechaza_entero() {
+        assert!(es_instante("2026-08-10 08:00"));
+        assert!(es_instante("2024-02-29 00:00"), "2024 sí es bisiesto");
+        // Lo IMPOSIBLE.
+        assert!(!es_instante("0000"), "el sabotaje que el CHECK textual dejaba pasar");
+        assert!(!es_instante("9999"));
+        assert!(!es_instante("2026-08-10"), "sin hora no es un instante");
+        assert!(!es_instante("2026-13-01 08:00"), "mes 13");
+        assert!(!es_instante("2026-02-31 08:00"), "31 de febrero");
+        assert!(!es_instante("2026-04-31 08:00"), "abril tiene 30");
+        assert!(!es_instante("2026-08-10 25:00"));
+        assert!(!es_instante("2026-8-10 08:00"), "sin ceros a la izquierda no ordena");
+        assert!(!es_instante("2026-08-10T08:00"), "ISO con T: otro formato");
+        // Lo INUSUAL sí pasa.
+        assert!(es_instante("2099-12-31 23:59"), "un bloqueo lejano es raro, no imposible");
+    }
+
+    /// 2026 NO es bisiesto: el 29 de febrero de ese año no existe.
+    #[test]
+    fn el_bisiesto_se_calcula_y_no_se_supone() {
+        assert!(!es_instante("2026-02-29 08:00"));
+        assert!(es_instante("2024-02-29 08:00"));
+        assert!(!es_instante("2100-02-29 08:00"), "2100 es divisible por 100 y no por 400");
+        assert!(es_instante("2000-02-29 08:00"), "2000 sí, por el /400");
     }
 
     #[test]

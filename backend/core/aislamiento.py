@@ -71,24 +71,71 @@ COMPARTIDOS: frozenset[str] = frozenset({
 MAX_SALTOS = 4
 
 
-def institucion_de(db, objeto: Any, _saltos: int = 0) -> Optional[int]:
+class _SinDuenio:
+    """«No se puede saber de quién es», que NO es «es de todos».
+
+    Existe porque las dos cosas viajaban como `None` y `puede_ver` leía ese
+    `None` como «catálogo compartido → lo ve cualquiera». Con eso, **todo
+    registro con `institucion_id` en NULL quedaba visible desde cualquier
+    institución** — y el `SUPERADMIN` tiene `institucion_id = NULL` por diseño,
+    así que un ADMIN podía leerlo, reescribirle el correo, desbloquearlo y
+    **cambiarle la contraseña** (`POST /api/admin/usuarios/{id}/reset-password`).
+    De ahí a entrar como dueño del sistema hay un login.
+
+    El alcance era mayor que ese caso: `models.py` declara `institucion_id`
+    opcional en 34 modelos, `Paciente` incluido. Una historia importada sin
+    institución quedaba legible desde cualquier otra.
+
+    La cabecera de este módulo ya decía la regla —«lo que NO se hace es
+    suponer»— y `COMPARTIDOS` ya era la declaración explícita de lo público. Lo
+    que faltaba era que el huérfano no pudiera confundirse con ella, y eso lo
+    arregla un tipo, no un `if` en cada llamador.
+
+    Lo cazó una revisión de seguridad independiente el 2026-07-31.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:  # pragma: no cover - solo para depurar
+        return "SIN_DUENIO"
+
+
+#: Marcador de dueño indeterminable. Ante él se NIEGA.
+SIN_DUENIO = _SinDuenio()
+
+
+def institucion_de(db, objeto: Any, _saltos: int = 0) -> Optional[int] | _SinDuenio:
     """A qué institución pertenece un registro, siguiendo la cadena de enlaces.
 
-    Devuelve `None` solo si el modelo está declarado en `COMPARTIDOS`.
-    Levanta `RuntimeError` si no hay forma de saberlo: es preferible una caída
-    ruidosa a entregar el dato por defecto.
+    Tres respuestas, no dos:
+
+    - un `int` — el dueño.
+    - `None` — **de todos**, y solo si el modelo está declarado en
+      `COMPARTIDOS`.
+    - [`SIN_DUENIO`] — no se puede saber: la columna está en NULL, o el enlace
+      apunta a un padre que ya no existe. Ante esto se niega.
+
+    Levanta `RuntimeError` si el modelo ni siquiera declara cómo averiguarlo: es
+    preferible una caída ruidosa a entregar el dato por defecto.
     """
     nombre = type(objeto).__name__
 
     directa = getattr(objeto, "institucion_id", None)
     if directa is not None:
         return directa
-    if "institucion_id" in getattr(type(objeto), "model_fields", {}):
-        # Lo declara pero está vacío: es un registro huérfano, no uno público.
-        return None
 
+    # COMPARTIDOS se consulta ANTES que el NULL de la columna, y el orden no es
+    # un detalle: `ItemInventario`, `Cama`, `Contrato` y `TarifaContrato` están
+    # declarados compartidos Y llevan la columna. Con el orden inverso, sus
+    # filas sin institución —que es como están hoy, porque el módulo no está
+    # segmentado— caerían en la rama del huérfano y desaparecerían para todo el
+    # mundo. La declaración explícita manda sobre el valor ausente.
     if nombre in COMPARTIDOS:
         return None
+
+    if "institucion_id" in getattr(type(objeto), "model_fields", {}):
+        # Lo declara pero está vacío: es un registro huérfano, no uno público.
+        return SIN_DUENIO
 
     if _saltos >= MAX_SALTOS:
         raise RuntimeError(
@@ -105,7 +152,9 @@ def institucion_de(db, objeto: Any, _saltos: int = 0) -> Optional[int]:
         padre = db.get(getattr(_m, destino), valor)
         if padre is None:
             # El enlace apunta a algo que ya no existe: sin dueño demostrable.
-            return None
+            # NO es «de todos» — antes lo era, y con eso bastaba borrar al padre
+            # para volver público al hijo.
+            return SIN_DUENIO
         return institucion_de(db, padre, _saltos + 1)
 
     raise RuntimeError(
@@ -124,8 +173,13 @@ def puede_ver(db, objeto: Any, user: Usuario) -> bool:
     if user.rol == RolUsuario.SUPERADMIN:
         return True
     duenno = institucion_de(db, objeto)
+    if duenno is SIN_DUENIO:
+        # No se sabe de quién es. Se NIEGA, que es lo que la cabecera de este
+        # módulo promete y lo que antes no ocurría: este caso caía en la rama de
+        # abajo y se concedía a todo el mundo.
+        return False
     if duenno is None:
-        return True  # catálogo compartido
+        return True  # catálogo compartido, DECLARADO en COMPARTIDOS
     return duenno == user.institucion_id
 
 
