@@ -13,10 +13,12 @@ use serde::{Deserialize, Serialize};
 use crate::auth::{
     autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
     EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
-    EscribirRehabilitacion, Estado, Firmar, GestionarFarmacia, GestionarRemision,
+    EscribirRehabilitacion, Estado, Firmar, GestionarAmbulancias, GestionarFarmacia,
+    GestionarRemision,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
+use medico_datos::ambulancia;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::diagnostico;
@@ -212,6 +214,17 @@ pub fn router(estado: Estado) -> Router {
         .route(
             "/api/farmacia/proveedores/{id}",
             get(prov_obtener).put(prov_actualizar).delete(prov_eliminar),
+        )
+        // Ambulancias. `traslados` es un segmento literal y va antes que `{id}`,
+        // como en `/api/imagenes`.
+        .route("/api/ambulancias", get(amb_listar).post(amb_crear))
+        .route("/api/ambulancias/traslados", get(amb_traslados).post(amb_despachar))
+        .route("/api/ambulancias/traslados/{id}", get(amb_traslado))
+        .route("/api/ambulancias/traslados/{id}/finalizar", post(amb_finalizar))
+        .route("/api/ambulancias/traslados/{id}/cancelar", post(amb_cancelar))
+        .route(
+            "/api/ambulancias/{id}",
+            get(amb_obtener).put(amb_actualizar).delete(amb_eliminar),
         )
         // Catálogos de referencia: los lee cualquier usuario autenticado.
         .route("/api/especialidades", get(listar_especialidades))
@@ -2285,6 +2298,218 @@ async fn img_subir(
         Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+// --- Ambulancias y traslados -------------------------------------------------
+//
+// Ver el parque solo pide sesión: saber si hay una ambulancia disponible es lo
+// primero que necesita quien atiende una urgencia. Darlas de alta y despachar
+// exigen `GestionarAmbulancias`.
+
+fn respuesta_ambulancia(r: ambulancia::ResultadoAlta, creada: bool) -> Response {
+    match r {
+        ambulancia::ResultadoAlta::Hecho(a) => {
+            let codigo = if creada { StatusCode::CREATED } else { StatusCode::OK };
+            (codigo, Json(*a)).into_response()
+        }
+        ambulancia::ResultadoAlta::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        ambulancia::ResultadoAlta::SinPlaca => detalle(
+            StatusCode::BAD_REQUEST,
+            "La ambulancia necesita placa: es lo que la identifica ante el tránsito y ante el \
+             asegurador."
+                .into(),
+        ),
+        ambulancia::ResultadoAlta::TipoInvalido => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "El tipo tiene que ser {} — las dos modalidades del transporte asistencial.",
+                ambulancia::TIPOS.join(" o ")
+            ),
+        ),
+        ambulancia::ResultadoAlta::EstadoInvalido => detalle(
+            StatusCode::CONFLICT,
+            "«En Traslado» lo pone el despacho y lo quita el cierre del traslado, no la edición: \
+             si se pudiera fijar a mano, el estado dejaría de decir dónde está el vehículo."
+                .into(),
+        ),
+        ambulancia::ResultadoAlta::PlacaRepetida(p) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ya hay una ambulancia con placa {p} en esta institución."),
+        ),
+    }
+}
+
+async fn amb_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<ambulancia::FiltrosAmbulancia>,
+) -> Response {
+    match ambulancia::listar(&e.pool, u.ambito(), &f, &ambulancia::hoy()).await {
+        Ok(a) => Json(a).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match ambulancia::obtener(&e.pool, u.ambito(), id, &ambulancia::hoy()).await {
+        Ok(Some(a)) => Json(a).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Json(a): Json<ambulancia::AmbulanciaNueva>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "El parque de ambulancias es de una institución y esta cuenta no está adscrita a \
+             ninguna."
+                .into(),
+        );
+    };
+    match ambulancia::crear(&e.pool, u.ambito(), institucion_id, &a, &ambulancia::hoy()).await {
+        Ok(r) => respuesta_ambulancia(r, true),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+    Json(cambios): Json<ambulancia::AmbulanciaEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match ambulancia::actualizar(&e.pool, u.ambito(), id, &cambios, &ambulancia::hoy()).await {
+        Ok(r) => respuesta_ambulancia(r, false),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match ambulancia::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(ambulancia::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(ambulancia::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(ambulancia::ResultadoBorrado::TieneTraslados { traslados }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Esta ambulancia tiene {traslados} traslado(s) registrados y su historial respalda \
+                 cada uno. Désela de baja: dejará de poder despacharse y seguirá explicando los \
+                 que ya hizo."
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_traslados(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<ambulancia::FiltrosTraslado>,
+) -> Response {
+    match ambulancia::listar_traslados(&e.pool, u.ambito(), &f).await {
+        Ok(t) => Json(t).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_traslado(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match ambulancia::obtener_traslado(&e.pool, u.ambito(), id).await {
+        Ok(Some(t)) => Json(t).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Despacha. Cada negativa dice qué hacer: qué traslado la tiene ocupada, en qué
+/// estado está, cuándo venció el SOAT. Quien coordina una urgencia no puede
+/// resolver nada con un «no se pudo».
+async fn amb_despachar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Json(t): Json<ambulancia::TrasladoNuevo>,
+) -> Response {
+    use ambulancia::ResultadoDespacho as R;
+    let u = autorizado.0;
+    match ambulancia::despachar(&e.pool, u.ambito(), u.id, &t, &ambulancia::hoy()).await {
+        Ok(R::Hecho(t)) => (StatusCode::CREATED, Json(*t)).into_response(),
+        Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(R::Ocupada { traslado_id }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Esa ambulancia está en el traslado #{traslado_id}. Ciérrelo o despache otra."),
+        ),
+        Ok(R::NoDisponible { estado }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Esa ambulancia está «{estado}» y no se puede despachar."),
+        ),
+        Ok(R::SoatVencido { vencio }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "El SOAT de esa ambulancia venció el {vencio}: no puede circular. Despache otra \
+                 mientras se renueva."
+            ),
+        ),
+        Ok(R::TipoInvalido) => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "El traslado es {} — primario desde el sitio del evento, secundario entre \
+                 prestadores.",
+                ambulancia::TIPOS_TRASLADO.join(" o ")
+            ),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn cerrar_traslado(
+    e: &Estado,
+    u: &Usuario,
+    id: i64,
+    c: ambulancia::Cierre,
+    cancelado: bool,
+) -> Response {
+    use ambulancia::ResultadoCierre as R;
+    match ambulancia::cerrar(&e.pool, u.ambito(), id, &c, cancelado).await {
+        Ok(R::Hecho(t)) => Json(*t).into_response(),
+        Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(R::YaCerrado { estado }) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ese traslado ya está «{estado}»."),
+        ),
+        Ok(R::LlegadaAntesDeSalida { salida }) => detalle(
+            StatusCode::BAD_REQUEST,
+            format!("La llegada no puede ser anterior a la salida, que fue el {salida}."),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn amb_finalizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+    Json(c): Json<ambulancia::Cierre>,
+) -> Response {
+    cerrar_traslado(&e, &autorizado.0, id, c, false).await
+}
+
+async fn amb_cancelar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarAmbulancias>,
+    Path(id): Path<i64>,
+    Json(c): Json<ambulancia::Cierre>,
+) -> Response {
+    cerrar_traslado(&e, &autorizado.0, id, c, true).await
 }
 
 // --- Farmacia ----------------------------------------------------------------

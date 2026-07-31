@@ -167,6 +167,18 @@ pub enum Capacidad {
     /// Leer el inventario es cosa aparte y NO exige esta capacidad: enfermería
     /// necesita saber si queda adrenalina antes de pedirla.
     GestionarFarmacia,
+    /// Parque de ambulancias y despacho de traslados asistenciales.
+    ///
+    /// Une dos cosas que en un hospital grande hacen personas distintas —dar de
+    /// alta un vehículo es administrativo; despachar es operativo— y aquí van
+    /// juntas a propósito: en la IPS que tiene dos ambulancias las hace la misma
+    /// persona, y partirlo en dos capacidades obligaría a configurar una
+    /// distinción que ese cliente no usa. Cuando exista la asignación por
+    /// institución, el hospital que sí las separa lo hará ahí.
+    ///
+    /// Quién: gestión, médico, enfermería y auxiliar — los que coordinan un
+    /// traslado. Fuera laboratorio, imagenología, farmacia y terapias.
+    GestionarAmbulancias,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
@@ -218,6 +230,10 @@ impl RolUsuario {
             ),
             EscribirImagenologia => matches!(self, Superadmin | Admin | Medico | Radiologo),
             GestionarFarmacia => matches!(self, Superadmin | Admin | RegenteFarmacia),
+            GestionarAmbulancias => matches!(
+                self,
+                Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
+            ),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),
             GestionarInstituciones => matches!(self, Superadmin),

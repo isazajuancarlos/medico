@@ -66,7 +66,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 144 pruebas
+cargo test  --workspace --all-targets                   # 246 pruebas
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -123,8 +123,46 @@ vacía y el acceso responde «credenciales incorrectas», que es indistinguible 
 
 **Lo que el port todavía NO cubre**, para no confundir avance con paridad:
 FEV-RIPS no existe en Rust, y el ADR no autoriza apagar Python hasta que sea byte
-a byte idéntico al de Python. Las ramas Rust viven en `feat/cie11-mapeo-oms`;
-`main` y `master` siguen siendo el sistema Python, que es el producto vivo.
+a byte idéntico al de Python. Tampoco existen en Rust `/api/modulos` —el catálogo
+de módulos por licencia, que hoy solo sirve Python— ni `/api/agenda/*`, así que la
+pantalla de **Agenda Médica** no carga contra el binario Rust. Las ramas Rust
+viven en `feat/cie11-mapeo-oms`; `main` y `master` siguen siendo el sistema
+Python, que es el producto vivo.
+
+**Sí cubre, desde el 2026-07-31**: farmacia e inventario con dispensación contra
+fórmula, proveedores, laboratorio, imágenes diagnósticas y ambulancias. Ver
+[Los módulos del port](#los-modulos-del-port).
+
+### Los módulos del port
+
+| módulo | tabla(s) | capacidad que exige escribir |
+|---|---|---|
+| Farmacia | `item_inventario`, `movimiento_inventario`, `dispensacion` | `GestionarFarmacia` (regente, admin) — **no** el médico |
+| Proveedores | `proveedor` (+ `proveedor_id` en el movimiento) | `GestionarFarmacia` |
+| Laboratorio | `resultado_laboratorio`, `perfil_laboratorio` | `EscribirLaboratorio` |
+| Imágenes | `informe_imagen` | `EscribirImagenologia` |
+| Ambulancias | `ambulancia`, `traslado` | `GestionarAmbulancias` |
+
+**Leer no exige capacidad en ninguno**: enfermería tiene que poder saber si queda
+adrenalina, y el médico que pidió el examen, ver su resultado.
+
+**Un vocabulario, no tres.** `orden.estado` y `orden.tipo` llevan CHECK con los
+valores del producto —«Pendiente»/«En Proceso»/«Completada»/«Cancelada» y
+«Laboratorio»/«Imagenología»/«Remisión Especialista»/…— que son los que escribe
+`historias.component.ts` y los que comparan las pantallas. Antes convivían tres
+escrituras y dos pantallas estaban muertas sin que nada fallara: la de laboratorio
+no mostraba el botón de procesar (comparaba «Pendiente» contra «PENDIENTE») y la
+bandeja de remisiones no veía las remisiones creadas desde la historia (buscaba
+«ESPECIALISTA» contra «Remisión Especialista»). Ver `0027_vocabulario_de_orden.sql`.
+
+**Cerrado es cerrado.** Un resultado de laboratorio validado y un informe de
+imágenes firmado no se editan, igual que la historia y el documento clínico: sobre
+ellos ya se decidió una conducta. Se corrige emitiendo otro.
+
+**Los bytes entran por un solo sitio.** `rutas::guardar_imagen_de` lo comparten el
+adjunto de la historia y la imagen de un informe radiológico — con su tipo
+deducido de la firma de los bytes y su cifrado en reposo. Un segundo almacén sería
+la puerta por donde entrase el SVG que `tipos.rs` existe para no admitir.
 
 ### Entorno
 

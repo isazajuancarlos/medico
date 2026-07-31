@@ -195,6 +195,13 @@ impl Exige for EscribirImagenologia {
         medico_dominio::rol::Capacidad::EscribirImagenologia;
 }
 
+/// Parque de ambulancias y despacho de traslados.
+pub struct GestionarAmbulancias;
+impl Exige for GestionarAmbulancias {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::GestionarAmbulancias;
+}
+
 /// Farmacia: alta de items, entradas de stock y dispensación. **Leer** el
 /// inventario no la exige: basta estar autenticado.
 pub struct GestionarFarmacia;
