@@ -34,6 +34,7 @@ use medico_datos::inventario;
 use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
 use medico_datos::paciente::{self, Antecedentes, InfoPaciente, Paciente, PacienteNuevo};
+use medico_datos::proveedor;
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
 /// Tope de una subida de imagen. Una radiografía o un PDF de laboratorio caben
@@ -171,6 +172,14 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/farmacia/dispensar", post(farm_dispensar))
         .route("/api/farmacia/dispensaciones", get(farm_dispensaciones))
         .route("/api/farmacia/movimientos", get(farm_movimientos))
+        .route(
+            "/api/farmacia/proveedores",
+            get(prov_listar).post(prov_crear),
+        )
+        .route(
+            "/api/farmacia/proveedores/{id}",
+            get(prov_obtener).put(prov_actualizar).delete(prov_eliminar),
+        )
         // Catálogos de referencia: los lee cualquier usuario autenticado.
         .route("/api/especialidades", get(listar_especialidades))
         .route("/api/medicamentos/buscar", get(buscar_medicamentos))
@@ -2026,6 +2035,117 @@ async fn farm_entrada(
                 "Quedan {quedan} unidades del lote {actual}. Un lote nuevo no se suma al anterior: \
                  vencen en fechas distintas y dejarían de poder rastrearse por separado. \
                  Dé de alta el lote nuevo como item."
+            ),
+        ),
+        Ok(inventario::ResultadoEntrada::ProveedorNoValido) => detalle(
+            StatusCode::CONFLICT,
+            "Ese proveedor no es de esta institución o está inactivo. La entrada no se registró: \
+             guardarla sin procedencia habría dejado una remesa que usted cree tener rastreada."
+                .into(),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Proveedores -------------------------------------------------------------
+
+async fn prov_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<proveedor::FiltrosProveedor>,
+) -> Response {
+    match proveedor::listar(&e.pool, u.ambito(), &f).await {
+        Ok(ps) => Json(ps).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn prov_obtener(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    match proveedor::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => Json(p).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Traduce el resultado del alta o la edición, y devuelve el proveedor ya
+/// releído para que la interfaz no tenga que pedirlo otra vez.
+async fn respuesta_proveedor(
+    e: &Estado,
+    ambito: Ambito,
+    r: proveedor::ResultadoAlta,
+    creado: bool,
+) -> Response {
+    match r {
+        proveedor::ResultadoAlta::Creado(id) => match proveedor::obtener(&e.pool, ambito, id).await {
+            Ok(Some(p)) => {
+                let codigo = if creado { StatusCode::CREATED } else { StatusCode::OK };
+                (codigo, Json(p)).into_response()
+            }
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        proveedor::ResultadoAlta::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        proveedor::ResultadoAlta::SinRazonSocial => detalle(
+            StatusCode::BAD_REQUEST,
+            "El proveedor necesita una razón social: sin ella la fila no identifica a nadie.".into(),
+        ),
+        proveedor::ResultadoAlta::NitRepetido(nit) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ya hay un proveedor con el NIT {nit} en esta institución."),
+        ),
+    }
+}
+
+async fn prov_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Json(p): Json<proveedor::ProveedorNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "Los proveedores son de una institución y esta cuenta no está adscrita a ninguna."
+                .into(),
+        );
+    };
+    match proveedor::crear(&e.pool, u.ambito(), institucion_id, &p).await {
+        Ok(r) => respuesta_proveedor(&e, u.ambito(), r, true).await,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn prov_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+    Json(cambios): Json<proveedor::ProveedorEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match proveedor::actualizar(&e.pool, u.ambito(), id, &cambios).await {
+        Ok(r) => respuesta_proveedor(&e, u.ambito(), r, false).await,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn prov_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFarmacia>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match proveedor::eliminar(&e.pool, u.ambito(), id).await {
+        Ok(proveedor::ResultadoBorrado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(proveedor::ResultadoBorrado::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(proveedor::ResultadoBorrado::TieneEntradas { entradas }) => detalle(
+            StatusCode::CONFLICT,
+            format!(
+                "Este proveedor ya trajo {entradas} remesa(s): borrarlo dejaría esas entradas sin \
+                 procedencia. Desactívelo y dejará de aparecer al registrar una entrada."
             ),
         ),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),

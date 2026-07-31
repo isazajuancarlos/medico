@@ -144,6 +144,9 @@ pub struct Movimiento {
     pub formula_id: Option<i64>,
     pub usuario_nombre: Option<String>,
     pub item_nombre: Option<String>,
+    pub proveedor_id: Option<i64>,
+    pub proveedor_nombre: Option<String>,
+    pub documento_soporte: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -154,6 +157,14 @@ pub struct Entrada {
     pub lote: Option<String>,
     pub fecha_vencimiento: Option<String>,
     pub costo_unitario: Option<f64>,
+    /// De quién viene la remesa. **Opcional a propósito**: hay entradas que no
+    /// son una compra —una donación, un traslado entre sedes, un ajuste de
+    /// conteo— y obligar a inventar un proveedor para esas produciría justo el
+    /// dato falso que este módulo evita en todo lo demás.
+    pub proveedor_id: Option<i64>,
+    /// Factura o remisión con la que llegó. Es el documento que un auditor pide
+    /// primero y el que cierra el rastro hacia atrás.
+    pub documento_soporte: Option<String>,
 }
 
 /// Qué pasó al registrar una entrada de stock.
@@ -173,6 +184,10 @@ pub enum ResultadoEntrada {
     /// Un lote nuevo es un item nuevo. Si la fila está en cero, en cambio, sí se
     /// reutiliza: no hay nada con qué mezclar.
     LoteDistinto { actual: String, quedan: i64 },
+    /// Se indicó un proveedor que no es de esta institución o está inactivo.
+    /// Guardar la entrada sin él «porque el id no valía» dejaría una remesa cuya
+    /// procedencia el usuario CREE haber registrado.
+    ProveedorNoValido,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -511,6 +526,11 @@ pub async fn entrada(
             quedan: item.cantidad_actual,
         });
     }
+    if let Some(proveedor_id) = e.proveedor_id
+        && !crate::proveedor::activo_del_ambito(pool, ambito, proveedor_id).await?
+    {
+        return Ok(ResultadoEntrada::ProveedorNoValido);
+    }
 
     let mut tx = pool.begin().await?;
     sqlx::query(
@@ -527,14 +547,16 @@ pub async fn entrada(
     .await?;
     sqlx::query(
         "INSERT INTO movimiento_inventario \
-         (item_inventario_id, usuario_id, fecha, tipo_movimiento, cantidad, motivo) \
-         VALUES (?,?,?,'ENTRADA',?,?)",
+         (item_inventario_id, usuario_id, fecha, tipo_movimiento, cantidad, motivo, \
+          proveedor_id, documento_soporte) VALUES (?,?,?,'ENTRADA',?,?,?,?)",
     )
     .bind(id)
     .bind(usuario_id)
     .bind(Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true))
     .bind(e.cantidad)
     .bind(&e.motivo)
+    .bind(e.proveedor_id)
+    .bind(&e.documento_soporte)
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
@@ -775,10 +797,12 @@ pub async fn movimientos(
     let mut sql = format!(
         "SELECT m.id, m.item_inventario_id, m.usuario_id, m.fecha, m.tipo_movimiento, \
          m.cantidad, m.motivo, m.paciente_id, m.formula_id, \
-         u.nombre AS usuario_nombre, i.nombre AS item_nombre \
+         u.nombre AS usuario_nombre, i.nombre AS item_nombre, \
+         m.proveedor_id, pr.razon_social AS proveedor_nombre, m.documento_soporte \
          FROM movimiento_inventario m \
          JOIN item_inventario i ON i.id = m.item_inventario_id \
          LEFT JOIN usuario u ON u.id = m.usuario_id \
+         LEFT JOIN proveedor pr ON pr.id = m.proveedor_id \
          WHERE {filtro}"
     );
     if item_id.is_some() {
@@ -1018,7 +1042,7 @@ mod pruebas {
         let pool = base().await;
         let id = crear(&pool, Ambito::institucion(1), 1, &item("Acetaminofén", 10))
             .await.unwrap().unwrap();
-        let e = Entrada { cantidad: 40, motivo: "Compra".into(), lote: None, fecha_vencimiento: None, costo_unitario: Some(200.0) };
+        let e = Entrada { cantidad: 40, motivo: "Compra".into(), lote: None, fecha_vencimiento: None, costo_unitario: Some(200.0), proveedor_id: None, documento_soporte: Some("FV-1024".into()) };
         let ResultadoEntrada::Hecha(despues) = entrada(&pool, Ambito::institucion(1), id, 5, &e, HOY).await.unwrap() else {
             panic!("la entrada debía registrarse");
         };
@@ -1031,13 +1055,78 @@ mod pruebas {
         assert_eq!(movs[0].usuario_nombre.as_deref(), Some("Regente Uno"));
     }
 
+    /// La remesa dice DE QUIÉN vino, y un proveedor ajeno o inactivo no cuela.
+    ///
+    /// Lo segundo importa más de lo que parece: sin la comprobación, un id
+    /// inválido se guardaría igual y la entrada quedaría con una procedencia que
+    /// el usuario cree haber registrado y que no lleva a ninguna parte.
+    #[tokio::test]
+    async fn la_entrada_registra_el_proveedor_y_rechaza_el_que_no_vale() {
+        let pool = base().await;
+        let id = crear(&pool, Ambito::institucion(1), 1, &item("Acetaminofén", 10))
+            .await.unwrap().unwrap();
+        let crate::proveedor::ResultadoAlta::Creado(prov) = crate::proveedor::crear(
+            &pool, Ambito::institucion(1), 1,
+            &crate::proveedor::ProveedorNuevo {
+                razon_social: "Distribuidora Andina".into(), nit: Some("900123456-1".into()),
+                contacto: None, telefono: None, email: None, direccion: None, ciudad: None,
+                suministra: None, observaciones: None,
+            }).await.unwrap()
+        else { panic!("debía crearse el proveedor") };
+        // Uno de la OTRA institución, para probar que no se acepta.
+        let crate::proveedor::ResultadoAlta::Creado(ajeno) = crate::proveedor::crear(
+            &pool, Ambito::institucion(2), 2,
+            &crate::proveedor::ProveedorNuevo {
+                razon_social: "Insumos del Valle".into(), nit: None, contacto: None,
+                telefono: None, email: None, direccion: None, ciudad: None,
+                suministra: None, observaciones: None,
+            }).await.unwrap()
+        else { panic!() };
+
+        let base_entrada = |p: Option<i64>| Entrada {
+            cantidad: 40, motivo: "Compra".into(), lote: None, fecha_vencimiento: None,
+            costo_unitario: None, proveedor_id: p, documento_soporte: Some("FV-1024".into()),
+        };
+
+        // El ajeno se rechaza, y NADA se escribe.
+        assert_eq!(
+            entrada(&pool, Ambito::institucion(1), id, 5, &base_entrada(Some(ajeno)), HOY).await.unwrap(),
+            ResultadoEntrada::ProveedorNoValido
+        );
+        assert_eq!(obtener(&pool, Ambito::institucion(1), id, HOY).await.unwrap().unwrap().cantidad_actual, 10);
+        assert!(movimientos(&pool, Ambito::institucion(1), None, None, 1).await.unwrap().is_empty());
+
+        // El propio y activo sí, y el movimiento lo lleva con nombre y factura.
+        assert!(matches!(
+            entrada(&pool, Ambito::institucion(1), id, 5, &base_entrada(Some(prov)), HOY).await.unwrap(),
+            ResultadoEntrada::Hecha(_)
+        ));
+        let movs = movimientos(&pool, Ambito::institucion(1), Some(id), None, 1).await.unwrap();
+        assert_eq!(movs[0].proveedor_id, Some(prov));
+        assert_eq!(movs[0].proveedor_nombre.as_deref(), Some("Distribuidora Andina"));
+        assert_eq!(movs[0].documento_soporte.as_deref(), Some("FV-1024"));
+
+        // Desactivarlo lo saca del juego: la donación siguiente ya no se le apunta.
+        crate::proveedor::actualizar(&pool, Ambito::institucion(1), prov,
+            &crate::proveedor::ProveedorEdicion { activo: Some(false), ..Default::default() }).await.unwrap();
+        assert_eq!(
+            entrada(&pool, Ambito::institucion(1), id, 5, &base_entrada(Some(prov)), HOY).await.unwrap(),
+            ResultadoEntrada::ProveedorNoValido
+        );
+        // Y sin proveedor la entrada SÍ pasa: una donación no tiene vendedor.
+        assert!(matches!(
+            entrada(&pool, Ambito::institucion(1), id, 5, &base_entrada(None), HOY).await.unwrap(),
+            ResultadoEntrada::Hecha(_)
+        ));
+    }
+
     /// Un lote nuevo NO se suma al que ya hay: se rechaza y el stock no se toca.
     #[tokio::test]
     async fn un_lote_distinto_no_se_mezcla_con_el_que_queda() {
         let pool = base().await;
         let id = crear(&pool, Ambito::institucion(1), 1, &item("Acetaminofén", 5))
             .await.unwrap().unwrap();
-        let e = Entrada { cantidad: 20, motivo: "Compra".into(), lote: Some("L-999".into()), fecha_vencimiento: None, costo_unitario: None };
+        let e = Entrada { cantidad: 20, motivo: "Compra".into(), lote: Some("L-999".into()), fecha_vencimiento: None, costo_unitario: None, proveedor_id: None, documento_soporte: None };
         assert_eq!(
             entrada(&pool, Ambito::institucion(1), id, 5, &e, HOY).await.unwrap(),
             ResultadoEntrada::LoteDistinto { actual: "L-001".into(), quedan: 5 }
