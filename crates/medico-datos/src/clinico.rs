@@ -102,6 +102,8 @@ struct CumCrudo {
     k: String,
     f: String,
     t: String,
+    /// `estadocum` del export. 22 % del maestro está inactivo.
+    a: bool,
 }
 
 /// La advertencia sobre la fecha del maestro CUM.
@@ -186,6 +188,7 @@ pub async fn sembrar(pool: &crate::Pool) -> Result<(usize, usize, usize), sqlx::
             concentracion: m.k.clone(),
             forma_farmaceutica: m.f.clone(),
             titular: if m.t.is_empty() { None } else { Some(m.t.clone()) },
+            activo: m.a,
         })
         .collect();
     crate::catalogo::cargar_medicamentos(pool, &lote).await?;
@@ -193,12 +196,35 @@ pub async fn sembrar(pool: &crate::Pool) -> Result<(usize, usize, usize), sqlx::
     Ok((cie.codigos.len(), cups.codigos.len(), lote.len()))
 }
 
-/// ¿Existe este CUM? El mismo criterio que los otros dos: no se normaliza nada.
+/// ¿Existe este CUM **en el maestro**, activo o no?
+///
+/// Es la pregunta de LECTURA: «¿qué medicamento es este código?», la que hace
+/// falta para mostrar una fórmula de hace dos años donde se prescribió algo que
+/// entonces estaba vigente. Para decidir si se puede prescribir HOY está
+/// [`esta_activo_cum`], que es otra pregunta — y por eso son dos funciones y no
+/// una con bandera.
 pub async fn existe_cum(pool: &crate::Pool, codigo: &str) -> Result<bool, sqlx::Error> {
     let f: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM medicamento WHERE codigo_cum = ?")
         .bind(codigo)
         .fetch_optional(pool)
         .await?;
+    Ok(f.is_some())
+}
+
+/// ¿Se puede prescribir HOY este CUM?
+///
+/// **Ésta es la que decide si el RIPS pasa.** 15 046 de los 65 997 medicamentos
+/// del maestro —el 22 %— existen y están INACTIVOS: el MUV los rechaza, y el
+/// rechazo llega semanas después como glosa. Un código que no existe y uno que
+/// existe pero está inactivo dan las dos `false` aquí, y eso es correcto: la
+/// pregunta es la misma. Quien necesite distinguirlos para el mensaje de error
+/// tiene [`existe_cum`].
+pub async fn esta_activo_cum(pool: &crate::Pool, codigo: &str) -> Result<bool, sqlx::Error> {
+    let f: Option<(i64,)> =
+        sqlx::query_as("SELECT 1 FROM medicamento WHERE codigo_cum = ? AND activo = 1")
+            .bind(codigo)
+            .fetch_optional(pool)
+            .await?;
     Ok(f.is_some())
 }
 
@@ -431,6 +457,45 @@ mod pruebas {
         assert_eq!(n, 65_997);
         assert!(existe_cum(&pool, "19900001-1").await.unwrap() || n > 0);
         assert!(!existe_cum(&pool, "no-existe").await.unwrap());
+    }
+
+    /// **22 % del maestro está INACTIVO, y se carga marcado, no borrado.**
+    ///
+    /// Se descubrió el 2026-07-31 al verificar contra https://app.invima.gov.co/cum/
+    /// por indicación de Juan: el export trae `estadocum` y el cargador lo
+    /// ignoraba, así que 15 046 medicamentos entraban como si se pudieran
+    /// prescribir. El MUV los rechaza.
+    #[tokio::test]
+    async fn los_medicamentos_inactivos_se_marcan_y_no_se_borran() {
+        let pool = base().await;
+        let (activos,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM medicamento WHERE activo=1")
+            .fetch_one(&pool).await.unwrap();
+        let (inactivos,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM medicamento WHERE activo=0")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(activos, 50_951);
+        assert_eq!(inactivos, 15_046, "el 22 % del maestro");
+        assert_eq!(activos + inactivos, 65_997, "no se borró ninguno");
+    }
+
+    /// Las DOS preguntas se distinguen, que es todo el punto: leer una fórmula
+    /// vieja necesita el nombre; prescribir hoy necesita el estado.
+    #[tokio::test]
+    async fn existir_y_poder_prescribirse_son_preguntas_distintas() {
+        let pool = base().await;
+        let inactivo: (String,) =
+            sqlx::query_as("SELECT codigo_cum FROM medicamento WHERE activo=0 LIMIT 1")
+                .fetch_one(&pool).await.unwrap();
+        assert!(existe_cum(&pool, &inactivo.0).await.unwrap(), "existe: se puede leer");
+        assert!(!esta_activo_cum(&pool, &inactivo.0).await.unwrap(), "pero no se prescribe");
+
+        let activo: (String,) =
+            sqlx::query_as("SELECT codigo_cum FROM medicamento WHERE activo=1 LIMIT 1")
+                .fetch_one(&pool).await.unwrap();
+        assert!(esta_activo_cum(&pool, &activo.0).await.unwrap());
+
+        // Y uno inventado da false en las dos.
+        assert!(!existe_cum(&pool, "no-existe").await.unwrap());
+        assert!(!esta_activo_cum(&pool, "no-existe").await.unwrap());
     }
 
     /// La concentración se resolvió donde NO había ambigüedad y se dejó vacía

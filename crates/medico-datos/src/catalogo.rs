@@ -60,6 +60,10 @@ pub struct MedicamentoNuevo {
     pub concentracion: String,
     pub forma_farmaceutica: String,
     pub titular: Option<String>,
+    /// `estadocum` del export: 22 % del maestro está INACTIVO. Se carga igual
+    /// —hace falta para leer una fórmula antigua— pero marcado, porque
+    /// prescribirlo hoy es un rechazo del MUV.
+    pub activo: bool,
 }
 
 /// Carga (o actualiza) un lote de medicamentos en UNA sola transacción: el
@@ -74,19 +78,21 @@ pub async fn cargar_medicamentos(
     let mut n = 0u64;
     for m in lote {
         let r = sqlx::query(
-            "INSERT INTO medicamento (codigo_cum, nombre, concentracion, forma_farmaceutica, titular) \
-             VALUES (?1, ?2, ?3, ?4, ?5) \
+            "INSERT INTO medicamento (codigo_cum, nombre, concentracion, forma_farmaceutica, titular, activo) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
              ON CONFLICT(codigo_cum) DO UPDATE SET \
                nombre = excluded.nombre, \
                concentracion = excluded.concentracion, \
                forma_farmaceutica = excluded.forma_farmaceutica, \
-               titular = excluded.titular",
+               titular = excluded.titular, \
+               activo = excluded.activo",
         )
         .bind(&m.codigo_cum)
         .bind(&m.nombre)
         .bind(&m.concentracion)
         .bind(&m.forma_farmaceutica)
         .bind(&m.titular)
+        .bind(i64::from(m.activo))
         .execute(&mut *tx)
         .await?;
         n += r.rows_affected();
@@ -165,6 +171,7 @@ mod pruebas {
             concentracion: String::new(),
             forma_farmaceutica: "TABLETA".into(),
             titular: Some("LEGRAND".into()),
+            activo: true,
         }];
         assert_eq!(cargar_medicamentos(&pool, &lote).await.unwrap(), 1);
 
@@ -176,6 +183,10 @@ mod pruebas {
             concentracion: String::new(),
             forma_farmaceutica: "TABLETA RECUBIERTA".into(),
             titular: None,
+            // Y de paso pasa a INACTIVO: es lo que ocurre de verdad cuando el
+            // INVIMA retira un registro. El upsert tiene que reflejarlo, o el
+            // sistema seguiría dejando prescribir algo que ya no se factura.
+            activo: false,
         }];
         cargar_medicamentos(&pool, &corregido).await.unwrap();
 
@@ -183,6 +194,11 @@ mod pruebas {
         assert_eq!(r.len(), 1, "el mismo CUM no se duplica al recargar");
         assert_eq!(r[0].nombre, "CARDIK 3 CORREGIDO");
         assert_eq!(r[0].forma_farmaceutica, "TABLETA RECUBIERTA");
+        // El estado también se actualiza: era activo y dejó de serlo.
+        let (activo,): (i64,) =
+            sqlx::query_as("SELECT activo FROM medicamento WHERE codigo_cum = '20048021-41'")
+                .fetch_one(&pool).await.unwrap();
+        assert_eq!(activo, 0, "un medicamento retirado debe quedar marcado al recargar");
         // Y se encuentra también tecleando el propio código CUM.
         let por_cum = buscar_medicamentos(&pool, "20048021-41").await.unwrap();
         assert_eq!(por_cum.len(), 1);
