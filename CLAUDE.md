@@ -44,12 +44,12 @@ acepte y devuelva CUV. Ver [La cadena RIPS](#la-cadena-rips--fev-rips--muv).
 ```bash
 # === BACKEND ===
 cd backend
-.venv/bin/python -m pytest -q                    # 645 pruebas (~62 s)
+.venv/bin/python -m pytest -q                    # 665 pruebas (~2 min 16 s)
 .venv/bin/python -m pytest tests/test_cie11.py -q         # un módulo
 .venv/bin/python -m pytest tests/test_cie11.py::test_x -q # una prueba
 .venv/bin/python -m pytest -k "aislamiento" -q            # por nombre
 
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt   # `pytest` va en el segundo
 python seed.py                                   # BD + datos de prueba (idempotente)
 uvicorn main:app --reload --port 8000            # Swagger en /docs
 
@@ -57,7 +57,7 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 cd frontend
 npm install --legacy-peer-deps                   # obligatorio: conflictos de peers de PrimeNG
 npm start                                        # :4200, proxy /api → :8000
-npm test                                         # vitest vía `ng test`: 5 specs, 57 pruebas
+npm test                                         # vitest vía `ng test`: 7 specs, 74 pruebas
 npm run build
 
 # === DOCKER (pila completa) ===
@@ -86,7 +86,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 246 pruebas
+cargo test  --workspace --all-targets                   # 392 pruebas (~2 min)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
