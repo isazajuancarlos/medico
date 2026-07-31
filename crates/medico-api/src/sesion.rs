@@ -83,18 +83,47 @@ fn constante_iguales(a: &[u8], b: &[u8]) -> bool {
     a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
-/// `Set-Cookie` de una sesión abierta. `Secure` se añade en el proxy: el perfil
-/// de una sola máquina se sirve por HTTP en `localhost`, y ahí una cookie
-/// `Secure` no se guarda.
-pub fn cabecera_abrir(valor: &str, minutos: i64) -> String {
+/// `Set-Cookie` de una sesión abierta.
+///
+/// # `Secure` lo decide el despliegue, y ya lo tenía dicho
+///
+/// Antes esto no marcaba `Secure` nunca, y el comentario afirmaba que «se añade
+/// en el proxy». **Ningún artefacto del repositorio lo añadía**: no hay vhost de
+/// nginx para medico. Era un control declarado y no ejercido, que es justo la
+/// forma en que nadie llega a implementarlo — quien lea el código cree que está
+/// resuelto y sigue.
+///
+/// El resto del comentario sí era cierto y sigue mandando: el perfil de una sola
+/// máquina se sirve por HTTP en `localhost`, y ahí el navegador **descarta** una
+/// cookie `Secure`. Marcarla siempre dejaría ese despliegue sin poder entrar.
+///
+/// Así que la marca la decide `tras_proxy`, que es la única señal que el binario
+/// tiene y que ya significa exactamente esto: *«hay un proxy inverso delante»* —
+/// y en este despliegue el proxy inverso es donde termina el TLS.
+///
+/// **El límite, dicho:** un proxy inverso que sirviera HTTP en claro recibiría
+/// una cookie `Secure` que el navegador tira, y nadie podría entrar. Es un fallo
+/// RUIDOSO y en el primer intento de login, no uno silencioso — que es la
+/// dirección correcta para equivocarse aquí. Un despliegue así no existe hoy;
+/// el día que exista, hará falta su propia bandera.
+pub fn cabecera_abrir(valor: &str, minutos: i64, tras_proxy: bool) -> String {
     format!(
-        "{NOMBRE_COOKIE}={valor}; HttpOnly; SameSite=Strict; Path=/; Max-Age={}",
-        minutos * 60
+        "{NOMBRE_COOKIE}={valor}; HttpOnly; SameSite=Strict; Path=/; Max-Age={}{}",
+        minutos * 60,
+        if tras_proxy { "; Secure" } else { "" }
     )
 }
 
-pub fn cabecera_cerrar() -> String {
-    format!("{NOMBRE_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0")
+/// La cookie de cierre lleva los MISMOS atributos que la de apertura, `Secure`
+/// incluido. Un navegador solo reemplaza una cookie por otra si coinciden en
+/// nombre, dominio y ruta; los atributos de seguridad no forman parte de esa
+/// identidad, pero mantenerlos iguales evita el caso en que el cierre no
+/// sustituye a la sesión abierta y esta sobrevive al «salir».
+pub fn cabecera_cerrar(tras_proxy: bool) -> String {
+    format!(
+        "{NOMBRE_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0{}",
+        if tras_proxy { "; Secure" } else { "" }
+    )
 }
 
 pub fn de_cabeceras(cabeceras: &HeaderMap) -> Option<String> {
@@ -149,5 +178,42 @@ mod pruebas {
     fn una_sesion_caducada_no_entra() {
         let v = emitir(SECRETO, 42, 0, -1);
         assert!(verificar(SECRETO, &v).is_none());
+    }
+
+    // === LOS ATRIBUTOS DE LA COOKIE ======================================
+    //
+    // Antes había un comentario afirmando que «`Secure` se añade en el proxy» y
+    // ningún artefacto lo añadía. Estas pruebas convierten la afirmación en un
+    // hecho comprobable: si mañana alguien quita la marca, se ponen rojas.
+
+    #[test]
+    fn tras_un_proxy_la_cookie_va_marcada_secure() {
+        let c = cabecera_abrir("x", 60, true);
+        assert!(c.contains("; Secure"), "{c}");
+        // Y el cierre igual, o la cookie de sesión podría sobrevivir al «salir».
+        assert!(cabecera_cerrar(true).contains("; Secure"));
+    }
+
+    /// Sin proxy NO se marca, y no es un olvido: el perfil de una sola máquina
+    /// se sirve por HTTP en `localhost`, donde el navegador DESCARTA una cookie
+    /// `Secure`. Marcarla siempre dejaría ese despliegue sin poder entrar.
+    #[test]
+    fn en_una_sola_maquina_no_se_marca_y_es_a_proposito() {
+        let c = cabecera_abrir("x", 60, false);
+        assert!(!c.contains("Secure"), "{c}");
+        assert!(!cabecera_cerrar(false).contains("Secure"));
+    }
+
+    /// Lo que NO depende del despliegue, en ninguna de las dos: `HttpOnly` cierra
+    /// el paso a `document.cookie` y `SameSite=Strict` al CSRF. Que la marca de
+    /// `Secure` sea condicional no puede arrastrarse a éstas.
+    #[test]
+    fn httponly_y_samesite_van_siempre_en_las_dos_cabeceras() {
+        for tras_proxy in [true, false] {
+            for c in [cabecera_abrir("x", 60, tras_proxy), cabecera_cerrar(tras_proxy)] {
+                assert!(c.contains("HttpOnly"), "{c}");
+                assert!(c.contains("SameSite=Strict"), "{c}");
+            }
+        }
     }
 }

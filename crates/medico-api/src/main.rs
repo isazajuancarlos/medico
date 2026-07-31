@@ -6,6 +6,7 @@ mod claves;
 mod config;
 mod estaticos;
 mod maestros;
+mod modulos;
 mod rutas;
 mod sesion;
 mod tipos;

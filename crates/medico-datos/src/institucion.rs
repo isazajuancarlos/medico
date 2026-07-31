@@ -71,6 +71,50 @@ pub async fn crear(
     Ok(ResultadoCrear::Creada(r.last_insert_rowid()))
 }
 
+/// Los módulos licenciados a una institución (#65).
+///
+/// Devuelve la lista tal como está guardada. Un JSON ilegible —tocado a mano, o
+/// de una versión posterior— **NO cae al defecto**: eso le devolvería en
+/// silencio a la institución módulos que quizá no compró, o le quitaría los que
+/// sí. Se propaga el error y la petición falla, que es la única respuesta que
+/// no inventa una licencia (directiva 20).
+pub async fn modulos_habilitados(
+    pool: &crate::Pool,
+    institucion_id: i64,
+) -> Result<Option<Vec<String>>, sqlx::Error> {
+    let fila: Option<(String,)> =
+        sqlx::query_as("SELECT modulos_habilitados FROM institucion WHERE id = ?")
+            .bind(institucion_id)
+            .fetch_optional(pool)
+            .await?;
+    let Some((crudo,)) = fila else { return Ok(None) };
+    serde_json::from_str::<Vec<String>>(&crudo)
+        .map(Some)
+        .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+}
+
+/// Fija los módulos licenciados. El llamante ya validó que todos existen en el
+/// catálogo: aquí no se filtra nada en silencio.
+pub async fn fijar_modulos(
+    pool: &crate::Pool,
+    institucion_id: i64,
+    modulos: &[String],
+) -> Result<bool, sqlx::Error> {
+    // Ordenados y sin repetidos: la licencia es un CONJUNTO, y guardarla dos
+    // veces igual con distinto orden haría que dos instituciones idénticas se
+    // vieran distintas al comparar.
+    let mut v: Vec<&str> = modulos.iter().map(|s| s.as_str()).collect();
+    v.sort_unstable();
+    v.dedup();
+    let json = serde_json::to_string(&v).expect("una lista de cadenas siempre serializa");
+    let r = sqlx::query("UPDATE institucion SET modulos_habilitados = ? WHERE id = ?")
+        .bind(&json)
+        .bind(institucion_id)
+        .execute(pool)
+        .await?;
+    Ok(r.rows_affected() > 0)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
