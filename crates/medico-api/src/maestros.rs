@@ -84,6 +84,9 @@ fn leer(ruta: &Path) -> Result<(Vec<MedicamentoNuevo>, Resumen), String> {
     let i_forma = opcional("formafarmaceutica");
     let i_titular = opcional("titular");
     let i_princ = opcional("principioactivo");
+    // `estadocum`: Activo o Inactivo. Ignorarlo cargaba 15 046 medicamentos —el
+    // 22 % del maestro— como si se pudieran prescribir. El MUV los rechaza.
+    let i_estado = opcional("estadocum");
     // La concentración se COMPONE de tres columnas; la que se llama
     // «concentracion» en el export NO lo es. Ver el bloque que la resuelve.
     let i_cant = opcional("cantidad");
@@ -124,6 +127,13 @@ fn leer(ruta: &Path) -> Result<(Vec<MedicamentoNuevo>, Resumen), String> {
             // Se rellena después, cuando se han visto todas las filas del CUM.
             concentracion: String::new(),
             forma_farmaceutica: i_forma.map(|i| campo(i).to_string()).unwrap_or_default(),
+            // Sin columna de estado se asume ACTIVO, y es la respuesta correcta
+            // para un export que no la traiga: marcarlo todo inactivo dejaría el
+            // maestro inservible por una columna que quizá esa versión no usa.
+            // Con columna, manda ella.
+            activo: i_estado
+                .map(|i| !campo(i).eq_ignore_ascii_case("inactivo"))
+                .unwrap_or(true),
             titular: i_titular
                 .map(campo)
                 .filter(|t| !t.is_empty())
@@ -208,6 +218,7 @@ pub fn generar_json(csv: &Path, salida: &Path) -> Result<Resumen, String> {
                 "k": m.concentracion,
                 "f": m.forma_farmaceutica,
                 "t": m.titular.clone().unwrap_or_default(),
+                "a": m.activo,
             })
         })
         .collect();
