@@ -229,6 +229,18 @@ impl Exige for GestionarUsuarios {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarUsuarios;
 }
 
+/// Crear instituciones, fijarles licencia y decidir qué módulos compraron.
+///
+/// Vive POR ENCIMA de la institución y por eso `Capacidad::GestionarInstituciones`
+/// no se puede configurar desde la matriz de una: un administrador que se la
+/// concediera estaría regalándose el producto entero. En la práctica es la
+/// capacidad del vendedor, no la del cliente.
+pub struct GestionarInstituciones;
+impl Exige for GestionarInstituciones {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::GestionarInstituciones;
+}
+
 impl<C: Exige> FromRequestParts<Estado> for Autorizado<C> {
     type Rejection = StatusCode;
 

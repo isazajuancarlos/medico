@@ -230,6 +230,13 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        // El menú que ve cada institución (#65). Leerlo basta con estar
+        // autenticado; cambiar la licencia es del vendedor, no del cliente.
+        .route("/api/modulos", get(crate::modulos::listar))
+        .route(
+            "/api/instituciones/{id}/modulos",
+            put(crate::modulos::fijar),
+        )
         // La matriz de capacidades de la institución (#235). Misma capacidad
         // que gestionar usuarios: quién es quién y quién puede qué son la misma
         // responsabilidad.
@@ -4125,6 +4132,149 @@ mod pruebas {
              Un usuario cualquiera de la institución puede destruir el recurso. \
              Ponles el `Autorizado<…>` que corresponda a SU recurso.",
         );
+    }
+
+    /// El menú por institución (#65, punto 6), por la ruta de verdad.
+    ///
+    /// `modulo.rs` prueba el catálogo y `modulos.rs` que no mienta sobre lo que
+    /// el binario sirve. Lo que aquí importa es **quién puede cambiar la
+    /// licencia**: es la decisión del vendedor, y dejársela al administrador del
+    /// cliente sería regalarle el producto entero.
+    mod menu_por_institucion {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        /// Un admin de la institución 1 y un superadmin sin institución.
+        async fn con_admin_y_superadmin() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (30,'Admin','adm4@x.co',?,'admin',1,1),
+                        (31,'Root','root@x.co',?,'superadmin',NULL,1)",
+            )
+            .bind(&h)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        async fn enviar(e: &Estado, metodo: &str, uri: &str, quien: i64, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        /// Una institución nueva arranca con los tres que todo prestador usa, y
+        /// no con todo ni con nada: sin pacientes no hay historia, sin historia
+        /// no hay RIPS y sin RIPS no hay pago.
+        #[tokio::test]
+        async fn una_institucion_nueva_arranca_con_lo_minimo_para_trabajar() {
+            let e = con_admin_y_superadmin().await;
+            let r = enviar(&e, "GET", "/api/modulos", 30, "").await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            assert_eq!(
+                v["habilitados"],
+                serde_json::json!(["CITAS", "HISTORIA", "PACIENTES"])
+            );
+        }
+
+        /// **La licencia la cambia el vendedor, no el cliente.**
+        #[tokio::test]
+        async fn un_admin_de_institucion_no_se_amplia_su_propia_licencia() {
+            let e = con_admin_y_superadmin().await;
+            let cuerpo = r#"{"modulos":["CITAS","PACIENTES","HISTORIA","FARMACIA"]}"#;
+            assert_eq!(
+                enviar(&e, "PUT", "/api/instituciones/1/modulos", 30, cuerpo).await.status(),
+                StatusCode::FORBIDDEN,
+                "un admin se compró un módulo solo"
+            );
+            // Y el superadmin sí.
+            let r = enviar(&e, "PUT", "/api/instituciones/1/modulos", 31, cuerpo).await;
+            assert_eq!(r.status(), StatusCode::OK);
+        }
+
+        /// El cambio se ve en el menú de la institución en la siguiente petición.
+        #[tokio::test]
+        async fn lo_que_el_vendedor_licencia_aparece_en_el_menu() {
+            let e = con_admin_y_superadmin().await;
+            let cuerpo = r#"{"modulos":["CITAS","PACIENTES","HISTORIA","FARMACIA","KARDEX"]}"#;
+            assert_eq!(
+                enviar(&e, "PUT", "/api/instituciones/1/modulos", 31, cuerpo).await.status(),
+                StatusCode::OK
+            );
+
+            let r = enviar(&e, "GET", "/api/modulos", 30, "").await;
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            let estado = |nombre: &str| -> String {
+                v["grupos"]
+                    .as_array().unwrap().iter()
+                    .flat_map(|g| g["modulos"].as_array().unwrap())
+                    .find(|m| m["modulo"] == nombre)
+                    .unwrap()["estado"].as_str().unwrap().to_string()
+            };
+            // Los TRES estados a la vez, que es lo que antes era indistinguible.
+            assert_eq!(estado("FARMACIA"), "habilitado", "licenciado y construido");
+            assert_eq!(estado("KARDEX"), "pendiente", "licenciado y sin construir");
+            assert_eq!(estado("QUIROFANO"), "no_incluido", "no está en su plan");
+        }
+
+        /// Un módulo inventado se RECHAZA. Filtrarlo en silencio dejaría la
+        /// licencia inerte y nadie sabría por qué ese cliente no ve lo que cree
+        /// haber comprado.
+        #[tokio::test]
+        async fn un_modulo_que_no_existe_se_rechaza_en_vez_de_ignorarse() {
+            let e = con_admin_y_superadmin().await;
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/instituciones/1/modulos",
+                31,
+                r#"{"modulos":["CITAS","TELETRANSPORTE"]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let b = axum::body::to_bytes(r.into_body(), 1 << 16).await.unwrap();
+            let texto = String::from_utf8(b.to_vec()).unwrap();
+            assert!(texto.contains("TELETRANSPORTE"), "debe decir cuál: {texto}");
+
+            // Y no se aplicó NADA: ni siquiera la parte válida.
+            let r = enviar(&e, "GET", "/api/modulos", 30, "").await;
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            let v: serde_json::Value = serde_json::from_slice(&b).unwrap();
+            assert_eq!(
+                v["habilitados"],
+                serde_json::json!(["CITAS", "HISTORIA", "PACIENTES"]),
+                "un lote rechazado no puede aplicarse a medias"
+            );
+        }
+
+        #[tokio::test]
+        async fn sin_cookie_no_hay_menu() {
+            let e = con_admin_y_superadmin().await;
+            let r = router(e.clone())
+                .oneshot(Request::builder().uri("/api/modulos").body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+        }
     }
 
     /// DIVIPOLA por la ruta de verdad (#16/#77).

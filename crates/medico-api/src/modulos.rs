@@ -1,0 +1,227 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Juan Carlos Isaza Arenas
+
+//! Qué módulos ve esta institución (#65, punto 6).
+//!
+//! Es la pieza que permite vender el MISMO binario a un consultorio, una IPS,
+//! una clínica y un hospital: lo que cambia no es el código, es la licencia. El
+//! frontend arma su menú desde aquí en vez de traer una lista fija.
+//!
+//! **Sin esto no se puede dar de alta un cliente nuevo sin tocar la base a
+//! mano**, que es lo que la ficha de #65 señala como bloqueo.
+//!
+//! # Quién puede qué
+//!
+//! - **Leer** el catálogo: cualquiera autenticado. Es su propio menú.
+//! - **Cambiar** la licencia: `GestionarInstituciones`, o sea **solo el
+//!   superadmin**. Qué módulos compró un cliente es una decisión del vendedor,
+//!   no del administrador del cliente — dejársela a éste sería regalarle el
+//!   producto entero. Es la misma razón por la que esa capacidad no se puede
+//!   configurar desde la matriz de una institución.
+
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
+use medico_datos::institucion;
+use medico_dominio::modulo::{self, EstadoModulo};
+use serde::{Deserialize, Serialize};
+
+use crate::auth::{Autenticado, Autorizado, Estado, GestionarInstituciones};
+
+#[derive(Debug, Serialize)]
+pub struct ModuloVista {
+    pub modulo: &'static str,
+    pub estado: EstadoModulo,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GrupoVista {
+    pub grupo: &'static str,
+    pub modulos: Vec<ModuloVista>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Catalogo {
+    pub institucion_id: i64,
+    /// Lo licenciado, ordenado. Se manda aparte de los grupos porque el menú lo
+    /// usa para decidir de un vistazo, sin recorrer el catálogo entero.
+    pub habilitados: Vec<String>,
+    pub grupos: Vec<GrupoVista>,
+}
+
+/// Las rutas que este binario sirve de verdad.
+///
+/// Se extrae del router en tiempo de compilación leyendo el propio fuente, y no
+/// se escribe a mano, porque una lista de «lo que ya está hecho» mantenida
+/// aparte se desincroniza al primer módulo nuevo — y entonces el producto
+/// promete al cliente algo que no existe. La prueba
+/// `el_catalogo_no_miente_sobre_lo_que_el_binario_sirve` lo comprueba.
+fn sirve(prefijo: &str) -> bool {
+    const RUTAS: &str = include_str!("rutas.rs");
+    RUTAS.contains(&format!("\"{prefijo}\""))
+        || RUTAS.contains(&format!("\"{prefijo}/"))
+}
+
+fn construir(institucion_id: i64, habilitados: &[String]) -> Catalogo {
+    let grupos = modulo::grupos()
+        .into_iter()
+        .map(|g| GrupoVista {
+            grupo: g,
+            modulos: modulo::CATALOGO
+                .iter()
+                .filter(|m| m.grupo == g)
+                .map(|m| ModuloVista {
+                    modulo: m.nombre,
+                    estado: m.estado(habilitados, sirve),
+                })
+                .collect(),
+        })
+        .collect();
+    let mut hab = habilitados.to_vec();
+    hab.sort();
+    Catalogo { institucion_id, habilitados: hab, grupos }
+}
+
+/// De qué institución habla. Igual que en la matriz de capacidades: quien
+/// pertenece a una usa la suya y el parámetro se ignora; el superadmin dice cuál.
+fn institucion_de(
+    u: &medico_datos::usuario::Usuario,
+    pedida: Option<i64>,
+) -> Result<i64, (StatusCode, &'static str)> {
+    match u.institucion_id {
+        Some(propia) => Ok(propia),
+        None => pedida.ok_or((
+            StatusCode::BAD_REQUEST,
+            "sin institución propia: indique cuál",
+        )),
+    }
+}
+
+/// `GET /api/modulos` — el catálogo con el estado de cada módulo.
+pub async fn listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+) -> Result<Json<Catalogo>, Response> {
+    let id = institucion_de(&u, None).map_err(IntoResponse::into_response)?;
+    let habilitados = institucion::modulos_habilitados(&e.pool, id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
+    Ok(Json(construir(id, &habilitados)))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FijarModulos {
+    pub modulos: Vec<String>,
+}
+
+/// `PUT /api/instituciones/{id}/modulos` — cambia la licencia. **Superadmin.**
+///
+/// Un nombre que no está en el catálogo se **rechaza**, no se filtra en
+/// silencio: guardar una licencia con `TELETRANSPORTE` dentro la dejaría inerte
+/// y nadie sabría por qué ese cliente no ve el módulo que cree haber comprado.
+pub async fn fijar(
+    State(e): State<Estado>,
+    _autorizado: Autorizado<GestionarInstituciones>,
+    Path(id): Path<i64>,
+    Json(p): Json<FijarModulos>,
+) -> Result<Json<Catalogo>, Response> {
+    let desconocidos: Vec<&str> = p
+        .modulos
+        .iter()
+        .map(|s| s.as_str())
+        .filter(|n| !modulo::existe(n))
+        .collect();
+    if !desconocidos.is_empty() {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("estos módulos no existen en el catálogo: {desconocidos:?}"),
+        )
+            .into_response());
+    }
+
+    let existia = institucion::fijar_modulos(&e.pool, id, &p.modulos)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    if !existia {
+        return Err(StatusCode::NOT_FOUND.into_response());
+    }
+
+    let ahora = institucion::modulos_habilitados(&e.pool, id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .unwrap_or_default();
+    Ok(Json(construir(id, &ahora)))
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// **El catálogo no puede mentir sobre lo que el binario sirve.**
+    ///
+    /// Cada módulo con `prefijo` declarado afirma «si el router sirve esto,
+    /// estoy construido». Si alguien escribe un prefijo que no existe —una
+    /// errata, o una ruta que se renombró—, el módulo quedaría PENDIENTE para
+    /// siempre y el cliente vería «aún no está» sobre algo que sí está. Al
+    /// revés no puede pasar: sin prefijo es pendiente por definición.
+    ///
+    /// Es la misma forma que `ningun_borrado_se_conforma_con_estar_autenticado`:
+    /// se comprueba contra el fuente, no caso por caso, para que un módulo nuevo
+    /// no dependa de que alguien se acuerde.
+    #[test]
+    fn el_catalogo_no_miente_sobre_lo_que_el_binario_sirve() {
+        let rotos: Vec<&str> = modulo::CATALOGO
+            .iter()
+            .filter_map(|m| m.prefijo.filter(|p| !sirve(p)).map(|_| m.nombre))
+            .collect();
+        assert!(
+            rotos.is_empty(),
+            "estos módulos declaran una ruta que el router NO sirve, así que se \
+             mostrarían como «pendientes» para siempre: {rotos:?}",
+        );
+    }
+
+    /// Y que `sirve` de verdad discrimine: si devolviera `true` siempre, la
+    /// prueba de arriba pasaría con el catálogo entero inventado.
+    #[test]
+    fn sirve_distingue_una_ruta_real_de_una_inventada() {
+        assert!(sirve("/api/pacientes"));
+        assert!(sirve("/api/nutricion"));
+        assert!(!sirve("/api/teletransporte"));
+        assert!(!sirve("/api/kardex"), "KARDEX no está construido");
+    }
+
+    #[test]
+    fn el_catalogo_se_pinta_por_grupos_y_en_orden() {
+        let c = construir(1, &["CITAS".to_string()]);
+        assert_eq!(c.institucion_id, 1);
+        assert_eq!(c.grupos.len(), 10);
+        assert_eq!(c.grupos[0].grupo, "Core");
+        // CITAS licenciado y servido; PACIENTES no licenciado.
+        let core = &c.grupos[0].modulos;
+        let citas = core.iter().find(|m| m.modulo == "CITAS").unwrap();
+        let pacientes = core.iter().find(|m| m.modulo == "PACIENTES").unwrap();
+        assert_eq!(citas.estado, EstadoModulo::Habilitado);
+        assert_eq!(pacientes.estado, EstadoModulo::NoIncluido);
+        // Y uno licenciado pero sin construir.
+        let c2 = construir(1, &["KARDEX".to_string()]);
+        let kardex = c2
+            .grupos
+            .iter()
+            .flat_map(|g| &g.modulos)
+            .find(|m| m.modulo == "KARDEX")
+            .unwrap();
+        assert_eq!(kardex.estado, EstadoModulo::Pendiente);
+    }
+
+    /// Todos los módulos del catálogo aparecen en algún grupo: ninguno se pierde
+    /// por un grupo mal escrito, que dejaría un módulo comprado invisible.
+    #[test]
+    fn ningun_modulo_se_queda_fuera_del_menu() {
+        let c = construir(1, &[]);
+        let pintados: usize = c.grupos.iter().map(|g| g.modulos.len()).sum();
+        assert_eq!(pintados, modulo::CATALOGO.len());
+    }
+}
