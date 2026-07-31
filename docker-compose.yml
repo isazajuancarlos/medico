@@ -4,6 +4,22 @@ version: '3.8'
 # MED-SYS PRO v2.0 - Docker Compose
 # Arquitectura: PostgreSQL + FastAPI Backend + Angular Frontend (Nginx)
 # Uso: docker compose up -d
+#
+# ESTA PILA ES EL BACKEND PYTHON, que se retira con el port a Rust (#156). El
+# producto que se entrega es el binario de `crates/medico-api`; esto queda como
+# implementación de referencia mientras se porta RIPS.
+#
+# LOS TRES SECRETOS SE EXIGEN DEL ENTORNO Y NO TIENEN VALOR POR DEFECTO. Hasta
+# hoy venían escritos aquí, así que `docker compose up -d` —el comando que el
+# CLAUDE.md documenta como «pila completa»— levantaba el backend firmando JWT con
+# una clave que está en el repositorio, sin que el operador hiciera nada. La
+# sintaxis `${VAR:?mensaje}` hace que compose ABORTE si falta, que es lo que debe
+# pasar: un secreto ausente para el arranque, nunca uno de relleno.
+#
+#   export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+#   export SECRET_KEY="$(openssl rand -hex 32)"
+#   export JWT_SECRET_KEY="$(openssl rand -hex 32)"
+#   docker compose up -d
 # ==============================================================================
 
 services:
@@ -15,7 +31,7 @@ services:
     environment:
       POSTGRES_DB: medsys_db
       POSTGRES_USER: medsys_user
-      POSTGRES_PASSWORD: MedSys2026Secure!
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD (exportela; no hay valor por defecto)}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - medsys_pgdata:/var/lib/postgresql/data
@@ -36,9 +52,9 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://medsys_user:MedSys2026Secure!@db:5432/medsys_db
-      SECRET_KEY: medsys_docker_secret_key_cambie_en_produccion_2026
-      JWT_SECRET_KEY: medsys_jwt_secret_cambie_en_produccion_2026_muy_largo
+      DATABASE_URL: postgresql://medsys_user:${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}@db:5432/medsys_db
+      SECRET_KEY: ${SECRET_KEY:?falta SECRET_KEY (firma las sesiones; genere 32+ bytes)}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?falta JWT_SECRET_KEY (firma los tokens; genere 32+ bytes)}
     ports:
       - "8000:8000"
     volumes:

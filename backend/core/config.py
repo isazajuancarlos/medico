@@ -47,11 +47,20 @@ class ConfiguracionInsegura(RuntimeError):
 
 #: Valores que alguna vez estuvieron como defecto en este código, o que son el
 #: relleno habitual. Si aparecen, es que nadie configuró nada.
+#:
+#: Los dos últimos son los que `docker-compose.yml` traía incrustados hasta el
+#: 2026-07-31: pasaban esta comprobación —ni se parecen a «changeme» ni son
+#: cortos—, así que `docker compose up -d` levantaba el backend firmando JWT con
+#: una clave del repositorio. Ya no vienen en el compose, pero se prohíben
+#: igualmente porque siguen en el historial de git: quien los copiara antes tiene
+#: que enterarse al reiniciar, no dentro de un año.
 CONOCIDOS = frozenset({
     "changeme", "change-me", "secret", "supersecret", "clave", "password",
     "default_insecure_key_change_in_production",
     "your-secret-key-here-change-in-production",
     "change-me-in-production-use-64-random-characters",
+    "medsys_docker_secret_key_cambie_en_produccion_2026",
+    "medsys_jwt_secret_cambie_en_produccion_2026_muy_largo",
 })
 
 #: Un HS256 con menos de esto se ataca por fuerza bruta fuera de línea a partir

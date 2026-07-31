@@ -292,6 +292,37 @@ def exigir_cupo_al_modificar(usuario, cambios: dict, user: "Usuario",
             negar(motivo)
 
 
+def exigir_ascenso_permitido(cambios: dict, user: "Usuario") -> None:
+    """**Solo un superadmin puede fabricar otro superadmin.**
+
+    Los dos extremos de actualización de usuario hacen `setattr` de todos los
+    campos del payload, y los dos esquemas —`UsuarioUpdate` y
+    `UsuarioUpdateAdmin`— exponen `rol`. Sin esta comprobación, un ADMIN ponía
+    `rol=SUPERADMIN` a cualquier cuenta de su institución (la suya incluida) y
+    con eso salía del aislamiento: `puede_ver()` no acota al superadmin, así que
+    el ascenso es una escalada de privilegios que CRUZA instituciones. El límite
+    de institución de `admin.py` no lo frena, porque el ascenso ocurre dentro de
+    la institución y el efecto ocurre fuera.
+
+    Se comprueba el DESTINO y no el origen: degradar a un superadmin no crea
+    autoridad nueva, y prohibirlo dejaría al dueño del sistema sin poder retirar
+    la suya. Y no se prohíbe cambiar de rol en general —un admin sube a alguien
+    de auxiliar a enfermería a diario—: eso sería cerrar lo inusual en vez de lo
+    imposible.
+
+    Es la misma regla que `crear_usuario` ya aplica en el binario Rust
+    (`crates/medico-api/src/rutas.rs`), dicha en el otro lado del port para que
+    las dos implementaciones no difieran justo aquí.
+    """
+    from models import RolUsuario as R
+
+    if cambios.get("rol") == R.SUPERADMIN and user.rol != R.SUPERADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo un superadministrador puede conceder el rol de superadministrador.",
+        )
+
+
 def requiere_licencia_vigente(
     user: "Usuario" = Depends(get_current_active_user),
     db: Session = Depends(get_db),

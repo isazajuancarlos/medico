@@ -1,0 +1,17 @@
+# Lo que hace falta para CORRER LAS PRUEBAS, y que no va en el servidor.
+#
+# Existe porque `requirements.txt` no traía `pytest`: un entorno virtual recién
+# creado con el comando que el CLAUDE.md documenta no podía ejecutar la suite que
+# el propio CLAUDE.md documenta tres líneas más arriba. Se descubrió el
+# 2026-07-31 al rehacer el venv, que había quedado inservible tras subir el
+# sistema de Python 3.14 a 3.13 (ver `conocimiento/venvs.py`).
+#
+#     pip install -r requirements.txt -r requirements-dev.txt
+#
+# `httpx` NO se repite aquí aunque el `TestClient` de Starlette lo necesite: ya
+# es dependencia del servidor (`requirements.txt`), y declararlo dos veces
+# invita a que las dos declaraciones se separen.
+-r requirements.txt
+
+pytest>=8.0
+pytest-asyncio>=0.23
