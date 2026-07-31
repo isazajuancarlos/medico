@@ -135,6 +135,23 @@ pub enum Capacidad {
     /// entran, y el médico también porque la remisión sale de su decisión
     /// clínica.
     GestionarRemision,
+    /// Registrar y validar resultados de laboratorio, y administrar los perfiles
+    /// de examen.
+    ///
+    /// Los roles del propio producto para `/laboratorio` (`sidebar.component.ts`)
+    /// son laboratorista, bacteriólogo, administración y superadmin — y el
+    /// médico. Se conserva el médico por el mismo motivo que en nutrición: la IPS
+    /// pequeña que manda las muestras a un laboratorio externo y transcribe el
+    /// resultado no tiene bacteriólogo en planta, y cerrarle la puerta dejaría el
+    /// módulo inservible donde más se usa. Cuando exista la asignación por
+    /// institución, un hospital con laboratorio propio se lo quita.
+    EscribirLaboratorio,
+    /// Redactar y firmar informes de imágenes diagnósticas.
+    ///
+    /// Radiología, médico y gestión. El informe radiológico es un acto médico
+    /// interpretativo: fuera enfermería, laboratorio y terapias, que no lo
+    /// emiten.
+    EscribirImagenologia,
     /// Farmacia: dar de alta items, registrar entradas de stock y **dispensar**.
     ///
     /// Los tres roles son los que el producto ya declara para `/farmacia`
@@ -195,6 +212,11 @@ impl RolUsuario {
                 self,
                 Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
             ),
+            EscribirLaboratorio => matches!(
+                self,
+                Superadmin | Admin | Medico | Laboratorista | Bacteriologo
+            ),
+            EscribirImagenologia => matches!(self, Superadmin | Admin | Medico | Radiologo),
             GestionarFarmacia => matches!(self, Superadmin | Admin | RegenteFarmacia),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GestionarUsuarios => matches!(self, Superadmin | Admin),

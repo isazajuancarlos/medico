@@ -182,6 +182,19 @@ impl Exige for GestionarRemision {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarRemision;
 }
 
+/// Resultados de laboratorio y perfiles de examen.
+pub struct EscribirLaboratorio;
+impl Exige for EscribirLaboratorio {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirLaboratorio;
+}
+
+/// Informes de imágenes diagnósticas.
+pub struct EscribirImagenologia;
+impl Exige for EscribirImagenologia {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::EscribirImagenologia;
+}
+
 /// Farmacia: alta de items, entradas de stock y dispensación. **Leer** el
 /// inventario no la exige: basta estar autenticado.
 pub struct GestionarFarmacia;

@@ -3,6 +3,7 @@
 pub mod acceso;
 pub mod catalogo;
 pub mod cita;
+pub mod diagnostico;
 pub mod documento;
 pub mod formula;
 pub mod freno;

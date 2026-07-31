@@ -12,13 +12,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::auth::{
     autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
-    EscribirNutricion, EscribirPaciente, EscribirRehabilitacion, Estado, Firmar, GestionarFarmacia,
-    GestionarRemision,
+    EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
+    EscribirRehabilitacion, Estado, Firmar, GestionarFarmacia, GestionarRemision,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
+use medico_datos::diagnostico;
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
@@ -154,6 +155,38 @@ pub fn router(estado: Estado) -> Router {
         )
         .route("/api/imagenes/{id}/archivo", get(servir_imagen))
         .route("/api/imagenes/{id}", axum::routing::delete(eliminar_imagen))
+        // Laboratorio. Las órdenes las crea la historia clínica; aquí se
+        // procesan. Leer es de cualquiera con sesión —el médico consulta el
+        // resultado de su paciente—; escribir exige `EscribirLaboratorio`.
+        .route("/api/laboratorio/ordenes", get(lab_ordenes))
+        .route("/api/laboratorio/ordenes/{id}", get(lab_orden))
+        .route("/api/laboratorio/ordenes/{id}/estado", put(lab_estado))
+        .route(
+            "/api/laboratorio/ordenes/{id}/resultado",
+            get(lab_resultado).post(lab_crear_resultado).put(lab_actualizar_resultado),
+        )
+        .route("/api/laboratorio/ordenes/{id}/resultado/validar", post(lab_validar))
+        .route("/api/laboratorio/paciente/{id}/resultados", get(lab_historial))
+        .route("/api/laboratorio/perfiles", get(lab_perfiles).post(lab_crear_perfil))
+        .route("/api/laboratorio/perfiles/{id}", axum::routing::delete(lab_eliminar_perfil))
+        // Imágenes diagnósticas. Conviven con `/api/imagenes/{id}` y
+        // `/api/imagenes/{id}/archivo`, que son los ADJUNTOS de la historia: los
+        // segmentos literales (`ordenes`, `paciente`) tienen prioridad sobre el
+        // parámetro, así que no se pisan. La prueba `las_rutas_de_imagenes_no_se_pisan`
+        // lo comprueba en vez de confiarlo al enrutador.
+        .route("/api/imagenes/ordenes", get(img_ordenes))
+        .route("/api/imagenes/ordenes/{id}", get(img_orden))
+        .route("/api/imagenes/ordenes/{id}/estado", put(img_estado))
+        .route(
+            "/api/imagenes/ordenes/{id}/informe",
+            get(img_informe).post(img_crear_informe).put(img_actualizar_informe),
+        )
+        .route("/api/imagenes/ordenes/{id}/informe/firmar", post(img_firmar))
+        .route(
+            "/api/imagenes/ordenes/{id}/informe/imagenes",
+            post(img_subir).layer(DefaultBodyLimit::max(MAX_SUBIDA)),
+        )
+        .route("/api/imagenes/paciente/{id}/informes", get(img_historial))
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
@@ -1489,47 +1522,71 @@ async fn subir_imagen(
     State(e): State<Estado>,
     Autenticado(u): Autenticado,
     Path(historia_id): Path<i64>,
-    mut multipart: Multipart,
+    multipart: Multipart,
 ) -> Response {
-    let mut archivo: Option<(String, String, Vec<u8>)> = None; // nombre, mime, bytes
-    let mut descripcion = String::new();
+    match guardar_imagen_de(&e, &u, historia_id, multipart, "").await {
+        Ok(id) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Err(codigo) => codigo.into_response(),
+    }
+}
+
+/// Guarda el archivo de un multipart como imagen de `historia_id` y devuelve su
+/// id. **Es el único camino por el que entran bytes al sistema**, y por eso lo
+/// comparten el adjunto de la historia clínica y la imagen de un informe
+/// radiológico: un segundo almacén con sus propias reglas sería el sitio por
+/// donde entrara el SVG que `tipos.rs` existe para no admitir.
+///
+/// Acepta el archivo venga en el campo que venga —se toma el primero que traiga
+/// nombre de archivo—. La pantalla de la historia lo llama `archivo` y la de
+/// imágenes `file`; exigir uno de los dos habría hecho que la otra fallara con
+/// un 400 que no dice nada, y el nombre del campo no es una comprobación de
+/// seguridad: la que cuenta es la de los bytes, dos párrafos más abajo.
+async fn guardar_imagen_de(
+    e: &Estado,
+    u: &Usuario,
+    historia_id: i64,
+    mut multipart: Multipart,
+    descripcion_por_defecto: &str,
+) -> Result<i64, StatusCode> {
+    let mut archivo: Option<(String, Vec<u8>)> = None; // nombre, bytes
+    let mut descripcion = descripcion_por_defecto.to_owned();
     loop {
         match multipart.next_field().await {
-            Ok(Some(campo)) => match campo.name() {
-                Some("archivo") => {
-                    let nombre = campo.file_name().unwrap_or("archivo").to_string();
-                    let mime = campo
-                        .content_type()
-                        .unwrap_or("application/octet-stream")
-                        .to_string();
-                    match campo.bytes().await {
-                        Ok(b) => archivo = Some((nombre, mime, b.to_vec())),
-                        // El único fallo esperable al leer el campo es que exceda
-                        // el tope del `DefaultBodyLimit`.
-                        Err(_) => return StatusCode::PAYLOAD_TOO_LARGE.into_response(),
-                    }
+            Ok(Some(campo)) => {
+                if campo.name() == Some("descripcion") {
+                    descripcion = campo.text().await.unwrap_or_default();
+                    continue;
                 }
-                Some("descripcion") => descripcion = campo.text().await.unwrap_or_default(),
-                _ => {}
-            },
+                let Some(nombre) = campo.file_name().map(str::to_owned) else {
+                    continue;
+                };
+                if archivo.is_some() {
+                    continue;
+                }
+                match campo.bytes().await {
+                    Ok(b) => archivo = Some((nombre, b.to_vec())),
+                    // El único fallo esperable al leer el campo es que exceda el
+                    // tope del `DefaultBodyLimit`.
+                    Err(_) => return Err(StatusCode::PAYLOAD_TOO_LARGE),
+                }
+            }
             Ok(None) => break,
-            Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+            Err(_) => return Err(StatusCode::BAD_REQUEST),
         }
     }
 
-    let Some((nombre, mime, bytes)) = archivo else {
-        return StatusCode::BAD_REQUEST.into_response();
+    let Some((nombre, bytes)) = archivo else {
+        return Err(StatusCode::BAD_REQUEST);
     };
     if bytes.is_empty() {
-        return StatusCode::BAD_REQUEST.into_response();
+        return Err(StatusCode::BAD_REQUEST);
     }
     // El tipo, de los BYTES. Lo que el cliente declaró se descarta aquí mismo: no
     // se compara siquiera con lo olfateado, porque no aporta nada — si coincide
     // no añade garantía y si discrepa la buena es la nuestra.
     let Some(tipo) = crate::tipos::tipo_real(&bytes) else {
-        return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
+        return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
     };
-    let _ = mime;
 
     // `tamano_bytes` es el tamaño del ORIGINAL (lo que ve el usuario), no del
     // blob cifrado. Con clave de reposo el archivo va cifrado al disco.
@@ -1545,17 +1602,17 @@ async fn subir_imagen(
     };
     let img = match imagen::registrar(&e.pool, u.ambito(), historia_id, &meta, cifrada).await {
         Ok(Some(img)) => img,
-        Ok(None) => return StatusCode::FORBIDDEN.into_response(),
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Ok(None) => return Err(StatusCode::FORBIDDEN),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
     };
     // Los bytes van al disco DESPUÉS de la fila: si la escritura falla, se
     // deshace la fila para no dejar una referencia a un archivo que no existe.
     let destino = e.dir_imagenes.join(&img.ruta_archivo);
     if tokio::fs::write(&destino, &para_disco).await.is_err() {
         let _ = imagen::eliminar(&e.pool, u.ambito(), img.id).await;
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
-    (StatusCode::CREATED, Json(Creado { id: img.id })).into_response()
+    Ok(img.id)
 }
 
 /// Devuelve los bytes de una imagen visible, con su mime. **404 si no existe o
@@ -1908,6 +1965,326 @@ async fn listar_unidades_dispensacion(
         .await
         .map(Json)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+// --- Laboratorio e imágenes diagnósticas -------------------------------------
+//
+// Las dos bandejas comparten forma: listar órdenes del servicio, abrir una,
+// mover su estado, y escribir la respuesta. Lo que cambia es la respuesta —
+// parámetros con referencias contra informe redactado— y la capacidad que se
+// exige. LEER no exige capacidad: el médico que pidió el examen tiene que poder
+// ver el resultado de su paciente.
+
+#[derive(Deserialize)]
+struct FiltroOrdenesDx {
+    estado: Option<String>,
+    paciente_id: Option<i64>,
+}
+
+/// Traduce el resultado de una escritura que puede chocar con algo cerrado.
+fn responder_escritura<T: Serialize>(
+    r: diagnostico::Escritura<T>,
+    creado: bool,
+    cerrado: &str,
+) -> Response {
+    match r {
+        diagnostico::Escritura::Hecho(v) => {
+            let codigo = if creado { StatusCode::CREATED } else { StatusCode::OK };
+            (codigo, Json(v)).into_response()
+        }
+        diagnostico::Escritura::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        diagnostico::Escritura::Cerrado => detalle(StatusCode::CONFLICT, cerrado.to_owned()),
+        diagnostico::Escritura::EstadoInvalido => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Estado no válido. Los del producto son: {}.",
+                diagnostico::ESTADOS.join(", ")
+            ),
+        ),
+    }
+}
+
+const LAB_CERRADO: &str = "Este resultado ya está validado y no se modifica: sobre él \
+    puede haberse decidido una conducta. Emita uno nuevo que lo corrija.";
+const INFORME_CERRADO: &str = "Este informe ya está firmado y no se modifica. Emita uno \
+    nuevo que lo corrija.";
+
+async fn lab_ordenes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroOrdenesDx>,
+) -> Response {
+    match diagnostico::listar_ordenes(
+        &e.pool, u.ambito(), diagnostico::Servicio::Laboratorio,
+        f.estado.as_deref(), f.paciente_id,
+    ).await {
+        Ok(os) => Json(os).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_orden(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::obtener_orden(&e.pool, u.ambito(), diagnostico::Servicio::Laboratorio, id).await {
+        Ok(Some(o)) => Json(o).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_estado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+    Json(c): Json<CambioEstado>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::cambiar_estado_orden(
+        &e.pool, u.ambito(), diagnostico::Servicio::Laboratorio, id, &c.estado,
+    ).await {
+        Ok(r) => responder_escritura(r, false, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_resultado(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::resultado_de_orden(&e.pool, u.ambito(), id).await {
+        Ok(Some(r)) => Json(r).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_crear_resultado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+    Json(r): Json<diagnostico::ResultadoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::crear_resultado(&e.pool, u.ambito(), id, u.id, &r).await {
+        Ok(res) => responder_escritura(res, true, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_actualizar_resultado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+    Json(r): Json<diagnostico::ResultadoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::actualizar_resultado(&e.pool, u.ambito(), id, &r).await {
+        Ok(res) => responder_escritura(res, false, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_validar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::validar_resultado(&e.pool, u.ambito(), id, u.id).await {
+        Ok(res) => responder_escritura(res, false, LAB_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::resultados_de_paciente(&e.pool, u.ambito(), id).await {
+        Ok(rs) => Json(rs).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_perfiles(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match diagnostico::listar_perfiles(&e.pool, u.ambito()).await {
+        Ok(ps) => Json(ps).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_crear_perfil(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Json(p): Json<diagnostico::PerfilNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "Los perfiles de examen son de una institución —sus referencias dependen del método y \
+             del equipo— y esta cuenta no está adscrita a ninguna."
+                .into(),
+        );
+    };
+    match diagnostico::crear_perfil(&e.pool, u.ambito(), institucion_id, &p).await {
+        Ok(diagnostico::ResultadoPerfil::Creado(perfil)) => {
+            (StatusCode::CREATED, Json(*perfil)).into_response()
+        }
+        Ok(diagnostico::ResultadoPerfil::NoExiste) => StatusCode::NOT_FOUND.into_response(),
+        Ok(diagnostico::ResultadoPerfil::SinNombre) => detalle(
+            StatusCode::BAD_REQUEST,
+            "El perfil necesita un nombre.".into(),
+        ),
+        Ok(diagnostico::ResultadoPerfil::NombreRepetido(n)) => detalle(
+            StatusCode::CONFLICT,
+            format!("Ya hay un perfil llamado «{n}» en esta institución."),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn lab_eliminar_perfil(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirLaboratorio>,
+    Path(id): Path<i64>,
+) -> StatusCode {
+    let u = autorizado.0;
+    match diagnostico::eliminar_perfil(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn img_ordenes(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroOrdenesDx>,
+) -> Response {
+    match diagnostico::listar_ordenes(
+        &e.pool, u.ambito(), diagnostico::Servicio::Imagenologia,
+        f.estado.as_deref(), f.paciente_id,
+    ).await {
+        Ok(os) => Json(os).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_orden(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::obtener_orden(&e.pool, u.ambito(), diagnostico::Servicio::Imagenologia, id).await {
+        Ok(Some(o)) => Json(o).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_estado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+    Json(c): Json<CambioEstado>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::cambiar_estado_orden(
+        &e.pool, u.ambito(), diagnostico::Servicio::Imagenologia, id, &c.estado,
+    ).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_informe(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::informe_de_orden(&e.pool, u.ambito(), id).await {
+        Ok(Some(i)) => Json(i).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_crear_informe(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+    Json(i): Json<diagnostico::InformeNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::crear_informe(&e.pool, u.ambito(), id, u.id, &i).await {
+        Ok(r) => responder_escritura(r, true, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_actualizar_informe(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+    Json(i): Json<diagnostico::InformeNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::actualizar_informe(&e.pool, u.ambito(), id, &i).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_firmar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    match diagnostico::firmar_informe(&e.pool, u.ambito(), id, u.id).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn img_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
+    match diagnostico::informes_de_paciente(&e.pool, u.ambito(), id).await {
+        Ok(is) => Json(is).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Adjunta una imagen al informe de una orden de imagenología.
+///
+/// Los bytes NO se guardan aquí de otra manera: se registran por el mismo camino
+/// que los adjuntos de la historia clínica —tipo deducido de la firma de los
+/// bytes, tope de tamaño, cifrado en reposo— y al informe solo llega la ruta que
+/// los sirve. Un segundo almacén, con sus propias reglas, habría sido el sitio
+/// por donde entrase el SVG que `tipos.rs` existe para no admitir.
+async fn img_subir(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirImagenologia>,
+    Path(orden_id): Path<i64>,
+    multipart: Multipart,
+) -> Response {
+    let u = autorizado.0;
+    // La orden tiene que ser suya y de imagenología, y su informe estar abierto,
+    // ANTES de escribir nada en el disco.
+    let Ok(Some(orden)) =
+        diagnostico::obtener_orden(&e.pool, u.ambito(), diagnostico::Servicio::Imagenologia, orden_id).await
+    else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match diagnostico::informe_de_orden(&e.pool, u.ambito(), orden_id).await {
+        Ok(Some(i)) if i.firmado => return detalle(StatusCode::CONFLICT, INFORME_CERRADO.into()),
+        Ok(Some(_)) => {}
+        // Sin informe todavía no hay dónde colgar la imagen. Crearlo vacío aquí
+        // dejaría un informe sin técnica ni hallazgos que parece redactado.
+        Ok(None) => {
+            return detalle(
+                StatusCode::CONFLICT,
+                "Redacte el informe antes de adjuntarle imágenes: una imagen suelta no dice qué \
+                 se vio en ella."
+                    .into(),
+            )
+        }
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+
+    let id_imagen = match guardar_imagen_de(&e, &u, orden.historia_id, multipart, "Imagen diagnóstica").await {
+        Ok(id) => id,
+        Err(codigo) => return codigo.into_response(),
+    };
+    match diagnostico::adjuntar_imagen(&e.pool, u.ambito(), orden_id, &format!("/api/imagenes/{id_imagen}/archivo")).await {
+        Ok(r) => responder_escritura(r, false, INFORME_CERRADO),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 // --- Farmacia ----------------------------------------------------------------
@@ -2461,6 +2838,110 @@ mod pruebas {
             assert_eq!(
                 pedir_con(&e, "POST", "/api/farmacia/inventario", &regente, alta).await,
                 StatusCode::CREATED
+            );
+        }
+
+        /// `/api/imagenes/…` sirve dos cosas distintas y NO se pisan.
+        ///
+        /// `/api/imagenes/{id}` y `/api/imagenes/{id}/archivo` son los ADJUNTOS
+        /// de la historia clínica; `/api/imagenes/ordenes/…` y
+        /// `/api/imagenes/paciente/…` son la bandeja de imagenología. El
+        /// enrutador da prioridad al segmento literal sobre el parámetro, así que
+        /// `ordenes` no se interpreta como un id — pero eso es una propiedad del
+        /// enrutador, no una decisión de este código, y una versión que la
+        /// cambiara rompería la bandeja en silencio.
+        ///
+        /// Se comprueba pidiendo por las dos formas: la bandeja responde 200 y el
+        /// adjunto inexistente 404. Si `ordenes` se estuviera leyendo como id, la
+        /// primera daría 404 —o el router habría entrado en pánico al montarse,
+        /// que es el otro final posible y que esta prueba también caza—.
+        #[tokio::test]
+        async fn las_rutas_de_imagenes_no_se_pisan() {
+            let e = con_tres_roles().await;
+            let medico = cookie_de(2);
+            assert_eq!(pedir(&e, "GET", "/api/imagenes/ordenes", &medico).await, StatusCode::OK);
+            assert_eq!(
+                pedir(&e, "GET", "/api/imagenes/paciente/1/informes", &medico).await,
+                StatusCode::OK
+            );
+            // El adjunto por id sigue existiendo como ruta (404 porque no hay
+            // imagen 99, no porque la ruta se haya perdido).
+            assert_eq!(
+                pedir(&e, "GET", "/api/imagenes/99/archivo", &medico).await,
+                StatusCode::NOT_FOUND
+            );
+        }
+
+        /// Laboratorio e imágenes: quién escribe el resultado y quién no.
+        ///
+        /// Enfermería atiende al paciente y registra en la historia, pero no
+        /// valida un hemograma ni firma una radiografía. Y al revés, la prueba
+        /// tiene que mostrar que la regla DISCRIMINA: el bacteriólogo entra al
+        /// laboratorio y no a imagenología, y la radióloga al revés.
+        #[tokio::test]
+        async fn el_resultado_lo_escribe_quien_lo_procesa() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (10,'Bacterióloga','bac@x.co',?,'bacteriologo',1,1),
+                        (11,'Radióloga','rad@x.co',?,'radiologo',1,1),
+                        (12,'Enfermera','enf@x.co',?,'enfermeria',1,1)",
+            )
+            .bind(&h).bind(&h).bind(&h)
+            .execute(&e.pool).await.unwrap();
+            sqlx::query(
+                "INSERT INTO orden (id, historia_id, tipo, descripcion, justificacion)
+                 VALUES (1,7,'Laboratorio','Hemograma','Control'),
+                        (2,7,'Imagenología','Rx de tórax','Tos')",
+            )
+            .execute(&e.pool).await.unwrap();
+
+            let resultado = r#"{"resultados_json":{"hb":{"valor":"13","critico":false}},"valores_criticos":false}"#;
+            let informe = r#"{"tecnica":"PA","hallazgos":"Sin consolidaciones","impresion_diagnostica":"Normal"}"#;
+
+            // Enfermería no escribe ninguno de los dos.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/laboratorio/ordenes/1/resultado", &cookie_de(12), resultado).await,
+                StatusCode::FORBIDDEN
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe", &cookie_de(12), informe).await,
+                StatusCode::FORBIDDEN
+            );
+            // La bacterióloga, el laboratorio sí y el informe radiológico no.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/laboratorio/ordenes/1/resultado", &cookie_de(10), resultado).await,
+                StatusCode::CREATED
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe", &cookie_de(10), informe).await,
+                StatusCode::FORBIDDEN
+            );
+            // La radióloga, al revés.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe", &cookie_de(11), informe).await,
+                StatusCode::CREATED
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/laboratorio/ordenes/1/resultado/validar", &cookie_de(11), "{}").await,
+                StatusCode::FORBIDDEN
+            );
+            // Y enfermería SÍ puede leer el resultado de su paciente: la regla
+            // cierra la escritura, no la consulta.
+            assert_eq!(
+                pedir(&e, "GET", "/api/laboratorio/ordenes/1/resultado", &cookie_de(12)).await,
+                StatusCode::OK
+            );
+
+            // Firmado el informe, ni la propia radióloga lo reescribe.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/imagenes/ordenes/2/informe/firmar", &cookie_de(11), "{}").await,
+                StatusCode::OK
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/imagenes/ordenes/2/informe", &cookie_de(11), informe).await,
+                StatusCode::CONFLICT
             );
         }
 
