@@ -192,6 +192,13 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        // La matriz de capacidades de la institución (#235). Misma capacidad
+        // que gestionar usuarios: quién es quién y quién puede qué son la misma
+        // responsabilidad.
+        .route(
+            "/api/capacidades",
+            get(crate::capacidades::obtener).put(crate::capacidades::actualizar),
+        )
         .route("/api/medicos", get(listar_medicos))
         .route("/api/citas", get(listar_citas).post(crear_cita))
         .route("/api/citas/{id}/estado", put(cambiar_estado_cita))
@@ -2881,6 +2888,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy,
+            capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }
 
@@ -3780,5 +3788,399 @@ mod pruebas {
         let mut blanca = header::HeaderMap::new();
         blanca.insert("x-real-ip", "   ".parse().unwrap());
         assert_eq!(origen_de(true, &blanca, Some(zocalo)), None);
+    }
+
+    /// La matriz de capacidades por institución (#235), por la ruta de verdad.
+    ///
+    /// `ajustes.rs` ya prueba la regla y `capacidad.rs` la caché. Lo que aquí se
+    /// comprueba es lo que ninguno de los dos puede: que el cambio pedido por
+    /// HTTP **cambie de verdad lo que la siguiente petición puede hacer**. Ese
+    /// es el cableado, y es donde se cae una configuración que se guarda y no se
+    /// aplica.
+    mod matriz_por_institucion {
+        use super::*;
+
+        const ADMIN: i64 = 20;
+        const LAB: i64 = 21;
+
+        /// Institución 1 con un admin y un laboratorista; un paciente y una
+        /// historia sin firmar, para tener sobre qué ejercer `EscribirClinico`.
+        async fn con_admin_y_lab() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (?,'Admin','adm@x.co',?,'admin',1,1),
+                        (?,'Lab','lab2@x.co',?,'laboratorista',1,1)",
+            )
+            .bind(ADMIN)
+            .bind(&h)
+            .bind(LAB)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO paciente (id, tipo_documento, numero_documento, nombre1, apellido1,
+                                       fecha_nacimiento, sexo, institucion_id)
+                 VALUES (1,'CC','123','Quien','Sea','1990-01-01','F',1)",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn enviar(e: &Estado, metodo: &str, uri: &str, quien: i64, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn cuerpo_de(r: Response) -> String {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 20).await.unwrap();
+            String::from_utf8(b.to_vec()).unwrap()
+        }
+
+        /// Crear una historia: la acción que exige `EscribirClinico`, y que el
+        /// laboratorista NO puede por defecto.
+        async fn intenta_escribir(e: &Estado, quien: i64) -> StatusCode {
+            enviar(
+                e,
+                "POST",
+                "/api/historias",
+                quien,
+                r#"{"paciente_id":1,"medico_id":2,"motivo_consulta":"m","enfermedad_actual":"e",
+                    "diagnostico_principal":"J00","plan_tratamiento":"p"}"#,
+            )
+            .await
+            .status()
+        }
+
+        // === LA PRUEBA QUE JUSTIFICA TODO EL CAMBIO =======================
+
+        /// Antes de configurar, el laboratorista no escribe. Después de que el
+        /// administrador se lo conceda **por la API**, escribe. Sin esta prueba,
+        /// todo lo demás podría estar guardándose sin aplicarse nunca.
+        #[tokio::test]
+        async fn conceder_por_la_api_cambia_lo_que_la_siguiente_peticion_puede_hacer() {
+            let e = con_admin_y_lab().await;
+            assert_eq!(
+                intenta_escribir(&e, LAB).await,
+                StatusCode::FORBIDDEN,
+                "de partida el defecto no le deja"
+            );
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+
+            assert_eq!(
+                intenta_escribir(&e, LAB).await,
+                StatusCode::CREATED,
+                "tras concederlo, la MISMA ruta le deja: la caché se invalidó"
+            );
+        }
+
+        /// Y al revés, que es la mitad que se olvida: quitar una capacidad la
+        /// quita de verdad. El médico escribe por defecto; tras recortarlo, no.
+        #[tokio::test]
+        async fn recortar_por_la_api_tambien_surte_efecto() {
+            let e = con_admin_y_lab().await;
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::CREATED);
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"medico","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::FORBIDDEN);
+        }
+
+        /// Devolver al defecto es una tercera operación, no «poner el valor del
+        /// defecto»: borra la excepción y la casilla vuelve a seguir la regla.
+        #[tokio::test]
+        async fn devolver_al_defecto_restituye() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"medico","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::FORBIDDEN);
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"medico","permitido":null}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            assert_eq!(intenta_escribir(&e, 2).await, StatusCode::CREATED);
+        }
+
+        // === QUIÉN PUEDE TOCARLA ==========================================
+
+        #[tokio::test]
+        async fn un_laboratorista_no_ve_ni_toca_la_matriz() {
+            let e = con_admin_y_lab().await;
+            assert_eq!(
+                enviar(&e, "GET", "/api/capacidades", LAB, "").await.status(),
+                StatusCode::FORBIDDEN
+            );
+            assert_eq!(
+                enviar(
+                    &e,
+                    "PUT",
+                    "/api/capacidades",
+                    LAB,
+                    r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#
+                )
+                .await
+                .status(),
+                StatusCode::FORBIDDEN,
+                "y menos concedérsela a sí mismo"
+            );
+        }
+
+        #[tokio::test]
+        async fn sin_cookie_no_hay_matriz() {
+            let e = con_admin_y_lab().await;
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/capacidades")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+        }
+
+        // === GUARDARRAÍLES ================================================
+
+        #[tokio::test]
+        async fn no_se_puede_tapiar_la_gestion_de_usuarios() {
+            let e = con_admin_y_lab().await;
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let texto = cuerpo_de(r).await;
+            assert!(texto.contains("sin ningún rol"), "mensaje poco útil: {texto}");
+
+            // Y no se aplicó nada: el admin sigue entrando.
+            assert_eq!(
+                enviar(&e, "GET", "/api/capacidades", ADMIN, "").await.status(),
+                StatusCode::OK
+            );
+        }
+
+        #[tokio::test]
+        async fn un_admin_no_se_quita_a_si_mismo_la_administracion() {
+            let e = con_admin_y_lab().await;
+            // Primero da relevo al laboratorista, así que el guardarraíl 1 no salta.
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+            // Pero el relevo SÍ puede hacérselo: el guardarraíl protege del
+            // despiste propio, no vuelve al rol intocable.
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                LAB,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+        }
+
+        /// El caso que la ficha original bloqueaba y la directiva 21 rescata:
+        /// una IPS sin ambulancias puede dejar esa capacidad sin nadie.
+        #[tokio::test]
+        async fn una_capacidad_que_la_ips_no_usa_puede_quedarse_sin_nadie() {
+            let e = con_admin_y_lab().await;
+            let r = enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[
+                    {"capacidad":"gestionar_ambulancias","rol":"admin","permitido":false},
+                    {"capacidad":"gestionar_ambulancias","rol":"medico","permitido":false},
+                    {"capacidad":"gestionar_ambulancias","rol":"enfermeria","permitido":false},
+                    {"capacidad":"gestionar_ambulancias","rol":"auxiliar_enfermeria","permitido":false}
+                ]}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+        }
+
+        #[tokio::test]
+        async fn no_se_concede_la_gestion_de_instituciones_ni_se_toca_al_superadmin() {
+            let e = con_admin_y_lab().await;
+            for cuerpo in [
+                r#"{"cambios":[{"capacidad":"gestionar_instituciones","rol":"admin","permitido":true}]}"#,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"superadmin","permitido":false}]}"#,
+            ] {
+                let r = enviar(&e, "PUT", "/api/capacidades", ADMIN, cuerpo).await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "debería rechazarse: {cuerpo}"
+                );
+            }
+        }
+
+        // === LO QUE SE DEVUELVE Y LO QUE SE ANOTA ==========================
+
+        #[tokio::test]
+        async fn la_matriz_dice_lo_efectivo_y_lo_que_decia_el_defecto() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+
+            let texto = cuerpo_de(enviar(&e, "GET", "/api/capacidades", ADMIN, "").await).await;
+            let v: serde_json::Value = serde_json::from_str(&texto).unwrap();
+            let fila = v["capacidades"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|f| f["capacidad"] == "escribir_clinico")
+                .unwrap();
+            let casilla = fila["roles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["rol"] == "laboratorista")
+                .unwrap();
+            assert_eq!(casilla["permitido"], true, "lo efectivo");
+            assert_eq!(casilla["defecto"], false, "lo que decía el defecto");
+            assert_eq!(casilla["apartado"], true, "hay fila guardada");
+
+            // Y el superadmin sale marcado como no configurable, para que la
+            // pantalla no ofrezca una casilla que el servidor va a rechazar.
+            let sa = fila["roles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["rol"] == "superadmin")
+                .unwrap();
+            assert_eq!(sa["configurable"], false);
+        }
+
+        /// Punto 7 de la ficha: el cambio queda en la bitácora encadenada, y la
+        /// cadena sigue verificando después.
+        #[tokio::test]
+        async fn el_cambio_queda_en_la_bitacora_y_la_cadena_verifica() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            )
+            .await;
+
+            let filas: Vec<(String,)> = sqlx::query_as(
+                "SELECT contenido FROM acceso WHERE contenido LIKE '%capacidad_rol%'",
+            )
+            .fetch_all(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(filas.len(), 1, "un eslabón por cambio");
+            assert!(
+                filas[0].0.contains("escribir_clinico:laboratorista=si"),
+                "el eslabón debe decir QUÉ se amplió, no solo que algo cambió: {}",
+                filas[0].0
+            );
+
+            assert_eq!(
+                medico_datos::acceso::verificar(&e.pool, None).await.unwrap(),
+                guaca::auditoria::Auditoria::Intacta
+            );
+        }
+
+        /// Y si el cambio se rechaza, NO se anota: una bitácora que registra lo
+        /// que no ocurrió es peor que una que no registra.
+        #[tokio::test]
+        async fn un_cambio_rechazado_no_deja_rastro() {
+            let e = con_admin_y_lab().await;
+            enviar(
+                &e,
+                "PUT",
+                "/api/capacidades",
+                ADMIN,
+                r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"admin","permitido":false}]}"#,
+            )
+            .await;
+            let n: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM acceso WHERE contenido LIKE '%capacidad_rol%'",
+            )
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(n.0, 0);
+        }
     }
 }
