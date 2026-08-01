@@ -44,7 +44,7 @@ acepte y devuelva CUV. Ver [La cadena RIPS](#la-cadena-rips--fev-rips--muv).
 ```bash
 # === BACKEND ===
 cd backend
-.venv/bin/python -m pytest -q                    # 665 pruebas (~2 min 16 s)
+.venv/bin/python -m pytest -q                    # 676 pruebas (~1 min 20 s)
 .venv/bin/python -m pytest tests/test_cie11.py -q         # un módulo
 .venv/bin/python -m pytest tests/test_cie11.py::test_x -q # una prueba
 .venv/bin/python -m pytest -k "aislamiento" -q            # por nombre
@@ -86,7 +86,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 392 pruebas (~2 min)
+cargo test  --workspace --all-targets                   # 402 pruebas (~2 min 35 s)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
