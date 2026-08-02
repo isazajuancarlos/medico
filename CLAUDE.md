@@ -190,9 +190,20 @@ lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.
 existir en Rust:
 
 ```
-rips  facturacion  estadisticas  admin  superadmin  quirofano
-epicrisis  evoluciones  interconsultas  consentimiento  nota-operatoria
+los que el frontend SÍ llama — hoy romperían la pantalla (6):
+  rips  facturacion  estadisticas  admin  quirofano  consentimiento
+
+los que no llama nadie desde Angular — no rompen nada, pero son Python
+que sigue vivo (5):
+  superadmin  epicrisis  evoluciones  interconsultas  nota-operatoria
 ```
+
+**Son dos medidas distintas y hay que decir cuál se usa.** La ficha #236 mide lo
+primero —cruce de los `/api/…` que piden los `.ts` contra los `.route(` de
+`rutas.rs`— porque lo que le duele a un cliente es una página muerta. La lista
+completa mide lo segundo, que es lo que decide cuándo se puede apagar Python.
+Dar seis por «lo que falta del port» es quedarse corto; dar once por «pantallas
+rotas», pasarse.
 
 **FEV-RIPS es el que decide**: sin él no hay facturación electrónica, que es por
 lo que le pagan al prestador, y el ADR no autoriza apagar Python hasta que la
