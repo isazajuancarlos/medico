@@ -62,7 +62,7 @@ uvicorn main:app --reload --port 8000  # Swagger en /docs
 
 # --- Rust (el port) ---
 ./construir.sh                         # interfaz → empotrado → binario. EL comando.
-cargo test  --workspace --all-targets  # 402 pruebas
+cargo test  --workspace --all-targets  # 479 pruebas
 cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---
@@ -156,7 +156,7 @@ el MUV lo aceptó y devolvió CUV, porque ese campo lo valida por rango.
 |---|---|
 | **Resolución 948/2026** | FEV-RIPS y los 22 campos CIE-11. `tests/test_campos_fev948.py` convierte la norma en prueba. |
 | **Resolución 2275/2023** | estructura RIPS. **2706/2025** CUPS 2026. **2765/2025** PBS 2026. |
-| **Ley 1581/2012** | rastro completo de acceso a datos personales, con bitácora encadenada. |
+| **Ley 1581/2012** | rastro de acceso a datos personales, con bitácora encadenada y firmada. Anota el acceso a un expediente y también los masivos: un **listado** deja ámbito, filtro y cuántos —sin ids—, y una **exportación**, además, a qué pacientes cubrió, porque el dato salió del sistema. Al consultar el rastro de uno, esa lista no se devuelve: sale cuántos eran, nunca quiénes. |
 | **Ley 527/1999** | firma electrónica de la historia clínica (Ed25519 + ML-DSA-87 vía Quipu). |
 | **Resolución 3100/2019** | habilitación; el módulo de ambulancias usa sus modalidades TAB y TAM. |
 

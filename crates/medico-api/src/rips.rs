@@ -197,11 +197,47 @@ pub async fn generar(
         ));
     }
 
+    // El archivo SALE del sistema: es una exportación de dato personal, y va a la
+    // bitácora con los pacientes que cubrió (#186, Ley 1581). Se anota aquí, con
+    // el documento ya generado, y no al entrar: un 409 por parcial o un 422 por
+    // dato faltante no exportan nada, y una bitácora que registra lo que no
+    // ocurrió es peor que una que no registra.
+    //
+    // A diferencia de un listado, esta SÍ guarda los ids: el dato del titular
+    // salió, y él tiene derecho a saber en qué archivo iba.
+    let mut pacientes: Vec<i64> = consultas.iter().map(|c| c.paciente.id).collect();
+    pacientes.sort_unstable();
+    pacientes.dedup();
+    crate::rutas::registrar_coleccion(
+        &e,
+        &u,
+        "exportar",
+        "rips",
+        Some(descripcion_del_alcance(&p)),
+        consultas.len(),
+        pacientes,
+    )
+    .await;
+
     Ok(Json(Salida {
         archivos: Archivos { ac },
         supuestos,
         sin_portar: SIN_PORTAR.to_vec(),
     }))
+}
+
+/// Qué se pidió exactamente, para el `filtro` de la bitácora. Lleva las dos
+/// puertas permisivas: dentro de un año, «quién exportó qué» no se responde sin
+/// saber si aquel archivo llevaba supuestos o le faltaban cuatro documentos.
+fn descripcion_del_alcance(p: &Periodo) -> String {
+    let mut d = format!("periodo {}..{}", p.inicio, p.fin);
+    if p.parcial {
+        d.push_str(&format!("; parcial (sin {})", SIN_PORTAR.join(", ")));
+    }
+    if p.permitir_supuestos {
+        d.push_str("; con supuestos");
+    }
+    d
 }
 
 /// Cuántos valores se supusieron, por etiqueta. Es el `_resumen_supuestos` del

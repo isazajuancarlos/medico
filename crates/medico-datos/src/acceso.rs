@@ -265,17 +265,67 @@ async fn paciente_es_del_ambito(
     Ok(fila.is_some_and(|(i,)| ambito.puede_ver(Some(i)) == Visibilidad::Si))
 }
 
+/// Cómo se nombra un ámbito dentro de un `Alcance`. Una sola escritura, para que
+/// el rastro no acabe con `"institucion:1"`, `"inst 1"` y `"1"` significando lo
+/// mismo y sin poder agruparse.
+pub fn describir_ambito(ambito: Ambito) -> String {
+    match ambito {
+        Ambito::Superadmin => "superadmin".into(),
+        Ambito::Institucion(id) => format!("institucion:{id}"),
+        Ambito::Ninguno => "ninguno".into(),
+    }
+}
+
+/// Lo que de un evento almacenado puede ver quien pregunta por el rastro de **un**
+/// paciente.
+///
+/// La lista `alcance.pacientes` de una exportación **no sale**: quien consulta el
+/// rastro del paciente 10 tiene derecho a saber que su dato se exportó, no a
+/// llevarse los ids de los otros que iban en el mismo archivo — que en una
+/// exportación de superadmin son de otras instituciones. Se sustituye por
+/// `pacientes_n`, que es el mismo dato agregado sin señalar a nadie.
+///
+/// **Lo devuelto ya no es el contenido sellado**, y por eso se distingue a
+/// simple vista: la cadena se verifica contra la columna `contenido`, no contra
+/// esto (ver [`verificar`]).
+///
+/// Un contenido que no parsea no se descarta en silencio —desaparecer del rastro
+/// del titular es justo lo que la bitácora existe para impedir—: sale marcado
+/// `ilegible` con su secuencia, que es lo que hay que ir a mirar.
+fn proyectar(secuencia: i64, contenido: &str) -> Value {
+    let Ok(mut v) = serde_json::from_str::<Value>(contenido) else {
+        return serde_json::json!({ "secuencia": secuencia, "ilegible": true });
+    };
+    if let Some(alcance) = v.get_mut("alcance").and_then(Value::as_object_mut) {
+        let cuantos = match alcance.remove("pacientes") {
+            Some(Value::Array(ids)) => Value::from(ids.len()),
+            // Estaba, pero no era una lista: no se puede contar y no se inventa.
+            Some(_) => Value::Null,
+            None => return v,
+        };
+        alcance.insert("pacientes_n".into(), cuantos);
+    }
+    v
+}
+
 /// El rastro de un paciente: sus accesos en orden. Para responder «¿quién vio mi
-/// historia?» (derecho del titular, Ley 1581). Devuelve el JSON de cada evento.
+/// historia?» (derecho del titular, Ley 1581). Devuelve cada evento **proyectado**
+/// por [`proyectar`] — sin los ids de los demás pacientes de una exportación.
 ///
 /// Filtra por `ambito` en la propia capa de datos (defensa en profundidad, como
 /// el resto de consultas de paciente): un ámbito ajeno recibe vacío —
 /// indistinguible de «sin accesos»—, aunque el llamante olvide comprobarlo.
+///
+/// El rastro no puede quedarse corto por una fila ilegible: el índice de
+/// expresión de la migración 0015 impide almacenar un `contenido` que no sea
+/// JSON, y si aun así llegara uno, `json_extract` levanta «malformed JSON» y
+/// falla la consulta ENTERA en vez de saltarse la fila. Un rastro con un hueco
+/// se lee como completo, y el hueco lo elegiría quien manipuló la fila.
 pub async fn por_paciente(
     pool: &crate::Pool,
     ambito: Ambito,
     paciente_id: i64,
-) -> Result<Vec<String>, sqlx::Error> {
+) -> Result<Vec<Value>, sqlx::Error> {
     if !paciente_es_del_ambito(pool, ambito, paciente_id).await? {
         return Ok(Vec::new());
     }
@@ -283,8 +333,8 @@ pub async fn por_paciente(
     // recurso suyo (`paciente_id`) y la exportación que lo cubrió (su id dentro de
     // `alcance.pacientes`). Un listado no lo incluye — no guarda ids. El coalesce
     // a '[]' evita que `json_each` falle en los eventos sin alcance.
-    let filas: Vec<(String,)> = sqlx::query_as(
-        "SELECT contenido FROM acceso \
+    let filas: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT secuencia, contenido FROM acceso \
          WHERE json_extract(contenido, '$.paciente_id') = ? \
             OR EXISTS ( \
                  SELECT 1 FROM json_each(coalesce(json_extract(contenido, '$.alcance.pacientes'), '[]')) \
@@ -296,7 +346,7 @@ pub async fn por_paciente(
     .bind(paciente_id)
     .fetch_all(pool)
     .await?;
-    Ok(filas.into_iter().map(|(c,)| c).collect())
+    Ok(filas.into_iter().map(|(s, c)| proyectar(s, &c)).collect())
 }
 
 #[cfg(test)]
@@ -472,7 +522,115 @@ mod pruebas {
         // El rastro del paciente 10 trae SOLO el acceso directo, no el listado.
         let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
         assert_eq!(rastro.len(), 1, "el listado no debe aparecer en el rastro individual");
-        assert!(rastro[0].contains("\"accion\":\"ver\""));
+        assert_eq!(rastro[0]["accion"], Value::from("ver"));
+    }
+
+    /// El hueco de LECTURA que la ficha #186 dejó anotado: `por_paciente` devolvía
+    /// el evento entero, y con él **la lista completa de pacientes exportados**, a
+    /// cualquiera que fuese dueño de UNO. En una exportación de superadmin eso
+    /// entrega ids de otras instituciones. Prueba que discrimina: si vuelve a salir
+    /// la lista, `sin_otros_ids` falla.
+    #[tokio::test]
+    async fn el_rastro_no_entrega_los_ids_de_los_demas_exportados() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 77, 2).await; // de OTRA institución
+        // Superadmin: su exportación atraviesa instituciones, que es cuando el
+        // hueco entrega ids de un cliente a otro.
+        let mut export = coleccion(1, "exportar", "rips", 2, vec![10, 77]);
+        export.institucion_id = None;
+        export.rol = "superadmin".into();
+        if let Some(a) = export.alcance.as_mut() {
+            a.ambito = describir_ambito(Ambito::Superadmin);
+        }
+        registrar(&pool, &export, None).await.unwrap();
+
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 1, "el titular debe ver que su dato salió");
+        let alcance = &rastro[0]["alcance"];
+        assert!(
+            alcance.get("pacientes").is_none(),
+            "la lista de exportados no puede salir en el rastro de uno: {alcance}"
+        );
+        assert_eq!(alcance["pacientes_n"], Value::from(2), "cuántos, sin decir quiénes");
+        // Y el agregado que sí es suyo sigue ahí: ámbito, filtro y n.
+        assert_eq!(alcance["n"], Value::from(2));
+        assert_eq!(alcance["ambito"], Value::from("superadmin"));
+        // El texto crudo tampoco puede llevar el 77 por ninguna otra vía.
+        let crudo = serde_json::to_string(&rastro[0]).unwrap();
+        assert!(!crudo.contains("77"), "el id ajeno se coló igualmente: {crudo}");
+    }
+
+    /// Y la proyección es SOLO de lectura: la fila almacenada conserva los ids,
+    /// que son los que hacen que el rastro del otro titular exista y los que
+    /// entraron en el hash. Si se proyectara al escribir, la cadena sellaría un
+    /// dato distinto del que se afirmó.
+    #[tokio::test]
+    async fn lo_almacenado_conserva_los_ids_y_sigue_verificando() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 77, 2).await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &coleccion(1, "exportar", "rips", 2, vec![10, 77]), Some(&sk))
+            .await
+            .unwrap();
+        let (cont,): (String,) = sqlx::query_as("SELECT contenido FROM acceso WHERE secuencia = 0")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(cont.contains("77"), "el almacén guarda a quién cubrió la exportación");
+        assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
+        // Y el otro titular ve su propia exportación por su lado.
+        assert_eq!(por_paciente(&pool, Ambito::institucion(2), 77).await.unwrap().len(), 1);
+    }
+
+    /// **La base no admite un `contenido` ilegible**, y eso no es un detalle: un
+    /// rastro al que le falta una fila se lee igual que uno completo, así que la
+    /// manera de acortarlo sería dejar una que no parsee.
+    ///
+    /// Medido, no supuesto — y el guardián no es una comprobación nuestra: el
+    /// índice de expresión `json_extract(contenido,'$.paciente_id')` de la
+    /// migración 0015 hay que EVALUARLO para escribir la fila, así que SQLite
+    /// rechaza el UPDATE con «malformed JSON». Sale gratis con el índice que ya
+    /// existía por rendimiento.
+    #[tokio::test]
+    async fn la_base_no_admite_un_contenido_ilegible() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        registrar(&pool, &evento(2, 10, "ver"), None).await.unwrap();
+        registrar(&pool, &evento(2, 10, "editar"), None).await.unwrap();
+
+        let r = sqlx::query("UPDATE acceso SET contenido = '{no es json' WHERE secuencia = 1")
+            .execute(&pool)
+            .await;
+        assert!(r.is_err(), "un contenido que no es JSON no debe poder almacenarse");
+
+        // Discrimina: el rechazo es por ilegible, no porque el UPDATE no pase —
+        // uno con JSON válido entra, y el rastro sigue completo con los dos.
+        sqlx::query("UPDATE acceso SET contenido = json_set(contenido,'$.accion','imprimir') WHERE secuencia = 1")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 2);
+        assert_eq!(rastro[1]["accion"], Value::from("imprimir"));
+    }
+
+    /// Y la red de abajo, por si algún día se escribiera por otra vía: un
+    /// contenido que serde no acepta sale marcado con su secuencia en vez de
+    /// desaparecer del rastro.
+    #[test]
+    fn una_fila_que_no_parsea_se_proyecta_marcada() {
+        let p = proyectar(7, "{no es json");
+        assert_eq!(p["ilegible"], Value::from(true));
+        assert_eq!(p["secuencia"], Value::from(7));
+    }
+
+    #[test]
+    fn el_ambito_se_describe_de_una_sola_manera() {
+        assert_eq!(describir_ambito(Ambito::Superadmin), "superadmin");
+        assert_eq!(describir_ambito(Ambito::institucion(7)), "institucion:7");
+        assert_eq!(describir_ambito(Ambito::Ninguno), "ninguno");
     }
 
     /// Una EXPORTACIÓN sí aparece en el rastro de CADA paciente que cubrió — el

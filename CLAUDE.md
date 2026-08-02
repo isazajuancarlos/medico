@@ -127,7 +127,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 402 pruebas (~2 min 35 s)
+cargo test  --workspace --all-targets                   # 479 pruebas (~2 min)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -265,6 +265,56 @@ ellos ya se decidió una conducta. Se corrige emitiendo otro.
 adjunto de la historia y la imagen de un informe radiológico — con su tipo
 deducido de la firma de los bytes y su cifrado en reposo. Un segundo almacén sería
 la puerta por donde entrase el SVG que `tipos.rs` existe para no admitir.
+
+### La bitácora de acceso (Ley 1581) — dos formas de evento, y no se mezclan
+
+`medico_datos::acceso` encadena por hash y firma cada acceso a dato de paciente
+(sobre `guaca::auditoria`): borrar o reordenar un eslabón rompe la cadena, no solo
+lo altera. Se registra **best-effort** —si falla, se grita en el log y NO se
+bloquea la atención—, y `GET /api/acceso/verificar` (solo superadmin) da el
+veredicto de la cadena entera.
+
+|  | recurso único | colección |
+|---|---|---|
+| cuándo | ver/editar una historia, un documento, una imagen | un listado o una exportación |
+| lleva | `paciente_id` + `recurso_id` | `alcance` (ámbito, filtro, `n`) |
+| helper | `rutas::registrar_acceso` | `rutas::registrar_coleccion` |
+
+Ninguna forma rellena la otra (directiva 20), y un evento de recurso único **no
+inserta la clave `alcance`**: su contenido canónico es byte a byte el de antes de
+existir las colecciones, así que las cadenas ya selladas siguen verificando.
+
+**Un listado NO guarda ids; una exportación SÍ.** Ver un nombre en una lista
+filtrada no es abrir el expediente, y un eslabón por fila ahogaría la cadena; una
+exportación, en cambio, saca el dato del sistema, y el titular tiene derecho a
+saber que el suyo iba dentro. Por eso `por_paciente` casa las dos vías:
+`$.paciente_id` **o** pertenencia a `$.alcance.pacientes`.
+
+**Y de vuelta, esa lista no sale.** `acceso::proyectar` sustituye
+`alcance.pacientes` por `alcance.pacientes_n` antes de devolver el rastro: quien
+consulta el de un paciente no puede llevarse los ids de los demás que iban en el
+mismo archivo — que en una exportación de superadmin son de otras instituciones.
+Lo almacenado conserva los ids (son los que entraron en el hash); lo proyectado
+**no es el contenido sellado**, y la verificación va contra la columna.
+
+Cableado hoy (2026-08-02): `GET /api/pacientes` como listado y `GET /api/rips`
+como exportación, esta última **solo cuando el archivo llegó a salir** —un 409 por
+`parcial`, un 422 por datos faltantes o un 403 por rol no dejan rastro, porque una
+bitácora que registra lo que no ocurrió es peor que una que no registra—. El resto
+de listados clínicos (urgencias, hospitalización, remisiones…) todavía no anota:
+el modelo los soporta y el helper es de una línea.
+
+**Lo que sigue abierto es una decisión, no un cableado**: un listado acotado a UN
+paciente (`/api/documentos?paciente_id=10`, `/api/pacientes/10/historias`) no
+encaja en ninguna de las dos formas. Como colección desaparece del rastro del
+titular —un listado no guarda ids—, y meterle `alcance.pacientes = [10]` lo
+convertiría en una exportación, que es decir que el dato salió cuando no salió.
+Hace falta elegir la tercera forma antes de cablearlos, no cablearlos y ver.
+
+El contenido ilegible no puede acortar el rastro, y el guardián sale gratis: el
+índice de expresión `json_extract(contenido,'$.paciente_id')` de la migración
+`0015` hay que evaluarlo para escribir la fila, así que SQLite rechaza un
+`contenido` que no sea JSON.
 
 ### Entorno
 
