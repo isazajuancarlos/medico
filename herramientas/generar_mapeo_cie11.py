@@ -45,6 +45,11 @@ RAIZ = Path(__file__).resolve().parent.parent
 TABLAS = Path.home() / "Documentos" / "mapping-cie10-cie-11"
 CIE10_RIPS = RAIZ / "backend" / "datos" / "cie10_rips.json"
 SALIDA = RAIZ / "backend" / "datos" / "mapeo_cie10_cie11.json"
+#: La copia que se empotra en el binario de Rust. La escribe ESTA corrida y no
+#: un paso aparte: dos archivos con el mismo contenido mantenidos por separado
+#: divergen, y el día que divergen el Python y el Rust derivan CIE-11 distintos
+#: para el mismo diagnóstico sin que nada falle.
+SALIDA_RUST = RAIZ / "crates" / "medico-dominio" / "datos" / "mapeo_cie10_cie11.json"
 
 UNICO = "10To11MapToOneCategory.txt"
 MULTIPLE = "10To11MapToMultipleCategories.txt"
@@ -169,6 +174,37 @@ def construir() -> dict:
     }
 
 
+def para_rust(datos: dict) -> dict:
+    """La misma tabla, sin lo que el binario no usa.
+
+    Se quitan tres cosas y ninguna es una decisión de contenido:
+
+    - `uri` y `capitulo` de cada destino — el RIPS pide el código y su título,
+      y la pantalla de captura ofrecerá lo mismo. La URI de la OMS no entra en
+      ningún campo de la 948.
+    - `inverso` — el índice CIE-11 → CIE-10 solo lo usa el análisis en Python.
+    - `_sin_equivalente_rips` — es un informe de la generación, no un dato.
+
+    Lo que NO se toca es el conjunto de códigos ni el `nivel`: quitar entradas
+    haría que el binario derivara distinto que el Python, que es exactamente lo
+    que esta función existe para impedir. De 3,3 MB baja a 2,0 MB.
+    """
+    return {
+        "release": datos["release"],
+        "version_tabla": datos["version_tabla"],
+        "fuente": datos["fuente"],
+        "mapa": {
+            codigo: {
+                "nivel": e["nivel"],
+                **({"via": e["via"]} if e.get("via") else {}),
+                "destinos": [{"codigo": d["codigo"], "titulo": d["titulo"]}
+                             for d in e["destinos"]],
+            }
+            for codigo, e in datos["mapa"].items()
+        },
+    }
+
+
 def main() -> int:
     datos = construir()
     mapa = datos["mapa"]
@@ -176,6 +212,9 @@ def main() -> int:
         print(f"ERROR: solo se mapearon {len(mapa)} códigos", file=sys.stderr)
         return 1
     SALIDA.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
+    SALIDA_RUST.parent.mkdir(parents=True, exist_ok=True)
+    SALIDA_RUST.write_text(json.dumps(para_rust(datos), ensure_ascii=False),
+                           encoding="utf-8")
 
     total_rips = len(codigos_rips())
     exactos = [e for e in mapa.values() if e["nivel"] == "exacto"]
@@ -190,6 +229,7 @@ def main() -> int:
           f"{len(datos['_sin_equivalente_rips'])}")
     print(f"  release  : {datos['release']}")
     print(f"→ {SALIDA} ({SALIDA.stat().st_size / 1e6:.1f} MB)")
+    print(f"→ {SALIDA_RUST} ({SALIDA_RUST.stat().st_size / 1e6:.1f} MB)")
     return 0
 
 

@@ -417,8 +417,13 @@ dato falso sin que nadie se entere.
 
 ### CIE-11 (Resolución 948 de 2026)
 
-Son **22 campos** (11 `cod*CIE11` + 11 `nomCod*CIE11`), no 35. `cie11.py` los deriva
-del CIE-10:
+Son **22 campos** (11 `cod*CIE11` + 11 `nomCod*CIE11`), no 35. `backend/cie11.py` y
+`medico-dominio/src/cie11.rs` los derivan del CIE-10 — **con la misma regla y desde
+el mismo archivo**, escrito para los dos por una sola corrida de
+`herramientas/generar_mapeo_cie11.py`. `tests/cie11_paridad_con_python.rs` compara
+los 12 406 códigos uno a uno y falla si divergen, que es la única diferencia que
+importa: dos CIE-11 distintos para el mismo diagnóstico entran los dos como válidos
+y no rompen nada.
 
 | caso | qué hace |
 |---|---|
@@ -427,9 +432,11 @@ del CIE-10:
 | varios destinos | los propone **todos**, no elige |
 | sin equivalencia | lo dice, y el campo queda vacío |
 
-**1 402 códigos (11,3 %) tienen más de un destino, hasta 42.** Poner el primero de una
-lista de 42 es exactamente lo mismo que `cod_consulta_cups="890201"`: un dato con la
-forma correcta que nadie afirmó. La 948 admite estos campos vacíos.
+Medido el 2026-08-01 sobre los 12 406 códigos mapeados: **8 070 se derivan solos**
+(65 %) y **1 402 (11,3 %) tienen más de un destino, hasta 35** —la cifra que decía
+«hasta 42» era de una versión anterior de la tabla—. Poner el primero de una lista de
+35 es exactamente lo mismo que `cod_consulta_cups="890201"`: un dato con la forma
+correcta que nadie afirmó. La 948 admite estos campos vacíos.
 
 ## Catálogos: empaquetados, no consultados por red
 
