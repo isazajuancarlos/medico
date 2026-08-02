@@ -73,6 +73,31 @@ export class AuthService {
     );
   }
 
+  /**
+   * Cierra la sesión en TODOS los dispositivos (M3, tarea #194).
+   *
+   * El servidor sube el `token_version` del usuario autenticado, con lo que toda
+   * cookie ya emitida —incluida la de este navegador— deja de valer en la
+   * siguiente petición. Actúa sobre quien está autenticado, nunca sobre un id
+   * que venga de aquí.
+   *
+   * **Si falla, NO se limpia la sesión local**, al revés que `logout()`. Esa
+   * diferencia es el punto entero de este método: en un cierre normal, borrar la
+   * cookie de este navegador ya cumple lo que se prometió aunque el servidor no
+   * conteste. Aquí lo prometido es cerrar en los OTROS dispositivos, y eso solo
+   * lo puede hacer el servidor. Limpiar aquí y mandar al login pintaría de
+   * «hecho» un cierre que no ocurrió — y quien lo pide suele estar pidiéndolo
+   * porque cree que alguien más tiene su sesión.
+   *
+   * El 401 es el único caso que sí limpia, y lo hace el interceptor: si la
+   * cookie ya no vale, la sesión de este navegador está cerrada de todos modos.
+   */
+  logoutTodos(): Observable<unknown> {
+    return this.http.post('/api/salir-todo', {}, { withCredentials: true }).pipe(
+      tap(() => this.cerrarLocal()),
+    );
+  }
+
   /** Limpia la sesión en el navegador, sin llamar al servidor. La usa el
    *  interceptor cuando el servidor responde 401. */
   cerrarLocal(): void {

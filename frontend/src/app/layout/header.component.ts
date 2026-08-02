@@ -1,15 +1,30 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../core/auth.service';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
+/**
+ * La cabecera, con las DOS formas de cerrar sesión.
+ *
+ * Son acciones distintas y por eso son dos botones y no un icono con sorpresa:
+ *
+ * - **Cerrar sesión** borra la cookie de este navegador. Es reversible en un
+ *   segundo y no afecta a nadie más.
+ * - **Cerrar en todos los dispositivos** sube el `token_version` del usuario en
+ *   el servidor, y con eso caduca toda cookie ya emitida — el móvil, el
+ *   consultorio, y el equipo de quien se hubiera quedado dentro. Se pide
+ *   confirmación porque cierra sesiones que no están a la vista.
+ */
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, ButtonModule, AvatarModule, TooltipModule],
+  imports: [CommonModule, ButtonModule, AvatarModule, TooltipModule, ConfirmDialogModule],
+  providers: [ConfirmationService],
   template: `
     <div class="header-left">
       <span class="page-breadcrumb">MED-SYS Pro</span>
@@ -28,14 +43,27 @@ import { TooltipModule } from 'primeng/tooltip';
           </div>
         </div>
         <p-button
+          icon="pi pi-lock"
+          [text]="true"
+          severity="secondary"
+          [loading]="cerrandoTodo()"
+          (onClick)="confirmarCerrarTodo()"
+          pTooltip="Cerrar sesión en todos los dispositivos"
+          tooltipPosition="bottom"
+          ariaLabel="Cerrar sesión en todos los dispositivos"
+        />
+        <p-button
           icon="pi pi-sign-out"
           [text]="true"
           severity="secondary"
           (onClick)="logout()"
           pTooltip="Cerrar sesión"
+          tooltipPosition="bottom"
+          ariaLabel="Cerrar sesión"
         />
       }
     </div>
+    <p-confirmdialog />
   `,
   styles: [`
     :host {
@@ -53,8 +81,11 @@ import { TooltipModule } from 'primeng/tooltip';
 export class HeaderComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(MessageService);
 
   readonly user = this.authService.currentUser;
+  readonly cerrandoTodo = signal(false);
 
   userInitial(): string {
     const u = this.user();
@@ -65,6 +96,54 @@ export class HeaderComponent {
     this.authService.logout().subscribe({
       next: () => this.router.navigate(['/login']),
       error: () => this.router.navigate(['/login']),
+    });
+  }
+
+  confirmarCerrarTodo(): void {
+    this.confirmationService.confirm({
+      header: 'Cerrar sesión en todos los dispositivos',
+      // Dice lo que va a pasar, incluido lo que le pasa a QUIEN lo pide: sin esa
+      // frase, quien lo pulsa desde el consultorio no espera que le cierre esta
+      // pantalla también.
+      message:
+        'Se cerrará la sesión en <strong>todos</strong> los dispositivos donde ' +
+        'haya entrado con esta cuenta, incluido este. Tendrá que volver a entrar ' +
+        'con su contraseña.<br><br>Úselo si cree que alguien más tiene acceso a ' +
+        'su cuenta.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Cerrar en todos',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.cerrarTodo(),
+    });
+  }
+
+  private cerrarTodo(): void {
+    this.cerrandoTodo.set(true);
+    this.authService.logoutTodos().subscribe({
+      next: () => {
+        this.cerrandoTodo.set(false);
+        this.router.navigate(['/login']);
+      },
+      // **No se navega al login.** El servidor responde 500 cuando la revocación
+      // no ocurrió, y él mismo se niega a fingir un cierre que no hizo; mandar
+      // aquí al login lo desharía — la pantalla diría «listo» mientras las otras
+      // sesiones siguen abiertas. Quien pide esto suele sospechar que alguien
+      // más está dentro, así que un falso «hecho» es peor que el error.
+      //
+      // El 401 no llega hasta aquí: lo atrapa el interceptor, que limpia y
+      // redirige, y con la cookie ya inválida esta sesión está cerrada igual.
+      error: () => {
+        this.cerrandoTodo.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se cerraron las sesiones',
+          detail:
+            'El servidor no pudo revocarlas, así que las otras sesiones siguen ' +
+            'abiertas. Vuelva a intentarlo; si sigue fallando, cambie la contraseña.',
+          life: 10000,
+        });
+      },
     });
   }
 }
