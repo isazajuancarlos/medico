@@ -24,7 +24,7 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 
 > **PrimeNG está saliendo.** El estándar de todos los desarrollos es Angular con
 > `@angular/material`; medico era el único que no cumplía y la migración está en
-> curso: 287 → 170 importaciones de `primeng`, con la compilación y las 82
+> curso: 287 → 154 importaciones de `primeng`, con la compilación y las 130
 > pruebas en verde en cada lote. La receta y las trampas, en
 > [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md). **No se sube `primeng` a la
 > 22**: dejó de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un

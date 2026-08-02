@@ -7,7 +7,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { Router } from '@angular/router';
 import { PacienteFormComponent } from './paciente-form.component';
 import { PacienteService } from '../../services/paciente.service';
@@ -18,7 +17,7 @@ import { PaginatedResponse } from '../../models/common.models';
   selector: 'app-pacientes',
   standalone: true,
   imports: [CommonModule, FormsModule, MatTableModule, MatPaginatorModule, MatButtonModule,
-            MatFormFieldModule, MatInputModule, EtiquetaComponent, MatTooltipModule,
+            MatFormFieldModule, MatInputModule, MatTooltipModule,
             PacienteFormComponent],
   template: `
     <div class="page-card">

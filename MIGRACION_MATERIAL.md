@@ -39,6 +39,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | antes | 287 | 35 |
 | tras servicios + vocabulario barato | 170 | 30 |
 | tras rips, contrarreferencia y pacientes | 159 | 27 |
+| tras remisiones | 154 | 26 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -153,13 +154,19 @@ de diferencia.
 
 ## Trampas ya pagadas
 
-1. **Backticks dentro del template literal. LA MÁS FÁCIL DE REPETIR — ya cayó
-   dos veces.** Escribir un comentario HTML que nombre `` `p-password` `` cierra
-   la cadena del `template:`, y el compilador escupe diez errores sin relación
-   (`shorthand property 'p'`, `Cannot find name 'styles'`, `Incorrect number of
-   arguments to @Component`). Si aparecen errores absurdos tras editar una
-   plantilla, es esto y solo esto. **En un comentario dentro de una plantilla,
-   los nombres de componente van sin comillas invertidas.**
+1. **Backticks dentro del template literal. LA MÁS FÁCIL DE REPETIR — cayó TRES
+   veces en una tarde, estando escrita aquí.** Un comentario HTML que nombre
+   `` `p-password` `` cierra la cadena del `template:`, y el compilador escupe
+   diez errores sin relación (`shorthand property 'p'`, `Cannot find name
+   'styles'`, `Incorrect number of arguments to @Component`). Si aparecen
+   errores absurdos tras editar una plantilla, es esto y solo esto. **En un
+   comentario dentro de una plantilla, los nombres van sin comillas invertidas.**
+
+   > Se llegó a escribir una prueba que lo cazara —directiva 6: *prueba que
+   > falla* > *directiva que recordar*— y **se borró tras medirla**: el error
+   > rompe la compilación, así que la prueba nunca llega a ejecutarse. No añadía
+   > detección sobre el compilador; solo habría dado una falsa sensación de red.
+   > La salvaguarda es el `ng build` de cada lote, que ya la caza siempre.
 
 2. **`tooltipPosition="bottom"` no es `matTooltipPosition="bottom"`.** Material
    usa `above`/`below`/`before`/`after`. Traducirlo mal no falla: deja el
@@ -209,8 +216,9 @@ de diferencia.
 
 Estos van **pantalla por pantalla y a mano**, de la más pequeña a la mayor, con
 `ng build` y las pruebas entre lote y lote. Hechas ya con este método: `login`,
-`rips`, `contrarreferencia` y `pacientes` — las dos últimas fijan los dos
-patrones de tabla.
+`rips`, `contrarreferencia`, `pacientes` y `remisiones` — las tablas de
+`contrarreferencia` y `pacientes` fijan los dos patrones de paginación, y
+`remisiones` fija el del `mat-select`.
 
 ## Lo que NO se toca en esta migración
 

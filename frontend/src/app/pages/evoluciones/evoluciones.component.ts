@@ -5,7 +5,6 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { SelectModule } from 'primeng/select';
@@ -21,7 +20,7 @@ type Vista = 'lista' | 'form';
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, MatTooltipModule, MatDividerModule,
+    MatTooltipModule, MatDividerModule,
     SelectModule,
   ],
   template: `
