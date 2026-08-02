@@ -279,9 +279,15 @@ pub async fn crear(
         .bind(&h.ef_hallazgos)
         .bind(&h.ef_orl)
         .bind(&h.ef_cardiopulmonar)
-        .bind(h.finalidad.as_deref().unwrap_or("10"))
-        .bind(h.causa_externa.as_deref().unwrap_or("13"))
-        .bind(h.tipo_diagnostico.as_deref().unwrap_or("01"))
+        // Los tres RIPS que iban con relleno. Ver `0038_finalidad_de_la_948.sql`:
+        // «10», «13» y «01» no los eligió nadie —ninguna pantalla ofrece estos
+        // campos— y los dos primeros ni siquiera existen en las tablas de la
+        // 948. Vacío es lo que son, y el recolector del RIPS ya lee el blanco
+        // como ausencia, así que salen en el informe de cierre en vez de
+        // viajar al validador como si alguien los hubiera afirmado.
+        .bind(h.finalidad.as_deref().unwrap_or(""))
+        .bind(h.causa_externa.as_deref().unwrap_or(""))
+        .bind(h.tipo_diagnostico.as_deref().unwrap_or(""))
         .bind(&h.cod_consulta_cups)
         .bind(&h.modalidad_grupo_servicio)
         .bind(&h.grupo_servicios)
@@ -430,9 +436,15 @@ pub async fn actualizar(
         .bind(&h.ef_hallazgos)
         .bind(&h.ef_orl)
         .bind(&h.ef_cardiopulmonar)
-        .bind(h.finalidad.as_deref().unwrap_or("10"))
-        .bind(h.causa_externa.as_deref().unwrap_or("13"))
-        .bind(h.tipo_diagnostico.as_deref().unwrap_or("01"))
+        // Los tres RIPS que iban con relleno. Ver `0038_finalidad_de_la_948.sql`:
+        // «10», «13» y «01» no los eligió nadie —ninguna pantalla ofrece estos
+        // campos— y los dos primeros ni siquiera existen en las tablas de la
+        // 948. Vacío es lo que son, y el recolector del RIPS ya lee el blanco
+        // como ausencia, así que salen en el informe de cierre en vez de
+        // viajar al validador como si alguien los hubiera afirmado.
+        .bind(h.finalidad.as_deref().unwrap_or(""))
+        .bind(h.causa_externa.as_deref().unwrap_or(""))
+        .bind(h.tipo_diagnostico.as_deref().unwrap_or(""))
         .bind(&h.cod_consulta_cups)
         .bind(&h.modalidad_grupo_servicio)
         .bind(&h.grupo_servicios)
@@ -631,8 +643,51 @@ mod pruebas {
         }
     }
 
+    /// El relleno de los tres campos del RIPS no puede volver (#250, tarea de
+    /// la finalidad).
+    ///
+    /// `finalidad`, `causa_externa` y `tipo_diagnostico` se escribían con «10»,
+    /// «13» y «01» cuando el llamante no mandaba nada — y no los manda nunca,
+    /// porque ninguna pantalla ofrece esos campos. Dos de esos tres valores ni
+    /// siquiera existen en las tablas de la Resolución 948 (la de finalidad va
+    /// del 11 al 44; la de causa/motivo, del 21 al 49), así que el archivo salía
+    /// con un código que el validador rechaza sin que nada fallara aquí.
+    ///
+    /// Se guarda el hueco. El `DEFAULT '10'` del DDL sigue en la tabla —quitarlo
+    /// exige reconstruir ochenta columnas— pero no se alcanza mientras estos
+    /// `bind` escriban la columna siempre. Esta prueba es lo que lo ata.
     #[tokio::test]
-    async fn crear_y_obtener_conserva_los_campos_y_aplica_defectos() {
+    async fn sin_finalidad_se_guarda_el_hueco_y_no_el_relleno() {
+        let pool = base().await;
+        let mut h = nueva(10);
+        h.finalidad = None;
+        h.causa_externa = None;
+        h.tipo_diagnostico = None;
+        let id = crear(&pool, Ambito::institucion(1), 5, &h).await.unwrap().unwrap();
+
+        let leida = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert_eq!(leida.finalidad, "", "«10» no está en la tabla del MUV");
+        assert_eq!(leida.causa_externa, "", "«13» tampoco");
+        assert_eq!(leida.tipo_diagnostico, "");
+    }
+
+    /// Y lo que sí viene, se guarda tal cual: el hueco es para la ausencia, no
+    /// una manera de ignorar lo que el médico eligió.
+    #[tokio::test]
+    async fn la_finalidad_elegida_se_guarda_tal_cual() {
+        let pool = base().await;
+        let mut h = nueva(10);
+        h.finalidad = Some("11".into());
+        h.causa_externa = Some("38".into());
+        let id = crear(&pool, Ambito::institucion(1), 5, &h).await.unwrap().unwrap();
+
+        let leida = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
+        assert_eq!(leida.finalidad, "11");
+        assert_eq!(leida.causa_externa, "38");
+    }
+
+    #[tokio::test]
+    async fn crear_y_obtener_conserva_los_campos() {
         let pool = base().await;
         let id = crear(&pool, Ambito::institucion(1), 5, &nueva(10)).await.unwrap().unwrap();
         let h = obtener(&pool, Ambito::institucion(1), id).await.unwrap().unwrap();
@@ -641,10 +696,13 @@ mod pruebas {
         assert_eq!(h.tension_arterial.as_deref(), Some("120/80"));
         assert_eq!(h.frecuencia_cardiaca, Some(72));
         assert_eq!(h.peso, Some(70.0));
-        // Defectos aplicados.
-        assert_eq!(h.finalidad, "10");
-        assert_eq!(h.causa_externa, "13");
-        assert_eq!(h.tipo_diagnostico, "01");
+        // Lo que NO se rellena: los tres campos del RIPS que ninguna pantalla
+        // ofrece. Ver `sin_finalidad_se_guarda_el_hueco_y_no_el_relleno`.
+        assert_eq!(h.finalidad, "");
+        assert_eq!(h.causa_externa, "");
+        assert_eq!(h.tipo_diagnostico, "");
+        // Este sí es un defecto de verdad: la mayoría de las atenciones no
+        // llevan copago, y cero aquí es un dato, no un hueco.
         assert_eq!(h.valor_pago_moderador, 0);
         assert_eq!(h.datos_dinamicos, "{}");
         assert!(!h.genera_incapacidad);

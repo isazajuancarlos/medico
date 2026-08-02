@@ -318,6 +318,11 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/especialidades", get(listar_especialidades))
         .route("/api/medicamentos/buscar", get(buscar_medicamentos))
         .route("/api/unidades-dispensacion", get(listar_unidades_dispensacion))
+        // Las dos tablas de la 948 que la historia tiene que ofrecer para que
+        // el médico ELIJA. Hasta el 2026-08-02 no se ofrecían y el sistema las
+        // rellenaba solo, con códigos que además eran de la tabla anterior.
+        .route("/api/finalidades", get(listar_finalidades))
+        .route("/api/causas-motivo", get(listar_causas_motivo))
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
         // los archivos del build y, para las rutas del SPA, el index.html.
         .fallback(crate::estaticos::servir)
@@ -2412,6 +2417,25 @@ async fn listar_unidades_dispensacion(
         .await
         .map(Json)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+/// `GET /api/finalidades` — las 34 finalidades de la Resolución 948.
+///
+/// Van empotradas en el binario (`medico_dominio::muv`), no en la base: son la
+/// tabla del validador y no cambian por institución. Y se sirven completas, con
+/// `aplica_ac` y `aplica_ap`, para que la pantalla ofrezca las que valen en cada
+/// documento en vez de las 34 siempre — unas cuantas solo aplican a
+/// procedimientos.
+///
+/// Basta con estar autenticado: es un catálogo público de MinSalud y no dice
+/// nada de ningún paciente.
+async fn listar_finalidades(_: Autenticado) -> Json<&'static [medico_dominio::muv::Finalidad]> {
+    Json(medico_dominio::muv::finalidades())
+}
+
+/// `GET /api/causas-motivo` — las 29 causas o motivos de atención de la 948.
+async fn listar_causas_motivo(_: Autenticado) -> Json<&'static [medico_dominio::muv::CausaMotivo]> {
+    Json(medico_dominio::muv::causas_motivo())
 }
 
 // --- Laboratorio e imágenes diagnósticas -------------------------------------
@@ -5271,13 +5295,18 @@ mod pruebas {
             .execute(&e.pool)
             .await
             .unwrap();
+            // `finalidad='11'` y `causa_externa='38'` son de la tabla de la
+            // Resolución 948. Antes iban «11» y «13»; el 13 era «enfermedad
+            // general» en la tabla ANTERIOR y no existe en la nueva, donde ese
+            // concepto es el 38 — sembrarlo hacía fallar la prueba con una falta
+            // de más, que es exactamente lo que el generador tiene que hacer.
             sqlx::query(
                 "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,creado_por,\
                  motivo_consulta,enfermedad_actual,plan_tratamiento,diagnostico_principal,\
                  cod_consulta_cups,modalidad_grupo_servicio,grupo_servicios,cod_servicio,\
                  valor_servicio,concepto_recaudo,finalidad,tipo_diagnostico,causa_externa) \
                  VALUES (1,'2026-03-15 14:30:00','H1',10,2,2,'dolor','desde ayer','reposo','A000',\
-                 '890201','01','01',328,45000,'05','11','01','13')",
+                 '890201','01','01',328,45000,'05','11','01','38')",
             )
             .execute(&e.pool)
             .await
@@ -5414,6 +5443,33 @@ mod pruebas {
             )
             .await;
             assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+        }
+
+        #[tokio::test]
+        async fn los_catalogos_de_la_948_se_sirven_para_que_la_pantalla_los_ofrezca() {
+            // Existen porque hasta el 2026-08-02 la pantalla NO podía ofrecer
+            // estos dos campos, así que el sistema los rellenaba solo — y con
+            // códigos de la tabla anterior, que el validador rechaza.
+            let e = con_admin_y_una_consulta().await;
+
+            let r = enviar(&e, "/api/finalidades", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            let fs = v.as_array().unwrap();
+            assert_eq!(fs.len(), 34);
+            assert_eq!(fs[0]["codigo"], "11", "la tabla de la 948 empieza en 11");
+            assert!(fs.iter().all(|f| f["codigo"] != "10"), "el «10» ya no está");
+            // Con `aplica_ac`, para que la consulta no ofrezca las de solo AP.
+            assert!(fs.iter().any(|f| f["aplica_ac"] == false));
+
+            let r = enviar(&e, "/api/causas-motivo", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            let cs = v.as_array().unwrap();
+            assert_eq!(cs.len(), 29);
+            assert!(cs.iter().all(|c| c["codigo"] != "13"), "el «13» ya no está");
+            let g = cs.iter().find(|c| c["codigo"] == "38").unwrap();
+            assert_eq!(g["nombre"], "ENFERMEDAD GENERAL");
         }
 
         #[tokio::test]

@@ -560,8 +560,14 @@ def seed_historias_y_ordenes(session: Session, pacientes: list, medico: Usuario)
             enfermedad_actual=d["motivo"],
             diagnostico_principal=d["dx"],
             plan_tratamiento=d["plan"],
-            finalidad=FinalidadConsulta.NO_APLICA,
-            causa_externa=CausaExterna.ENFERMEDAD_GENERAL,
+            # Por CÓDIGO y no por nombre de miembro: los miembros los genera
+            # el maestro del validador y cambiarían si la norma renombra una
+            # fila. 16 = TRATAMIENTO, 38 = ENFERMEDAD GENERAL, los dos de la
+            # tabla de la 948. Antes iban NO_APLICA («10») y ENFERMEDAD_GENERAL
+            # («13»), que no existen en ella: la semilla producía demos cuyo
+            # RIPS el MUV habría rechazado.
+            finalidad=FinalidadConsulta("16"),
+            causa_externa=CausaExterna("38"),
             tipo_diagnostico=TipoDiagnostico.CONFIRMADO_NUEVO,
             genera_incapacidad=d.get("incapacidad", False),
             dias_incapacidad=d.get("dias_incap", 0)

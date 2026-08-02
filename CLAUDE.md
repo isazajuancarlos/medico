@@ -493,6 +493,33 @@ Datos que nadie afirmó, indistinguibles de los reales. Pero quitarlos sin poner
 en su lugar solo hace la captura más lenta, y **lo lento se rodea**: se cambia un dato
 falso por uno basura, con más fricción.
 
+### Los tres que se corrigieron el 2026-08-02
+
+`finalidad`, `causa_externa` y `tipo_diagnostico` eran el caso peor del párrafo
+anterior, y llevaban meses sin verse porque **dos fallos se tapaban entre sí**:
+
+1. tenían defecto (`'10'`, `'13'`, `'01'`) en el modelo Python, en el DDL de
+   SQLite y en dos `unwrap_or` de `historia.rs`, así que nunca llegaban vacíos y
+   el recolector —que solo ve AUSENCIAS— no tenía nada que anotar;
+2. **ninguna pantalla los ofrecía**, así que nadie eligió uno nunca.
+
+Y medido contra los maestros del validador: `FinalidadConsulta` (02–10) y
+`CausaExterna` (01–15) eran las tablas **anteriores** a la 948, que usa 11–44 y
+21–49. Ninguno de los 22 valores existía. O sea: dos campos del RIPS salían con un
+código rechazable en toda atención, puestos por el sistema en nombre del médico.
+
+Hoy: los enums se **generan** del maestro (`maestros_muv.finalidades()` /
+`causas_motivo()`), los defectos se quitaron en los tres sitios, la migración
+`0038` convierte lo escrito en hueco, el AC valida contra el catálogo y
+`GET /api/finalidades` y `GET /api/causas-motivo` alimentan los dos selectores
+nuevos del paso «Diagnóstico».
+
+**Lo que NO se hizo, y es la parte que importa**: traducir los datos viejos. `13`
+(enfermedad general) es exactamente el `38` de la tabla nueva, y aun así no se
+reescribe — un valor que nadie eligió, traducido, sigue sin haberlo dicho nadie, y
+encima pasa a ser válido, o sea que ya no lo detecta nada. Los códigos de la tabla
+anterior salen en el informe de cierre diciendo que hay que convertirlos.
+
 La salida es marcar el origen: `CONFIRMADO` · `DERIVADO` · `PROPUESTO_ACEPTADO` ·
 `AUSENTE`. Un valor derivado de otros que ya estaban cuesta cero segundos y es
 reproducible. `derivaciones.py` devuelve `None` cuando no puede derivar — no aproxima.
@@ -564,8 +591,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 37, de `0001_fundacion.sql` a
-    `0037_campos_que_el_rips_exige.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 38, de `0001_fundacion.sql` a
+    `0038_finalidad_de_la_948.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==

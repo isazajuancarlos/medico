@@ -17,6 +17,7 @@ use std::sync::OnceLock;
 
 const TIPO_DOC_JSON: &str = include_str!("../datos/muv_tipo_doc.json");
 const FINALIDAD_JSON: &str = include_str!("../datos/muv_finalidad.json");
+const CAUSA_JSON: &str = include_str!("../datos/muv_causa_motivo.json");
 
 #[derive(Debug, Deserialize)]
 struct FilaTipoDoc {
@@ -71,26 +72,59 @@ pub fn tipos_documento_profesional_listados() -> String {
         .join(", ")
 }
 
-#[derive(Debug, Deserialize)]
-struct FilaFinalidad {
-    #[serde(rename = "Codigo")]
-    codigo: String,
-    /// Si aplica al archivo de consultas. El maestro la trae por archivo.
-    #[serde(rename = "AplicaAC")]
-    aplica_ac: bool,
+/// Una finalidad de la tabla de la 948.
+///
+/// El `rename` va acotado a `deserialize`: **de entrada** se leen los nombres
+/// del contenedor del validador (`Codigo`, `AplicaAC`), y **de salida** se
+/// sirven los nuestros (`codigo`, `aplica_ac`). Sin acotarlo, la API publicaba
+/// la forma del maestro de MinSalud como si fuera nuestro contrato, y la
+/// pantalla tendría que conocer una convención ajena que puede cambiar sin
+/// avisarnos. Lo destapó la prueba que pide `/api/finalidades` de verdad.
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+pub struct Finalidad {
+    #[serde(rename(deserialize = "Codigo"))]
+    pub codigo: String,
+    #[serde(rename(deserialize = "Nombre"))]
+    pub nombre: String,
+    /// Si aplica al archivo de CONSULTAS. El maestro lo trae por archivo, y no
+    /// son las mismas: de las 34, unas pocas solo valen para procedimientos.
+    #[serde(rename(deserialize = "AplicaAC"))]
+    pub aplica_ac: bool,
+    /// Si aplica al archivo de PROCEDIMIENTOS.
+    #[serde(rename(deserialize = "AplicaAP"))]
+    pub aplica_ap: bool,
 }
+
+type FilaFinalidad = Finalidad;
 
 #[derive(Debug, Deserialize)]
 struct ArchivoFinalidad {
     filas: Vec<FilaFinalidad>,
 }
 
-fn finalidades() -> &'static [FilaFinalidad] {
+/// Las 34 finalidades de la 948, ordenadas por código.
+///
+/// Es lo que una pantalla de captura tiene que ofrecer. Hoy **ninguna la
+/// ofrece**: medido el 2026-08-02, `finalidad` no aparece en ningún formulario
+/// del frontend, así que nadie ha elegido una nunca y toda historia lleva el
+/// defecto. Un campo que el RIPS reporta y que nadie puede rellenar no es un
+/// campo opcional: es un dato inventado con sitio reservado.
+pub fn finalidades() -> &'static [Finalidad] {
+    cargadas()
+}
+
+fn cargadas() -> &'static [FilaFinalidad] {
     static CACHE: OnceLock<Vec<FilaFinalidad>> = OnceLock::new();
     CACHE.get_or_init(|| {
-        serde_json::from_str::<ArchivoFinalidad>(FINALIDAD_JSON)
+        let mut filas = serde_json::from_str::<ArchivoFinalidad>(FINALIDAD_JSON)
             .expect("el maestro va empotrado y las pruebas lo validan")
-            .filas
+            .filas;
+        // El maestro NO viene ordenado —su primera fila es la 12— y esto
+        // alimenta un desplegable: una lista de 34 opciones en orden arbitrario
+        // se busca a ojo cada vez. Se ordena por código, que es el orden de la
+        // norma y agrupa las finalidades emparentadas.
+        filas.sort_by(|a, b| a.codigo.cmp(&b.codigo));
+        filas
     })
 }
 
@@ -108,12 +142,76 @@ fn finalidades() -> &'static [FilaFinalidad] {
 /// `11`: eso sería elegir la finalidad del acto médico en nombre de quien lo
 /// hizo.
 pub fn finalidad_existe(codigo: &str) -> bool {
-    finalidades().iter().any(|f| f.codigo == codigo)
+    cargadas().iter().any(|f| f.codigo == codigo)
+}
+
+/// Una causa o motivo de atención de la tabla de la 948.
+///
+/// El maestro la trae por archivo —`AplicaAC`, `AplicaAU`, `AplicaAH`— y no por
+/// AP: los procedimientos no llevan causa.
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+pub struct CausaMotivo {
+    #[serde(rename(deserialize = "Codigo"))]
+    pub codigo: String,
+    #[serde(rename(deserialize = "Nombre"))]
+    pub nombre: String,
+    #[serde(rename(deserialize = "AplicaAC"), deserialize_with = "si_no")]
+    pub aplica_ac: bool,
+    #[serde(rename(deserialize = "AplicaAU"), deserialize_with = "si_no")]
+    pub aplica_au: bool,
+    #[serde(rename(deserialize = "AplicaAH"), deserialize_with = "si_no")]
+    pub aplica_ah: bool,
+}
+
+/// Este maestro escribe los sí/no como `"SI"` y `"NO"`, no como booleanos —al
+/// revés que el de finalidad, que sí los trae `true`/`false`.
+///
+/// No es una manía del formato: es que cada tabla del validador se exportó como
+/// venía, y suponer el tipo por el nombre de la columna es como se cuelan los
+/// errores que nadie ve. Lo que NO se hace es tratar cualquier cosa distinta de
+/// «SI» como `false`: un valor inesperado revienta con su texto a la vista, en
+/// vez de convertir una tabla mal leída en un catálogo silenciosamente vacío.
+fn si_no<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
+    let s = String::deserialize(d)?;
+    match s.trim().to_uppercase().as_str() {
+        "SI" | "SÍ" | "TRUE" | "1" => Ok(true),
+        "NO" | "FALSE" | "0" => Ok(false),
+        otro => Err(serde::de::Error::custom(format!(
+            "«{otro}» no es SI ni NO en el maestro de causa/motivo"
+        ))),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ArchivoCausa {
+    filas: Vec<CausaMotivo>,
+}
+
+/// Las 29 causas o motivos de atención de la 948.
+///
+/// Mismo hallazgo que con la finalidad, medido el 2026-08-02: el enum del
+/// sistema (`CausaExterna`, trece valores del 01 al 15) es la tabla ANTERIOR, y
+/// esta va del **21 al 49**. Ninguno de los trece está aquí. El defecto era el
+/// `'13'` («enfermedad general»), que en la tabla nueva es el **38**.
+pub fn causas_motivo() -> &'static [CausaMotivo] {
+    static CACHE: OnceLock<Vec<CausaMotivo>> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        let mut filas = serde_json::from_str::<ArchivoCausa>(CAUSA_JSON)
+            .expect("el maestro va empotrado y las pruebas lo validan")
+            .filas;
+        filas.sort_by(|a, b| a.codigo.cmp(&b.codigo));
+        filas
+    })
+}
+
+/// Si el código de causa o motivo existe en la tabla del validador.
+pub fn causa_motivo_existe(codigo: &str) -> bool {
+    causas_motivo().iter().any(|c| c.codigo == codigo)
 }
 
 /// Las finalidades que el maestro marca como aplicables al archivo de consultas.
 pub fn finalidades_de_consulta() -> Vec<&'static str> {
-    finalidades()
+    cargadas()
         .iter()
         .filter(|f| f.aplica_ac)
         .map(|f| f.codigo.as_str())
@@ -172,6 +270,60 @@ mod pruebas {
         assert_eq!(c.len(), 34);
         assert_eq!(*c.first().unwrap(), "11");
         assert_eq!(*c.last().unwrap(), "44");
+    }
+
+    #[test]
+    fn el_trece_de_causa_tampoco_existe_en_la_tabla_del_muv() {
+        // El mismo defecto que el «10», en el campo de al lado: el enum del
+        // sistema es la tabla anterior entera.
+        assert!(!causa_motivo_existe("13"), "«13» era el defecto de causa_externa");
+        assert!(!causa_motivo_existe("01"));
+        assert!(!causa_motivo_existe("15"));
+        // La tabla nueva empieza en 21 y «enfermedad general» es el 38.
+        assert!(causa_motivo_existe("21"));
+        assert!(causa_motivo_existe("38"));
+        assert!(causa_motivo_existe("49"));
+        assert!(!causa_motivo_existe("50"));
+        assert_eq!(causas_motivo().len(), 29);
+    }
+
+    #[test]
+    fn los_catalogos_salen_ordenados_por_codigo() {
+        // Alimentan desplegables. El maestro no viene ordenado —su primera fila
+        // es la 12— y una lista de 34 opciones en orden arbitrario obliga a
+        // buscar a ojo en cada consulta.
+        let f: Vec<&str> = finalidades().iter().map(|x| x.codigo.as_str()).collect();
+        let mut ordenada = f.clone();
+        ordenada.sort_unstable();
+        assert_eq!(f, ordenada);
+        assert_eq!(f[0], "11");
+
+        let c: Vec<&str> = causas_motivo().iter().map(|x| x.codigo.as_str()).collect();
+        let mut ordenada = c.clone();
+        ordenada.sort_unstable();
+        assert_eq!(c, ordenada);
+        assert_eq!(c[0], "21");
+    }
+
+    #[test]
+    fn el_si_no_de_texto_se_lee_y_discrimina() {
+        // Este maestro trae «SI»/«NO» y no booleanos. Si `si_no` devolviera
+        // siempre `true`, las 29 aplicarían a todo y esto lo dice: hay dos que
+        // NO valen para urgencias ni hospitalización.
+        let no_urgencias = causas_motivo().iter().filter(|c| !c.aplica_au).count();
+        assert_eq!(no_urgencias, 2, "el «NO» se está leyendo como «SI»");
+        assert_eq!(causas_motivo().iter().filter(|c| !c.aplica_ah).count(), 2);
+        assert!(causas_motivo().iter().all(|c| c.aplica_ac), "todas valen para AC");
+    }
+
+    #[test]
+    fn enfermedad_general_es_el_38_y_se_lee_del_maestro() {
+        // El nombre no se escribe aquí: se comprueba que el maestro lo trae. Si
+        // un día la tabla lo moviera, esto lo dice en vez de dejar un 38 escrito
+        // a mano en el código.
+        let c = causas_motivo().iter().find(|c| c.codigo == "38").unwrap();
+        assert_eq!(c.nombre, "ENFERMEDAD GENERAL");
+        assert!(c.aplica_ac, "tiene que valer para consultas");
     }
 
     #[test]

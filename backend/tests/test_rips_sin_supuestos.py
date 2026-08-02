@@ -42,6 +42,11 @@ COMPLETO = dict(
     modalidad_grupo_servicio="01", grupo_servicios="01", cod_servicio=328,
     via_ingreso_servicio="01", causa_motivo="13",
     valor_servicio=45000, concepto_recaudo="04", valor_pago_moderador=0,
+    # Los tres que dejaron de tener defecto el 2026-08-02: el sistema ya no los
+    # responde por el médico. Van con códigos de las tablas de la Resolución 948
+    # —16 TRATAMIENTO y 38 ENFERMEDAD GENERAL—, no con los de la tabla anterior
+    # («10» y «13»), que el MUV rechaza.
+    finalidad="16", causa_externa="38", tipo_diagnostico="02",
 )
 
 

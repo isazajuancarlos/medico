@@ -21,7 +21,7 @@ import { TabsModule } from 'primeng/tabs';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo,
-         UnidadDispensacion } from '../../services/historia.service';
+         UnidadDispensacion, Finalidad, CausaMotivo } from '../../services/historia.service';
 import { PacienteService } from '../../services/paciente.service';
 import { Patient } from '../../models/patient.models';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -599,6 +599,29 @@ function defaultAntPrenatales(): AntPrenatales {
                   <div class="field">
                     <label>Código CIE-10 relacionado</label>
                     <input pInputText [(ngModel)]="form.diagnostico_relacionado1" class="w-full" placeholder="Código adicional" />
+                  </div>
+                  <!--
+                    Finalidad y causa: los dos van al RIPS y hasta el 2026-08-02
+                    NO se podían elegir. El sistema los rellenaba —«10» y «13»—
+                    con códigos que además eran de la tabla anterior a la
+                    Resolución 948 y que el validador rechaza. Sin este campo, el
+                    dato lo afirmaba el sistema en nombre del médico.
+                    Van sin valor inicial a propósito: vacío es «falta», y el
+                    generador del RIPS lo pide al cerrar el mes.
+                  -->
+                  <div class="field">
+                    <label>Finalidad de la atención</label>
+                    <p-select [(ngModel)]="form.finalidad" [options]="finalidades()"
+                      optionLabel="nombre" optionValue="codigo" [filter]="true" filterBy="nombre"
+                      placeholder="Para qué se atendió (Resolución 948)" class="w-full"
+                      appendTo="body" [showClear]="true" />
+                  </div>
+                  <div class="field">
+                    <label>Causa o motivo de la atención</label>
+                    <p-select [(ngModel)]="form.causa_externa" [options]="causasMotivo()"
+                      optionLabel="nombre" optionValue="codigo" [filter]="true" filterBy="nombre"
+                      placeholder="Por qué se atendió (Resolución 948)" class="w-full"
+                      appendTo="body" [showClear]="true" />
                   </div>
                 </div>
                 <div class="step-actions">
@@ -1214,6 +1237,11 @@ export class HistoriasComponent implements OnInit {
   // nadie eligió y de la que dependen el valor unitario y la cantidad.
   fForm: FormulaCreate = { medicamento: '', dosis: '', cantidad: 1 };
   readonly unidades = signal<UnidadDispensacion[]>([]);
+  // Las dos tablas de la 948 que la historia tiene que ofrecer. Solo las que
+  // aplican al archivo de CONSULTAS: unas cuantas finalidades son exclusivas de
+  // procedimientos y ofrecerlas aquí produciría un RIPS rechazado.
+  readonly finalidades = signal<Finalidad[]>([]);
+  readonly causasMotivo = signal<CausaMotivo[]>([]);
   private medSearch$ = new Subject<string>();
 
   // ── Órdenes médicas ──
@@ -1249,6 +1277,17 @@ export class HistoriasComponent implements OnInit {
     this.svc.getUnidadesDispensacion()
       .pipe(catchError(() => of([] as UnidadDispensacion[])))
       .subscribe(u => this.unidades.set(u));
+
+    // Mismo criterio que arriba: si el catálogo no llega, la lista queda vacía
+    // y el campo se ve vacío. Lo que no se hace es preseleccionar una opción
+    // «razonable», que es exactamente como llegamos a reportar «10» y «13» en
+    // toda atención sin que nadie lo hubiera elegido.
+    this.svc.getFinalidades()
+      .pipe(catchError(() => of([] as Finalidad[])))
+      .subscribe(f => this.finalidades.set(f.filter(x => x.aplica_ac)));
+    this.svc.getCausasMotivo()
+      .pipe(catchError(() => of([] as CausaMotivo[])))
+      .subscribe(c => this.causasMotivo.set(c.filter(x => x.aplica_ac)));
 
     // Búsqueda de medicamentos con debounce
     this.medSearch$.pipe(

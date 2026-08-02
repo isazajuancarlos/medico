@@ -256,12 +256,31 @@ fn consulta_de(
         })
         .o_nada();
 
-    let causa = exigir!(
-        c.causa_externa.as_deref(),
-        "causa_externa",
-        "causa o motivo de la atención",
-        "13"
-    );
+    // La causa va como la finalidad y por lo mismo: el enum del sistema es la
+    // tabla anterior a la 948 entera. El supuesto ya NO es «13» —que no existe—
+    // sino «38», que es el mismo «enfermedad general» en la tabla nueva.
+    //
+    // Traducir aquí sí vale y en la migración no, y la diferencia importa: un
+    // supuesto lo pide el llamante, se emite solo con `permitir_supuestos` y
+    // queda anotado con su etiqueta. Reescribir la columna, en cambio, deja un
+    // código válido que nadie afirmó y que ya no detecta nada.
+    let donde_causa = Donde::ac(c.id, "causa_externa", "causa o motivo de la atención")
+        .supuesto("38");
+    let causa_dato = rec.codigo(c.causa_externa.as_deref(), &donde_causa, |v| {
+        if muv::causa_motivo_existe(v) {
+            return Ok(());
+        }
+        Err(format!(
+            "«{v}» no está en la tabla de causa o motivo del MUV (21 a 49). El \
+             sistema traía la tabla anterior a la 948, donde «13» era enfermedad \
+             general; hoy eso es el 38."
+        ))
+    });
+    let causa = if permisivo {
+        causa_dato.o_el_supuesto(Some("38"))
+    } else {
+        causa_dato.o_nada()
+    };
     let diagnostico = exigir!(
         c.diagnostico_principal.as_deref(),
         "diagnostico_principal",
@@ -395,7 +414,7 @@ mod pruebas {
             grupo_servicios: Some("01".into()),
             cod_servicio: Some(328),
             finalidad: Some("11".into()),
-            causa_externa: Some("13".into()),
+            causa_externa: Some("38".into()),
             diagnostico_principal: Some("A000".into()),
             diagnostico_relacionado1: None,
             diagnostico_relacionado2: None,
@@ -488,6 +507,45 @@ mod pruebas {
             Some("06"),
             "se devuelve tal cual: sustituirlo escondería lo que hay en la base"
         );
+    }
+
+    #[test]
+    fn la_causa_de_la_tabla_vieja_tambien_sale_en_el_cierre() {
+        // El mismo defecto en el campo de al lado. «13» era «enfermedad general»
+        // en la tabla anterior y no existe en la de la 948, donde ese concepto
+        // es el 38.
+        let mut c = completa(1, paciente(7, "1"));
+        c.causa_externa = Some("13".into());
+        let mut rec = Recolector::permitiendo_supuestos();
+        let doc = documento_ac(&institucion(), &[c], &mut rec);
+
+        let f = rec.faltantes();
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].campo, "causa_externa");
+        let motivo = f[0].motivo.as_deref().unwrap();
+        assert!(motivo.contains("21 a 49"), "{motivo}");
+        assert!(motivo.contains("38"), "dice cuál es hoy: {motivo}");
+        assert_eq!(
+            doc.usuarios[0].servicios.consultas[0].causa_motivo_atencion.as_deref(),
+            Some("13"),
+            "se devuelve tal cual, no se traduce por su cuenta"
+        );
+    }
+
+    #[test]
+    fn sin_causa_y_con_supuestos_entra_el_38_y_no_el_13() {
+        // El supuesto se actualizó con la tabla. Si hubiera quedado el «13», el
+        // camino permisivo produciría un archivo que el MUV rechaza — una salida
+        // de emergencia que no salva a nadie.
+        let mut c = completa(1, paciente(7, "1"));
+        c.causa_externa = None;
+        let mut rec = Recolector::permitiendo_supuestos();
+        let doc = documento_ac(&institucion(), &[c], &mut rec);
+        assert_eq!(
+            doc.usuarios[0].servicios.consultas[0].causa_motivo_atencion.as_deref(),
+            Some("38")
+        );
+        assert!(muv::causa_motivo_existe("38"), "y el supuesto es válido");
     }
 
     #[test]
