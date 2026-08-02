@@ -24,21 +24,31 @@ Backend **FastAPI + SQLModel + PostgreSQL** en `backend/`, frontend **Angular 21
 PrimeNG 21** en `frontend/`. Multi-institucional, con licencia por institución que
 decide qué módulos se ven.
 
-> **PrimeNG AQUÍ ES DEUDA, NO EL ESTÁNDAR — y no se sube de versión.** El stack de
-> todos los desarrollos es Rust (axum + SQLx/SQLite) con Angular empotrado en el
-> binario y **`@angular/material`**. `informes` ya cumple (Material 22.0.6);
-> medico no, y es el único que no.
+> **PrimeNG está SALIENDO, y Material ya está dentro** (#255, desde el
+> 2026-08-02). El stack de todos los desarrollos es Rust (axum + SQLx/SQLite) con
+> Angular empotrado en el binario y **`@angular/material`**. `informes` ya
+> cumple (22.1.0); medico está a medio camino y es el único que no.
 >
 > **`primeng` NO se actualiza a la 22 bajo ningún concepto**: la 22 dejó de ser
 > MIT —es «PrimeUI», comercial, con clave obligatoria que sin ella estampa
 > *«Invalid PrimeUI License»* sobre la aplicación—. Un binario que va offline a
 > casa de un cliente no puede llevar dentro una clave que caduca; se probó entero
 > en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
-> no 21 → 22. Queda en 21.1.2 hasta que se migre.
+> no 21 → 22. Queda en 21.1.2 hasta que salga del todo.
 >
-> Tamaño medido el 2026-08-01: 34 archivos, 29 componentes distintos, 284
-> importaciones. El grueso es `button` (30), `table` (25), `inputtext` (25),
-> `tag` (25), `toast` (21), `select` (21) y `api` (21).
+> Avance medido: **287 → 170** importaciones `from 'primeng/…'` (35 → 30
+> archivos), con `ng build` y las 82 pruebas del frontend en verde en cada lote.
+> Hechos: los dos servicios (avisos y confirmación), etiqueta, separador,
+> tooltip, mensaje y la pantalla de acceso. Queda lo caro: `button` (29),
+> `table` (25), `inputtext`/`textarea` (41), `select` (21), `dialog` (13) y la
+> cola. **La receta, las equivalencias y las seis trampas ya pagadas están en
+> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md)** — leerlo antes de seguir.
+>
+> Y el orden importa: **primero Material con Angular 21, después el salto a la
+> 22** (#254). Un cambio a la vez; si se hacen juntos y algo se rompe, no se sabe
+> cuál fue. Medido de paso: Angular 22 con PrimeNG 21 *sí* compila y pasa las
+> pruebas, así que había atajo — no se toma, porque deja una librería corriendo
+> fuera de su rango declarado en un producto que se instala offline.
 
 El eje del trabajo actual es la **cadena RIPS → FEV-RIPS → MUV**: producir el JSON
 de la Resolución 948 de 2026 y que el Mecanismo Único de Validación de MinSalud lo

@@ -18,15 +18,18 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 | | producto vivo | port en curso |
 |---|---|---|
 | **Backend** | FastAPI + SQLModel + PostgreSQL (`backend/`) | axum + SQLx + SQLite (`crates/`) |
-| **Interfaz** | Angular 21 + PrimeNG (`frontend/`) | la misma, **empotrada en el binario** |
+| **Interfaz** | Angular 21, saliendo de PrimeNG a Material (`frontend/`) | la misma, **empotrada en el binario** |
 | **Entrega** | proceso + base de datos | **un archivo** |
 | **Ramas** | `main`, `master` | `feat/*` |
 
-> **PrimeNG aquí es DEUDA, no el estándar.** El estándar de todos los
-> desarrollos es Angular con `@angular/material`; medico es el único que no
-> cumple, y la migración está pendiente. **No se sube `primeng` a la 22**: dejó
-> de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un binario que
-> vive offline en casa de un cliente no puede llevar dentro una clave que caduca.
+> **PrimeNG está saliendo.** El estándar de todos los desarrollos es Angular con
+> `@angular/material`; medico era el único que no cumplía y la migración está en
+> curso: 287 → 170 importaciones de `primeng`, con la compilación y las 82
+> pruebas en verde en cada lote. La receta y las trampas, en
+> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md). **No se sube `primeng` a la
+> 22**: dejó de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un
+> binario que vive offline en casa de un cliente no puede llevar dentro una clave
+> que caduca.
 
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
