@@ -40,6 +40,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras servicios + vocabulario barato | 170 | 30 |
 | tras rips, contrarreferencia y pacientes | 159 | 27 |
 | tras remisiones | 154 | 26 |
+| tras barra CRUD, cabecera, incapacidades y consentimiento | 140 | 22 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -68,6 +69,29 @@ Dos decisiones que lo hacen útil:
 
 **Discrimina, comprobado**: con un `throw` en el `ngOnInit` de una pantalla, el
 banco la señala a ella y solo a ella.
+
+## La segunda red: el guardián de las directivas mudas
+
+`src/app/directivas-de-material-cableadas.spec.ts`. Comprueba que una directiva
+de Material escrita en una plantilla esté **cableada** en los `imports` de su
+componente.
+
+Existe porque el banco de humo **no** llega ahí. Una directiva de Material se
+escribe casi siempre como atributo estático —`matTooltip="Ver"`,
+`matInput`, `matIconButton`, `mat-cell`—, y para Angular un atributo que ningún
+módulo reclama es un atributo corriente, como `title` o `data-x`. Sin el módulo:
+el compilador calla, `ng build` pasa, la pantalla monta, las pruebas quedan
+verdes, y la directiva **no hace nada**.
+
+Solo son mudos los atributos. Un elemento (`<mat-table>`) sin su módulo rompe la
+compilación, y un enlace (`[matTooltip]="x"`) da NG8002. El agujero es
+exactamente la forma más común.
+
+Lee el fuente con el glob de Vite y no monta nada, porque lo que hay que
+comprobar es **una ausencia en una lista**, y una ausencia no se ve ejecutando.
+Cada marca admite varios módulos —`MatInputModule` reexporta
+`MatFormFieldModule`— para no producir alarmas falsas (directiva 23), y lleva la
+misma guardia de recuento que el banco de humo.
 
 `src/entorno-de-pruebas.ts` suple `ResizeObserver`, que jsdom no trae y cualquier
 navegador sí. Lo destapó `agenda-medica`; lo pedirá igual Material
@@ -144,6 +168,56 @@ como el `pTemplate="emptymessage"` de `p-table`. El «no hay nada» va fuera de 
 tabla, y hay que ponerlo: una tabla sin filas y sin frase se lee como «todavía
 está cargando».
 
+## Los diálogos: dos patrones, y el segundo cambia el código
+
+`p-dialog` era declarativo —`[(visible)]`, contenido en la misma plantilla—.
+`MatDialog` es imperativo: el contenido es **otro componente** y se abre con una
+llamada. Eso obliga a partir la pantalla, y hay dos formas según lo que el
+diálogo haga:
+
+**(a) Solo muestra** (`incapacidades`, el detalle de `consentimiento`): el
+componente recibe el dato por `MAT_DIALOG_DATA`, no inyecta nada y no conoce a
+quien lo abrió.
+
+```ts
+constructor(@Inject(MAT_DIALOG_DATA) public d: Detalle) {}
+// …
+this.dialogo.open(CertificacionComponent, { data: d, width: '38rem', maxWidth: '95vw' });
+```
+
+**(b) Devuelve un dato** (la revocación de `consentimiento`): el campo vive
+**dentro** del diálogo y sale por `afterClosed()`.
+
+```html
+<button matButton="filled" [disabled]="!motivo.trim()" [mat-dialog-close]="motivo.trim()">
+```
+```ts
+.afterClosed().subscribe((motivo?: string) => { if (motivo) this.revocar(c, motivo); });
+```
+
+Con `p-dialog` ese texto era un campo de la pantalla anfitriona y el diálogo solo
+su envoltorio visible. La diferencia no es estética: cerrar por Escape devuelve
+`undefined`, y así no queda un motivo a medio escribir esperando al siguiente
+paciente.
+
+## Los colores: el input `color` de un botón no pinta nada
+
+El tema es **M3** (`azure-blue` prebuilt), y ahí el input `color` de `MatButton`
+**no tiene efecto** — lo dice la propia documentación de Material. Traducir
+`severity="danger"` a `color="warn"` compila, pasa las pruebas y deja el botón de
+eliminar en gris: un aviso que desaparece sin que nada falle.
+
+Lo destructivo y lo afirmativo van por CSS, con las clases `.peligro` y `.exito`
+(`#dc2626` / `#16a34a`), que es lo mismo que ya hacía `confirmar.service.ts`.
+
+## Lo que Material no trae y no merece un módulo
+
+- **`p-avatar`** (la inicial en un círculo de la cabecera) → un `<span>` con
+  `border-radius: 50%`. Traer un componente entero por esto es desproporcionado.
+- **`[loading]` de `p-button`** → el icono pasa a `pi pi-spin pi-spinner` y el
+  botón queda inerte. Las dos cosas, no solo la segunda: un botón que se apaga
+  sin decir por qué se lee como averiado.
+
 ## El calendario
 
 `provideNativeDateAdapter()` y `{ provide: MAT_DATE_LOCALE, useValue: 'es-CO' }`,
@@ -187,6 +261,14 @@ de diferencia.
    selector que `<p-confirmDialog />`, así que una sustitución por la forma
    camelCase se deja uno atrás.
 
+5-bis. **La directiva muda: cambiar el atributo sin cablear el módulo.** El
+   barrido de tooltips dejó `matTooltip` en cinco pantallas sin
+   `MatTooltipModule`, y estuvo un día así con todo en verde — es la trampa 4 al
+   revés (allí sobraba el elemento, aquí falta el módulo), y la mitad silenciosa
+   de las dos. Ya no puede repetirse: la caza
+   `directivas-de-material-cableadas.spec.ts`. **Al migrar una pantalla se
+   comprueba la lista de `imports`, no solo la plantilla.**
+
 6. **El banco de humo montaba una aplicación que no existía.** Traía su propia
    lista de proveedores, así que nada de `app.config.ts` estaba bajo prueba: lo
    destapó `/rips`, que falló por un `DateAdapter` que *sí* estaba en la
@@ -203,7 +285,8 @@ de diferencia.
 
 ## Lo que queda, y por qué no se hace con sustitución ciega
 
-170 importaciones, todas de los cuatro vocabularios caros:
+140 importaciones, todas de los cuatro vocabularios caros (los usos son los que
+había al empezar; van bajando con cada lote):
 
 | pendiente | usos | dificultad |
 |---|---|---|
@@ -216,9 +299,18 @@ de diferencia.
 
 Estos van **pantalla por pantalla y a mano**, de la más pequeña a la mayor, con
 `ng build` y las pruebas entre lote y lote. Hechas ya con este método: `login`,
-`rips`, `contrarreferencia`, `pacientes` y `remisiones` — las tablas de
-`contrarreferencia` y `pacientes` fijan los dos patrones de paginación, y
-`remisiones` fija el del `mat-select`.
+`rips`, `contrarreferencia`, `pacientes`, `remisiones`, `incapacidades`,
+`consentimiento`, y las dos piezas compartidas (`barra-crud` y `header`). Las
+que fijan un patrón:
+
+| pantalla | fija |
+|---|---|
+| `contrarreferencia` | tabla con paginación en cliente |
+| `pacientes` | tabla con paginación del servidor |
+| `remisiones` | el `mat-select` |
+| `incapacidades` | el diálogo que solo muestra |
+| `consentimiento` | el diálogo que devuelve un dato |
+| `barra-crud` | el botón de icono y el color por CSS |
 
 ## Lo que NO se toca en esta migración
 
