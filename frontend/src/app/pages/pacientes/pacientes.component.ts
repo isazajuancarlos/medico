@@ -1,11 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { Router } from '@angular/router';
 import { PacienteFormComponent } from './paciente-form.component';
 import { PacienteService } from '../../services/paciente.service';
@@ -15,70 +17,85 @@ import { PaginatedResponse } from '../../models/common.models';
 @Component({
   selector: 'app-pacientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule, EtiquetaComponent, MatTooltipModule, PacienteFormComponent],
+  imports: [CommonModule, FormsModule, MatTableModule, MatPaginatorModule, MatButtonModule,
+            MatFormFieldModule, MatInputModule, EtiquetaComponent, MatTooltipModule,
+            PacienteFormComponent],
   template: `
     <div class="page-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2 class="page-title" style="margin-bottom: 0">Pacientes</h2>
-        <p-button label="Nuevo Paciente" icon="pi pi-plus" size="small" (onClick)="nuevo()" />
+        <button matButton="filled" (click)="nuevo()">
+          <i class="pi pi-plus"></i> Nuevo Paciente
+        </button>
       </div>
 
-      <div style="margin-bottom: 1rem;">
+      <mat-form-field appearance="outline" class="buscador">
+        <mat-label>Buscar</mat-label>
         <input
-          pInputText
+          matInput
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearch($event)"
-          placeholder="Buscar por nombre, apellido o identificación..."
-          style="width: 100%; max-width: 400px;"
+          placeholder="Nombre, apellido o identificación..."
         />
-      </div>
+      </mat-form-field>
 
-      <p-table
-        [value]="pacientes()"
-        [loading]="loading()"
-        [paginator]="true"
-        [rows]="pageSize"
-        [totalRecords]="total()"
-        [lazy]="true"
-        (onLazyLoad)="loadPacientes($event)"
-        dataKey="id"
-        styleClass="p-datatable-sm"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th>Identificación</th>
-            <th>Nombre Completo</th>
-            <th>Fecha Nacimiento</th>
-            <th>Celular</th>
-            <th>Tipo Usuario</th>
-            <th>Acciones</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-p>
-          <tr>
-            <td>{{ p.tipo_id }} {{ p.identificacion }}</td>
-            <td>{{ p.nombre1 }} {{ p.nombre2 }} {{ p.apellido1 }} {{ p.apellido2 }}</td>
-            <td>{{ p.fecha_nacimiento }}</td>
-            <td>{{ p.celular }}</td>
-            <td>
-              <span class="badge" [class]="getTipoClass(p.tipo_usuario)">
-                {{ getTipoLabel(p.tipo_usuario) }}
-              </span>
-            </td>
-            <td>
-              <p-button icon="pi pi-eye" [text]="true" size="small" matTooltip="Ver Historia"
-                (onClick)="verHistoria(p)" />
-              <p-button icon="pi pi-pencil" [text]="true" size="small" matTooltip="Editar"
-                severity="secondary" (onClick)="editar(p)" />
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr><td colspan="6" style="text-align:center; padding: 2rem; color: #64748b">
-            No se encontraron pacientes
-          </td></tr>
-        </ng-template>
-      </p-table>
+      <table mat-table [dataSource]="pacientes()" class="tabla">
+        <ng-container matColumnDef="identificacion">
+          <th mat-header-cell *matHeaderCellDef>Identificación</th>
+          <td mat-cell *matCellDef="let p">{{ p.tipo_id }} {{ p.identificacion }}</td>
+        </ng-container>
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef>Nombre Completo</th>
+          <td mat-cell *matCellDef="let p">
+            {{ p.nombre1 }} {{ p.nombre2 }} {{ p.apellido1 }} {{ p.apellido2 }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="nacimiento">
+          <th mat-header-cell *matHeaderCellDef>Fecha Nacimiento</th>
+          <td mat-cell *matCellDef="let p">{{ p.fecha_nacimiento }}</td>
+        </ng-container>
+        <ng-container matColumnDef="celular">
+          <th mat-header-cell *matHeaderCellDef>Celular</th>
+          <td mat-cell *matCellDef="let p">{{ p.celular }}</td>
+        </ng-container>
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef>Tipo Usuario</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="badge" [class]="getTipoClass(p.tipo_usuario)">
+              {{ getTipoLabel(p.tipo_usuario) }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let p">
+            <button matIconButton matTooltip="Ver Historia" (click)="verHistoria(p)">
+              <i class="pi pi-eye"></i>
+            </button>
+            <button matIconButton matTooltip="Editar" (click)="editar(p)">
+              <i class="pi pi-pencil"></i>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+        <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+      </table>
+
+      @if (!loading() && pacientes().length === 0) {
+        <p class="vacio">No se encontraron pacientes</p>
+      }
+
+      <!-- Paginación DEL SERVIDOR, como antes: se le dice el total y él avisa de
+           la página pedida. No se le da un MatTableDataSource, que pagina en
+           cliente sobre lo que ya tiene — con miles de pacientes eso mostraría
+           veinte y diría que no hay más. -->
+      <mat-paginator
+        [length]="total()"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[10, 20, 50]"
+        (page)="alPaginar($event)"
+      />
     </div>
 
     <app-paciente-form
@@ -88,11 +105,17 @@ import { PaginatedResponse } from '../../models/common.models';
       (guardado)="alGuardar()"
     />
   `,
+  styles: [`
+    .tabla { width: 100%; }
+    .buscador { width: 100%; max-width: 400px; margin-bottom: 1rem; }
+    .vacio { text-align: center; padding: 2rem; color: #64748b; }
+  `],
 })
 export class PacientesComponent implements OnInit {
   private svc = inject(PacienteService);
   private router = inject(Router);
 
+  readonly columnas = ['identificacion', 'nombre', 'nacimiento', 'celular', 'tipo', 'acciones'];
   pacientes = signal<Patient[]>([]);
   loading = signal(true);
   total = signal(0);
@@ -102,14 +125,14 @@ export class PacientesComponent implements OnInit {
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.loadPacientes({ first: 0, rows: this.pageSize });
+    this.loadPacientes(0, this.pageSize);
   }
 
-  loadPacientes(event: TableLazyLoadEvent): void {
+  /** `first` es el índice de la primera fila; `rows`, el tamaño de página. */
+  loadPacientes(first: number, rows: number): void {
     this.loading.set(true);
-    const first = event.first ?? 0;
-    const rows = event.rows ?? this.pageSize;
     this.primerVisible = first;
+    this.pageSize = rows;
     const page = Math.floor(first / rows) + 1;
     this.svc.list(page, rows, this.searchQuery || undefined).subscribe({
       next: (r: PaginatedResponse<Patient>) => {
@@ -121,9 +144,13 @@ export class PacientesComponent implements OnInit {
     });
   }
 
+  alPaginar(e: PageEvent): void {
+    this.loadPacientes(e.pageIndex * e.pageSize, e.pageSize);
+  }
+
   onSearch(_q: string): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => this.loadPacientes({ first: 0, rows: this.pageSize, filters: {} }), 400);
+    this.searchTimer = setTimeout(() => this.loadPacientes(0, this.pageSize), 400);
   }
 
   formularioAbierto = signal(false);
@@ -146,7 +173,7 @@ export class PacientesComponent implements OnInit {
   /** Tras guardar se recarga la página actual, no la primera: perder el sitio
    *  en una lista de miles obliga a volver a buscar. */
   alGuardar(): void {
-    this.loadPacientes({ first: this.primerVisible, rows: this.pageSize });
+    this.loadPacientes(this.primerVisible, this.pageSize);
   }
 
   getTipoLabel(tipo: string): string {

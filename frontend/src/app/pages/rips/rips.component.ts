@@ -1,16 +1,21 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
-import { DatePickerModule } from 'primeng/datepicker';
-import { MessageModule } from 'primeng/message';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MensajeComponent } from '../../shared/ui/mensaje.component';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 @Component({
   selector: 'app-rips',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonModule, CardModule, DatePickerModule, MessageModule],
+  imports: [
+    CommonModule, FormsModule, MatButtonModule, MatDatepickerModule,
+    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MensajeComponent,
+  ],
   template: `
     <div class="page-card">
       <h2 class="page-title">Generación de RIPS</h2>
@@ -19,32 +24,46 @@ import { HttpClient, HttpParams } from '@angular/common/http';
       </p>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 500px; margin-bottom: 1.5rem;">
-        <div>
-          <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Fecha Inicio</label>
-          <p-datepicker [(ngModel)]="fechaInicio" dateFormat="yy-mm-dd" [showIcon]="true" styleClass="w-full" />
-        </div>
-        <div>
-          <label style="display:block; font-weight:500; margin-bottom:0.4rem;">Fecha Fin</label>
-          <p-datepicker [(ngModel)]="fechaFin" dateFormat="yy-mm-dd" [showIcon]="true" styleClass="w-full" />
-        </div>
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Inicio</mat-label>
+          <input matInput [matDatepicker]="calIni" [(ngModel)]="fechaInicio" />
+          <mat-datepicker-toggle matIconSuffix [for]="calIni" />
+          <mat-datepicker #calIni />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha Fin</mat-label>
+          <input matInput [matDatepicker]="calFin" [(ngModel)]="fechaFin" />
+          <mat-datepicker-toggle matIconSuffix [for]="calFin" />
+          <mat-datepicker #calFin />
+        </mat-form-field>
       </div>
 
-      <p-button
-        label="Generar RIPS"
-        icon="pi pi-download"
-        [loading]="loading()"
-        [disabled]="!fechaInicio || !fechaFin"
-        (onClick)="generarRips()"
-      />
+      <button
+        matButton="filled"
+        [disabled]="!fechaInicio || !fechaFin || loading()"
+        (click)="generarRips()"
+      >
+        @if (loading()) {
+          <mat-spinner diameter="18" />
+        } @else {
+          <i class="pi pi-download"></i>
+        }
+        Generar RIPS
+      </button>
 
       @if (error()) {
-        <p-message severity="error" [text]="error()!" styleClass="w-full mt-3" />
+        <x-mensaje severity="error" [text]="error()!" />
       }
       @if (success()) {
-        <p-message severity="success" text="RIPS generado exitosamente. Descargando..." styleClass="w-full mt-3" />
+        <x-mensaje severity="success" text="RIPS generado exitosamente. Descargando..." />
       }
     </div>
   `,
+  styles: [`
+    x-mensaje { display: block; margin-top: 1rem; }
+    button i { margin-right: 0.4rem; }
+    mat-spinner { display: inline-block; margin-right: 0.4rem; }
+  `],
 })
 export class RipsComponent {
   private http = inject(HttpClient);

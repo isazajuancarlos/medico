@@ -29,6 +29,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Routes } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { appConfig } from './app.config';
 import { routes } from './app.routes';
 
 /**
@@ -116,11 +117,18 @@ describe('todas las pantallas se montan', () => {
       TestBed.configureTestingModule({
         imports: [componente],
         providers: [
+          // **Los proveedores de la aplicación de verdad**, no una lista
+          // paralela. Se descubrió montando `/rips`: el calendario de Material
+          // exige un `DateAdapter` que sí está en `appConfig`, y el banco
+          // fallaba por no tenerlo — o sea que cualquier proveedor global era un
+          // punto ciego suyo, y una lista propia se desincroniza en el primer
+          // cambio y empieza a probar una aplicación que no existe.
+          ...appConfig.providers,
+          // Y encima lo propio de una prueba. Van DESPUÉS a propósito: en
+          // Angular gana el último, así que estos pisan a los de arriba.
           provideHttpClient(),
           provideHttpClientTesting(),
           provideRouter([]),
-          // Material anima; sin esto los diálogos y los campos de formulario
-          // lanzan al montarse y el fallo parecería de la pantalla.
           provideNoopAnimations(),
         ],
       });
