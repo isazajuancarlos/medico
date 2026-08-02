@@ -1,4 +1,12 @@
-# CLAUDE.md
+# CLAUDE.md — medico
+
+> **Configuración general: `~/.claude/CLAUDE.md`** — reglas que no se rompen,
+> las directivas numeradas y las máquinas montadas. Se carga en toda sesión y
+> **no se copia aquí**; este archivo lleva SOLO lo propio de medico.
+>
+> **Esta instancia se arranca desde esta carpeta**: `cd /mnt/data/medico && claude`.
+> Desde el 2026-08-01 no se trabajan varios proyectos desde una sola sesión — y
+> aquí importa doblemente: `/security-review` construye su diff con el `cwd`.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
