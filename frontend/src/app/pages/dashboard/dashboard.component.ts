@@ -1,14 +1,15 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { CardModule } from 'primeng/card';
 import { AuthService } from '../../core/auth.service';
 import { KPIs } from '../../models/common.models';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CardModule],
+  // `CardModule` de PrimeNG estaba importado y NO se usaba: las tarjetas son
+  // `div.kpi-card` con CSS propio. No hacía falta traducirlo a `mat-card`.
+  imports: [CommonModule],
   template: `
     <div class="page-card">
       <h2 class="page-title">

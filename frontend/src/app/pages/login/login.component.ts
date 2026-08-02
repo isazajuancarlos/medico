@@ -3,17 +3,18 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/auth.service';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { CardModule } from 'primeng/card';
-import { MessageModule } from 'primeng/message';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconButton } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MensajeComponent } from '../../shared/ui/mensaje.component';
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule,
-    PasswordModule, CardModule, MessageModule,
+    CommonModule, ReactiveFormsModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatIconButton, MatProgressSpinnerModule, MensajeComponent,
   ],
   template: `
     <div class="login-wrapper">
@@ -25,42 +26,40 @@ import { MessageModule } from 'primeng/message';
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
-          <div class="field">
-            <label for="email">Correo</label>
-            <input
-              id="email"
-              pInputText
-              type="email"
-              formControlName="email"
-              placeholder="correo@institucion.co"
-              class="w-full"
-            />
-          </div>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Correo</mat-label>
+            <input matInput id="email" type="email" formControlName="email"
+                   placeholder="correo@institucion.co" autocomplete="username" />
+          </mat-form-field>
 
-          <div class="field">
-            <label for="clave">Contraseña</label>
-            <p-password
-              id="clave"
-              formControlName="clave"
-              placeholder="Ingrese su contraseña"
-              [feedback]="false"
-              [toggleMask]="true"
-              styleClass="w-full"
-            />
-          </div>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Contraseña</mat-label>
+            <input matInput id="clave" [type]="verClave ? 'text' : 'password'"
+                   formControlName="clave" placeholder="Ingrese su contraseña"
+                   autocomplete="current-password" />
+            <!-- El ojo lo traía p-password con toggleMask; Material no lo trae,
+                 y sin él no hay forma de comprobar lo que se tecleó en un
+                 teclado de consultorio. Son cuatro líneas. -->
+            <button matIconButton matSuffix type="button" (click)="verClave = !verClave"
+                    [attr.aria-label]="verClave ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    [attr.aria-pressed]="verClave">
+              <i class="pi" [class.pi-eye]="!verClave" [class.pi-eye-slash]="verClave"></i>
+            </button>
+          </mat-form-field>
 
           @if (errorMessage) {
-            <p-message severity="error" [text]="errorMessage" styleClass="w-full mb-3" />
+            <x-mensaje severity="error" [text]="errorMessage" />
           }
 
-          <p-button
-            type="submit"
-            label="Iniciar Sesión"
-            icon="pi pi-sign-in"
-            [loading]="loading"
-            [disabled]="form.invalid"
-            styleClass="w-full"
-          />
+          <button matButton="filled" type="submit" class="w-full boton-entrar"
+                  [disabled]="form.invalid || loading">
+            @if (loading) {
+              <mat-spinner diameter="18" />
+            } @else {
+              <i class="pi pi-sign-in"></i>
+            }
+            Iniciar Sesión
+          </button>
         </form>
       </div>
     </div>
@@ -82,9 +81,9 @@ import { MessageModule } from 'primeng/message';
     }
     .login-logo h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0; }
     .login-logo p { color: #64748b; font-size: 0.875rem; margin: 0.25rem 0 0; }
-    .field { margin-bottom: 1.25rem; }
-    .field label { display: block; font-weight: 500; margin-bottom: 0.4rem; color: #374151; font-size: 0.875rem; }
-    ::ng-deep .field input, ::ng-deep .field .p-password { width: 100%; }
+    .w-full { width: 100%; }
+    .boton-entrar { margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; justify-content: center; }
+    x-mensaje { display: block; margin-bottom: 1rem; }
   `]
 })
 export class LoginComponent {
@@ -99,6 +98,7 @@ export class LoginComponent {
 
   loading = false;
   errorMessage = '';
+  verClave = false;
 
   onSubmit(): void {
     if (this.form.invalid) return;
