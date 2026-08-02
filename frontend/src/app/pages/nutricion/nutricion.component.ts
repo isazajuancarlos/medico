@@ -1,13 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { SelectModule } from 'primeng/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { Confirmar } from '../../shared/ui/confirmar.service';
@@ -23,9 +23,8 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, MatTooltipModule, SelectModule,
-    MatDividerModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -34,11 +33,18 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Nutrición Clínica</h2>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <p-select [(ngModel)]="filtroRiesgo" [options]="opcionesRiesgo"
-              optionLabel="label" optionValue="value"
-              (onChange)="cargar()" placeholder="Riesgo nutricional" style="width:185px" />
-            <p-button label="Nueva valoración" icon="pi pi-plus" (onClick)="abrirNueva()" />
+          <div style="display:flex;gap:0.5rem;align-items:flex-start">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:185px">
+              <mat-label>Riesgo nutricional</mat-label>
+              <mat-select [(ngModel)]="filtroRiesgo" (selectionChange)="cargar()">
+                @for (o of opcionesRiesgo; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button matButton="filled" (click)="abrirNueva()">
+              <i class="pi pi-plus"></i> Nueva valoración
+            </button>
           </div>
         </div>
 
@@ -50,57 +56,73 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
             <p>No hay valoraciones nutricionales registradas.</p>
           </div>
         } @else {
-          <p-table [value]="lista()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Nutricionista</th>
-                <th>Fecha</th>
-                <th style="text-align:center">Peso</th>
-                <th style="text-align:center">IMC</th>
-                <th style="text-align:center">Screening</th>
-                <th style="text-align:center">Riesgo</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-v>
-              <tr>
-                <td>
-                  <strong>{{ v.paciente_nombre || '—' }}</strong>
-                  @if (v.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ v.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ v.nutricionista_nombre || '—' }}</td>
-                <td style="font-size:0.85rem">{{ v.fecha_valoracion | date:'dd/MM/yyyy' }}</td>
-                <td style="text-align:center;font-size:0.85rem">{{ v.peso }} kg</td>
-                <td style="text-align:center">
-                  <span [class]="'imc-badge imc-' + imcCategoria(v.imc)">
-                    {{ v.imc | number:'1.1-1' }}
-                  </span>
-                </td>
-                <td style="text-align:center;font-size:0.82rem">{{ v.screening_nutricional }}</td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="v.riesgo_nutricional" [severity]="riesgoSeverity(v.riesgo_nutricional)" />
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-eye" [text]="true" size="small"
-                    matTooltip="Ver detalle" (onClick)="abrirDetalle(v)" />
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    matTooltip="Editar" (onClick)="abrirEditar(v)" />
-                  <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    matTooltip="Eliminar" (onClick)="confirmarEliminar(v)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="lista()" class="tabla">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let v">
+                <strong>{{ v.paciente_nombre || '—' }}</strong>
+                @if (v.paciente_identificacion) {
+                  <div style="font-size:0.78rem;color:#94a3b8">{{ v.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="nutricionista">
+              <th mat-header-cell *matHeaderCellDef>Nutricionista</th>
+              <td mat-cell *matCellDef="let v" style="font-size:0.85rem">{{ v.nutricionista_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let v" style="font-size:0.85rem">
+                {{ v.fecha_valoracion | date:'dd/MM/yyyy' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="peso">
+              <th mat-header-cell *matHeaderCellDef class="centro">Peso</th>
+              <td mat-cell *matCellDef="let v" class="centro" style="font-size:0.85rem">{{ v.peso }} kg</td>
+            </ng-container>
+            <ng-container matColumnDef="imc">
+              <th mat-header-cell *matHeaderCellDef class="centro">IMC</th>
+              <td mat-cell *matCellDef="let v" class="centro">
+                <span [class]="'imc-badge imc-' + imcCategoria(v.imc)">{{ v.imc | number:'1.1-1' }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="screening">
+              <th mat-header-cell *matHeaderCellDef class="centro">Screening</th>
+              <td mat-cell *matCellDef="let v" class="centro" style="font-size:0.82rem">
+                {{ v.screening_nutricional }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="riesgo">
+              <th mat-header-cell *matHeaderCellDef class="centro">Riesgo</th>
+              <td mat-cell *matCellDef="let v" class="centro">
+                <x-etiqueta [value]="v.riesgo_nutricional" [severity]="riesgoSeverity(v.riesgo_nutricional)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let v" class="centro">
+                <button matIconButton matTooltip="Ver detalle" (click)="abrirDetalle(v)">
+                  <i class="pi pi-eye"></i>
+                </button>
+                <button matIconButton matTooltip="Editar" (click)="abrirEditar(v)">
+                  <i class="pi pi-file-edit"></i>
+                </button>
+                <button matIconButton class="peligro" matTooltip="Eliminar" (click)="confirmarEliminar(v)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
         }
       }
 
       <!-- ═══════════════════════════════════ FORMULARIO ═ -->
       @if (vista() === 'valoracion') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">
             {{ editando() ? 'Editar valoración' : 'Nueva valoración nutricional' }}
           </h2>
@@ -112,21 +134,25 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           @if (!editando()) {
             <div class="form-section">
               <div class="section-label">Paciente</div>
-              <div style="display:flex;gap:0.5rem;align-items:flex-end">
-                <div class="field" style="flex:1">
-                  <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
+              <div style="display:flex;gap:0.5rem;align-items:flex-start">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                  <mat-label>Paciente</mat-label>
+                  <input matInput [(ngModel)]="busquedaPaciente"
                     placeholder="Nombre o identificación..." (keyup.enter)="buscarPaciente()" />
-                </div>
-                <p-button label="Buscar" icon="pi pi-search"
-                  [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+                </mat-form-field>
+                <button matButton="filled" [disabled]="buscandoPaciente()" (click)="buscarPaciente()">
+                  <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i> Buscar
+                </button>
               </div>
               @if (resultadosPaciente().length > 0) {
-                <div style="margin-top:0.75rem">
-                  <p-select [(ngModel)]="pacienteSeleccionado"
-                    [options]="resultadosPaciente()" optionLabel="nombre_completo"
-                    [filter]="true" placeholder="Seleccione paciente..."
-                    class="w-full" style="width:100%" />
-                </div>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
+                  <mat-label>Seleccione paciente…</mat-label>
+                  <mat-select [(ngModel)]="pacienteSeleccionado">
+                    @for (p of resultadosPaciente(); track p.id) {
+                      <mat-option [value]="p">{{ p.nombre_completo }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
               }
               @if (pacienteSeleccionado) {
                 <div class="paciente-chip">
@@ -149,16 +175,16 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           <div class="form-section">
             <div class="section-label">Datos antropométricos</div>
             <div class="grid-4">
-              <div class="field">
-                <label>Peso (kg) *</label>
-                <input pInputText [(ngModel)]="f.peso" type="number" step="0.1"
-                  class="w-full" placeholder="70.0" (input)="calcularIMC()" />
-              </div>
-              <div class="field">
-                <label>Talla (m) *</label>
-                <input pInputText [(ngModel)]="f.talla" type="number" step="0.01"
-                  class="w-full" placeholder="1.70" (input)="calcularIMC()" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Peso (kg) *</mat-label>
+                <input matInput [(ngModel)]="f.peso" type="number" step="0.1"
+                  placeholder="70.0" (input)="calcularIMC()" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Talla (m) *</mat-label>
+                <input matInput [(ngModel)]="f.talla" type="number" step="0.01"
+                  placeholder="1.70" (input)="calcularIMC()" />
+              </mat-form-field>
               <div class="field">
                 <label>IMC (calculado)</label>
                 <div class="imc-display" [class]="'imc-' + imcCategoria(f.imc || 0)">
@@ -168,26 +194,24 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
                   }
                 </div>
               </div>
-              <div class="field">
-                <label>Circunferencia de brazo (cm)</label>
-                <input pInputText [(ngModel)]="f.circunferencia_brazo" type="number"
-                  step="0.1" class="w-full" placeholder="Opcional" />
-              </div>
-              <div class="field">
-                <label>Pliegue tricipital (mm)</label>
-                <input pInputText [(ngModel)]="f.pliegue_tricipital" type="number"
-                  step="0.1" class="w-full" placeholder="Opcional" />
-              </div>
-              <div class="field">
-                <label>Albúmina (g/dL)</label>
-                <input pInputText [(ngModel)]="f.albumina" type="number"
-                  step="0.1" class="w-full" placeholder="Opcional" />
-              </div>
-              <div class="field">
-                <label>Prealbúmina (mg/dL)</label>
-                <input pInputText [(ngModel)]="f.prealbumina" type="number"
-                  step="0.1" class="w-full" placeholder="Opcional" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Circunferencia de brazo (cm)</mat-label>
+                <input matInput [(ngModel)]="f.circunferencia_brazo" type="number"
+                  step="0.1" placeholder="Opcional" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Pliegue tricipital (mm)</mat-label>
+                <input matInput [(ngModel)]="f.pliegue_tricipital" type="number"
+                  step="0.1" placeholder="Opcional" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Albúmina (g/dL)</mat-label>
+                <input matInput [(ngModel)]="f.albumina" type="number" step="0.1" placeholder="Opcional" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Prealbúmina (mg/dL)</mat-label>
+                <input matInput [(ngModel)]="f.prealbumina" type="number" step="0.1" placeholder="Opcional" />
+              </mat-form-field>
             </div>
           </div>
 
@@ -197,23 +221,26 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           <div class="form-section">
             <div class="section-label">Screening nutricional</div>
             <div class="grid-3">
-              <div class="field">
-                <label>Herramienta de screening</label>
-                <p-select [(ngModel)]="f.screening_nutricional"
-                  [options]="opcionesScreening" optionLabel="label" optionValue="value"
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Puntaje obtenido</label>
-                <input pInputText [(ngModel)]="f.puntaje_screening" type="number"
-                  class="w-full" placeholder="0" />
-              </div>
-              <div class="field">
-                <label>Riesgo nutricional</label>
-                <p-select [(ngModel)]="f.riesgo_nutricional"
-                  [options]="opcionesRiesgo.slice(1)" optionLabel="label" optionValue="value"
-                  class="w-full" style="width:100%" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Herramienta de screening</mat-label>
+                <mat-select [(ngModel)]="f.screening_nutricional">
+                  @for (o of opcionesScreening; track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Puntaje obtenido</mat-label>
+                <input matInput [(ngModel)]="f.puntaje_screening" type="number" placeholder="0" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Riesgo nutricional</mat-label>
+                <mat-select [(ngModel)]="f.riesgo_nutricional">
+                  @for (o of riesgosElegibles; track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             </div>
           </div>
 
@@ -223,35 +250,34 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           <div class="form-section">
             <div class="section-label">Diagnóstico y requerimientos</div>
             <div class="form-grid">
-              <div class="field" style="grid-column:1/-1">
-                <label>Diagnóstico nutricional *</label>
-                <textarea pTextarea [(ngModel)]="f.diagnostico_nutricional" rows="3" class="w-full"
+              <mat-form-field appearance="outline" style="grid-column:1/-1">
+                <mat-label>Diagnóstico nutricional *</mat-label>
+                <textarea matInput [(ngModel)]="f.diagnostico_nutricional" rows="3"
                   placeholder="Estado nutricional actual, deficiencias identificadas..."></textarea>
-              </div>
-              <div class="field">
-                <label>Requerimiento calórico (kcal/día)</label>
-                <input pInputText [(ngModel)]="f.requerimiento_calorico" type="number"
-                  class="w-full" placeholder="2000" />
-              </div>
-              <div class="field">
-                <label>Requerimiento proteico (g/día)</label>
-                <input pInputText [(ngModel)]="f.requerimiento_proteico" type="number"
-                  class="w-full" placeholder="80" />
-              </div>
-              <div class="field" style="grid-column:1/-1">
-                <label>Observaciones</label>
-                <textarea pTextarea [(ngModel)]="f.observaciones" rows="3" class="w-full"
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Requerimiento calórico (kcal/día)</mat-label>
+                <input matInput [(ngModel)]="f.requerimiento_calorico" type="number" placeholder="2000" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Requerimiento proteico (g/día)</mat-label>
+                <input matInput [(ngModel)]="f.requerimiento_proteico" type="number" placeholder="80" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="grid-column:1/-1">
+                <mat-label>Observaciones</mat-label>
+                <textarea matInput [(ngModel)]="f.observaciones" rows="3"
                   placeholder="Observaciones adicionales de la valoración..."></textarea>
-              </div>
+              </mat-form-field>
             </div>
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button [label]="editando() ? 'Guardar cambios' : 'Registrar valoración'"
-              icon="pi pi-check" [loading]="guardando()"
-              [disabled]="!f.peso || !f.talla || !f.diagnostico_nutricional || (!editando() && !pacienteSeleccionado)"
-              (onClick)="guardar()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="guardar()"
+              [disabled]="guardando() || !f.peso || !f.talla || !f.diagnostico_nutricional || (!editando() && !pacienteSeleccionado)">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i>
+              {{ editando() ? 'Guardar cambios' : 'Registrar valoración' }}
+            </button>
           </div>
         </div>
       }
@@ -259,11 +285,12 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
       <!-- ═══════════════════════════════════════ DETALLE ═ -->
       @if (vista() === 'detalle' && actual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">Valoración Nutricional</h2>
           <div style="margin-left:auto;display:flex;gap:0.5rem">
-            <p-button icon="pi pi-file-edit" [text]="true" label="Editar valoración"
-              (onClick)="abrirEditar(actual()!)" />
+            <button matButton (click)="abrirEditar(actual()!)">
+              <i class="pi pi-file-edit"></i> Editar valoración
+            </button>
           </div>
         </div>
 
@@ -351,52 +378,57 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           @if (!mostrarFormPlan()) {
             <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:8px">
               <span style="color:#64748b;font-size:0.875rem">No hay plan de alimentación registrado para esta valoración.</span>
-              <p-button label="Crear plan" icon="pi pi-plus" size="small"
-                (onClick)="mostrarFormPlan.set(true)" />
+              <button matButton="filled" (click)="mostrarFormPlan.set(true)">
+                <i class="pi pi-plus"></i> Crear plan
+              </button>
             </div>
           } @else {
             <div class="form-card" style="margin-top:0">
               <div class="grid-3" style="margin-bottom:1rem">
-                <div class="field">
-                  <label>Tipo de dieta *</label>
-                  <p-select [(ngModel)]="pForm.tipo_dieta"
-                    [options]="opcionesDieta" optionLabel="label" optionValue="value"
-                    class="w-full" style="width:100%" />
-                </div>
-                <div class="field">
-                  <label>Vía de alimentación</label>
-                  <p-select [(ngModel)]="pForm.via_alimentacion"
-                    [options]="opcionesVia" optionLabel="label" optionValue="value"
-                    class="w-full" style="width:100%" />
-                </div>
-                <div class="field">
-                  <label>Calorías totales (kcal/día) *</label>
-                  <input pInputText [(ngModel)]="pForm.calorias_totales" type="number"
-                    class="w-full" placeholder="2000" />
-                </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo de dieta *</mat-label>
+                  <mat-select [(ngModel)]="pForm.tipo_dieta">
+                    @for (o of opcionesDieta; track o.value) {
+                      <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Vía de alimentación</mat-label>
+                  <mat-select [(ngModel)]="pForm.via_alimentacion">
+                    @for (o of opcionesVia; track o.value) {
+                      <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Calorías totales (kcal/día) *</mat-label>
+                  <input matInput [(ngModel)]="pForm.calorias_totales" type="number" placeholder="2000" />
+                </mat-form-field>
               </div>
               <div class="form-grid" style="margin-bottom:1rem">
-                <div class="field">
-                  <label>Restricciones alimentarias</label>
-                  <textarea pTextarea [(ngModel)]="pForm.restricciones" rows="3" class="w-full"
+                <mat-form-field appearance="outline">
+                  <mat-label>Restricciones alimentarias</mat-label>
+                  <textarea matInput [(ngModel)]="pForm.restricciones" rows="3"
                     placeholder="Alergias, intolerancias, restricciones médicas..."></textarea>
-                </div>
-                <div class="field">
-                  <label>Suplementos indicados</label>
-                  <textarea pTextarea [(ngModel)]="pForm.suplementos" rows="3" class="w-full"
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Suplementos indicados</mat-label>
+                  <textarea matInput [(ngModel)]="pForm.suplementos" rows="3"
                     placeholder="Vitaminas, minerales, suplementos proteicos..."></textarea>
-                </div>
-                <div class="field" style="grid-column:1/-1">
-                  <label>Observaciones del plan</label>
-                  <textarea pTextarea [(ngModel)]="pForm.observaciones" rows="2" class="w-full"
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="grid-column:1/-1">
+                  <mat-label>Observaciones del plan</mat-label>
+                  <textarea matInput [(ngModel)]="pForm.observaciones" rows="2"
                     placeholder="Indicaciones adicionales..."></textarea>
-                </div>
+                </mat-form-field>
               </div>
               <div style="display:flex;gap:0.5rem;justify-content:flex-end">
-                <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormPlan.set(false)" />
-                <p-button label="Guardar plan" icon="pi pi-check"
-                  [loading]="guardandoPlan()" [disabled]="!pForm.tipo_dieta || !pForm.calorias_totales"
-                  (onClick)="guardarPlan()" />
+                <button matButton (click)="mostrarFormPlan.set(false)">Cancelar</button>
+                <button matButton="filled" (click)="guardarPlan()"
+                  [disabled]="guardandoPlan() || !pForm.tipo_dieta || !pForm.calorias_totales">
+                  <i [class]="guardandoPlan() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Guardar plan
+                </button>
               </div>
             </div>
           }
@@ -409,8 +441,9 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
               </div>
               <div style="display:flex;align-items:center;gap:0.75rem">
                 <span class="plan-kcal">{{ planActual()!.calorias_totales }} kcal/día</span>
-                <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                  matTooltip="Editar plan" (onClick)="editarPlanActual()" />
+                <button matIconButton matTooltip="Editar plan" (click)="editarPlanActual()">
+                  <i class="pi pi-file-edit"></i>
+                </button>
               </div>
             </div>
             @if (planActual()!.restricciones) {
@@ -440,6 +473,11 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    mat-form-field { width: 100%; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .peligro { color: #dc2626; }
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
     .list-header .page-title { margin-bottom: 0; }
     .cargando { padding: 3rem; text-align: center; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
@@ -544,6 +582,14 @@ export class NutricionComponent implements OnInit {
     { label: 'Moderado', value: 'MODERADO' },
     { label: 'Alto', value: 'ALTO' },
   ];
+
+  /** Los mismos sin «Todos»: eso es un filtro, no un riesgo que se pueda
+   *  afirmar de un paciente. */
+  readonly riesgosElegibles = this.opcionesRiesgo.slice(1);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['paciente', 'nutricionista', 'fecha', 'peso', 'imc',
+                       'screening', 'riesgo', 'acciones'];
 
   readonly opcionesScreening = [
     { label: 'NRS-2002', value: 'NRS-2002' },
