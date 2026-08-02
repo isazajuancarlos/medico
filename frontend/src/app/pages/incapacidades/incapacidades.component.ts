@@ -114,15 +114,15 @@ export class IncapacidadCertificacionComponent {
       </div>
 
       <div class="filtros">
-        <mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Desde</mat-label>
           <input matInput type="date" [(ngModel)]="desde" (change)="cargar()" />
         </mat-form-field>
-        <mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Hasta</mat-label>
           <input matInput type="date" [(ngModel)]="hasta" (change)="cargar()" />
         </mat-form-field>
-        <mat-form-field class="crece">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="crece">
           <mat-label>Paciente</mat-label>
           <input matInput placeholder="Nombre, apellido o documento"
             [(ngModel)]="buscar" (ngModelChange)="alBuscar()" />

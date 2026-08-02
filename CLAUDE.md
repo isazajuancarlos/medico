@@ -36,14 +36,24 @@ decide qué módulos se ven.
 > en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
 > no 21 → 22. Queda en 21.1.2 hasta que salga del todo.
 >
-> Avance medido: **287 → 154** importaciones `from 'primeng/…'` (35 → 26
-> archivos), con `ng build` y las pruebas del frontend en verde en cada lote (82 antes del
-> banco de humo, 130 después).
+> Avance medido: **287 → 128** importaciones `from 'primeng/…'` (35 → 20
+> archivos), con `ng build` y las pruebas del frontend en verde en cada lote (82
+> antes del banco de humo, 130 con él, **197** con el guardián de las directivas
+> mudas).
 > Hechos: los dos servicios (avisos y confirmación), etiqueta, separador,
-> tooltip, mensaje y la pantalla de acceso. Queda lo caro: `button` (29),
-> `table` (25), `inputtext`/`textarea` (41), `select` (21), `dialog` (13) y la
-> cola. **La receta, las equivalencias y las seis trampas ya pagadas están en
+> tooltip, mensaje, la pantalla de acceso, las dos piezas compartidas
+> (`barra-crud` y `header`) y nueve pantallas. Queda lo caro: `button`,
+> `table`, `inputtext`/`textarea`, `select`, `dialog` y la cola.
+> **La receta, las equivalencias y las siete trampas ya pagadas están en
 > [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md)** — leerlo antes de seguir.
+>
+> Dos redes, y hacen falta las dos: el **banco de humo**
+> (`pantallas-montan.spec.ts`) monta las 30 pantallas, y el **guardián de las
+> directivas mudas** (`directivas-de-material-cableadas.spec.ts`) comprueba que
+> cada directiva de Material escrita en una plantilla esté en los `imports` de
+> su componente. Lo segundo el primero no lo ve: `matTooltip` sin
+> `MatTooltipModule` es, para Angular, un atributo estático corriente, así que
+> el tooltip no existe y **nada falla**. Pasó en cinco pantallas.
 >
 > Y el orden importa: **primero Material con Angular 21, después el salto a la
 > 22** (#254). Un cambio a la vez; si se hacen juntos y algo se rompe, no se sabe
@@ -76,7 +86,7 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 cd frontend
 npm install --legacy-peer-deps                   # obligatorio: conflictos de peers de PrimeNG
 npm start                                        # :4200, proxy /api → :8000
-npm test                                         # vitest vía `ng test`: 9 specs, 130 pruebas
+npm test                                         # vitest vía `ng test`: 10 specs, 197 pruebas
 npm run build
 
 # === DOCKER (pila completa) ===

@@ -41,6 +41,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras rips, contrarreferencia y pacientes | 159 | 27 |
 | tras remisiones | 154 | 26 |
 | tras barra CRUD, cabecera, incapacidades y consentimiento | 140 | 22 |
+| tras urgencias y superadmin | 128 | 20 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -163,6 +164,13 @@ set paginador(p: MatPaginator | undefined) { if (p) this.datos.paginator = p; }
 cliente sobre lo que ya tiene**: con miles de pacientes muestra veinte y afirma
 que no hay más. Compila, se ve bien, y es falso.
 
+**Dos tablas en la misma pantalla** (`superadmin`) se enganchan por referencia de
+plantilla, `@ViewChild('pagIps')`, no por tipo: `@ViewChild(MatPaginator)`
+devuelve el primero y deja el segundo mudo sin que nada falle.
+
+Y hay tablas que **no se paginan a propósito**: la cola de `urgencias` llega
+ordenada por prioridad, y una segunda página escondería al rojo.
+
 Y una tercera cosa que no se hereda: **`mat-table` no tiene plantilla de vacío**
 como el `pTemplate="emptymessage"` de `p-table`. El «no hay nada» va fuera de la
 tabla, y hay que ponerlo: una tabla sin filas y sin frase se lee como «todavía
@@ -198,7 +206,18 @@ this.dialogo.open(CertificacionComponent, { data: d, width: '38rem', maxWidth: '
 Con `p-dialog` ese texto era un campo de la pantalla anfitriona y el diálogo solo
 su envoltorio visible. La diferencia no es estética: cerrar por Escape devuelve
 `undefined`, y así no queda un motivo a medio escribir esperando al siguiente
-paciente.
+paciente. En `urgencias` y `superadmin` eso borró de la clase anfitriona seis
+campos y tres métodos `abrirX()` que no hacían más que limpiarlos.
+
+Y el formulario completo **valida dentro**: el botón lleva
+`[mat-dialog-close]="resultado()"`, y `resultado()` devuelve `null` si falta
+algo. El botón ya está inerte, pero un diálogo capaz de cerrarse devolviendo un
+triage a medias sería un paciente en cola sin nivel.
+
+**Lo que sí se pierde y hay que reponer**: el `[loading]` que el botón del
+`p-dialog` mostraba mientras se guardaba. Ahora el diálogo se cierra y la
+petición sigue viva, así que la pantalla se queda igual y parece que no pasó
+nada. Va una `<mat-progress-bar>` con `cargando() || guardando()`.
 
 ## Los colores: el input `color` de un botón no pinta nada
 
@@ -310,6 +329,8 @@ que fijan un patrón:
 | `remisiones` | el `mat-select` |
 | `incapacidades` | el diálogo que solo muestra |
 | `consentimiento` | el diálogo que devuelve un dato |
+| `urgencias` | el diálogo con formulario completo y su validación dentro |
+| `superadmin` | dos paginadores en una pantalla; el calendario y el ojo de la clave |
 | `barra-crud` | el botón de icono y el color por CSS |
 
 ## Lo que NO se toca en esta migración
