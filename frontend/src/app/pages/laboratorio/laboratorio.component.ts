@@ -1,19 +1,16 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { CardModule } from 'primeng/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { PanelModule } from 'primeng/panel';
-import { SelectModule } from 'primeng/select';
-import { CheckboxModule } from 'primeng/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { InputGroupModule } from 'primeng/inputgroup';
-import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { Confirmar } from '../../shared/ui/confirmar.service';
 import {
@@ -41,10 +38,9 @@ function defaultFila(): FilaResultado {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, CardModule, MatDividerModule, PanelModule,
-    SelectModule, CheckboxModule, MatTooltipModule,
-    InputGroupModule, InputGroupAddonModule,
+    MatButtonModule, MatCardModule, MatCheckboxModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule, MatTableModule,
+    EtiquetaComponent, MatDividerModule, MatTooltipModule,
   ],
   template: `
     <div class="page-card">
@@ -55,17 +51,18 @@ function defaultFila(): FilaResultado {
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Laboratorio Clínico</h2>
-          <div style="display:flex;gap:0.5rem">
-            <p-select
-              [(ngModel)]="filtroEstado"
-              [options]="opcionesEstado"
-              optionLabel="label"
-              optionValue="value"
-              (onChange)="cargarOrdenes()"
-              placeholder="Todos los estados"
-              style="width:190px" />
-            <p-button label="Perfiles" icon="pi pi-list" [outlined]="true"
-              (onClick)="vista.set('perfiles')" />
+          <div style="display:flex;gap:0.5rem;align-items:flex-start">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:190px">
+              <mat-label>Estado</mat-label>
+              <mat-select [(ngModel)]="filtroEstado" (selectionChange)="cargarOrdenes()">
+                @for (o of opcionesEstado; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button matButton="outlined" (click)="vista.set('perfiles')">
+              <i class="pi pi-list"></i> Perfiles
+            </button>
           </div>
         </div>
 
@@ -77,52 +74,64 @@ function defaultFila(): FilaResultado {
             <p>No hay órdenes de laboratorio con el filtro seleccionado.</p>
           </div>
         } @else {
-          <p-table [value]="ordenes()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Examen solicitado</th>
-                <th>Médico solicitante</th>
-                <th>Fecha orden</th>
-                <th style="text-align:center">Estado</th>
-                <th style="text-align:center">Resultado</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-o>
-              <tr>
-                <td>
-                  <strong>{{ o.paciente_nombre || '—' }}</strong>
-                  @if (o.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ o.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td>
-                  <span style="font-weight:500">{{ o.descripcion }}</span>
-                  @if (o.codigo_cups) {
-                    <div style="font-size:0.75rem;color:#64748b">CUPS: {{ o.codigo_cups }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ o.medico_nombre || '—' }}</td>
-                <td style="font-size:0.85rem">{{ o.fecha_orden | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="o.estado" [severity]="estadoSeverity(o.estado)" />
-                </td>
-                <td style="text-align:center">
-                  @if (o.tiene_resultado) {
-                    <x-etiqueta value="Registrado" severity="success" icon="pi pi-check-circle" />
-                  } @else {
-                    <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
-                  }
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    [matTooltip]="o.tiene_resultado ? 'Ver / editar resultado' : 'Ingresar resultado'"
-                    (onClick)="abrirOrden(o)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="ordenes()" class="tabla">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let o">
+                <strong>{{ o.paciente_nombre || '—' }}</strong>
+                @if (o.paciente_identificacion) {
+                  <div style="font-size:0.78rem;color:#94a3b8">{{ o.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="examen">
+              <th mat-header-cell *matHeaderCellDef>Examen solicitado</th>
+              <td mat-cell *matCellDef="let o">
+                <span style="font-weight:500">{{ o.descripcion }}</span>
+                @if (o.codigo_cups) {
+                  <div style="font-size:0.75rem;color:#64748b">CUPS: {{ o.codigo_cups }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="medico">
+              <th mat-header-cell *matHeaderCellDef>Médico solicitante</th>
+              <td mat-cell *matCellDef="let o" style="font-size:0.85rem">{{ o.medico_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha orden</th>
+              <td mat-cell *matCellDef="let o" style="font-size:0.85rem">
+                {{ o.fecha_orden | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let o" class="centro">
+                <x-etiqueta [value]="o.estado" [severity]="estadoSeverity(o.estado)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="resultado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Resultado</th>
+              <td mat-cell *matCellDef="let o" class="centro">
+                @if (o.tiene_resultado) {
+                  <x-etiqueta value="Registrado" severity="success" icon="pi pi-check-circle" />
+                } @else {
+                  <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let o" class="centro">
+                <button matIconButton (click)="abrirOrden(o)"
+                  [matTooltip]="o.tiene_resultado ? 'Ver / editar resultado' : 'Ingresar resultado'">
+                  <i class="pi pi-file-edit"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
         }
       }
 
@@ -131,7 +140,9 @@ function defaultFila(): FilaResultado {
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'procesar' && ordenActual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
+          <button matIconButton matTooltip="Volver" (click)="volverLista()">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">Procesar Examen de Laboratorio</h2>
         </div>
 
@@ -161,8 +172,9 @@ function defaultFila(): FilaResultado {
             </div>
             @if (ordenActual()!.estado === 'Pendiente') {
               <div style="margin-top:0.5rem">
-                <p-button label="Iniciar proceso" icon="pi pi-play" size="small"
-                  [loading]="cambiandoEstado()" (onClick)="iniciarProceso()" />
+                <button matButton="filled" [disabled]="cambiandoEstado()" (click)="iniciarProceso()">
+                  <i [class]="cambiandoEstado() ? 'pi pi-spin pi-spinner' : 'pi pi-play'"></i> Iniciar proceso
+                </button>
               </div>
             }
           </div>
@@ -175,25 +187,26 @@ function defaultFila(): FilaResultado {
         </div>
 
         <!-- Cuerpo resultados -->
-        <p-panel header="Resultados del Examen" styleClass="resultado-panel">
-          <ng-template pTemplate="header">
-            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:1rem">
-              <span style="font-weight:600;color:#f1f5f9">Resultados del Examen</span>
-              <div style="display:flex;gap:0.5rem">
-                @if (perfiles().length > 0) {
-                  <p-select
-                    [(ngModel)]="perfilSeleccionado"
-                    [options]="perfiles()"
-                    optionLabel="nombre"
-                    (onChange)="cargarDesdePerfil()"
-                    placeholder="Cargar perfil..."
-                    style="width:200px" />
-                }
-                <p-button label="Agregar parámetro" icon="pi pi-plus" size="small"
-                  [outlined]="true" (onClick)="agregarFila()" />
-              </div>
+        <mat-card class="resultado-panel">
+          <div class="panel-cabecera">
+            <span style="font-weight:600;color:#f1f5f9">Resultados del Examen</span>
+            <div style="display:flex;gap:0.5rem;align-items:flex-start">
+              @if (perfiles().length > 0) {
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:200px">
+                  <mat-label>Cargar perfil…</mat-label>
+                  <mat-select [(ngModel)]="perfilSeleccionado" (selectionChange)="cargarDesdePerfil()">
+                    @for (pf of perfiles(); track pf.id) {
+                      <mat-option [value]="pf">{{ pf.nombre }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
+              <button matButton="outlined" (click)="agregarFila()">
+                <i class="pi pi-plus"></i> Agregar parámetro
+              </button>
             </div>
-          </ng-template>
+          </div>
+          <mat-card-content>
 
           @if (filas().length === 0) {
             <div class="sin-resultados" style="padding:1.5rem">
@@ -213,24 +226,25 @@ function defaultFila(): FilaResultado {
               </div>
               @for (fila of filas(); track $index) {
                 <div class="param-row" [class.param-critico]="fila.critico">
-                  <input pInputText [(ngModel)]="fila.nombre" placeholder="Ej: Hemoglobina"
+                  <input [(ngModel)]="fila.nombre" placeholder="Ej: Hemoglobina"
                     class="param-input" [disabled]="resultadoValidado()" />
-                  <input pInputText [(ngModel)]="fila.valor" placeholder="13.5"
+                  <input [(ngModel)]="fila.valor" placeholder="13.5"
                     class="param-input" [disabled]="resultadoValidado()"
                     [class.valor-critico]="fila.critico" />
-                  <input pInputText [(ngModel)]="fila.unidad" placeholder="g/dL"
+                  <input [(ngModel)]="fila.unidad" placeholder="g/dL"
                     class="param-input" [disabled]="resultadoValidado()" />
-                  <input pInputText [(ngModel)]="fila.ref_min" placeholder="12"
+                  <input [(ngModel)]="fila.ref_min" placeholder="12"
                     class="param-input" [disabled]="resultadoValidado()" />
-                  <input pInputText [(ngModel)]="fila.ref_max" placeholder="16"
+                  <input [(ngModel)]="fila.ref_max" placeholder="16"
                     class="param-input" [disabled]="resultadoValidado()" />
                   <div style="display:flex;justify-content:center">
-                    <p-checkbox [(ngModel)]="fila.critico" [binary]="true"
-                      [disabled]="resultadoValidado()" />
+                    <mat-checkbox [(ngModel)]="fila.critico" [disabled]="resultadoValidado()" />
                   </div>
                   @if (!resultadoValidado()) {
-                    <p-button icon="pi pi-times" [text]="true" size="small" severity="danger"
-                      (onClick)="eliminarFila($index)" />
+                    <button matIconButton class="peligro" matTooltip="Quitar el parámetro"
+                      (click)="eliminarFila($index)">
+                      <i class="pi pi-times"></i>
+                    </button>
                   } @else {
                     <span></span>
                   }
@@ -239,41 +253,42 @@ function defaultFila(): FilaResultado {
             </div>
           }
 
-          <div class="field-full" style="margin-top:1rem">
-            <label style="font-weight:500;font-size:0.875rem;color:#e2e8f0">Observaciones del bioanalista</label>
-            <textarea pTextarea [(ngModel)]="observaciones" rows="3" class="w-full"
+          <mat-form-field appearance="outline" style="margin-top:1rem">
+            <mat-label>Observaciones del bioanalista</mat-label>
+            <textarea matInput [(ngModel)]="observaciones" rows="3"
               placeholder="Notas adicionales, interferencias, calidad de la muestra..."
               [disabled]="resultadoValidado()"></textarea>
-          </div>
+          </mat-form-field>
 
-          <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem">
-            <p-checkbox [(ngModel)]="hayValoresCriticos" [binary]="true"
-              inputId="chk_crit" [disabled]="resultadoValidado()" />
-            <label for="chk_crit" style="color:#fbbf24;font-weight:500;cursor:pointer">
+          <div style="margin-top:0.75rem">
+            <mat-checkbox class="critico" [(ngModel)]="hayValoresCriticos" [disabled]="resultadoValidado()">
               Contiene valores críticos que requieren notificación inmediata al médico
-            </label>
+            </mat-checkbox>
           </div>
-        </p-panel>
+          </mat-card-content>
+        </mat-card>
 
         <!-- Acciones -->
         <div class="step-actions" style="margin-top:1.5rem">
           @if (!resultadoValidado()) {
-            <p-button label="Guardar resultados" icon="pi pi-save"
-              [loading]="guardando()" [disabled]="filas().length === 0"
-              (onClick)="guardarResultado()" />
+            <button matButton="filled" [disabled]="guardando() || filas().length === 0"
+              (click)="guardarResultado()">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar resultados
+            </button>
             @if (resultadoActual()) {
-              <p-button label="Validar y completar" icon="pi pi-check-circle"
-                severity="success" [loading]="validando()"
-                [disabled]="filas().length === 0"
-                (onClick)="validarResultado()" />
+              <button matButton="filled" class="exito"
+                [disabled]="validando() || filas().length === 0" (click)="validarResultado()">
+                <i [class]="validando() ? 'pi pi-spin pi-spinner' : 'pi pi-check-circle'"></i> Validar y completar
+              </button>
             }
           } @else {
             <div style="display:flex;align-items:center;gap:0.75rem;color:#4ade80">
               <i class="pi pi-check-circle"></i>
               <span>Resultado validado el {{ resultadoActual()!.fecha_validacion | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
-            <p-button label="Volver a la lista" icon="pi pi-arrow-left" [text]="true"
-              (onClick)="volverLista()" />
+            <button matButton (click)="volverLista()">
+              <i class="pi pi-arrow-left"></i> Volver a la lista
+            </button>
           }
         </div>
       }
@@ -283,11 +298,12 @@ function defaultFila(): FilaResultado {
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'perfiles') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="vista.set('lista')" />
+          <button matIconButton (click)="vista.set('lista')"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">Perfiles de Laboratorio</h2>
           <span style="margin-left:auto">
-            <p-button label="Nuevo perfil" icon="pi pi-plus"
-              (onClick)="mostrarFormPerfil.set(true)" />
+            <button matButton="filled" (click)="mostrarFormPerfil.set(true)">
+              <i class="pi pi-plus"></i> Nuevo perfil
+            </button>
           </span>
         </div>
 
@@ -295,38 +311,41 @@ function defaultFila(): FilaResultado {
           <div class="formula-form" style="margin-bottom:1.5rem">
             <h4 style="margin:0 0 1rem;color:#f1f5f9">Nuevo perfil de exámenes</h4>
             <div class="form-grid">
-              <div class="field">
-                <label>Nombre del perfil *</label>
-                <input pInputText [(ngModel)]="pForm.nombre" class="w-full"
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre del perfil *</mat-label>
+                <input matInput [(ngModel)]="pForm.nombre"
                   placeholder="Ej: Hemograma completo, Perfil lipídico..." />
-              </div>
-              <div class="field">
-                <label>Descripción</label>
-                <input pInputText [(ngModel)]="pForm.descripcion" class="w-full"
-                  placeholder="Descripción opcional..." />
-              </div>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Descripción</mat-label>
+                <input matInput [(ngModel)]="pForm.descripcion" placeholder="Descripción opcional..." />
+              </mat-form-field>
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
               <strong style="color:#e2e8f0;font-size:0.875rem">Parámetros del perfil</strong>
-              <p-button label="Agregar parámetro" icon="pi pi-plus" size="small"
-                [text]="true" (onClick)="agregarParamPerfil()" />
+              <button matButton (click)="agregarParamPerfil()">
+                <i class="pi pi-plus"></i> Agregar parámetro
+              </button>
             </div>
             @for (p of pForm.examenes; track $index) {
               <div class="param-row" style="margin-bottom:0.5rem">
-                <input pInputText [(ngModel)]="p['nombre']" placeholder="Parámetro" class="param-input" />
+                <input [(ngModel)]="p['nombre']" placeholder="Parámetro" class="param-input" />
                 <span style="opacity:0.3;font-size:0.8rem;padding:0 0.25rem">valor</span>
-                <input pInputText [(ngModel)]="p['unidad']" placeholder="Unidad" class="param-input" />
-                <input pInputText [(ngModel)]="p['ref_min']" placeholder="Ref. mín" class="param-input" />
-                <input pInputText [(ngModel)]="p['ref_max']" placeholder="Ref. máx" class="param-input" />
+                <input [(ngModel)]="p['unidad']" placeholder="Unidad" class="param-input" />
+                <input [(ngModel)]="p['ref_min']" placeholder="Ref. mín" class="param-input" />
+                <input [(ngModel)]="p['ref_max']" placeholder="Ref. máx" class="param-input" />
                 <span></span>
-                <p-button icon="pi pi-times" [text]="true" size="small" severity="danger"
-                  (onClick)="eliminarParamPerfil($index)" />
+                <button matIconButton class="peligro" matTooltip="Quitar el parámetro"
+                  (click)="eliminarParamPerfil($index)">
+                  <i class="pi pi-times"></i>
+                </button>
               </div>
             }
             <div class="step-actions" style="margin-top:1rem">
-              <p-button label="Cancelar" [text]="true" (onClick)="cerrarFormPerfil()" />
-              <p-button label="Guardar perfil" icon="pi pi-check"
-                [loading]="guardandoPerfil()" (onClick)="guardarPerfil()" />
+              <button matButton (click)="cerrarFormPerfil()">Cancelar</button>
+              <button matButton="filled" [disabled]="guardandoPerfil()" (click)="guardarPerfil()">
+                <i [class]="guardandoPerfil() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Guardar perfil
+              </button>
             </div>
           </div>
         }
@@ -351,8 +370,10 @@ function defaultFila(): FilaResultado {
                     }
                   </div>
                 </div>
-                <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                  matTooltip="Desactivar perfil" (onClick)="confirmarEliminarPerfil(p)" />
+                <button matIconButton class="peligro" matTooltip="Desactivar perfil"
+                  (click)="confirmarEliminarPerfil(p)">
+                  <i class="pi pi-trash"></i>
+                </button>
               </div>
             </div>
           }
@@ -402,7 +423,19 @@ function defaultFila(): FilaResultado {
       background: rgba(255,255,255,0.02);
     }
     .param-row.param-critico { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.05); }
-    .param-input { width: 100%; font-size: 0.875rem; }
+    /* Los parámetros son una rejilla densa: aquí NO se envuelve cada campo en
+       un mat-form-field —una fila de siete controles con etiqueta flotante y
+       margen no cabe en la pantalla—, así que son input desnudos con el
+       aspecto puesto por esta hoja. */
+    .param-input {
+      width: 100%; font-size: 0.875rem;
+      background: rgba(255,255,255,0.04); color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
+      padding: 0.4rem 0.5rem;
+    }
+    .param-input:focus { outline: none; border-color: #818cf8; }
+    .param-input:disabled { opacity: 0.6; }
+    .param-input::placeholder { color: #64748b; }
     .valor-critico { color: #fbbf24 !important; font-weight: 700; }
 
     /* Form grid */
@@ -431,7 +464,18 @@ function defaultFila(): FilaResultado {
       border: 1px solid rgba(99,102,241,0.25);
     }
 
-    ::ng-deep .resultado-panel .p-panel-header { background: #1e293b !important; }
+    .resultado-panel { background: #0f172a; }
+    .panel-cabecera {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: 1rem; background: #1e293b; border-radius: 4px 4px 0 0;
+    }
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    mat-form-field { width: 100%; }
+    .critico { color: #fbbf24; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .peligro { color: #dc2626; }
+    .exito { background: #16a34a; color: #fff; }
     ::ng-deep textarea { resize: vertical; }
   `]
 })
@@ -444,6 +488,10 @@ export class LaboratorioComponent implements OnInit {
   cargando = signal(false);
   ordenes = signal<OrdenLab[]>([]);
   filtroEstado = '';
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['paciente', 'examen', 'medico', 'fecha', 'estado',
+                       'resultado', 'acciones'];
 
   readonly opcionesEstado = [
     { label: 'Todos', value: '' },

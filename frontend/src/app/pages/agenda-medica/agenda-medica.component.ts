@@ -1,18 +1,19 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TabsModule } from 'primeng/tabs';
-import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
-import { DatePickerModule } from 'primeng/datepicker';
+import { forkJoin, of } from 'rxjs';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { Avisos } from '../../shared/ui/avisos.service';
-import { CardModule } from 'primeng/card';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { diaLocal } from '../../shared/fecha';
 import { CitaService } from '../../services/cita.service';
 import { MedicoDisponible } from '../../models/appointment.models';
 
@@ -35,173 +36,460 @@ const TIPO_BLOQUEO_A_PANTALLA: Record<string, string> = Object.fromEntries(
   Object.entries(TIPOS_BLOQUEO).map(([pantalla, api]) => [api, pantalla]),
 );
 
-/** `Date` → `YYYY-MM-DD HH:MM`, que es lo que guarda la columna. `toISOString()`
- *  daba `2026-08-10T12:00:00.000Z`: además de otro formato, es UTC, y con eso un
- *  bloqueo de la tarde en Colombia se guardaba al día siguiente. */
-function aInstante(d: Date | null | undefined): string | null {
-  if (!d) return null;
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
-         `${p(d.getHours())}:${p(d.getMinutes())}`;
+const ANIOS = [new Date().getFullYear(), new Date().getFullYear() + 1];
+const MESES_OPT = MESES.map((m, i) => ({ label: m, value: i + 1 }));
+const DIAS_OPT = DIAS.map((d, i) => ({ label: d, value: i }));
+
+/**
+ * `2026-08-10T14:30` → `2026-08-10 14:30`, que es lo que guarda la columna.
+ *
+ * El campo es un `datetime-local`, o sea la hora de pared tal como la escribió
+ * quien la escribió. Antes era un calendario que entregaba un `Date` y se
+ * convertía con `toISOString()`: además de otro formato, es UTC, y con eso un
+ * bloqueo de la tarde en Colombia se guardaba al día siguiente.
+ */
+function aInstante(v: string | null | undefined): string | null {
+  if (!v) return null;
+  return v.replace('T', ' ').slice(0, 16);
+}
+
+interface BloqueForm {
+  id?: number;
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fin: string;
+  activo: boolean;
+}
+
+interface AgendaForm {
+  medico_id: number | null;
+  anio: number;
+  mes: number | null;
+  observaciones: string;
+  bloques: BloqueForm[];
+}
+
+/** Alta o edición de una agenda mensual. Devuelve el formulario, o nada. */
+@Component({
+  selector: 'app-agenda-dialogo',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule, MatTooltipModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar agenda' : 'Nueva agenda mensual' }}</h2>
+    <mat-dialog-content>
+      @if (!editando) {
+        <div class="cabecera">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Médico *</mat-label>
+            <mat-select [(ngModel)]="f.medico_id">
+              @for (m of medicos; track m.id) {
+                <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Año *</mat-label>
+            <mat-select [(ngModel)]="f.anio">
+              @for (a of anios; track a) { <mat-option [value]="a">{{ a }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Mes *</mat-label>
+            <mat-select [(ngModel)]="f.mes">
+              @for (m of meses; track m.value) {
+                <mat-option [value]="m.value">{{ m.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      }
+
+      <div class="bloques-cabecera">
+        <strong>Bloques de atención</strong>
+        <button matButton (click)="agregarBloque()"><i class="pi pi-plus"></i> Agregar bloque</button>
+      </div>
+      <p class="nota">
+        Duración mínima por consulta: medicina general ≥20 min · especialista ≥30 min
+        (Circular 049/2008 Supersalud)
+      </p>
+
+      @for (bloque of f.bloques; track $index; let i = $index) {
+        <div class="bloque">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Día</mat-label>
+            <mat-select [(ngModel)]="bloque.dia_semana">
+              @for (d of dias; track d.value) {
+                <mat-option [value]="d.value">{{ d.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Desde</mat-label>
+            <input matInput type="time" [(ngModel)]="bloque.hora_inicio" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Hasta</mat-label>
+            <input matInput type="time" [(ngModel)]="bloque.hora_fin" />
+          </mat-form-field>
+          <button matIconButton class="peligro" matTooltip="Quitar el bloque" (click)="quitarBloque(i)">
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
+      }
+
+      @if (f.bloques.length === 0) {
+        <p class="vacio">No hay bloques. Agregue al menos uno para la semana laboral.</p>
+      }
+
+      <mat-form-field appearance="outline" class="ancho">
+        <mat-label>Observaciones</mat-label>
+        <input matInput [(ngModel)]="f.observaciones" placeholder="Notas opcionales" />
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Guardar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .cabecera { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1.25rem; }
+    .bloques-cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
+    .nota { font-size:.75rem; color:#64748b; margin:.25rem 0 .75rem; }
+    .bloque {
+      display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.5rem;
+      align-items:center; margin-bottom:.5rem;
+    }
+    .vacio { color:#9ca3af; font-size:.875rem; text-align:center; padding:.75rem; }
+    .ancho { width:100%; margin-top:1rem; }
+    mat-dialog-content { min-width:min(42rem, 88vw); }
+    mat-form-field { width:100%; }
+    .peligro { color:#dc2626; }
+  `],
+})
+export class AgendaDialogoComponent {
+  readonly anios = ANIOS;
+  readonly meses = MESES_OPT;
+  readonly dias = DIAS_OPT;
+
+  readonly medicos: MedicoDisponible[];
+  readonly editando: boolean;
+  f: AgendaForm;
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) datos: { medicos: MedicoDisponible[]; agenda: any | null },
+  ) {
+    this.medicos = datos.medicos;
+    this.editando = !!datos.agenda;
+    const a = datos.agenda;
+    this.f = a
+      ? {
+          medico_id: a.medico_id,
+          anio: a.anio,
+          mes: a.mes,
+          observaciones: a.observaciones ?? '',
+          bloques: a.bloques.map((b: any) => ({
+            id: b.id,
+            dia_semana: b.dia_semana,
+            hora_inicio: b.hora_inicio,
+            hora_fin: b.hora_fin,
+            activo: b.activo,
+          })),
+        }
+      : { medico_id: null, anio: ANIOS[0], mes: null, observaciones: '', bloques: [] };
+  }
+
+  agregarBloque(): void {
+    this.f.bloques.push({ dia_semana: 0, hora_inicio: '08:00', hora_fin: '12:00', activo: true });
+  }
+
+  quitarBloque(i: number): void { this.f.bloques.splice(i, 1); }
+
+  completo(): boolean {
+    return this.editando || (!!this.f.medico_id && !!this.f.mes);
+  }
+
+  resultado(): AgendaForm | null {
+    return this.completo() ? this.f : null;
+  }
+}
+
+/** Un bloqueo de agenda. Devuelve lo que espera el servidor, o nada. */
+@Component({
+  selector: 'app-bloqueo-dialogo',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Nuevo bloqueo de agenda</h2>
+    <mat-dialog-content>
+      <div class="campos">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Médico *</mat-label>
+          <mat-select [(ngModel)]="medicoId">
+            @for (m of medicos; track m.id) {
+              <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Desde *</mat-label>
+          <input matInput type="datetime-local" [(ngModel)]="inicio" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta *</mat-label>
+          <input matInput type="datetime-local" [(ngModel)]="fin" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Tipo *</mat-label>
+          <mat-select [(ngModel)]="tipo">
+            @for (t of tipos; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Motivo *</mat-label>
+          <input matInput [(ngModel)]="motivo" placeholder="Descripción del bloqueo" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Guardar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .campos {
+      display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding-top:.5rem;
+      min-width:min(32rem, 85vw);
+    }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class BloqueoDialogoComponent {
+  readonly tipos = Object.keys(TIPOS_BLOQUEO);
+  readonly medicos: MedicoDisponible[];
+
+  medicoId: number | null = null;
+  inicio = '';
+  fin = '';
+  tipo = 'Otro';
+  motivo = '';
+
+  constructor(@Inject(MAT_DIALOG_DATA) datos: { medicos: MedicoDisponible[] }) {
+    this.medicos = datos.medicos;
+  }
+
+  completo(): boolean {
+    return !!this.medicoId && !!this.inicio && !!this.fin && !!this.motivo.trim();
+  }
+
+  resultado(): Record<string, unknown> | null {
+    if (!this.completo()) return null;
+    return {
+      medico_id: this.medicoId,
+      motivo: this.motivo.trim(),
+      tipo: TIPOS_BLOQUEO[this.tipo] ?? 'OTRO',
+      inicio: aInstante(this.inicio),
+      fin: aInstante(this.fin),
+    };
+  }
 }
 
 @Component({
   selector: 'app-agenda-medica',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    TabsModule, TableModule, ButtonModule, DialogModule,
-    InputTextModule, SelectModule, DatePickerModule, EtiquetaComponent,
-    CardModule, ToggleSwitchModule, MatTooltipModule,
+    FormsModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule, MatDatepickerModule, MatProgressBarModule,
+    MatTooltipModule, EtiquetaComponent,
   ],
   template: `
 <div class="page-card">
   <h2 class="page-title">Agenda Médica</h2>
-  <p style="font-size:.8rem;color:#64748b;margin-top:-.5rem;margin-bottom:1rem">
+  <p class="normativa">
     Gestión de horarios de atención conforme a Res. 256/2016 · Res. 2003/2014 · Decreto 780/2016
   </p>
 
-  <p-tabs [value]="activeTab" (valueChange)="onTabChange($event)">
-    <p-tablist>
-      <p-tab value="agendas">Horarios Mensuales</p-tab>
-      <p-tab value="bloqueos">Bloqueos</p-tab>
-      <p-tab value="indicadores">Indicadores (Res. 256/2016)</p-tab>
-    </p-tablist>
-
-    <!-- ── Tab 1: Agendas ─────────────────────────────────────── -->
-    <p-tabpanels>
-      <p-tabpanel value="agendas">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-            <p-select
-              [(ngModel)]="filterMedico"
-              [options]="medicos()"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Todos los médicos"
-              [showClear]="true"
-              (onChange)="loadAgendas()"
-              styleClass="p-inputtext-sm"
-            />
-            <p-select
-              [(ngModel)]="filterAnio"
-              [options]="anioOpts"
-              placeholder="Año"
-              (onChange)="loadAgendas()"
-              styleClass="p-inputtext-sm"
-            />
-            <p-select
-              [(ngModel)]="filterMes"
-              [options]="mesOpts"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Mes"
-              [showClear]="true"
-              (onChange)="loadAgendas()"
-              styleClass="p-inputtext-sm"
-            />
+  <mat-tab-group [(selectedIndex)]="pestana" (selectedIndexChange)="alCambiarPestana($event)">
+    <!-- ── Horarios mensuales ─────────────────────────────────── -->
+    <mat-tab label="Horarios Mensuales">
+      <div class="panel">
+        <div class="barra">
+          <div class="filtros">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Médico</mat-label>
+              <mat-select [(ngModel)]="filterMedico" (selectionChange)="loadAgendas()">
+                <mat-option [value]="null">Todos los médicos</mat-option>
+                @for (m of medicos(); track m.id) {
+                  <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Año</mat-label>
+              <mat-select [(ngModel)]="filterAnio" (selectionChange)="loadAgendas()">
+                @for (a of anios; track a) { <mat-option [value]="a">{{ a }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Mes</mat-label>
+              <mat-select [(ngModel)]="filterMes" (selectionChange)="loadAgendas()">
+                <mat-option [value]="null">Todos los meses</mat-option>
+                @for (m of meses; track m.value) {
+                  <mat-option [value]="m.value">{{ m.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           </div>
-          <p-button label="Nueva Agenda" icon="pi pi-plus" size="small" (onClick)="openNewAgenda()" />
+          <button matButton="filled" (click)="abrirAgenda(null)">
+            <i class="pi pi-plus"></i> Nueva agenda
+          </button>
         </div>
 
-        <p-table [value]="agendas()" [loading]="loadingAgendas()" styleClass="p-datatable-sm" dataKey="id">
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Médico</th><th>Mes / Año</th><th>Bloques</th><th>Estado</th><th>Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-a>
-            <tr>
-              <td>{{ a.medico_nombre }}</td>
-              <td>{{ mesNombre(a.mes) }} {{ getAnio(a) }}</td>
-              <td>
-                <div style="display:flex;flex-wrap:wrap;gap:.25rem">
-                  @for (b of a.bloques; track b.id) {
-                    <span style="background:#dbeafe;color:#1d4ed8;padding:.125rem .5rem;border-radius:.75rem;font-size:.75rem">
-                      {{ b.dia_nombre }}: {{ b.hora_inicio }}-{{ b.hora_fin }}
-                    </span>
-                  }
-                  @if (a.bloques.length === 0) {
-                    <span style="color:#9ca3af;font-size:.8rem">Sin bloques</span>
-                  }
-                </div>
-              </td>
-              <td>
-                <x-etiqueta [value]="a.activa ? 'Activa' : 'Inactiva'" [severity]="a.activa ? 'success' : 'secondary'" />
-              </td>
-              <td style="display:flex;gap:.25rem">
-                <p-button icon="pi pi-pencil" size="small" [text]="true" (onClick)="editAgenda(a)" matTooltip="Editar bloques" />
-                <p-button icon="pi pi-trash" size="small" severity="danger" [text]="true" (onClick)="deleteAgenda(a.id)" />
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="emptymessage">
-            <tr><td colspan="5" style="text-align:center;padding:2rem;color:#64748b">No hay agendas configuradas</td></tr>
-          </ng-template>
-        </p-table>
-      </p-tabpanel>
+        @if (loadingAgendas()) { <mat-progress-bar mode="indeterminate" /> }
+        <table mat-table [dataSource]="agendas()" class="tabla">
+          <ng-container matColumnDef="medico">
+            <th mat-header-cell *matHeaderCellDef>Médico</th>
+            <td mat-cell *matCellDef="let a">{{ a.medico_nombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="periodo">
+            <th mat-header-cell *matHeaderCellDef>Mes / Año</th>
+            <td mat-cell *matCellDef="let a">{{ mesNombre(a.mes) }} {{ a.anio }}</td>
+          </ng-container>
+          <ng-container matColumnDef="bloques">
+            <th mat-header-cell *matHeaderCellDef>Bloques</th>
+            <td mat-cell *matCellDef="let a">
+              <div class="chips">
+                @for (b of a.bloques; track b.id) {
+                  <span class="chip">{{ b.dia_nombre }}: {{ b.hora_inicio }}-{{ b.hora_fin }}</span>
+                }
+                @if (a.bloques.length === 0) { <span class="tenue">Sin bloques</span> }
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let a">
+              <x-etiqueta [value]="a.activa ? 'Activa' : 'Inactiva'"
+                [severity]="a.activa ? 'success' : 'secondary'" />
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let a">
+              <button matIconButton matTooltip="Editar bloques" (click)="abrirAgenda(a)">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button matIconButton class="peligro" matTooltip="Eliminar" (click)="deleteAgenda(a.id)">
+                <i class="pi pi-trash"></i>
+              </button>
+            </td>
+          </ng-container>
 
-      <!-- ── Tab 2: Bloqueos ─────────────────────────────────────── -->
-      <p-tabpanel value="bloqueos">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <p style="font-size:.875rem;color:#64748b;margin:0">
+          <tr mat-header-row *matHeaderRowDef="columnasAgendas"></tr>
+          <tr mat-row *matRowDef="let fila; columns: columnasAgendas"></tr>
+        </table>
+        @if (!loadingAgendas() && agendas().length === 0) {
+          <p class="vacio">No hay agendas configuradas</p>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- ── Bloqueos ───────────────────────────────────────────── -->
+    <mat-tab label="Bloqueos">
+      <div class="panel">
+        <div class="barra">
+          <p class="tenue" style="margin:0">
             Vacaciones, incapacidades, reuniones u otros períodos sin atención
           </p>
-          <p-button label="Nuevo Bloqueo" icon="pi pi-plus" size="small" (onClick)="openNewBloqueo()" />
+          <button matButton="filled" (click)="abrirBloqueo()">
+            <i class="pi pi-plus"></i> Nuevo bloqueo
+          </button>
         </div>
 
-        <p-table [value]="bloqueos()" [loading]="loadingBloqueos()" styleClass="p-datatable-sm" dataKey="id">
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Médico</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-b>
-            <tr>
-              <td>{{ b.medico_nombre }}</td>
-              <td><x-etiqueta [value]="tipoEnPantalla(b.tipo)" severity="warn" /></td>
-              <td>{{ b.inicio }}</td>
-              <td>{{ b.fin }}</td>
-              <td>{{ b.motivo }}</td>
-              <td>
-                <p-button icon="pi pi-trash" size="small" severity="danger" [text]="true" (onClick)="deleteBloqueo(b.id)" />
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="emptymessage">
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:#64748b">No hay bloqueos registrados</td></tr>
-          </ng-template>
-        </p-table>
-      </p-tabpanel>
+        @if (loadingBloqueos()) { <mat-progress-bar mode="indeterminate" /> }
+        <table mat-table [dataSource]="bloqueos()" class="tabla">
+          <ng-container matColumnDef="medico">
+            <th mat-header-cell *matHeaderCellDef>Médico</th>
+            <td mat-cell *matCellDef="let b">{{ b.medico_nombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let b">
+              <x-etiqueta [value]="tipoEnPantalla(b.tipo)" severity="warn" />
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="desde">
+            <th mat-header-cell *matHeaderCellDef>Desde</th>
+            <td mat-cell *matCellDef="let b">{{ b.inicio }}</td>
+          </ng-container>
+          <ng-container matColumnDef="hasta">
+            <th mat-header-cell *matHeaderCellDef>Hasta</th>
+            <td mat-cell *matCellDef="let b">{{ b.fin }}</td>
+          </ng-container>
+          <ng-container matColumnDef="motivo">
+            <th mat-header-cell *matHeaderCellDef>Motivo</th>
+            <td mat-cell *matCellDef="let b">{{ b.motivo }}</td>
+          </ng-container>
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let b">
+              <button matIconButton class="peligro" matTooltip="Eliminar" (click)="deleteBloqueo(b.id)">
+                <i class="pi pi-trash"></i>
+              </button>
+            </td>
+          </ng-container>
 
-      <!-- ── Tab 3: Indicadores ─────────────────────────────────────── -->
-      <p-tabpanel value="indicadores">
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.5rem">
-          <div>
-            <label style="display:block;font-size:.8rem;color:#64748b;margin-bottom:.2rem">Médico</label>
-            <p-select
-              [(ngModel)]="indFilterMedico"
-              [options]="medicos()"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Todos"
-              [showClear]="true"
-              styleClass="p-inputtext-sm"
-            />
-          </div>
-          <div>
-            <label style="display:block;font-size:.8rem;color:#64748b;margin-bottom:.2rem">Desde</label>
-            <p-datepicker [(ngModel)]="indDesde" dateFormat="yy-mm-dd" inputStyleClass="p-inputtext-sm" />
-          </div>
-          <div>
-            <label style="display:block;font-size:.8rem;color:#64748b;margin-bottom:.2rem">Hasta</label>
-            <p-datepicker [(ngModel)]="indHasta" dateFormat="yy-mm-dd" inputStyleClass="p-inputtext-sm" />
-          </div>
-          <p-button label="Consultar" icon="pi pi-refresh" size="small" (onClick)="loadIndicadores()" [loading]="loadingInd()" />
+          <tr mat-header-row *matHeaderRowDef="columnasBloqueos"></tr>
+          <tr mat-row *matRowDef="let fila; columns: columnasBloqueos"></tr>
+        </table>
+        @if (!loadingBloqueos() && bloqueos().length === 0) {
+          <p class="vacio">No hay bloqueos registrados</p>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- ── Indicadores ────────────────────────────────────────── -->
+    <mat-tab label="Indicadores (Res. 256/2016)">
+      <div class="panel">
+        <div class="filtros" style="margin-bottom:1.5rem">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Médico</mat-label>
+            <mat-select [(ngModel)]="indFilterMedico">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (m of medicos(); track m.id) {
+                <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Desde</mat-label>
+            <input matInput [matDatepicker]="calD" [(ngModel)]="indDesde" />
+            <mat-datepicker-toggle matIconSuffix [for]="calD" />
+            <mat-datepicker #calD />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Hasta</mat-label>
+            <input matInput [matDatepicker]="calH" [(ngModel)]="indHasta" />
+            <mat-datepicker-toggle matIconSuffix [for]="calH" />
+            <mat-datepicker #calH />
+          </mat-form-field>
+          <button matButton="filled" [disabled]="loadingInd()" (click)="loadIndicadores()">
+            <i [class]="loadingInd() ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'"></i> Consultar
+          </button>
         </div>
 
         @if (indicadores()) {
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
+          <div class="kpis">
             <div class="kpi-card">
               <div class="kpi-value">{{ indicadores().atendidas }}</div>
               <div class="kpi-label">Citas Atendidas</div>
@@ -226,16 +514,16 @@ function aInstante(d: Date | null | undefined): string | null {
                IPS la estaba midiendo. Ya se mide —días entre la solicitud y la
                cita— y se dice SOBRE CUÁNTAS: sin ninguna medible el número es
                «sin datos», no un cero, que sería el mejor resultado posible. -->
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem">
+          <div class="indicadores">
             <div class="ind-card"
                  [class.ind-ok]="indicadores().oportunidad_dias_promedio !== null && indicadores().oportunidad_dias_promedio <= indicadores().meta_medicina_general_dias"
                  [class.ind-warn]="indicadores().oportunidad_dias_promedio !== null && indicadores().oportunidad_dias_promedio > indicadores().meta_medicina_general_dias">
-              <div style="font-size:1.5rem;font-weight:700">
+              <div class="ind-valor">
                 {{ indicadores().oportunidad_dias_promedio ?? 'sin datos' }}
                 @if (indicadores().oportunidad_dias_promedio !== null) { <span style="font-size:.9rem"> días</span> }
               </div>
               <div style="font-weight:600">Oportunidad promedio</div>
-              <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">
+              <div class="ind-nota">
                 Medida sobre {{ indicadores().oportunidad_medidas }} de
                 {{ indicadores().oportunidad_medidas + indicadores().oportunidad_sin_dato }} citas
                 &middot; Meta: ≤ {{ indicadores().meta_medicina_general_dias }} días (general),
@@ -244,9 +532,9 @@ function aInstante(d: Date | null | undefined): string | null {
             </div>
             @if (indicadores().oportunidad_sin_dato > 0) {
               <div class="ind-card ind-warn">
-                <div style="font-size:1.5rem;font-weight:700">{{ indicadores().oportunidad_sin_dato }}</div>
+                <div class="ind-valor">{{ indicadores().oportunidad_sin_dato }}</div>
                 <div style="font-weight:600">Sin fecha de solicitud</div>
-                <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">
+                <div class="ind-nota">
                   No cuentan para la oportunidad. Registre la fecha en que el
                   paciente PIDIÓ la cita para que entren.
                 </div>
@@ -254,9 +542,9 @@ function aInstante(d: Date | null | undefined): string | null {
             }
             @if (indicadores().oportunidad_incoherentes > 0) {
               <div class="ind-card ind-warn">
-                <div style="font-size:1.5rem;font-weight:700">{{ indicadores().oportunidad_incoherentes }}</div>
+                <div class="ind-valor">{{ indicadores().oportunidad_incoherentes }}</div>
                 <div style="font-weight:600">Con solicitud posterior a la cita</div>
-                <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">
+                <div class="ind-nota">
                   Imposible: nadie pide una cita después de que ocurra. No se
                   promedian —darían días negativos que MEJORAN el indicador— y
                   hay que corregir la fecha en esas citas.
@@ -265,190 +553,72 @@ function aInstante(d: Date | null | undefined): string | null {
             }
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="tasas">
             <div class="ind-card" [class.ind-ok]="indicadores().tasa_inasistencia_pct <= 20" [class.ind-warn]="indicadores().tasa_inasistencia_pct > 20">
-              <div style="font-size:1.5rem;font-weight:700">{{ indicadores().tasa_inasistencia_pct }}%</div>
+              <div class="ind-valor">{{ indicadores().tasa_inasistencia_pct }}%</div>
               <div style="font-weight:600">Tasa de Inasistencia</div>
-              <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">Meta: ≤ 20%</div>
+              <div class="ind-nota">Meta: ≤ 20%</div>
             </div>
             <div class="ind-card" [class.ind-ok]="indicadores().tasa_cancelacion_pct <= 10" [class.ind-warn]="indicadores().tasa_cancelacion_pct > 10">
-              <div style="font-size:1.5rem;font-weight:700">{{ indicadores().tasa_cancelacion_pct }}%</div>
+              <div class="ind-valor">{{ indicadores().tasa_cancelacion_pct }}%</div>
               <div style="font-weight:600">Tasa de Cancelación</div>
-              <div style="font-size:.75rem;color:#64748b;margin-top:.25rem">Meta: ≤ 10%</div>
+              <div class="ind-nota">Meta: ≤ 10%</div>
             </div>
           </div>
 
-          <div style="margin-top:1rem;padding:.75rem;background:#eff6ff;border-radius:.5rem;font-size:.8rem;color:#1e40af">
+          <div class="normativa-box">
             <strong>Normativa aplicada:</strong> {{ indicadores().normativa }}
             (Decreto 780/2016, Ley 1438/2011)
           </div>
         } @else if (!loadingInd()) {
-          <p style="color:#64748b;text-align:center;padding:2rem">
-            Seleccione el período y presione "Consultar" para ver los indicadores
+          <p class="vacio">
+            Seleccione el período y presione «Consultar» para ver los indicadores
           </p>
         }
-      </p-tabpanel>
-    </p-tabpanels>
-  </p-tabs>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>
-
-<!-- Dialog: Nueva/Editar Agenda -->
-<p-dialog [(visible)]="showAgendaDialog" [header]="editingAgenda ? 'Editar Agenda' : 'Nueva Agenda Mensual'"
-  [modal]="true" [style]="{width:'700px'}">
-
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem">
-    @if (!editingAgenda) {
-      <div>
-        <label class="form-label">Médico *</label>
-        <p-select
-          [(ngModel)]="agendaForm.medico_id"
-          [options]="medicos()"
-          optionLabel="nombre"
-          optionValue="id"
-          placeholder="Seleccionar"
-          [style]="{width:'100%'}"
-        />
-      </div>
-      <div>
-        <label class="form-label">Año *</label>
-        <p-select [(ngModel)]="agendaForm.anio" [options]="anioOpts" [style]="{width:'100%'}" />
-      </div>
-      <div>
-        <label class="form-label">Mes *</label>
-        <p-select
-          [(ngModel)]="agendaForm.mes"
-          [options]="mesOpts"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Seleccionar"
-          [style]="{width:'100%'}"
-        />
-      </div>
-    }
-  </div>
-
-  <div style="margin-bottom:.75rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-      <strong style="font-size:.9rem">Bloques de Atención</strong>
-      <p-button label="Agregar bloque" icon="pi pi-plus" size="small" [text]="true" (onClick)="addBloqueForm()" />
-    </div>
-    <p style="font-size:.75rem;color:#64748b;margin:.25rem 0 .75rem">
-      Duración mínima por consulta: medicina general ≥20 min · especialista ≥30 min (Circular 049/2008 Supersalud)
-    </p>
-
-    @for (bloque of agendaForm.bloques; track $index; let i = $index) {
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:.5rem;align-items:center;margin-bottom:.5rem;padding:.5rem;background:#f8fafc;border-radius:.375rem">
-        <p-select
-          [(ngModel)]="bloque.dia_semana"
-          [options]="diasOpts"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Día"
-          [style]="{width:'100%'}"
-        />
-        <input pInputText type="time" [(ngModel)]="bloque.hora_inicio" style="width:100%" />
-        <input pInputText type="time" [(ngModel)]="bloque.hora_fin" style="width:100%" />
-        <p-button icon="pi pi-trash" severity="danger" [text]="true" size="small" (onClick)="removeBloqueForm(i)" />
-      </div>
-    }
-
-    @if (agendaForm.bloques.length === 0) {
-      <p style="color:#9ca3af;font-size:.875rem;text-align:center;padding:.75rem">
-        No hay bloques. Agrega al menos uno para la semana laboral.
-      </p>
-    }
-  </div>
-
-  <div>
-    <label class="form-label">Observaciones</label>
-    <input pInputText [(ngModel)]="agendaForm.observaciones" placeholder="Notas opcionales" style="width:100%" />
-  </div>
-
-  <ng-template pTemplate="footer">
-    <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showAgendaDialog=false" />
-    <p-button label="Guardar" icon="pi pi-check" (onClick)="saveAgenda()" [loading]="savingAgenda()" />
-  </ng-template>
-</p-dialog>
-
-<!-- Dialog: Nuevo Bloqueo -->
-<p-dialog [(visible)]="showBloqueoDialog" header="Nuevo Bloqueo de Agenda"
-  [modal]="true" [style]="{width:'500px'}">
-
-  <div style="display:grid;gap:1rem;padding:.5rem 0">
-    <div>
-      <label class="form-label">Médico *</label>
-      <p-select
-        [(ngModel)]="bloqueoForm.medico_id"
-        [options]="medicos()"
-        optionLabel="nombre"
-        optionValue="id"
-        placeholder="Seleccionar médico"
-        [style]="{width:'100%'}"
-      />
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-      <div>
-        <label class="form-label">Fecha inicio *</label>
-        <p-datepicker
-          [(ngModel)]="bloqueoForm.fecha_inicio"
-          [showTime]="true"
-          hourFormat="24"
-          dateFormat="yy-mm-dd"
-          [style]="{width:'100%'}"
-        />
-      </div>
-      <div>
-        <label class="form-label">Fecha fin *</label>
-        <p-datepicker
-          [(ngModel)]="bloqueoForm.fecha_fin"
-          [showTime]="true"
-          hourFormat="24"
-          dateFormat="yy-mm-dd"
-          [style]="{width:'100%'}"
-        />
-      </div>
-    </div>
-    <div>
-      <label class="form-label">Tipo *</label>
-      <p-select
-        [(ngModel)]="bloqueoForm.tipo"
-        [options]="tiposBloqueo"
-        placeholder="Tipo de bloqueo"
-        [style]="{width:'100%'}"
-      />
-    </div>
-    <div>
-      <label class="form-label">Motivo *</label>
-      <input pInputText [(ngModel)]="bloqueoForm.motivo" placeholder="Descripción del bloqueo" style="width:100%" />
-    </div>
-  </div>
-
-  <ng-template pTemplate="footer">
-    <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showBloqueoDialog=false" />
-    <p-button label="Guardar" icon="pi pi-check" (onClick)="saveBloqueo()" [loading]="savingBloqueo()" />
-  </ng-template>
-</p-dialog>
   `,
   styles: [`
-    .form-label { display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.25rem }
-    .kpi-card {
-      background:#f8fafc;border:1px solid #e2e8f0;border-radius:.5rem;
-      padding:1rem;text-align:center;
-    }
-    .kpi-value { font-size:2rem;font-weight:700;color:#1e293b;line-height:1 }
-    .kpi-label { font-size:.8rem;color:#64748b;margin-top:.25rem }
-    .ind-card {
-      padding:1.25rem;border-radius:.5rem;border:1px solid #e2e8f0;
-    }
-    .ind-ok { background:#f0fdf4;border-color:#86efac }
-    .ind-warn { background:#fff7ed;border-color:#fdba74 }
+    .normativa { font-size:.8rem; color:#64748b; margin-top:-.5rem; margin-bottom:1rem; }
+    .panel { padding-top:1rem; }
+    .barra { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;
+      margin-bottom:1rem; flex-wrap:wrap; }
+    .filtros { display:flex; gap:.5rem; flex-wrap:wrap; }
+    .tabla { width:100%; }
+    .tenue { color:#64748b; font-size:.875rem; }
+    .vacio { text-align:center; padding:2rem; color:#64748b; }
+    .chips { display:flex; flex-wrap:wrap; gap:.25rem; }
+    .chip { background:#dbeafe; color:#1d4ed8; padding:.125rem .5rem; border-radius:.75rem; font-size:.75rem; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .kpi-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.5rem; padding:1rem; text-align:center; }
+    .kpi-value { font-size:2rem; font-weight:700; color:#1e293b; line-height:1; }
+    .kpi-label { font-size:.8rem; color:#64748b; margin-top:.25rem; }
+    .indicadores { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .tasas { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .ind-card { padding:1.25rem; border-radius:.5rem; border:1px solid #e2e8f0; }
+    .ind-valor { font-size:1.5rem; font-weight:700; }
+    .ind-nota { font-size:.75rem; color:#64748b; margin-top:.25rem; }
+    .ind-ok { background:#f0fdf4; border-color:#86efac; }
+    .ind-warn { background:#fff7ed; border-color:#fdba74; }
+    .normativa-box { margin-top:1rem; padding:.75rem; background:#eff6ff; border-radius:.5rem;
+      font-size:.8rem; color:#1e40af; }
+    /* En M3 el input color de un botón no pinta nada: lo destructivo va por CSS. */
+    .peligro { color:#dc2626; }
   `],
 })
 export class AgendaMedicaComponent implements OnInit {
   private svc = inject(CitaService);
+  private dialogo = inject(MatDialog);
   private msg = inject(Avisos);
 
-  activeTab = 'agendas';
+  readonly columnasAgendas = ['medico', 'periodo', 'bloques', 'estado', 'acciones'];
+  readonly columnasBloqueos = ['medico', 'tipo', 'desde', 'hasta', 'motivo', 'acciones'];
+  readonly anios = ANIOS;
+  readonly meses = MESES_OPT;
+
+  pestana = 0;
   medicos = signal<MedicoDisponible[]>([]);
   agendas = signal<any[]>([]);
   bloqueos = signal<any[]>([]);
@@ -457,10 +627,7 @@ export class AgendaMedicaComponent implements OnInit {
   loadingAgendas = signal(false);
   loadingBloqueos = signal(false);
   loadingInd = signal(false);
-  savingAgenda = signal(false);
-  savingBloqueo = signal(false);
 
-  // Filters
   filterMedico: number | null = null;
   filterAnio: number = new Date().getFullYear();
   filterMes: number | null = null;
@@ -468,29 +635,14 @@ export class AgendaMedicaComponent implements OnInit {
   indDesde: Date = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   indHasta: Date = new Date();
 
-  // Dialogs
-  showAgendaDialog = false;
-  showBloqueoDialog = false;
-  editingAgenda: any = null;
-
-  agendaForm: any = { medico_id: null, anio: new Date().getFullYear(), mes: null, observaciones: '', bloques: [] };
-  bloqueoForm: any = { medico_id: null, fecha_inicio: null, fecha_fin: null, tipo: 'Otro', motivo: '' };
-
-  anioOpts = [new Date().getFullYear(), new Date().getFullYear() + 1];
-  mesOpts = MESES.map((m, i) => ({ label: m, value: i + 1 }));
-  diasOpts = DIAS.map((d, i) => ({ label: d, value: i }));
-  tiposBloqueo = Object.keys(TIPOS_BLOQUEO);
-
   ngOnInit(): void {
     this.svc.getMedicos().subscribe(m => this.medicos.set(m));
     this.loadAgendas();
     this.loadBloqueos();
   }
 
-  onTabChange(tab: string | number | undefined): void {
-    if (tab === undefined || typeof tab === 'number') return;
-    this.activeTab = tab;
-    if (tab === 'bloqueos') this.loadBloqueos();
+  alCambiarPestana(i: number): void {
+    if (i === 1) this.loadBloqueos();
   }
 
   mesNombre(mes: number): string {
@@ -502,7 +654,7 @@ export class AgendaMedicaComponent implements OnInit {
     this.svc.getAgendas(
       this.filterMedico ?? undefined,
       this.filterAnio,
-      this.filterMes ?? undefined
+      this.filterMes ?? undefined,
     ).subscribe({
       next: a => { this.agendas.set(a); this.loadingAgendas.set(false); },
       error: () => this.loadingAgendas.set(false),
@@ -519,91 +671,64 @@ export class AgendaMedicaComponent implements OnInit {
 
   loadIndicadores(): void {
     this.loadingInd.set(true);
-    const desde = this.toDateStr(this.indDesde);
-    const hasta = this.toDateStr(this.indHasta);
     this.svc.getIndicadoresOportunidad(
       this.indFilterMedico ?? undefined,
-      desde,
-      hasta
+      diaLocal(this.indDesde),
+      diaLocal(this.indHasta),
     ).subscribe({
       next: d => { this.indicadores.set(d); this.loadingInd.set(false); },
       error: () => this.loadingInd.set(false),
     });
   }
 
-  /** El binario manda `anio`, sin eñe: una columna con tilde en SQLite es una
-   *  fuente de líos de codificación y el Python la tenía por descuido, no por
-   *  decisión. El acceso por corchetes era el rodeo que hacía falta con `año`. */
-  getAnio(a: any): number { return a.anio; }
-
   tipoEnPantalla(t: string): string { return TIPO_BLOQUEO_A_PANTALLA[t] ?? t; }
 
-  openNewAgenda(): void {
-    this.editingAgenda = null;
-    this.agendaForm = {
-      medico_id: null,
-      anio: new Date().getFullYear(),
-      mes: null,
-      observaciones: '',
-      bloques: [],
-    };
-    this.showAgendaDialog = true;
+  abrirAgenda(agenda: any | null): void {
+    this.dialogo
+      .open(AgendaDialogoComponent, { data: { medicos: this.medicos(), agenda }, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((f?: AgendaForm) => { if (f) this.guardarAgenda(agenda, f); });
   }
 
-  editAgenda(agenda: any): void {
-    this.editingAgenda = agenda;
-    this.agendaForm = {
-      medico_id: agenda.medico_id,
-      anio: agenda.anio,
-      mes: agenda.mes,
-      observaciones: agenda.observaciones ?? '',
-      bloques: agenda.bloques.map((b: any) => ({
-        id: b.id,
-        dia_semana: b.dia_semana,
-        hora_inicio: b.hora_inicio,
-        hora_fin: b.hora_fin,
-        activo: b.activo,
-      })),
-    };
-    this.showAgendaDialog = true;
-  }
-
-  addBloqueForm(): void {
-    this.agendaForm.bloques.push({ dia_semana: 0, hora_inicio: '08:00', hora_fin: '12:00', activo: true });
-  }
-
-  removeBloqueForm(idx: number): void {
-    this.agendaForm.bloques.splice(idx, 1);
-  }
-
-  saveAgenda(): void {
-    this.savingAgenda.set(true);
-    if (this.editingAgenda) {
-      // Update: toggle active + update bloques individually
-      this.svc.updateAgenda(this.editingAgenda.id, { observaciones: this.agendaForm.observaciones }).subscribe({
-        next: () => {
-          this.savingAgenda.set(false);
-          this.showAgendaDialog = false;
-          this.msg.add({ severity: 'success', summary: 'Agenda actualizada' });
-          this.loadAgendas();
-        },
-        error: () => this.savingAgenda.set(false),
+  /**
+   * Al editar se guardan TAMBIÉN los bloques.
+   *
+   * Antes solo se mandaban las observaciones: el diálogo dejaba agregar y quitar
+   * bloques, se cerraba diciendo «Agenda actualizada» y el horario del médico
+   * quedaba igual. Un cambio que se acepta y no ocurre es peor que uno que
+   * falla. Los nuevos son los que no tienen `id`; los quitados, los `id` que
+   * estaban antes y ya no están.
+   */
+  private guardarAgenda(previa: any | null, f: AgendaForm): void {
+    if (!previa) {
+      this.svc.createAgenda(f).subscribe({
+        next: () => { this.msg.add({ severity: 'success', summary: 'Agenda creada' }); this.loadAgendas(); },
+        error: (err) => this.msg.add({
+          severity: 'error', summary: 'Error',
+          detail: err?.error?.detail ?? 'No se pudo crear la agenda',
+        }),
       });
-    } else {
-      this.svc.createAgenda(this.agendaForm).subscribe({
-        next: () => {
-          this.savingAgenda.set(false);
-          this.showAgendaDialog = false;
-          this.msg.add({ severity: 'success', summary: 'Agenda creada' });
-          this.loadAgendas();
-        },
-        error: (err) => {
-          this.savingAgenda.set(false);
-          const detail = err?.error?.detail ?? 'No se pudo crear la agenda';
-          this.msg.add({ severity: 'error', summary: 'Error', detail });
-        },
-      });
+      return;
     }
+
+    const quedan = new Set(f.bloques.filter(b => b.id).map(b => b.id));
+    const eliminados: number[] = previa.bloques
+      .map((b: any) => b.id)
+      .filter((id: number) => !quedan.has(id));
+    const nuevos = f.bloques.filter(b => !b.id);
+
+    forkJoin([
+      this.svc.updateAgenda(previa.id, { observaciones: f.observaciones }),
+      ...eliminados.map(id => this.svc.deleteBloque(previa.id, id)),
+      ...nuevos.map(b => this.svc.addBloque(previa.id, b)),
+      of(null),
+    ]).subscribe({
+      next: () => { this.msg.add({ severity: 'success', summary: 'Agenda actualizada' }); this.loadAgendas(); },
+      error: (err) => this.msg.add({
+        severity: 'error', summary: 'Error',
+        detail: err?.error?.detail ?? 'No se pudo actualizar la agenda',
+      }),
+    });
   }
 
   deleteAgenda(id: number): void {
@@ -615,24 +740,16 @@ export class AgendaMedicaComponent implements OnInit {
     });
   }
 
-  openNewBloqueo(): void {
-    this.bloqueoForm = { medico_id: null, fecha_inicio: null, fecha_fin: null, tipo: 'Otro', motivo: '' };
-    this.showBloqueoDialog = true;
+  abrirBloqueo(): void {
+    this.dialogo
+      .open(BloqueoDialogoComponent, { data: { medicos: this.medicos() }, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((payload?: Record<string, unknown>) => { if (payload) this.guardarBloqueo(payload); });
   }
 
-  saveBloqueo(): void {
-    this.savingBloqueo.set(true);
-    const payload = {
-      medico_id: this.bloqueoForm.medico_id,
-      motivo: this.bloqueoForm.motivo,
-      tipo: TIPOS_BLOQUEO[this.bloqueoForm.tipo] ?? 'OTRO',
-      inicio: aInstante(this.bloqueoForm.fecha_inicio),
-      fin: aInstante(this.bloqueoForm.fecha_fin),
-    };
+  private guardarBloqueo(payload: Record<string, unknown>): void {
     this.svc.createBloqueo(payload).subscribe({
       next: (r) => {
-        this.savingBloqueo.set(false);
-        this.showBloqueoDialog = false;
         // El bloqueo NO cancela las citas que quedan dentro: si las hay, hay que
         // reasignarlas a mano, y por eso el aviso es `warn` y no `success`.
         const enConflicto = r.citas_en_conflicto ?? 0;
@@ -645,7 +762,10 @@ export class AgendaMedicaComponent implements OnInit {
         });
         this.loadBloqueos();
       },
-      error: () => this.savingBloqueo.set(false),
+      error: (err) => this.msg.add({
+        severity: 'error', summary: 'Error',
+        detail: err?.error?.detail ?? 'No se pudo crear el bloqueo',
+      }),
     });
   }
 
@@ -656,9 +776,5 @@ export class AgendaMedicaComponent implements OnInit {
         this.loadBloqueos();
       },
     });
-  }
-
-  private toDateStr(d: Date): string {
-    return d.toISOString().slice(0, 10);
   }
 }
