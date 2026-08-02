@@ -24,6 +24,9 @@ Estas pruebas atan las tres cosas: que las enumeraciones salgan del maestro, que
 los códigos viejos ya no sean valores válidos, y que el modelo no vuelva a
 responder por el profesional.
 """
+import re
+from pathlib import Path
+
 import pytest
 
 import maestros_muv
@@ -77,6 +80,59 @@ class TestLosCodigosViejosYaNoValen:
         assert CausaExterna("38").name == "ENFERMEDAD_GENERAL"
         with pytest.raises(ValueError):
             CausaExterna("13")
+
+
+class TestNingunSupuestoQuedaFueraDelCatalogo:
+    """Un supuesto inválido es peor que no tener supuesto.
+
+    `permitir_supuestos` existe como salida de emergencia para el cierre de mes
+    que no puede esperar. Si el valor que emite no está en la tabla del
+    validador, esa salida no salva a nadie: produce un archivo que el MUV
+    rechaza igual, solo que ahora con la firma de alguien encima.
+
+    Pasó en tres sitios a la vez —el AC con «13», el AU con «17» y el AH con
+    «13»—, todos de la tabla anterior a la 948. Se corrigieron los tres, y esta
+    prueba mira el CÓDIGO FUENTE para que el cuarto no aparezca: los supuestos
+    son literales dentro de las llamadas y no hay forma de recorrerlos en
+    tiempo de ejecución sin montar una base por documento.
+    """
+
+    RUTA = Path(__file__).resolve().parent.parent / "rips_completo.py"
+
+    def _supuestos_de(self, etiqueta: str) -> list[str]:
+        fuente = self.RUTA.read_text(encoding="utf-8")
+        # `"<etiqueta>", "<supuesto>"` — el par que reciben `exigir` y `rec.dato`.
+        patron = re.escape(f'"{etiqueta}"') + r'\s*,\s*"([^"]+)"'
+        return re.findall(patron, fuente)
+
+    def test_los_supuestos_de_causa_existen_en_la_tabla_del_muv(self):
+        del_maestro = {c["Codigo"] for c in maestros_muv.causas_motivo()}
+        supuestos = self._supuestos_de("causa o motivo de la atención")
+        assert supuestos, "no se encontró ninguno: ¿cambió la forma de la llamada?"
+        assert len(supuestos) >= 3, f"eran tres documentos: {supuestos}"
+        for s in supuestos:
+            assert s in del_maestro, (
+                f"«{s}» es un supuesto de causa/motivo que el MUV no reconoce. "
+                f"La tabla de la 948 va del 21 al 49."
+            )
+
+    def test_los_supuestos_de_finalidad_existen_en_la_tabla_del_muv(self):
+        del_maestro = {f["Codigo"] for f in maestros_muv.finalidades()}
+        supuestos = self._supuestos_de("finalidad de la consulta")
+        supuestos += self._supuestos_de("finalidad del procedimiento")
+        assert supuestos, "no se encontró ninguno: ¿cambió la forma de la llamada?"
+        for s in supuestos:
+            assert s in del_maestro, (
+                f"«{s}» es un supuesto de finalidad que el MUV no reconoce. "
+                f"La tabla de la 948 va del 11 al 44."
+            )
+
+    def test_la_busqueda_encuentra_algo_de_verdad(self):
+        """El contraste: si el patrón no casara con nada, las dos pruebas de
+        arriba pasarían con la lista vacía y no comprobarían nada."""
+        assert self._supuestos_de("causa o motivo de la atención")
+        assert self._supuestos_de("finalidad de la consulta")
+        assert not self._supuestos_de("una etiqueta que no existe en el archivo")
 
 
 class TestElModeloNoRespondePorElMedico:
