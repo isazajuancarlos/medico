@@ -1,16 +1,17 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { SelectModule } from 'primeng/select';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DialogModule } from 'primeng/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { Avisos } from '../../shared/ui/avisos.service';
+import { diaLocal } from '../../shared/fecha';
 import {
   FacturacionService, Factura, FacturaCreate, DetalleCreate, DetalleFactura,
   Glosa, Contrato, ContratoCreate, Entidad, StatsFacturacion,
@@ -19,14 +20,347 @@ import {
 type Tab = 'facturas' | 'contratos' | 'glosas';
 type Vista = 'lista' | 'detalle' | 'nueva';
 
+
+/** Opción de un selector: lo que se lee y lo que se guarda. */
+interface OpcionSelect { label: string; value: number | string }
+
+/** Los manuales tarifarios con los que se contrata en Colombia. */
+const TARIFAS = [
+  { label: 'CUPS', value: 'CUPS' },
+  { label: 'ISS', value: 'ISS' },
+  { label: 'SOAT', value: 'SOAT' },
+  { label: 'Personalizada', value: 'PERSONALIZADA' },
+];
+
+/** Radicación de una factura. Devuelve el radicado, o nada. */
+@Component({
+  selector: 'app-facturacion-radicar',
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule, MatDialogModule, MatButtonModule,
+    MatFormFieldModule, MatInputModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Radicar factura</h2>
+    <mat-dialog-content>
+      <div class="ficha">
+        <div style="font-weight:600;color:#f1f5f9">{{ f.numero_factura }}</div>
+        <div style="font-size:0.82rem;color:#94a3b8">
+          {{ f.entidad_nombre }} — {{ f.valor_neto | currency:'COP':'symbol-narrow':'1.0-0' }}
+        </div>
+      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Número de radicado *</mat-label>
+        <input matInput [(ngModel)]="numero" placeholder="RAD-2026-XXXXX" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de radicación</mat-label>
+        <input matInput type="date" [(ngModel)]="fecha" />
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="exito" [disabled]="!numero.trim()"
+        [mat-dialog-close]="resultado()">
+        <i class="pi pi-send"></i> Radicar factura
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { min-width:min(26rem, 85vw); display:flex; flex-direction:column; gap:.5rem; }
+    .ficha { margin-bottom:.5rem; padding:.75rem; background:rgba(99,102,241,0.1);
+      border-radius:6px; border:1px solid rgba(99,102,241,0.2); }
+    mat-form-field { width:100%; }
+    .exito { background:#16a34a; color:#fff; }
+  `],
+})
+export class FacturacionRadicarComponent {
+  numero = '';
+  /** El día LOCAL: ver shared/fecha. */
+  fecha = diaLocal(new Date());
+
+  constructor(@Inject(MAT_DIALOG_DATA) public f: Factura) {}
+
+  resultado(): { numero: string; fecha: string } | null {
+    return this.numero.trim() ? { numero: this.numero.trim(), fecha: this.fecha } : null;
+  }
+}
+
+/** Un servicio que se añade a una factura en borrador. */
+@Component({
+  selector: 'app-facturacion-servicio',
+  standalone: true,
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  template: `
+    <h2 mat-dialog-title>Agregar servicio</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Descripción del servicio *</mat-label>
+          <input matInput [(ngModel)]="f.servicio"
+            placeholder="Ej: Consulta médica general - HC 2026-001" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Código CUPS</mat-label>
+          <input matInput [(ngModel)]="f.codigo_cups" placeholder="890201" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Cantidad</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="f.cantidad" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Valor unitario (COP) *</mat-label>
+          <input matInput type="number" [(ngModel)]="f.valor_unitario" placeholder="0" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Agregar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem;
+      min-width:min(28rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class FacturacionServicioComponent {
+  f: Partial<DetalleCreate> = { codigo_cups: '890201', cantidad: 1 };
+
+  completo(): boolean { return !!this.f.servicio && !!this.f.valor_unitario; }
+
+  resultado(): DetalleCreate | null {
+    if (!this.completo()) return null;
+    return {
+      servicio: this.f.servicio!,
+      codigo_cups: this.f.codigo_cups || '890201',
+      cantidad: Number(this.f.cantidad) || 1,
+      valor_unitario: Number(this.f.valor_unitario),
+    };
+  }
+}
+
+/** Una glosa nueva sobre una factura. */
+@Component({
+  selector: 'app-facturacion-glosa',
+  standalone: true,
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  template: `
+    <h2 mat-dialog-title>Registrar glosa</h2>
+    <mat-dialog-content>
+      <mat-form-field appearance="outline">
+        <mat-label>Item glosado *</mat-label>
+        <input matInput [(ngModel)]="item" placeholder="Ej: Consulta del 2026-01-05" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Motivo de la glosa *</mat-label>
+        <textarea matInput [(ngModel)]="motivo" rows="2"
+          placeholder="Falta autorización, documentación incompleta..."></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Valor glosado (COP) *</mat-label>
+        <input matInput type="number" [(ngModel)]="valor" placeholder="0" />
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="aviso" [disabled]="!completo()"
+        [mat-dialog-close]="resultado()">
+        <i class="pi pi-exclamation-circle"></i> Registrar glosa
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { min-width:min(28rem, 85vw); display:flex; flex-direction:column; gap:.5rem; }
+    mat-form-field { width:100%; }
+    .aviso { background:#f59e0b; color:#0f172a; }
+  `],
+})
+export class FacturacionGlosaComponent {
+  item = '';
+  motivo = '';
+  valor: number | null = null;
+
+  completo(): boolean { return !!this.item.trim() && !!this.motivo.trim() && !!this.valor; }
+
+  resultado(): { item_glosado: string; motivo: string; valor_glosado: number } | null {
+    if (!this.completo()) return null;
+    return {
+      item_glosado: this.item.trim(),
+      motivo: this.motivo.trim(),
+      valor_glosado: Number(this.valor),
+    };
+  }
+}
+
+/**
+ * Respuesta a una glosa. Devuelve el texto Y si se acepta.
+ *
+ * Aceptar y rechazar son dos botones distintos y ninguno es el «por defecto»:
+ * aceptar una glosa es renunciar a cobrar ese valor, y rechazarla es sostener
+ * el cobro ante la EPS. No es una confirmación, es una decisión.
+ */
+@Component({
+  selector: 'app-facturacion-responder-glosa',
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule, MatDialogModule, MatButtonModule,
+    MatFormFieldModule, MatInputModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Responder glosa</h2>
+    <mat-dialog-content>
+      <div class="ficha">
+        <div style="font-weight:600;color:#f1f5f9">{{ g.item_glosado }}</div>
+        <div style="font-size:0.82rem;color:#94a3b8">{{ g.motivo }}</div>
+        <div style="font-size:0.82rem;color:#f87171;margin-top:0.25rem">
+          {{ g.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}
+        </div>
+      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Respuesta / sustentación *</mat-label>
+        <textarea matInput [(ngModel)]="texto" rows="4"
+          placeholder="Explique por qué acepta o rechaza la glosa..."></textarea>
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="exito" [disabled]="!texto.trim()"
+        [mat-dialog-close]="resultado(true)">
+        <i class="pi pi-check"></i> Aceptar glosa
+      </button>
+      <button matButton="filled" class="peligro-fondo" [disabled]="!texto.trim()"
+        [mat-dialog-close]="resultado(false)">
+        <i class="pi pi-times"></i> Rechazar glosa
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { min-width:min(28rem, 85vw); }
+    .ficha { margin-bottom:1rem; padding:.75rem; background:rgba(99,102,241,0.1);
+      border-radius:6px; border:1px solid rgba(99,102,241,0.2); }
+    mat-form-field { width:100%; }
+    .exito { background:#16a34a; color:#fff; }
+    .peligro-fondo { background:#dc2626; color:#fff; }
+  `],
+})
+export class FacturacionResponderGlosaComponent {
+  texto = '';
+
+  constructor(@Inject(MAT_DIALOG_DATA) public g: Glosa) {}
+
+  resultado(aceptar: boolean): { texto: string; aceptar: boolean } | null {
+    return this.texto.trim() ? { texto: this.texto.trim(), aceptar } : null;
+  }
+}
+
+/** Alta y edición de un contrato. */
+@Component({
+  selector: 'app-facturacion-contrato',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar contrato' : 'Nuevo contrato' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Entidad / EPS *</mat-label>
+          <mat-select [(ngModel)]="f.entidad_id">
+            @for (o of entidades; track o.value) {
+              <mat-option [value]="o.value">{{ o.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Nombre del contrato *</mat-label>
+          <input matInput [(ngModel)]="f.nombre" placeholder="Ej: Contrato SURA 2026" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Número de contrato *</mat-label>
+          <input matInput [(ngModel)]="f.numero_contrato" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de tarifa</mat-label>
+          <mat-select [(ngModel)]="f.tipo_tarifa">
+            @for (o of tarifas; track o.value) {
+              <mat-option [value]="o.value">{{ o.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha inicio</mat-label>
+          <input matInput type="date" [(ngModel)]="f.fecha_inicio" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha fin</mat-label>
+          <input matInput type="date" [(ngModel)]="f.fecha_fin" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>% de incremento sobre tarifa base</mat-label>
+          <input matInput type="number" [(ngModel)]="f.porcentaje_incremento" placeholder="0" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput [(ngModel)]="f.observaciones" rows="2"></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> {{ editando ? 'Guardar cambios' : 'Crear contrato' }}
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem;
+      min-width:min(32rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class FacturacionContratoComponent {
+  readonly tarifas = TARIFAS;
+  readonly entidades: OpcionSelect[];
+  readonly editando: boolean;
+  f: Partial<ContratoCreate>;
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) datos: { contrato: Contrato | null; entidades: OpcionSelect[] },
+  ) {
+    this.entidades = datos.entidades;
+    this.editando = !!datos.contrato;
+    const c = datos.contrato;
+    this.f = c
+      ? { entidad_id: c.entidad_id, nombre: c.nombre, numero_contrato: c.numero_contrato,
+          fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, tipo_tarifa: c.tipo_tarifa,
+          porcentaje_incremento: c.porcentaje_incremento, observaciones: c.observaciones }
+      : { tipo_tarifa: 'CUPS', porcentaje_incremento: 0 };
+  }
+
+  completo(): boolean {
+    return !!this.f.nombre && !!this.f.numero_contrato && !!this.f.entidad_id;
+  }
+
+  resultado(): Partial<ContratoCreate> | null {
+    return this.completo() ? this.f : null;
+  }
+}
+
 @Component({
   selector: 'app-facturacion',
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, SelectModule, MatTooltipModule,
-    DialogModule, MatDividerModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -37,10 +371,14 @@ type Vista = 'lista' | 'detalle' | 'nueva';
         <div class="list-header">
           <h2 class="page-title">Facturación</h2>
           @if (tab() === 'facturas') {
-            <p-button label="Nueva factura" icon="pi pi-plus" (onClick)="abrirNuevaFactura()" />
+            <button matButton="filled" (click)="abrirNuevaFactura()">
+              <i class="pi pi-plus"></i> Nueva factura
+            </button>
           }
           @if (tab() === 'contratos') {
-            <p-button label="Nuevo contrato" icon="pi pi-plus" (onClick)="abrirFormContrato(null)" />
+            <button matButton="filled" (click)="abrirFormContrato(null)">
+              <i class="pi pi-plus"></i> Nuevo contrato
+            </button>
           }
         </div>
 
@@ -91,14 +429,29 @@ type Vista = 'lista' | 'detalle' | 'nueva';
         <!-- ─── TAB FACTURAS ─── -->
         @if (tab() === 'facturas') {
           <div class="filter-bar">
-            <input pInputText [(ngModel)]="busqFactura" placeholder="Buscar por número..."
-              (input)="cargarFacturas()" class="search-input" />
-            <p-select [(ngModel)]="filtroEstadoFact" [options]="opcionesEstadoFact"
-              optionLabel="label" optionValue="value" [showClear]="true"
-              placeholder="Estado" style="width:160px" (onChange)="cargarFacturas()" />
-            <p-select [(ngModel)]="filtroEntidad" [options]="entidadesOpts()"
-              optionLabel="label" optionValue="value" [showClear]="true"
-              placeholder="Entidad" style="width:200px" (onChange)="cargarFacturas()" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-input">
+              <mat-label>Buscar</mat-label>
+              <input matInput [(ngModel)]="busqFactura" placeholder="Buscar por número..."
+                (input)="cargarFacturas()" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:160px">
+              <mat-label>Estado</mat-label>
+              <mat-select [(ngModel)]="filtroEstadoFact" (selectionChange)="cargarFacturas()">
+                <mat-option [value]="''">Todos</mat-option>
+                @for (o of opcionesEstadoFact; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:200px">
+              <mat-label>Entidad</mat-label>
+              <mat-select [(ngModel)]="filtroEntidad" (selectionChange)="cargarFacturas()">
+                <mat-option [value]="null">Todas</mat-option>
+                @for (o of entidadesOpts(); track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           </div>
 
           @if (cargandoFact()) {
@@ -109,77 +462,95 @@ type Vista = 'lista' | 'detalle' | 'nueva';
               <p>No hay facturas con los filtros seleccionados.</p>
             </div>
           } @else {
-            <p-table [value]="facturas()" [rowHover]="true" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Número</th>
-                  <th>Entidad / EPS</th>
-                  <th>Período</th>
-                  <th>Fecha</th>
-                  <th style="text-align:right">Valor neto</th>
-                  <th style="text-align:center">Estado</th>
-                  <th style="text-align:center">Items</th>
-                  <th style="text-align:center">Acciones</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-f>
-                <tr>
-                  <td>
-                    <strong class="num-factura">{{ f.numero_factura }}</strong>
-                    @if (f.num_radicado) {
-                      <div style="font-size:0.72rem;color:#94a3b8">Rad: {{ f.num_radicado }}</div>
-                    }
-                  </td>
-                  <td>
-                    <span>{{ f.entidad_nombre || '—' }}</span>
-                    @if (f.contrato_nombre) {
-                      <div style="font-size:0.75rem;color:#94a3b8">{{ f.contrato_nombre }}</div>
-                    }
-                  </td>
-                  <td style="font-size:0.82rem">
-                    {{ f.periodo_inicio | date:'dd/MM/yy' }} – {{ f.periodo_fin | date:'dd/MM/yy' }}
-                  </td>
-                  <td style="font-size:0.82rem">{{ f.fecha_factura | date:'dd/MM/yyyy' }}</td>
-                  <td style="text-align:right;font-weight:600">
-                    {{ f.valor_neto | currency:'COP':'symbol-narrow':'1.0-0' }}
-                    @if (f.descuentos > 0) {
-                      <div style="font-size:0.72rem;color:#94a3b8">-{{ f.descuentos | currency:'COP':'symbol-narrow':'1.0-0' }}</div>
-                    }
-                  </td>
-                  <td style="text-align:center">
-                    <x-etiqueta [value]="estadoLabel(f.estado)" [severity]="estadoSeverity(f.estado)" />
-                    @if (f.glosada) {
-                      <div style="font-size:0.68rem;color:#fbbf24;margin-top:2px">⚠ glosada</div>
-                    }
-                  </td>
-                  <td style="text-align:center">
-                    <span class="dur-badge">{{ f.total_detalles }}</span>
-                  </td>
-                  <td style="text-align:center;white-space:nowrap">
-                    <p-button icon="pi pi-eye" [text]="true" size="small"
-                      matTooltip="Ver detalle" (onClick)="abrirDetalle(f.id)" />
-                    @if (f.estado === 'BORRADOR') {
-                      <p-button icon="pi pi-send" [text]="true" size="small"
-                        severity="success" matTooltip="Radicar"
-                        (onClick)="abrirRadicar(f)" />
-                      <p-button icon="pi pi-trash" [text]="true" size="small"
-                        severity="danger" matTooltip="Eliminar"
-                        (onClick)="eliminarFactura(f)" />
-                    }
-                    @if (f.estado === 'RADICADA') {
-                      <p-button icon="pi pi-check" [text]="true" size="small"
-                        severity="success" matTooltip="Marcar aceptada"
-                        (onClick)="cambiarEstado(f, 'ACEPTADA')" />
-                    }
-                    @if (f.estado === 'ACEPTADA') {
-                      <p-button icon="pi pi-dollar" [text]="true" size="small"
-                        severity="success" matTooltip="Marcar pagada"
-                        (onClick)="cambiarEstado(f, 'PAGADA')" />
-                    }
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="facturas()" class="tabla">
+              <ng-container matColumnDef="numero">
+                <th mat-header-cell *matHeaderCellDef>Número</th>
+                <td mat-cell *matCellDef="let f">
+                  <strong class="num-factura">{{ f.numero_factura }}</strong>
+                  @if (f.num_radicado) {
+                    <div style="font-size:0.72rem;color:#94a3b8">Rad: {{ f.num_radicado }}</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="entidad">
+                <th mat-header-cell *matHeaderCellDef>Entidad / EPS</th>
+                <td mat-cell *matCellDef="let f">
+                  <span>{{ f.entidad_nombre || '—' }}</span>
+                  @if (f.contrato_nombre) {
+                    <div style="font-size:0.75rem;color:#94a3b8">{{ f.contrato_nombre }}</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="periodo">
+                <th mat-header-cell *matHeaderCellDef>Período</th>
+                <td mat-cell *matCellDef="let f" style="font-size:0.82rem">
+                  {{ f.periodo_inicio | date:'dd/MM/yy' }} – {{ f.periodo_fin | date:'dd/MM/yy' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let f" style="font-size:0.82rem">
+                  {{ f.fecha_factura | date:'dd/MM/yyyy' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Valor neto</th>
+                <td mat-cell *matCellDef="let f" class="derecha" style="font-weight:600">
+                  {{ f.valor_neto | currency:'COP':'symbol-narrow':'1.0-0' }}
+                  @if (f.descuentos > 0) {
+                    <div style="font-size:0.72rem;color:#94a3b8">
+                      -{{ f.descuentos | currency:'COP':'symbol-narrow':'1.0-0' }}
+                    </div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                <td mat-cell *matCellDef="let f" class="centro">
+                  <x-etiqueta [value]="estadoLabel(f.estado)" [severity]="estadoSeverity(f.estado)" />
+                  @if (f.glosada) {
+                    <div style="font-size:0.68rem;color:#fbbf24;margin-top:2px">⚠ glosada</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="items">
+                <th mat-header-cell *matHeaderCellDef class="centro">Items</th>
+                <td mat-cell *matCellDef="let f" class="centro">
+                  <span class="dur-badge">{{ f.total_detalles }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+                <td mat-cell *matCellDef="let f" class="centro" style="white-space:nowrap">
+                  <button matIconButton matTooltip="Ver detalle" (click)="abrirDetalle(f.id)">
+                    <i class="pi pi-eye"></i>
+                  </button>
+                  @if (f.estado === 'BORRADOR') {
+                    <button matIconButton class="exito-texto" matTooltip="Radicar" (click)="abrirRadicar(f)">
+                      <i class="pi pi-send"></i>
+                    </button>
+                    <button matIconButton class="peligro" matTooltip="Eliminar" (click)="eliminarFactura(f)">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  }
+                  @if (f.estado === 'RADICADA') {
+                    <button matIconButton class="exito-texto" matTooltip="Marcar aceptada"
+                      (click)="cambiarEstado(f, 'ACEPTADA')">
+                      <i class="pi pi-check"></i>
+                    </button>
+                  }
+                  @if (f.estado === 'ACEPTADA') {
+                    <button matIconButton class="exito-texto" matTooltip="Marcar pagada"
+                      (click)="cambiarEstado(f, 'PAGADA')">
+                      <i class="pi pi-dollar"></i>
+                    </button>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasFacturas"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnasFacturas"></tr>
+            </table>
           }
         }
 
@@ -193,56 +564,76 @@ type Vista = 'lista' | 'detalle' | 'nueva';
               <p>No hay contratos registrados.</p>
             </div>
           } @else {
-            <p-table [value]="contratos()" [rowHover]="true" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Nombre contrato</th>
-                  <th>N° contrato</th>
-                  <th>Entidad</th>
-                  <th>Tarifa base</th>
-                  <th>Vigencia</th>
-                  <th style="text-align:center">Estado</th>
-                  <th style="text-align:center">Acciones</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-c>
-                <tr>
-                  <td><strong>{{ c.nombre }}</strong></td>
-                  <td style="font-size:0.82rem;color:#94a3b8">{{ c.numero_contrato }}</td>
-                  <td style="font-size:0.85rem">{{ c.entidad_nombre || '—' }}</td>
-                  <td>
-                    <x-etiqueta [value]="c.tipo_tarifa" severity="secondary" />
-                    @if (c.porcentaje_incremento) {
-                      <span style="font-size:0.75rem;color:#94a3b8;margin-left:4px">+{{ c.porcentaje_incremento }}%</span>
-                    }
-                  </td>
-                  <td style="font-size:0.82rem">
-                    {{ c.fecha_inicio | date:'dd/MM/yyyy' }} – {{ c.fecha_fin | date:'dd/MM/yyyy' }}
-                  </td>
-                  <td style="text-align:center">
-                    <x-etiqueta [value]="c.activo ? 'Activo' : 'Inactivo'"
-                      [severity]="c.activo ? 'success' : 'secondary'" />
-                  </td>
-                  <td style="text-align:center">
-                    <p-button icon="pi pi-pencil" [text]="true" size="small"
-                      matTooltip="Editar" (onClick)="abrirFormContrato(c)" />
-                    <p-button [icon]="c.activo ? 'pi pi-ban' : 'pi pi-check'" [text]="true"
-                      size="small" [severity]="c.activo ? 'warn' : 'success'"
-                      [matTooltip]="c.activo ? 'Desactivar' : 'Activar'"
-                      (onClick)="toggleContrato(c)" />
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="contratos()" class="tabla">
+              <ng-container matColumnDef="nombre">
+                <th mat-header-cell *matHeaderCellDef>Nombre contrato</th>
+                <td mat-cell *matCellDef="let c"><strong>{{ c.nombre }}</strong></td>
+              </ng-container>
+              <ng-container matColumnDef="numero">
+                <th mat-header-cell *matHeaderCellDef>N° contrato</th>
+                <td mat-cell *matCellDef="let c" style="font-size:0.82rem;color:#94a3b8">
+                  {{ c.numero_contrato }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="entidad">
+                <th mat-header-cell *matHeaderCellDef>Entidad</th>
+                <td mat-cell *matCellDef="let c" style="font-size:0.85rem">{{ c.entidad_nombre || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="tarifa">
+                <th mat-header-cell *matHeaderCellDef>Tarifa base</th>
+                <td mat-cell *matCellDef="let c">
+                  <x-etiqueta [value]="c.tipo_tarifa" severity="secondary" />
+                  @if (c.porcentaje_incremento) {
+                    <span style="font-size:0.75rem;color:#94a3b8;margin-left:4px">
+                      +{{ c.porcentaje_incremento }}%
+                    </span>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="vigencia">
+                <th mat-header-cell *matHeaderCellDef>Vigencia</th>
+                <td mat-cell *matCellDef="let c" style="font-size:0.82rem">
+                  {{ c.fecha_inicio | date:'dd/MM/yyyy' }} – {{ c.fecha_fin | date:'dd/MM/yyyy' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                <td mat-cell *matCellDef="let c" class="centro">
+                  <x-etiqueta [value]="c.activo ? 'Activo' : 'Inactivo'"
+                    [severity]="c.activo ? 'success' : 'secondary'" />
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+                <td mat-cell *matCellDef="let c" class="centro">
+                  <button matIconButton matTooltip="Editar" (click)="abrirFormContrato(c)">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button matIconButton [class.aviso-color]="c.activo" [class.exito-texto]="!c.activo"
+                    [matTooltip]="c.activo ? 'Desactivar' : 'Activar'" (click)="toggleContrato(c)">
+                    <i [class]="c.activo ? 'pi pi-ban' : 'pi pi-check'"></i>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasContratos"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnasContratos"></tr>
+            </table>
           }
         }
 
         <!-- ─── TAB GLOSAS ─── -->
         @if (tab() === 'glosas') {
           <div class="filter-bar">
-            <p-select [(ngModel)]="filtroEstadoGlosa" [options]="opcionesEstadoGlosa"
-              optionLabel="label" optionValue="value" [showClear]="true"
-              placeholder="Estado" style="width:160px" (onChange)="cargarGlosas()" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:160px">
+              <mat-label>Estado</mat-label>
+              <mat-select [(ngModel)]="filtroEstadoGlosa" (selectionChange)="cargarGlosas()">
+                <mat-option [value]="''">Todos</mat-option>
+                @for (o of opcionesEstadoGlosa; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           </div>
 
           @if (cargandoGlosa()) {
@@ -253,44 +644,58 @@ type Vista = 'lista' | 'detalle' | 'nueva';
               <p>No hay glosas con el filtro seleccionado.</p>
             </div>
           } @else {
-            <p-table [value]="glosas()" [rowHover]="true" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Factura</th>
-                  <th>Item glosado</th>
-                  <th>Motivo</th>
-                  <th style="text-align:right">Valor</th>
-                  <th>Fecha</th>
-                  <th style="text-align:center">Estado</th>
-                  <th style="text-align:center">Acción</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-g>
-                <tr>
-                  <td><strong class="num-factura">{{ g.numero_factura || '—' }}</strong></td>
-                  <td style="font-size:0.85rem">{{ g.item_glosado }}</td>
-                  <td style="font-size:0.82rem">{{ g.motivo }}</td>
-                  <td style="text-align:right;font-weight:600;color:#f87171">
-                    {{ g.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}
-                  </td>
-                  <td style="font-size:0.82rem">{{ g.fecha_glosa | date:'dd/MM/yyyy' }}</td>
-                  <td style="text-align:center">
-                    <x-etiqueta [value]="g.estado"
-                      [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'RECHAZADA' ? 'danger' : 'success'" />
-                  </td>
-                  <td style="text-align:center">
-                    @if (g.estado === 'PENDIENTE') {
-                      <p-button icon="pi pi-reply" [text]="true" size="small"
-                        matTooltip="Responder glosa" (onClick)="abrirResponderGlosa(g)" />
-                    } @else {
-                      <span style="font-size:0.75rem;color:#64748b" matTooltip="{{ g.respuesta }}">
-                        {{ g.fecha_respuesta | date:'dd/MM/yy' }}
-                      </span>
-                    }
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="glosas()" class="tabla">
+              <ng-container matColumnDef="factura">
+                <th mat-header-cell *matHeaderCellDef>Factura</th>
+                <td mat-cell *matCellDef="let g">
+                  <strong class="num-factura">{{ g.numero_factura || '—' }}</strong>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="item">
+                <th mat-header-cell *matHeaderCellDef>Item glosado</th>
+                <td mat-cell *matCellDef="let g" style="font-size:0.85rem">{{ g.item_glosado }}</td>
+              </ng-container>
+              <ng-container matColumnDef="motivo">
+                <th mat-header-cell *matHeaderCellDef>Motivo</th>
+                <td mat-cell *matCellDef="let g" style="font-size:0.82rem">{{ g.motivo }}</td>
+              </ng-container>
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+                <td mat-cell *matCellDef="let g" class="derecha" style="font-weight:600;color:#f87171">
+                  {{ g.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <td mat-cell *matCellDef="let g" style="font-size:0.82rem">
+                  {{ g.fecha_glosa | date:'dd/MM/yyyy' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                <td mat-cell *matCellDef="let g" class="centro">
+                  <x-etiqueta [value]="g.estado"
+                    [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'RECHAZADA' ? 'danger' : 'success'" />
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="accion">
+                <th mat-header-cell *matHeaderCellDef class="centro">Acción</th>
+                <td mat-cell *matCellDef="let g" class="centro">
+                  @if (g.estado === 'PENDIENTE') {
+                    <button matIconButton matTooltip="Responder glosa" (click)="abrirResponderGlosa(g)">
+                      <i class="pi pi-reply"></i>
+                    </button>
+                  } @else {
+                    <span style="font-size:0.75rem;color:#64748b" [matTooltip]="g.respuesta">
+                      {{ g.fecha_respuesta | date:'dd/MM/yy' }}
+                    </span>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasGlosas"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnasGlosas"></tr>
+            </table>
           }
         }
 
@@ -299,7 +704,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
       <!-- ══════════════════ VISTA NUEVA FACTURA ══════════════════ -->
       @if (vista() === 'nueva') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">Nueva Factura</h2>
         </div>
 
@@ -307,37 +712,39 @@ type Vista = 'lista' | 'detalle' | 'nueva';
           <div class="form-section">
             <div class="section-title">Datos de la factura</div>
             <div class="form-grid">
-              <div class="field">
-                <label class="field-label">Entidad / EPS *</label>
-                <p-select [(ngModel)]="nFact.entidad_id" [options]="entidadesOpts()"
-                  optionLabel="label" optionValue="value" [filter]="true"
-                  placeholder="Seleccione entidad..."
-                  class="w-full" style="width:100%"
-                  (onChange)="onEntidadChange()" />
-              </div>
-              <div class="field">
-                <label class="field-label">Contrato (opcional)</label>
-                <p-select [(ngModel)]="nFact.contrato_id" [options]="contratosEntidad()"
-                  optionLabel="label" optionValue="value" [filter]="true" [showClear]="true"
-                  placeholder="Seleccione contrato..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label class="field-label">Período inicio *</label>
-                <input type="date" [(ngModel)]="nFact.periodo_inicio" class="w-full date-input" />
-              </div>
-              <div class="field">
-                <label class="field-label">Período fin *</label>
-                <input type="date" [(ngModel)]="nFact.periodo_fin" class="w-full date-input" />
-              </div>
-              <div class="field">
-                <label class="field-label">Descuentos (COP)</label>
-                <input pInputText type="number" [(ngModel)]="nFact.descuentos" class="w-full" placeholder="0" />
-              </div>
-              <div class="field">
-                <label class="field-label">Observaciones</label>
-                <input pInputText [(ngModel)]="nFact.observaciones" class="w-full" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Entidad / EPS *</mat-label>
+                <mat-select [(ngModel)]="nFact.entidad_id" (selectionChange)="onEntidadChange()">
+                  @for (o of entidadesOpts(); track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Contrato (opcional)</mat-label>
+                <mat-select [(ngModel)]="nFact.contrato_id">
+                  <mat-option [value]="null">Sin contrato</mat-option>
+                  @for (o of contratosEntidad(); track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Período inicio *</mat-label>
+                <input matInput type="date" [(ngModel)]="nFact.periodo_inicio" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Período fin *</mat-label>
+                <input matInput type="date" [(ngModel)]="nFact.periodo_fin" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Descuentos (COP)</mat-label>
+                <input matInput type="number" [(ngModel)]="nFact.descuentos" placeholder="0" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Observaciones</mat-label>
+                <input matInput [(ngModel)]="nFact.observaciones" />
+              </mat-form-field>
             </div>
           </div>
 
@@ -347,8 +754,9 @@ type Vista = 'lista' | 'detalle' | 'nueva';
           <div class="form-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
               <div class="section-title" style="margin-bottom:0">Servicios prestados</div>
-              <p-button label="Agregar servicio" icon="pi pi-plus" size="small"
-                [outlined]="true" (onClick)="agregarLineaTemporal()" />
+              <button matButton="outlined" (click)="agregarLineaTemporal()">
+                <i class="pi pi-plus"></i> Agregar servicio
+              </button>
             </div>
 
             @if (lineasTemp().length === 0) {
@@ -366,16 +774,21 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                   <span></span>
                 </div>
                 @for (lin of lineasTemp(); track $index) {
+                  <!-- Rejilla densa: los campos van desnudos con el CSS de la
+                       página. Envolver siete controles por fila en mat-form-field
+                       no cabe en la pantalla. -->
                   <div class="detalle-row">
-                    <input pInputText [(ngModel)]="lin.servicio" class="w-full" placeholder="Descripción servicio" />
-                    <input pInputText [(ngModel)]="lin.codigo_cups" style="width:100px" placeholder="CUPS" />
-                    <input pInputText type="number" [(ngModel)]="lin.cantidad"
+                    <input [(ngModel)]="lin.servicio" class="linea-input" placeholder="Descripción servicio" />
+                    <input [(ngModel)]="lin.codigo_cups" class="linea-input" style="width:100px" placeholder="CUPS" />
+                    <input type="number" [(ngModel)]="lin.cantidad" class="linea-input"
                       style="width:70px;text-align:center" min="1" (input)="calcLine(lin)" />
-                    <input pInputText type="number" [(ngModel)]="lin.valor_unitario"
+                    <input type="number" [(ngModel)]="lin.valor_unitario" class="linea-input"
                       style="width:130px;text-align:right" (input)="calcLine(lin)" />
                     <span class="total-linea">{{ ((lin.valor_unitario ?? 0) * (lin.cantidad ?? 0)) | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
-                    <p-button icon="pi pi-times" [text]="true" size="small" severity="danger"
-                      (onClick)="quitarLinea($index)" />
+                    <button matIconButton class="peligro" matTooltip="Quitar la línea"
+                      (click)="quitarLinea($index)">
+                      <i class="pi pi-times"></i>
+                    </button>
                   </div>
                 }
                 <div class="total-factura">
@@ -395,11 +808,11 @@ type Vista = 'lista' | 'detalle' | 'nueva';
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button label="Crear factura" icon="pi pi-check"
-              [loading]="guardando()"
-              [disabled]="!nFact.entidad_id || !nFact.periodo_inicio || !nFact.periodo_fin"
-              (onClick)="crearFactura()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="crearFactura()"
+              [disabled]="guardando() || !nFact.entidad_id || !nFact.periodo_inicio || !nFact.periodo_fin">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Crear factura
+            </button>
           </div>
         </div>
       }
@@ -407,7 +820,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
       <!-- ══════════════════ VISTA DETALLE FACTURA ══════════════════ -->
       @if (vista() === 'detalle' && facturaDetalle()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">{{ facturaDetalle()!.numero_factura }}</h2>
           <x-etiqueta [value]="estadoLabel(facturaDetalle()!.estado)"
             [severity]="estadoSeverity(facturaDetalle()!.estado)" />
@@ -469,102 +882,126 @@ type Vista = 'lista' | 'detalle' | 'nueva';
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
             <div class="section-title" style="margin-bottom:0">Servicios ({{ facturaDetalle()!.detalles.length }})</div>
             @if (facturaDetalle()!.estado === 'BORRADOR') {
-              <p-button label="Agregar" icon="pi pi-plus" size="small"
-                [outlined]="true" (onClick)="abrirAgregarDetalle()" />
+              <button matButton="outlined" (click)="abrirAgregarDetalle()">
+                <i class="pi pi-plus"></i> Agregar
+              </button>
             }
           </div>
 
           @if (facturaDetalle()!.detalles.length > 0) {
-            <p-table [value]="facturaDetalle()!.detalles" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Servicio</th>
-                  <th>CUPS</th>
-                  <th style="text-align:center">Cant.</th>
-                  <th style="text-align:right">Valor unit.</th>
-                  <th style="text-align:right">Total</th>
-                  @if (facturaDetalle()!.estado === 'BORRADOR') {
-                    <th></th>
+            <table mat-table [dataSource]="facturaDetalle()!.detalles" class="tabla">
+              <ng-container matColumnDef="servicio">
+                <th mat-header-cell *matHeaderCellDef>Servicio</th>
+                <td mat-cell *matCellDef="let d">
+                  {{ d.servicio }}
+                  @if (d.paciente_nombre) {
+                    <div style="font-size:0.75rem;color:#94a3b8">{{ d.paciente_nombre }}</div>
                   }
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-d>
-                <tr>
-                  <td>
-                    {{ d.servicio }}
-                    @if (d.paciente_nombre) {
-                      <div style="font-size:0.75rem;color:#94a3b8">{{ d.paciente_nombre }}</div>
-                    }
-                  </td>
-                  <td style="font-size:0.82rem;color:#94a3b8">{{ d.codigo_cups }}</td>
-                  <td style="text-align:center">{{ d.cantidad }}</td>
-                  <td style="text-align:right;font-size:0.82rem">{{ d.valor_unitario | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
-                  <td style="text-align:right;font-weight:600">{{ d.valor_total | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
-                  @if (facturaDetalle()!.estado === 'BORRADOR') {
-                    <td style="text-align:center">
-                      <p-button icon="pi pi-times" [text]="true" size="small" severity="danger"
-                        (onClick)="eliminarDetalle(d)" [loading]="accionando()" />
-                    </td>
-                  }
-                </tr>
-              </ng-template>
-            </p-table>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="cups">
+                <th mat-header-cell *matHeaderCellDef>CUPS</th>
+                <td mat-cell *matCellDef="let d" style="font-size:0.82rem;color:#94a3b8">{{ d.codigo_cups }}</td>
+              </ng-container>
+              <ng-container matColumnDef="cantidad">
+                <th mat-header-cell *matHeaderCellDef class="centro">Cant.</th>
+                <td mat-cell *matCellDef="let d" class="centro">{{ d.cantidad }}</td>
+              </ng-container>
+              <ng-container matColumnDef="unitario">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Valor unit.</th>
+                <td mat-cell *matCellDef="let d" class="derecha" style="font-size:0.82rem">
+                  {{ d.valor_unitario | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Total</th>
+                <td mat-cell *matCellDef="let d" class="derecha" style="font-weight:600">
+                  {{ d.valor_total | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="quitar">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let d" class="centro">
+                  <button matIconButton class="peligro" matTooltip="Quitar el servicio"
+                    [disabled]="accionando()" (click)="eliminarDetalle(d)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasDetalle()"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnasDetalle()"></tr>
+            </table>
           }
 
           <!-- Glosas -->
           @if (facturaDetalle()!.glosas.length > 0) {
             <mat-divider />
             <div class="section-title">Glosas ({{ facturaDetalle()!.glosas.length }})</div>
-            <p-table [value]="facturaDetalle()!.glosas" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Item glosado</th>
-                  <th>Motivo</th>
-                  <th style="text-align:right">Valor</th>
-                  <th style="text-align:center">Estado</th>
-                  <th>Respuesta</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-g>
-                <tr>
-                  <td>{{ g.item_glosado }}</td>
-                  <td style="font-size:0.82rem">{{ g.motivo }}</td>
-                  <td style="text-align:right;color:#f87171;font-weight:600">{{ g.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
-                  <td style="text-align:center">
-                    <x-etiqueta [value]="g.estado"
-                      [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'RECHAZADA' ? 'danger' : 'success'" />
-                  </td>
-                  <td style="font-size:0.78rem;color:#94a3b8">{{ g.respuesta || '—' }}</td>
-                </tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="facturaDetalle()!.glosas" class="tabla">
+              <ng-container matColumnDef="item">
+                <th mat-header-cell *matHeaderCellDef>Item glosado</th>
+                <td mat-cell *matCellDef="let g">{{ g.item_glosado }}</td>
+              </ng-container>
+              <ng-container matColumnDef="motivo">
+                <th mat-header-cell *matHeaderCellDef>Motivo</th>
+                <td mat-cell *matCellDef="let g" style="font-size:0.82rem">{{ g.motivo }}</td>
+              </ng-container>
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+                <td mat-cell *matCellDef="let g" class="derecha" style="color:#f87171;font-weight:600">
+                  {{ g.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                <td mat-cell *matCellDef="let g" class="centro">
+                  <x-etiqueta [value]="g.estado"
+                    [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'RECHAZADA' ? 'danger' : 'success'" />
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="respuesta">
+                <th mat-header-cell *matHeaderCellDef>Respuesta</th>
+                <td mat-cell *matCellDef="let g" style="font-size:0.78rem;color:#94a3b8">
+                  {{ g.respuesta || '—' }}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasGlosasDetalle"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnasGlosasDetalle"></tr>
+            </table>
           }
 
           <!-- Acciones -->
           <mat-divider />
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;flex-wrap:wrap">
+            @if (facturaDetalle()!.estado === 'BORRADOR' || facturaDetalle()!.estado === 'RADICADA') {
+              <button matButton="outlined" class="aviso-color" (click)="abrirAgregarGlosa()">
+                <i class="pi pi-exclamation-circle"></i> Agregar glosa
+              </button>
+            }
             @if (facturaDetalle()!.estado === 'BORRADOR') {
-              <p-button label="Agregar glosa" icon="pi pi-exclamation-circle" [outlined]="true"
-                severity="warn" size="small" (onClick)="abrirAgregarGlosa()" />
-              <p-button label="Radicar" icon="pi pi-send"
-                severity="success" (onClick)="abrirRadicar(facturaDetalle()!)" />
+              <button matButton="filled" class="exito" (click)="abrirRadicar(facturaDetalle()!)">
+                <i class="pi pi-send"></i> Radicar
+              </button>
             }
             @if (facturaDetalle()!.estado === 'RADICADA') {
-              <p-button label="Agregar glosa" icon="pi pi-exclamation-circle" [outlined]="true"
-                severity="warn" size="small" (onClick)="abrirAgregarGlosa()" />
-              <p-button label="Marcar aceptada" icon="pi pi-check"
-                severity="success" [loading]="accionando()"
-                (onClick)="cambiarEstado(facturaDetalle()!, 'ACEPTADA')" />
+              <button matButton="filled" class="exito" [disabled]="accionando()"
+                (click)="cambiarEstado(facturaDetalle()!, 'ACEPTADA')">
+                <i class="pi pi-check"></i> Marcar aceptada
+              </button>
             }
             @if (facturaDetalle()!.estado === 'ACEPTADA') {
-              <p-button label="Marcar pagada" icon="pi pi-dollar"
-                severity="success" [loading]="accionando()"
-                (onClick)="cambiarEstado(facturaDetalle()!, 'PAGADA')" />
+              <button matButton="filled" class="exito" [disabled]="accionando()"
+                (click)="cambiarEstado(facturaDetalle()!, 'PAGADA')">
+                <i class="pi pi-dollar"></i> Marcar pagada
+              </button>
             }
             @if (!['PAGADA','ANULADA'].includes(facturaDetalle()!.estado)) {
-              <p-button label="Anular" icon="pi pi-ban" [outlined]="true"
-                severity="danger" size="small" [loading]="accionando()"
-                (onClick)="cambiarEstado(facturaDetalle()!, 'ANULADA')" />
+              <button matButton="outlined" class="peligro" [disabled]="accionando()"
+                (click)="cambiarEstado(facturaDetalle()!, 'ANULADA')">
+                <i class="pi pi-ban"></i> Anular
+              </button>
             }
           </div>
         </div>
@@ -572,182 +1009,28 @@ type Vista = 'lista' | 'detalle' | 'nueva';
 
     </div>
 
-    <!-- ══ DIALOG RADICAR ══ -->
-    <p-dialog header="Radicar Factura" [(visible)]="mostrarRadicar"
-      [style]="{width:'440px'}" [modal]="true">
-      @if (facturaRadicar()) {
-        <div class="item-info-card" style="margin-bottom:1rem">
-          <div>
-            <div style="font-weight:600;color:#f1f5f9">{{ facturaRadicar()!.numero_factura }}</div>
-            <div style="font-size:0.82rem;color:#94a3b8">{{ facturaRadicar()!.entidad_nombre }} — {{ facturaRadicar()!.valor_neto | currency:'COP':'symbol-narrow':'1.0-0' }}</div>
-          </div>
-        </div>
-        <div class="form-grid" style="gap:0.875rem">
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Número de radicado *</label>
-            <input pInputText [(ngModel)]="radNumero" class="w-full" placeholder="RAD-2026-XXXXX" />
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Fecha de radicación</label>
-            <input type="date" [(ngModel)]="radFecha" class="w-full date-input" />
-          </div>
-        </div>
-      }
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarRadicar = false" />
-        <p-button label="Radicar factura" icon="pi pi-send"
-          severity="success" [loading]="accionando()"
-          [disabled]="!radNumero"
-          (onClick)="confirmarRadicar()" />
-      </div>
-    </p-dialog>
-
-    <!-- ══ DIALOG AGREGAR DETALLE ══ -->
-    <p-dialog header="Agregar Servicio" [(visible)]="mostrarDetalleDlg"
-      [style]="{width:'480px'}" [modal]="true">
-      <div class="form-grid" style="gap:0.875rem">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Descripción del servicio *</label>
-          <input pInputText [(ngModel)]="newDet.servicio" class="w-full"
-            placeholder="Ej: Consulta médica general - HC 2026-001" />
-        </div>
-        <div class="field">
-          <label class="field-label">Código CUPS</label>
-          <input pInputText [(ngModel)]="newDet.codigo_cups" class="w-full" placeholder="890201" />
-        </div>
-        <div class="field">
-          <label class="field-label">Cantidad</label>
-          <input pInputText type="number" [(ngModel)]="newDet.cantidad" class="w-full" min="1" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Valor unitario (COP) *</label>
-          <input pInputText type="number" [(ngModel)]="newDet.valor_unitario" class="w-full" placeholder="0" />
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarDetalleDlg = false" />
-        <p-button label="Agregar" icon="pi pi-check"
-          [loading]="accionando()"
-          [disabled]="!newDet.servicio || !newDet.valor_unitario"
-          (onClick)="confirmarAgregarDetalle()" />
-      </div>
-    </p-dialog>
-
-    <!-- ══ DIALOG AGREGAR GLOSA ══ -->
-    <p-dialog header="Registrar Glosa" [(visible)]="mostrarGlosaDlg"
-      [style]="{width:'480px'}" [modal]="true">
-      <div class="form-grid" style="gap:0.875rem">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Item glosado *</label>
-          <input pInputText [(ngModel)]="newGlosa.item_glosado" class="w-full"
-            placeholder="Ej: Consulta del 2026-01-05" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Motivo de la glosa *</label>
-          <textarea pTextarea [(ngModel)]="newGlosa.motivo" rows="2" class="w-full"
-            placeholder="Falta autorización, documentación incompleta..."></textarea>
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Valor glosado (COP) *</label>
-          <input pInputText type="number" [(ngModel)]="newGlosa.valor_glosado" class="w-full" placeholder="0" />
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarGlosaDlg = false" />
-        <p-button label="Registrar glosa" icon="pi pi-exclamation-circle"
-          severity="warn" [loading]="accionando()"
-          [disabled]="!newGlosa.item_glosado || !newGlosa.motivo || !newGlosa.valor_glosado"
-          (onClick)="confirmarGlosa()" />
-      </div>
-    </p-dialog>
-
-    <!-- ══ DIALOG RESPONDER GLOSA ══ -->
-    <p-dialog header="Responder Glosa" [(visible)]="mostrarRespGlosa"
-      [style]="{width:'480px'}" [modal]="true">
-      @if (glosaResponder()) {
-        <div class="item-info-card" style="margin-bottom:1rem">
-          <div>
-            <div style="font-weight:600;color:#f1f5f9">{{ glosaResponder()!.item_glosado }}</div>
-            <div style="font-size:0.82rem;color:#94a3b8">{{ glosaResponder()!.motivo }}</div>
-            <div style="font-size:0.82rem;color:#f87171;margin-top:0.25rem">{{ glosaResponder()!.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}</div>
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:1rem">
-          <label class="field-label">Respuesta / sustentación *</label>
-          <textarea pTextarea [(ngModel)]="respGlosaTexto" rows="4" class="w-full"
-            placeholder="Explique por qué acepta o rechaza la glosa..."></textarea>
-        </div>
-        <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.1)">
-          <p-button label="Cancelar" [text]="true" (onClick)="mostrarRespGlosa = false" />
-          <p-button label="Aceptar glosa" icon="pi pi-check"
-            severity="success" [loading]="accionando()"
-            [disabled]="!respGlosaTexto"
-            (onClick)="confirmarRespuestaGlosa(true)" />
-          <p-button label="Rechazar glosa" icon="pi pi-times"
-            severity="danger" [loading]="accionando()"
-            [disabled]="!respGlosaTexto"
-            (onClick)="confirmarRespuestaGlosa(false)" />
-        </div>
-      }
-    </p-dialog>
-
-    <!-- ══ DIALOG CONTRATO ══ -->
-    <p-dialog [header]="editContrato ? 'Editar Contrato' : 'Nuevo Contrato'"
-      [(visible)]="mostrarContratoForm" [style]="{width:'560px'}" [modal]="true">
-      <div class="form-grid" style="gap:0.875rem">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Entidad / EPS *</label>
-          <p-select [(ngModel)]="cForm.entidad_id" [options]="entidadesOpts()"
-            optionLabel="label" optionValue="value" [filter]="true"
-            placeholder="Seleccione entidad..."
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Nombre del contrato *</label>
-          <input pInputText [(ngModel)]="cForm.nombre" class="w-full"
-            placeholder="Ej: Contrato SURA 2026" />
-        </div>
-        <div class="field">
-          <label class="field-label">Número de contrato *</label>
-          <input pInputText [(ngModel)]="cForm.numero_contrato" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Tipo de tarifa</label>
-          <p-select [(ngModel)]="cForm.tipo_tarifa" [options]="opcionesTarifa"
-            optionLabel="label" optionValue="value"
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Fecha inicio</label>
-          <input type="date" [(ngModel)]="cForm.fecha_inicio" class="w-full date-input" />
-        </div>
-        <div class="field">
-          <label class="field-label">Fecha fin</label>
-          <input type="date" [(ngModel)]="cForm.fecha_fin" class="w-full date-input" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">% de incremento sobre tarifa base</label>
-          <input pInputText type="number" [(ngModel)]="cForm.porcentaje_incremento"
-            class="w-full" placeholder="0" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Observaciones</label>
-          <textarea pTextarea [(ngModel)]="cForm.observaciones" rows="2" class="w-full"></textarea>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarContratoForm = false" />
-        <p-button [label]="editContrato ? 'Guardar cambios' : 'Crear contrato'"
-          icon="pi pi-check" [loading]="guardando()"
-          [disabled]="!cForm.nombre || !cForm.numero_contrato || !cForm.entidad_id"
-          (onClick)="guardarContrato()" />
-      </div>
-    </p-dialog>
-
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0; }
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    .derecha { text-align: right; }
+    mat-form-field { width: 100%; }
+    /* Las líneas de la factura nueva son una rejilla densa: input desnudos con
+       el aspecto puesto aquí, como hacía pInputText. */
+    .linea-input {
+      background: rgba(255,255,255,0.04); color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
+      padding: 0.4rem 0.5rem; font-size: 0.875rem; width: 100%;
+    }
+    .linea-input:focus { outline: none; border-color: #818cf8; }
+    .linea-input::placeholder { color: #64748b; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .peligro { color: #dc2626; }
+    .exito-texto { color: #16a34a; }
+    .exito { background: #16a34a; color: #fff; }
+    .aviso-color { color: #f59e0b; }
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
     .cargando { padding: 3rem; text-align: center; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
     .sin-resultados { text-align: center; padding: 3rem 1rem; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
@@ -848,6 +1131,22 @@ type Vista = 'lista' | 'detalle' | 'nueva';
 })
 export class FacturacionComponent implements OnInit {
   private svc = inject(FacturacionService);
+  private dialogo = inject(MatDialog);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnasFacturas = ['numero', 'entidad', 'periodo', 'fecha', 'valor',
+                               'estado', 'items', 'acciones'];
+  readonly columnasContratos = ['nombre', 'numero', 'entidad', 'tarifa', 'vigencia',
+                                'estado', 'acciones'];
+  readonly columnasGlosas = ['factura', 'item', 'motivo', 'valor', 'fecha', 'estado', 'accion'];
+  readonly columnasGlosasDetalle = ['item', 'motivo', 'valor', 'estado', 'respuesta'];
+
+  /** La columna de quitar solo existe mientras la factura sea un borrador:
+   *  radicada ya salió hacia la EPS. */
+  columnasDetalle(): string[] {
+    const base = ['servicio', 'cups', 'cantidad', 'unitario', 'total'];
+    return this.facturaDetalle()?.estado === 'BORRADOR' ? [...base, 'quitar'] : base;
+  }
   private messageService = inject(Avisos);
 
   vista = signal<Vista>('lista');
@@ -891,29 +1190,19 @@ export class FacturacionComponent implements OnInit {
   subtotalTemp = () => this.lineasTemp().reduce((s, l) => s + (l.valor_unitario || 0) * (l.cantidad || 1), 0);
 
   // Dialog radicar
-  mostrarRadicar = false;
-  facturaRadicar = signal<Factura | null>(null);
-  radNumero = '';
-  radFecha = '';
+
 
   // Dialog detalle (agregar línea)
-  mostrarDetalleDlg = false;
-  newDet: Partial<DetalleCreate> = { codigo_cups: '890201', cantidad: 1 };
+
 
   // Dialog glosa
-  mostrarGlosaDlg = false;
-  newGlosa: Partial<{ item_glosado: string; motivo: string; valor_glosado: number }> = {};
-  glosaTargetId: number | null = null;
+
 
   // Dialog responder glosa
-  mostrarRespGlosa = false;
-  glosaResponder = signal<Glosa | null>(null);
-  respGlosaTexto = '';
+
 
   // Dialog contrato
-  mostrarContratoForm = false;
-  editContrato: Contrato | null = null;
-  cForm: Partial<ContratoCreate> = { tipo_tarifa: 'CUPS', porcentaje_incremento: 0 };
+
 
   readonly opcionesEstadoFact = [
     { label: 'Borrador', value: 'BORRADOR' },
@@ -930,12 +1219,7 @@ export class FacturacionComponent implements OnInit {
     { label: 'Rechazadas', value: 'RECHAZADA' },
   ];
 
-  readonly opcionesTarifa = [
-    { label: 'CUPS', value: 'CUPS' },
-    { label: 'ISS', value: 'ISS' },
-    { label: 'SOAT', value: 'SOAT' },
-    { label: 'Personalizada', value: 'PERSONALIZADA' },
-  ];
+  readonly opcionesTarifa = TARIFAS;
 
   ngOnInit(): void {
     this.svc.listEntidades().subscribe({ next: es => this.entidades.set(es) });
@@ -1086,20 +1370,17 @@ export class FacturacionComponent implements OnInit {
   // ── Radicar ──────────────────────────────────────
 
   abrirRadicar(f: Factura): void {
-    this.facturaRadicar.set(f);
-    this.radNumero = '';
-    this.radFecha = new Date().toISOString().split('T')[0];
-    this.mostrarRadicar = true;
+    this.dialogo
+      .open(FacturacionRadicarComponent, { data: f, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((r?: { numero: string; fecha: string }) => { if (r) this.radicar(f, r); });
   }
 
-  confirmarRadicar(): void {
-    const f = this.facturaRadicar();
-    if (!f || !this.radNumero) return;
+  private radicar(f: Factura, r: { numero: string; fecha: string }): void {
     this.accionando.set(true);
-    this.svc.radicarFactura(f.id, this.radNumero, this.radFecha).subscribe({
+    this.svc.radicarFactura(f.id, r.numero, r.fecha).subscribe({
       next: updated => {
         this.accionando.set(false);
-        this.mostrarRadicar = false;
         this.ok('Factura radicada', updated.numero_factura);
         if (this.vista() === 'detalle') this.facturaDetalle.set(updated);
         this.cargarFacturas();
@@ -1112,23 +1393,19 @@ export class FacturacionComponent implements OnInit {
   // ── Detalles ─────────────────────────────────────
 
   abrirAgregarDetalle(): void {
-    this.newDet = { codigo_cups: '890201', cantidad: 1 };
-    this.mostrarDetalleDlg = true;
+    const f = this.facturaDetalle();
+    if (!f) return;
+    this.dialogo
+      .open(FacturacionServicioComponent, { maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((d?: DetalleCreate) => { if (d) this.agregarDetalle(f, d); });
   }
 
-  confirmarAgregarDetalle(): void {
-    const f = this.facturaDetalle();
-    if (!f || !this.newDet.servicio || !this.newDet.valor_unitario) return;
+  private agregarDetalle(f: Factura, d: DetalleCreate): void {
     this.accionando.set(true);
-    this.svc.agregarDetalle(f.id, {
-      servicio: this.newDet.servicio!,
-      codigo_cups: this.newDet.codigo_cups || '890201',
-      cantidad: Number(this.newDet.cantidad) || 1,
-      valor_unitario: Number(this.newDet.valor_unitario),
-    }).subscribe({
+    this.svc.agregarDetalle(f.id, d).subscribe({
       next: updated => {
         this.accionando.set(false);
-        this.mostrarDetalleDlg = false;
         this.facturaDetalle.set(updated);
         this.ok('Servicio agregado');
       },
@@ -1149,27 +1426,26 @@ export class FacturacionComponent implements OnInit {
   // ── Glosas ───────────────────────────────────────
 
   abrirAgregarGlosa(): void {
-    this.newGlosa = {};
-    this.glosaTargetId = this.facturaDetalle()?.id ?? null;
-    this.mostrarGlosaDlg = true;
+    const id = this.facturaDetalle()?.id;
+    if (!id) return;
+    this.dialogo
+      .open(FacturacionGlosaComponent, { maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((g?: { item_glosado: string; motivo: string; valor_glosado: number }) => {
+        if (g) this.agregarGlosa(id, g);
+      });
   }
 
-  confirmarGlosa(): void {
-    const id = this.glosaTargetId;
-    if (!id || !this.newGlosa.item_glosado || !this.newGlosa.motivo || !this.newGlosa.valor_glosado) return;
+  private agregarGlosa(
+    facturaId: number,
+    g: { item_glosado: string; motivo: string; valor_glosado: number },
+  ): void {
     this.accionando.set(true);
-    this.svc.agregarGlosa(id, {
-      item_glosado: this.newGlosa.item_glosado!,
-      motivo: this.newGlosa.motivo!,
-      valor_glosado: Number(this.newGlosa.valor_glosado),
-    }).subscribe({
+    this.svc.agregarGlosa(facturaId, g).subscribe({
       next: () => {
         this.accionando.set(false);
-        this.mostrarGlosaDlg = false;
         this.ok('Glosa registrada');
-        if (this.vista() === 'detalle' && this.facturaDetalle()) {
-          this.abrirDetalle(this.facturaDetalle()!.id);
-        }
+        if (this.vista() === 'detalle') this.abrirDetalle(facturaId);
         this.cargarStats();
       },
       error: err => { this.accionando.set(false); this.err(err?.error?.detail ?? 'Error al registrar glosa'); },
@@ -1177,20 +1453,18 @@ export class FacturacionComponent implements OnInit {
   }
 
   abrirResponderGlosa(g: Glosa): void {
-    this.glosaResponder.set(g);
-    this.respGlosaTexto = '';
-    this.mostrarRespGlosa = true;
+    this.dialogo
+      .open(FacturacionResponderGlosaComponent, { data: g, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((r?: { texto: string; aceptar: boolean }) => { if (r) this.responderGlosa(g, r); });
   }
 
-  confirmarRespuestaGlosa(aceptar: boolean): void {
-    const g = this.glosaResponder();
-    if (!g || !this.respGlosaTexto) return;
+  private responderGlosa(g: Glosa, r: { texto: string; aceptar: boolean }): void {
     this.accionando.set(true);
-    this.svc.responderGlosa(g.id, this.respGlosaTexto, aceptar).subscribe({
+    this.svc.responderGlosa(g.id, r.texto, r.aceptar).subscribe({
       next: () => {
         this.accionando.set(false);
-        this.mostrarRespGlosa = false;
-        this.ok(aceptar ? 'Glosa aceptada' : 'Glosa rechazada');
+        this.ok(r.aceptar ? 'Glosa aceptada' : 'Glosa rechazada');
         this.cargarGlosas();
         this.cargarStats();
       },
@@ -1201,29 +1475,25 @@ export class FacturacionComponent implements OnInit {
   // ── Contratos ────────────────────────────────────
 
   abrirFormContrato(c: Contrato | null): void {
-    this.editContrato = c;
-    this.cForm = c
-      ? { entidad_id: c.entidad_id, nombre: c.nombre, numero_contrato: c.numero_contrato,
-          fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, tipo_tarifa: c.tipo_tarifa,
-          porcentaje_incremento: c.porcentaje_incremento, observaciones: c.observaciones }
-      : { tipo_tarifa: 'CUPS', porcentaje_incremento: 0 };
-    this.mostrarContratoForm = true;
+    this.dialogo
+      .open(FacturacionContratoComponent, {
+        data: { contrato: c, entidades: this.entidadesOpts() },
+        maxWidth: '95vw',
+      })
+      .afterClosed()
+      .subscribe((datos?: Partial<ContratoCreate>) => { if (datos) this.guardarContrato(c, datos); });
   }
 
-  guardarContrato(): void {
-    if (!this.cForm.nombre || !this.cForm.numero_contrato || !this.cForm.entidad_id) return;
-    this.guardando.set(true);
-    const obs = this.editContrato
-      ? this.svc.actualizarContrato(this.editContrato.id, this.cForm as ContratoCreate)
-      : this.svc.crearContrato(this.cForm as ContratoCreate);
+  private guardarContrato(editando: Contrato | null, datos: Partial<ContratoCreate>): void {
+    const obs = editando
+      ? this.svc.actualizarContrato(editando.id, datos as ContratoCreate)
+      : this.svc.crearContrato(datos as ContratoCreate);
     obs.subscribe({
       next: () => {
-        this.guardando.set(false);
-        this.mostrarContratoForm = false;
-        this.ok(this.editContrato ? 'Contrato actualizado' : 'Contrato creado');
+        this.ok(editando ? 'Contrato actualizado' : 'Contrato creado');
         this.cargarContratos();
       },
-      error: err => { this.guardando.set(false); this.err(err?.error?.detail ?? 'Error al guardar contrato'); },
+      error: err => this.err(err?.error?.detail ?? 'Error al guardar contrato'),
     });
   }
 
