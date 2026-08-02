@@ -18,18 +18,23 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 | | producto vivo | port en curso |
 |---|---|---|
 | **Backend** | FastAPI + SQLModel + PostgreSQL (`backend/`) | axum + SQLx + SQLite (`crates/`) |
-| **Interfaz** | Angular 21, saliendo de PrimeNG a Material (`frontend/`) | la misma, **empotrada en el binario** |
+| **Interfaz** | Angular 21 + `@angular/material` (`frontend/`) | la misma, **empotrada en el binario** |
 | **Entrega** | proceso + base de datos | **un archivo** |
 | **Ramas** | `main`, `master` | `feat/*` |
 
-> **PrimeNG está saliendo.** El estándar de todos los desarrollos es Angular con
-> `@angular/material`; medico era el único que no cumplía y la migración está en
-> curso: 287 → 154 importaciones de `primeng`, con la compilación y las 130
-> pruebas en verde en cada lote. La receta y las trampas, en
-> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md). **No se sube `primeng` a la
-> 22**: dejó de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un
+> **PrimeNG salió el 2026-08-02.** El estándar de todos los desarrollos es
+> Angular con `@angular/material`; medico era el único que no cumplía. La
+> migración terminó: **287 → 0** importaciones de `primeng`, y la librería y
+> `@primeuix/themes` salieron del `package.json`, con la compilación y las
+> pruebas en verde en cada lote (82 → **366**). La receta y las trampas, en
+> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md). Nunca se subió `primeng` a
+> la 22: dejó de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un
 > binario que vive offline en casa de un cliente no puede llevar dentro una clave
-> que caduca.
+> que caduca. De la familia solo queda `primeicons`, que es MIT y es una fuente
+> de iconos.
+
+Con eso queda desbloqueado el salto a Angular 22 (#254), que era lo que el peer
+de PrimeNG 21 impedía.
 
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
@@ -70,7 +75,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---
 cd frontend
-npm install --legacy-peer-deps         # obligatorio: conflictos de peers de PrimeNG
+npm install --legacy-peer-deps         # el árbol se instaló así; queda hasta la próxima limpieza
 npm start                              # :4200 con proxy a :8000
 ```
 

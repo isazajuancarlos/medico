@@ -21,45 +21,55 @@ consultorio de un cliente real (`/mnt/data/aprograms`, fuente autoritativa;
 de cero: cada decisión se contrasta contra lo que el prestador ya usa.
 
 Backend **FastAPI + SQLModel + PostgreSQL** en `backend/`, frontend **Angular 21 +
-PrimeNG 21** en `frontend/`. Multi-institucional, con licencia por institución que
-decide qué módulos se ven.
+`@angular/material`** en `frontend/`. Multi-institucional, con licencia por
+institución que decide qué módulos se ven.
 
-> **PrimeNG está SALIENDO, y Material ya está dentro** (#255, desde el
-> 2026-08-02). El stack de todos los desarrollos es Rust (axum + SQLx/SQLite) con
-> Angular empotrado en el binario y **`@angular/material`**. `informes` ya
-> cumple (22.1.0); medico está a medio camino y es el único que no.
+> **PrimeNG SALIÓ el 2026-08-02** (#255, cerrada). El stack de todos los
+> desarrollos es Rust (axum + SQLx/SQLite) con Angular empotrado en el binario y
+> **`@angular/material`**; medico era el único que no cumplía y ya cumple.
 >
-> **`primeng` NO se actualiza a la 22 bajo ningún concepto**: la 22 dejó de ser
-> MIT —es «PrimeUI», comercial, con clave obligatoria que sin ella estampa
-> *«Invalid PrimeUI License»* sobre la aplicación—. Un binario que va offline a
-> casa de un cliente no puede llevar dentro una clave que caduca; se probó entero
-> en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
-> no 21 → 22. Queda en 21.1.2 hasta que salga del todo.
+> Medido: **287 → 0** importaciones `from 'primeng/…'` (35 → 0 archivos).
+> `primeng` y `@primeuix/themes` salieron del `package.json` y de
+> `node_modules`; `providePrimeNG` salió de `app.config.ts`. Las pruebas del
+> frontend fueron de **82 → 366** y `ng build` quedó en verde en cada lote.
+> **`primeicons` se queda**: es MIT, es solo una fuente de iconos y no tiene el
+> problema de licencia de `primeng` — por eso los componentes propios usan
+> `<i class="pi pi-…">` y no `<mat-icon>`, que obligaría a empaquetar otra
+> fuente.
 >
-> Avance medido: **287 → 102** importaciones `from 'primeng/…'` (35 → 15
-> archivos), con `ng build` y las pruebas del frontend en verde en cada lote (82
-> antes del banco de humo, 130 con él, **197** con el guardián de las directivas
-> mudas; **224** hoy).
-> Hechos: los dos servicios (avisos y confirmación), etiqueta, separador,
-> tooltip, mensaje, la pantalla de acceso, las dos piezas compartidas
-> (`barra-crud` y `header`) y catorce pantallas. Queda lo caro: `button`,
-> `table`, `inputtext`/`textarea`, `select`, `dialog` y la cola.
-> **La receta, las equivalencias y las siete trampas ya pagadas están en
-> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md)** — leerlo antes de seguir.
+> **Nunca se subió `primeng` a la 22**, y esa es la razón de todo esto: la 22
+> dejó de ser MIT —es «PrimeUI», comercial, con clave obligatoria que sin ella
+> estampa *«Invalid PrimeUI License»* sobre la aplicación—. Un binario que va
+> offline a casa de un cliente no puede llevar dentro una clave que caduca; se
+> probó entero en SIGER y se descartó por eso.
+>
+> **Esto desbloquea #254** (Angular 21 → 22), que era lo que el peer
+> `@angular/core ^21.0.7` de PrimeNG 21 impedía. El orden fue el decidido:
+> primero Material con Angular 21, después el salto. Medido de paso: Angular 22
+> con PrimeNG 21 *sí* compilaba, así que había atajo — no se tomó, porque dejaba
+> una librería corriendo fuera de su rango declarado en un producto que se
+> instala offline.
+>
+> **La receta, las equivalencias y las trampas ya pagadas están en
+> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md)** — leerlo antes de tocar una
+> pantalla.
 >
 > Dos redes, y hacen falta las dos: el **banco de humo**
 > (`pantallas-montan.spec.ts`) monta las 30 pantallas, y el **guardián de las
 > directivas mudas** (`directivas-de-material-cableadas.spec.ts`) comprueba que
 > cada directiva de Material escrita en una plantilla esté en los `imports` de
-> su componente. Lo segundo el primero no lo ve: `matTooltip` sin
-> `MatTooltipModule` es, para Angular, un atributo estático corriente, así que
-> el tooltip no existe y **nada falla**. Pasó en cinco pantallas.
+> **su** componente. Lo segundo el primero no lo ve: `matTooltip` sin
+> `MatTooltipModule` es, para Angular, un atributo estático corriente, así que el
+> tooltip no existe y **nada falla**. Pasó en cinco pantallas.
 >
-> Y el orden importa: **primero Material con Angular 21, después el salto a la
-> 22** (#254). Un cambio a la vez; si se hacen juntos y algo se rompe, no se sabe
-> cuál fue. Medido de paso: Angular 22 con PrimeNG 21 *sí* compila y pasa las
-> pruebas, así que había atajo — no se toma, porque deja una librería corriendo
-> fuera de su rango declarado en un producto que se instala offline.
+> Y el guardián **tampoco discriminaba hasta el 2026-08-02**: miraba si el nombre
+> del módulo aparecía en el ARCHIVO, no en la lista de `imports`, así que la
+> línea `import` de arriba lo daba por cableado — y con los diálogos hechos
+> componentes propios, un archivo lleva de dos a cinco y el `imports` de la
+> pantalla tapaba el del diálogo. Se comprobó rompiéndolo a propósito (295
+> verdes con la lista rota). Hoy corta por `@Component(` y comprueba cada
+> componente contra su lista: 156 → 227 comprobaciones, y con la lista rota
+> nombra al componente culpable y solo a él.
 
 El eje del trabajo actual es la **cadena RIPS → FEV-RIPS → MUV**: producir el JSON
 de la Resolución 948 de 2026 y que el Mecanismo Único de Validación de MinSalud lo
@@ -84,9 +94,9 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 
 # === FRONTEND ===
 cd frontend
-npm install --legacy-peer-deps                   # obligatorio: conflictos de peers de PrimeNG
+npm install --legacy-peer-deps                   # el árbol se instaló así; queda hasta la próxima limpieza
 npm start                                        # :4200, proxy /api → :8000
-npm test                                         # vitest vía `ng test`: 11 specs, 224 pruebas
+npm test                                         # vitest vía `ng test`: 11 specs, 366 pruebas
 npm run build
 
 # === DOCKER (pila completa) ===
@@ -657,7 +667,7 @@ tramo «0 años» va del recién nacido al de once meses.
 
 ## Frontend
 
-Angular 21.2 + PrimeNG 21.1, standalone, 30 páginas y 50 entradas en
+Angular 21.2 + `@angular/material` 21.2, standalone, 30 páginas y 50 entradas en
 `app.routes.ts` (47 con `loadComponent`, el resto redirecciones), con `authGuard`,
 `roleGuard` y `modulo.guard`. Medido el 2026-08-01.
 
@@ -768,7 +778,7 @@ reescrita «mejor» se suma a la original en vez de sustituirla.
 | **#88** | Barrer el backend buscando el patrón «filtro opcional» fuera de los routers, y decidir si `test_guardia_aislamiento.py` puede cubrir esa capa. |
 | **#84** | Captura asistida: fricción graduada — bloquear solo donde hay efecto jurídico o económico. |
 | **#104** | Antropometría: migrar `PESOTALLA1` (62 filas, con índice EDAD), **no** `PESOTALLA`. En el original el `SEEK` abría la tabla equivocada y la talla ideal salía siempre en 0. |
-| **#80** | Angular 21.2.0 → 21.2.18 y decidir el salto a la 22. Los paquetes se peer-dependen con versión exacta: `ng update @angular/core@21 @angular/cli@21`, nunca `npm install` sobre el árbol existente. |
+| **#80** | Angular 21.2.0 → 21.2.18 y decidir el salto a la 22. Los paquetes se peer-dependen con versión exacta: `ng update @angular/core@21 @angular/cli@21`, nunca `npm install` sobre el árbol existente. **Ya no lo frena nadie**: PrimeNG salió el 2026-08-02 y era su único peer atado a la 21. |
 | **#65.7** | La verificación que de verdad cierra el RIPS: comparar el JSON propio contra el del conversor web de MinSalud para el mismo caso. |
 | **#65.6** | Panel para editar `modulos_habilitados` sin tocar la base. Bloquea dar de alta un cliente nuevo. |
 

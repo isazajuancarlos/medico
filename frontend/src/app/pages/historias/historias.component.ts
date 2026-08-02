@@ -2,21 +2,18 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { CheckboxModule } from 'primeng/checkbox';
-import { StepperModule } from 'primeng/stepper';
-import { CardModule } from 'primeng/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { PanelModule } from 'primeng/panel';
-import { TableModule } from 'primeng/table';
-import { InputGroupModule } from 'primeng/inputgroup';
-import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
-import { TabsModule } from 'primeng/tabs';
-import { SelectModule } from 'primeng/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo,
          UnidadDispensacion, Finalidad, CausaMotivo } from '../../services/historia.service';
@@ -94,11 +91,10 @@ function defaultAntPrenatales(): AntPrenatales {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, InputNumberModule,
-    CheckboxModule, StepperModule, CardModule, MatDividerModule, EtiquetaComponent,
-    PanelModule, TableModule,
-    InputGroupModule, InputGroupAddonModule, TabsModule,
-    SelectModule, MatTooltipModule,
+    MatButtonModule, MatCardModule, MatCheckboxModule, MatExpansionModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatStepperModule,
+    MatTableModule, MatTabsModule,
+    MatDividerModule, MatTooltipModule, EtiquetaComponent,
   ],
   template: `
     <div class="page-card">
@@ -111,15 +107,17 @@ function defaultAntPrenatales(): AntPrenatales {
         <p class="search-hint">Busque al paciente por nombre o número de documento para ver o crear su historia clínica.</p>
 
         <div class="search-box">
-          <p-inputgroup>
-            <p-inputgroup-addon><i class="pi pi-search"></i></p-inputgroup-addon>
-            <input pInputText
-              [(ngModel)]="terminoBusqueda"
-              placeholder="Nombre o documento del paciente..."
-              (keydown.enter)="buscarPacientes()"
-              class="search-input" />
-            <p-button label="Buscar" [loading]="buscando()" (onClick)="buscarPacientes()" />
-          </p-inputgroup>
+          <div class="buscador">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-input">
+              <mat-label>Paciente</mat-label>
+              <input matInput [(ngModel)]="terminoBusqueda"
+                placeholder="Nombre o documento del paciente..."
+                (keydown.enter)="buscarPacientes()" />
+            </mat-form-field>
+            <button matButton="filled" [disabled]="buscando()" (click)="buscarPacientes()">
+              <i [class]="buscando() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i> Buscar
+            </button>
+          </div>
         </div>
 
         @if (resultadosBusqueda().length > 0) {
@@ -176,8 +174,8 @@ function defaultAntPrenatales(): AntPrenatales {
         <div class="lista-header">
           <h2 class="page-title" style="margin-bottom:0">Historias Clínicas</h2>
           <div style="display:flex;gap:0.5rem">
-            <p-button label="Nueva Historia" icon="pi pi-plus" (onClick)="nuevaHistoria()" />
-            <p-button label="Volver" icon="pi pi-arrow-left" [text]="true" (onClick)="volverBusqueda()" />
+            <button matButton="filled" (click)="nuevaHistoria()"><i class="pi pi-plus"></i> Nueva Historia</button>
+            <button matButton (click)="volverBusqueda()"><i class="pi pi-arrow-left"></i> Volver</button>
           </div>
         </div>
 
@@ -187,48 +185,59 @@ function defaultAntPrenatales(): AntPrenatales {
           <div class="sin-resultados">
             <i class="pi pi-file-o" style="font-size:2rem;opacity:0.4"></i>
             <p>Este paciente no tiene historias clínicas registradas.</p>
-            <p-button label="Crear Primera Historia" icon="pi pi-plus" (onClick)="nuevaHistoria()" />
+            <button matButton="filled" (click)="nuevaHistoria()"><i class="pi pi-plus"></i> Crear Primera Historia</button>
           </div>
         } @else {
-          <p-table [value]="historiasPaciente()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Código</th>
-                <th>Fecha</th>
-                <th>Motivo de Consulta</th>
-                <th>Diagnóstico</th>
-                <th>Médico</th>
-                <th style="text-align:center">Estado</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-h>
-              <tr>
-                <td><strong>{{ h.codigo_historia }}</strong></td>
-                <td>{{ h.fecha | date:'dd/MM/yyyy' }}</td>
-                <td class="col-truncate">{{ h.motivo_consulta }}</td>
-                <td class="col-truncate">{{ h.diagnostico_principal }}</td>
-                <td>{{ h.medico?.nombre_completo }}</td>
-                <td style="text-align:center">
-                  @if (h.firmada) {
-                    <x-etiqueta value="Firmada" severity="success" icon="pi pi-lock" />
-                  } @else {
-                    <x-etiqueta value="Borrador" severity="warn" icon="pi pi-pencil" />
+          <table mat-table [dataSource]="historiasPaciente()" class="tabla">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <td mat-cell *matCellDef="let h"><strong>{{ h.codigo_historia }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let h">{{ h.fecha | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="motivo">
+              <th mat-header-cell *matHeaderCellDef>Motivo de Consulta</th>
+              <td mat-cell *matCellDef="let h" class="col-truncate">{{ h.motivo_consulta }}</td>
+            </ng-container>
+            <ng-container matColumnDef="diagnostico">
+              <th mat-header-cell *matHeaderCellDef>Diagnóstico</th>
+              <td mat-cell *matCellDef="let h" class="col-truncate">{{ h.diagnostico_principal }}</td>
+            </ng-container>
+            <ng-container matColumnDef="medico">
+              <th mat-header-cell *matHeaderCellDef>Médico</th>
+              <td mat-cell *matCellDef="let h">{{ h.medico?.nombre_completo }}</td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let h" class="centro">
+                @if (h.firmada) {
+                  <x-etiqueta value="Firmada" severity="success" icon="pi pi-lock" />
+                } @else {
+                  <x-etiqueta value="Borrador" severity="warn" icon="pi pi-pencil" />
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let h" class="centro">
+                <div style="display:flex;gap:0.4rem;justify-content:center">
+                  <button matIconButton matTooltip="Ver / Editar" (click)="editarHistoria(h)">
+                    <i class="pi pi-eye"></i>
+                  </button>
+                  @if (!h.firmada) {
+                    <button matIconButton class="peligro" matTooltip="Eliminar" (click)="confirmarEliminar(h)">
+                      <i class="pi pi-trash"></i>
+                    </button>
                   }
-                </td>
-                <td style="text-align:center">
-                  <div style="display:flex;gap:0.4rem;justify-content:center">
-                    <p-button icon="pi pi-eye" [text]="true" size="small"
-                      matTooltip="Ver / Editar" (onClick)="editarHistoria(h)" />
-                    @if (!h.firmada) {
-                      <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                        matTooltip="Eliminar" (onClick)="confirmarEliminar(h)" />
-                    }
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasHistorias"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasHistorias"></tr>
+          </table>
         }
       }
 
@@ -285,240 +294,246 @@ function defaultAntPrenatales(): AntPrenatales {
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
           <div style="display:flex;align-items:center;gap:0.75rem">
-            <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver a la lista" />
+            <button matIconButton matTooltip="Volver a la lista" (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
             <h2 class="page-title" style="margin-bottom:0">
               {{ historia()?.id ? 'Editar Historia' : 'Nueva Historia' }}
             </h2>
           </div>
           @if (historia()?.id) {
-            <p-button label="Firmar Historia" icon="pi pi-lock"
-              [loading]="signing()" [disabled]="!!historia()?.firmada"
-              (onClick)="firmarHistoria()" />
+            <button matButton="filled" [disabled]="!!historia()?.firmada || signing()" (click)="firmarHistoria()"><i [class]="signing() ? 'pi pi-spin pi-spinner' : 'pi pi-lock'"></i> Firmar Historia</button>
           }
         </div>
 
-        <p-stepper [value]="activeStep()">
-          <p-step-list>
-            <p-step [value]="1">Antecedentes</p-step>
-            <p-step [value]="2">Examen Físico</p-step>
-            <p-step [value]="3">Diagnóstico</p-step>
-            <p-step [value]="4">Plan</p-step>
-            <p-step [value]="5">Fórmula Médica</p-step>
-            <p-step [value]="6">Órdenes</p-step>
-            <p-step [value]="7">Imágenes</p-step>
-          </p-step-list>
-
-          <p-step-panels>
+        <!-- El paso activo vive en la señal, no en el componente: lo mueven
+             tanto la cabecera del stepper como los botones de Siguiente y
+             Anterior, y hay código (guardarYContinuar) que salta de paso. -->
+        <mat-stepper [selectedIndex]="activeStep() - 1"
+          (selectionChange)="activeStep.set($event.selectedIndex + 1)">
 
             <!-- PASO 1: ANTECEDENTES -->
-            <p-step-panel [value]="1">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
+            <mat-step label="Antecedentes">
 
-                <p-panel header="Antecedentes Familiares" [toggleable]="true" styleClass="ant-panel">
+                <mat-expansion-panel expanded class="ant-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>Antecedentes familiares</mat-panel-title>
+                  </mat-expansion-panel-header>
                   <div class="check-grid">
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.hta" [binary]="true" inputId="ff_hta" /><label for="ff_hta">HTA</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.diabetes" [binary]="true" inputId="ff_dia" /><label for="ff_dia">Diabetes</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.coronarias" [binary]="true" inputId="ff_cor" /><label for="ff_cor">Coronarias</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.cancer" [binary]="true" inputId="ff_can" /><label for="ff_can">Cáncer</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.acv" [binary]="true" inputId="ff_acv" /><label for="ff_acv">ACV</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.tbc" [binary]="true" inputId="ff_tbc" /><label for="ff_tbc">TBC</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antFam.asma" [binary]="true" inputId="ff_asm" /><label for="ff_asm">Asma</label></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.hta">HTA</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.diabetes">Diabetes</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.coronarias">Coronarias</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.cancer">Cáncer</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.acv">ACV</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.tbc">TBC</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.asma">Asma</mat-checkbox></div>
                   </div>
-                  <div class="field" style="margin-top:0.75rem">
-                    <label>Otros</label>
-                    <input pInputText [(ngModel)]="antFam.otros" class="w-full" placeholder="Describa otros antecedentes familiares..." />
-                  </div>
-                </p-panel>
+                  <mat-form-field appearance="outline" style="margin-top:0.75rem">
+                        <mat-label>Otros</mat-label>
+                        <input matInput [(ngModel)]="antFam.otros" class="w-full" placeholder="Describa otros antecedentes familiares..." />
+                      </mat-form-field>
+                </mat-expansion-panel>
 
-                <p-panel header="Antecedentes Personales" [toggleable]="true" styleClass="ant-panel">
+                <mat-expansion-panel expanded class="ant-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>Antecedentes personales</mat-panel-title>
+                  </mat-expansion-panel-header>
                   <div class="check-grid">
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.hta" [binary]="true" inputId="fp_hta" /><label for="fp_hta">HTA</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.diabetes" [binary]="true" inputId="fp_dia" /><label for="fp_dia">Diabetes</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.coronarias" [binary]="true" inputId="fp_cor" /><label for="fp_cor">Coronarias</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.acv" [binary]="true" inputId="fp_acv" /><label for="fp_acv">ACV</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.tbc" [binary]="true" inputId="fp_tbc" /><label for="fp_tbc">TBC</label></div>
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.asma" [binary]="true" inputId="fp_asm" /><label for="fp_asm">Asma</label></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.hta">HTA</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.diabetes">Diabetes</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.coronarias">Coronarias</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.acv">ACV</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.tbc">TBC</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.asma">Asma</mat-checkbox></div>
                   </div>
                   <mat-divider />
                   <div class="cond-row">
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.cancer_activo" [binary]="true" inputId="fp_can" /><label for="fp_can">Cáncer</label></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.cancer_activo">Cáncer</mat-checkbox></div>
                     @if (antPers.cancer_activo) {
-                      <input pInputText [(ngModel)]="antPers.cancer_desc" class="cond-input" placeholder="Tipo / descripción..." />
+                      <input [(ngModel)]="antPers.cancer_desc" class="cond-input" placeholder="Tipo / descripción..." />
                     }
                   </div>
                   <div class="cond-row">
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.quirurgicos_activo" [binary]="true" inputId="fp_qui" /><label for="fp_qui">Quirúrgicos</label></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.quirurgicos_activo">Quirúrgicos</mat-checkbox></div>
                     @if (antPers.quirurgicos_activo) {
-                      <input pInputText [(ngModel)]="antPers.quirurgicos_desc" class="cond-input" placeholder="Cirugías / descripción..." />
+                      <input [(ngModel)]="antPers.quirurgicos_desc" class="cond-input" placeholder="Cirugías / descripción..." />
                     }
                   </div>
                   <div class="cond-row">
-                    <div class="chk"><p-checkbox [(ngModel)]="antPers.its_activo" [binary]="true" inputId="fp_its" /><label for="fp_its">ITS</label></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.its_activo">ITS</mat-checkbox></div>
                     @if (antPers.its_activo) {
-                      <input pInputText [(ngModel)]="antPers.its_desc" class="cond-input" placeholder="Descripción..." />
+                      <input [(ngModel)]="antPers.its_desc" class="cond-input" placeholder="Descripción..." />
                     }
                   </div>
                   <mat-divider />
                   <div class="form-grid">
-                    <div class="field">
-                      <label>Otros antecedentes</label>
-                      <input pInputText [(ngModel)]="antPers.otros" class="w-full" placeholder="Alergias, farmacológicos, tóxicos..." />
-                    </div>
-                    <div class="field">
-                      <label>Hábitos</label>
-                      <input pInputText [(ngModel)]="antPers.habitos" class="w-full" placeholder="Tabaco, alcohol, ejercicio..." />
-                    </div>
+                    <mat-form-field appearance="outline">
+                        <mat-label>Otros antecedentes</mat-label>
+                        <input matInput [(ngModel)]="antPers.otros" class="w-full" placeholder="Alergias, farmacológicos, tóxicos..." />
+                      </mat-form-field>
+                    <mat-form-field appearance="outline">
+                        <mat-label>Hábitos</mat-label>
+                        <input matInput [(ngModel)]="antPers.habitos" class="w-full" placeholder="Tabaco, alcohol, ejercicio..." />
+                      </mat-form-field>
                   </div>
-                </p-panel>
+                </mat-expansion-panel>
 
                 @if (esMujer()) {
-                  <p-panel header="Antecedentes Ginecobstétricos" [toggleable]="true" styleClass="ant-panel">
+                  <mat-expansion-panel expanded class="ant-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>Antecedentes ginecobstétricos</mat-panel-title>
+                  </mat-expansion-panel-header>
                     <div class="form-grid">
-                      <div class="field">
-                        <label>Menarquia (edad)</label>
-                        <p-inputNumber [(ngModel)]="antGineco.menarquia" [min]="0" [max]="25" class="w-full" />
-                      </div>
-                      <div class="field">
-                        <label>FUM</label>
-                        <input pInputText type="date" [(ngModel)]="antGineco.fum" class="w-full" />
-                      </div>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Menarquia (edad)</mat-label>
+                        <input matInput [(ngModel)]="antGineco.menarquia" type="number" min="0" max="25" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>FUM</mat-label>
+                        <input matInput type="date" [(ngModel)]="antGineco.fum" class="w-full" />
+                      </mat-form-field>
                     </div>
                     <div class="check-grid" style="margin-bottom:0.75rem">
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.ciclos_regulares" [binary]="true" inputId="fg_cic" /><label for="fg_cic">Ciclos regulares</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.dismenorrea" [binary]="true" inputId="fg_dis" /><label for="fg_dis">Dismenorrea</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.metrorragia" [binary]="true" inputId="fg_met" /><label for="fg_met">Metrorragia</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.citologia_vigente" [binary]="true" inputId="fg_cit" /><label for="fg_cit">Citología vigente</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.lactancia_actual" [binary]="true" inputId="fg_lac" /><label for="fg_lac">Lactancia actual</label></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.ciclos_regulares">Ciclos regulares</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.dismenorrea">Dismenorrea</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.metrorragia">Metrorragia</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.citologia_vigente">Citología vigente</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.lactancia_actual">Lactancia actual</mat-checkbox></div>
                     </div>
                     <div class="cond-row">
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.planificacion" [binary]="true" inputId="fg_pla" /><label for="fg_pla">Planificación familiar</label></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.planificacion">Planificación familiar</mat-checkbox></div>
                       @if (antGineco.planificacion) {
-                        <input pInputText [(ngModel)]="antGineco.metodo_planificacion" class="cond-input" placeholder="Método..." />
+                        <input [(ngModel)]="antGineco.metodo_planificacion" class="cond-input" placeholder="Método..." />
                       }
                     </div>
                     @if (antGineco.citologia_vigente) {
-                      <div class="field" style="margin-top:0.5rem">
-                        <label>Fecha citología</label>
-                        <input pInputText type="date" [(ngModel)]="antGineco.fecha_citologia" style="width:200px" />
-                      </div>
+                      <mat-form-field appearance="outline" style="margin-top:0.5rem">
+                        <mat-label>Fecha citología</mat-label>
+                        <input matInput type="date" [(ngModel)]="antGineco.fecha_citologia" style="width:200px" />
+                      </mat-form-field>
                     }
                     <div class="cond-row" style="margin-top:0.5rem">
-                      <div class="chk"><p-checkbox [(ngModel)]="antGineco.embarazo_actual" [binary]="true" inputId="fg_emb" /><label for="fg_emb">Embarazo actual</label></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.embarazo_actual">Embarazo actual</mat-checkbox></div>
                       @if (antGineco.embarazo_actual) {
-                        <p-inputNumber [(ngModel)]="antGineco.semanas_gestacion" [min]="1" [max]="42"
+                        <input [(ngModel)]="antGineco.semanas_gestacion" type="number" min="1" max="42"
                           placeholder="Semanas" class="cond-input" />
                       }
                     </div>
                     <mat-divider />
                     <div class="obstetrico-grid">
-                      <div class="field"><label>G (Gestas)</label><p-inputNumber [(ngModel)]="antGineco.gestas" [min]="0" class="w-full" /></div>
-                      <div class="field"><label>P (Partos)</label><p-inputNumber [(ngModel)]="antGineco.partos" [min]="0" class="w-full" /></div>
-                      <div class="field"><label>C (Cesáreas)</label><p-inputNumber [(ngModel)]="antGineco.cesareas" [min]="0" class="w-full" /></div>
-                      <div class="field"><label>A (Abortos)</label><p-inputNumber [(ngModel)]="antGineco.abortos" [min]="0" class="w-full" /></div>
-                      <div class="field"><label>Hijos vivos</label><p-inputNumber [(ngModel)]="antGineco.hijos_vivos" [min]="0" class="w-full" /></div>
+                      <mat-form-field appearance="outline">
+                        <mat-label>G (Gestas)</mat-label>
+                        <input matInput [(ngModel)]="antGineco.gestas" type="number" min="0" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>P (Partos)</mat-label>
+                        <input matInput [(ngModel)]="antGineco.partos" type="number" min="0" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>C (Cesáreas)</mat-label>
+                        <input matInput [(ngModel)]="antGineco.cesareas" type="number" min="0" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>A (Abortos)</mat-label>
+                        <input matInput [(ngModel)]="antGineco.abortos" type="number" min="0" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Hijos vivos</mat-label>
+                        <input matInput [(ngModel)]="antGineco.hijos_vivos" type="number" min="0" />
+                      </mat-form-field>
                     </div>
-                    <div class="field" style="margin-top:0.75rem">
-                      <label>Observaciones</label>
-                      <textarea pTextarea [(ngModel)]="antGineco.obs_adicionales" rows="2" class="w-full"></textarea>
-                    </div>
-                  </p-panel>
+                    <mat-form-field appearance="outline" style="margin-top:0.75rem">
+                        <mat-label>Observaciones</mat-label>
+                        <textarea matInput [(ngModel)]="antGineco.obs_adicionales" rows="2" class="w-full"></textarea>
+                      </mat-form-field>
+                  </mat-expansion-panel>
 
-                  <p-panel header="Antecedentes Prenatales" [toggleable]="true" styleClass="ant-panel">
+                  <mat-expansion-panel expanded class="ant-panel">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>Antecedentes prenatales</mat-panel-title>
+                    </mat-expansion-panel-header>
                     <div class="check-grid" style="margin-bottom:0.75rem">
-                      <div class="chk"><p-checkbox [(ngModel)]="antPrenatales.embarazo_a_termino" [binary]="true" inputId="fp_ter" /><label for="fp_ter">Embarazo a término</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antPrenatales.parto_normal" [binary]="true" inputId="fp_pno" /><label for="fp_pno">Parto normal</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antPrenatales.parto_cesarea" [binary]="true" inputId="fp_pce" /><label for="fp_pce">Cesárea</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antPrenatales.parto_forceps" [binary]="true" inputId="fp_pfo" /><label for="fp_pfo">Fórceps</label></div>
-                      <div class="chk"><p-checkbox [(ngModel)]="antPrenatales.lactancia_materna" [binary]="true" inputId="fp_lma" /><label for="fp_lma">Lactancia materna</label></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.embarazo_a_termino">Embarazo a término</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.parto_normal">Parto normal</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.parto_cesarea">Cesárea</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.parto_forceps">Fórceps</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.lactancia_materna">Lactancia materna</mat-checkbox></div>
                     </div>
                     <div class="form-grid">
-                      <div class="field">
-                        <label>Semanas de gestación al nacer</label>
-                        <p-inputNumber [(ngModel)]="antPrenatales.semanas_gestacion_nacer" [min]="20" [max]="44" class="w-full" />
-                      </div>
-                      <div class="field">
-                        <label>Peso al nacer (kg)</label>
-                        <p-inputNumber [(ngModel)]="antPrenatales.peso_nacer" [minFractionDigits]="1" [maxFractionDigits]="3" class="w-full" />
-                      </div>
-                      <div class="field">
-                        <label>Talla al nacer (cm)</label>
-                        <p-inputNumber [(ngModel)]="antPrenatales.talla_nacer" [minFractionDigits]="1" class="w-full" />
-                      </div>
-                      <div class="field">
-                        <label>APGAR al minuto</label>
-                        <p-inputNumber [(ngModel)]="antPrenatales.apgar_1min" [min]="0" [max]="10" class="w-full" />
-                      </div>
-                      <div class="field">
-                        <label>APGAR 5 minutos</label>
-                        <p-inputNumber [(ngModel)]="antPrenatales.apgar_5min" [min]="0" [max]="10" class="w-full" />
-                      </div>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Semanas de gestación al nacer</mat-label>
+                        <input matInput [(ngModel)]="antPrenatales.semanas_gestacion_nacer" type="number" min="20" max="44" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Peso al nacer (kg)</mat-label>
+                        <input matInput [(ngModel)]="antPrenatales.peso_nacer" type="number" step="any" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Talla al nacer (cm)</mat-label>
+                        <input matInput [(ngModel)]="antPrenatales.talla_nacer" type="number" step="any" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>APGAR al minuto</mat-label>
+                        <input matInput [(ngModel)]="antPrenatales.apgar_1min" type="number" min="0" max="10" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>APGAR 5 minutos</mat-label>
+                        <input matInput [(ngModel)]="antPrenatales.apgar_5min" type="number" min="0" max="10" />
+                      </mat-form-field>
                     </div>
-                    <div class="field" style="margin-top:0.5rem">
-                      <label>Complicaciones perinatales</label>
-                      <textarea pTextarea [(ngModel)]="antPrenatales.complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
-                    </div>
-                  </p-panel>
+                    <mat-form-field appearance="outline" style="margin-top:0.5rem">
+                        <mat-label>Complicaciones perinatales</mat-label>
+                        <textarea matInput [(ngModel)]="antPrenatales.complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
+                      </mat-form-field>
+                  </mat-expansion-panel>
                 }
 
                 <div class="step-actions">
-                  <p-button label="Siguiente" icon="pi pi-chevron-right" iconPos="right" (onClick)="activateCallback(2)" />
+                  <button matButton="filled" (click)="irAPaso(2)">Siguiente <i class="pi pi-chevron-right"></i></button>
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
             <!-- PASO 2: EXAMEN FÍSICO (Signos Vitales + Examen por Sistemas) -->
-            <p-step-panel [value]="2">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
-                <p-tabs value="sv">
-                  <p-tablist>
-                    <p-tab value="sv">Signos Vitales</p-tab>
-                    <p-tab value="ef">Examen por Sistemas</p-tab>
-                  </p-tablist>
-                  <p-tabpanels>
-
+            <mat-step label="Examen Físico">
+                <mat-tab-group>
                     <!-- TAB 1: SIGNOS VITALES -->
-                    <p-tabpanel value="sv">
+                    <mat-tab label="Signos Vitales">
                       <div class="sv-grid">
 
-                        <div class="field">
-                          <label>Perímetro abdominal (cm)</label>
-                          <p-inputNumber [(ngModel)]="form.pabd" [minFractionDigits]="1" class="w-full" placeholder="pabd" />
-                        </div>
-                        <div class="field">
-                          <label>Presión arterial media</label>
-                          <input pInputText [(ngModel)]="form.pam" class="w-full" placeholder="pam (mmHg)" />
-                        </div>
-                        <div class="field">
-                          <label>Temperatura corporal (°C)</label>
-                          <p-inputNumber [(ngModel)]="form.temperatura" [minFractionDigits]="1" class="w-full" placeholder="tc" />
-                        </div>
-                        <div class="field">
-                          <label>Pulso / min</label>
-                          <p-inputNumber [(ngModel)]="form.pulso" [min]="0" class="w-full" placeholder="p/m" />
-                        </div>
-                        <div class="field">
-                          <label>Frec. respiratoria</label>
-                          <p-inputNumber [(ngModel)]="form.frecuencia_respiratoria" [min]="0" class="w-full" placeholder="fr" />
-                        </div>
-                        <div class="field">
-                          <label>Frec. cardíaca / min</label>
-                          <p-inputNumber [(ngModel)]="form.frecuencia_cardiaca" [min]="0" class="w-full" placeholder="fc/m" />
-                        </div>
-                        <div class="field">
-                          <label>Perímetro cefálico (cm)</label>
-                          <p-inputNumber [(ngModel)]="form.pc" [minFractionDigits]="1" class="w-full" placeholder="pc" />
-                        </div>
-                        <div class="field">
-                          <label>Peso (kg)</label>
-                          <p-inputNumber [(ngModel)]="form.peso" [minFractionDigits]="1" [maxFractionDigits]="2"
-                            class="w-full" placeholder="peso/k" (ngModelChange)="calcularMetrics()" />
-                        </div>
-                        <div class="field">
-                          <label>Talla (m)</label>
-                          <p-inputNumber [(ngModel)]="tallaMts" [minFractionDigits]="2" [maxFractionDigits]="2"
-                            [min]="0" [max]="3" class="w-full" placeholder="talla/m"
-                            (ngModelChange)="onTallaChange($event)" />
-                        </div>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Perímetro abdominal (cm)</mat-label>
+                        <input matInput [(ngModel)]="form.pabd" type="number" step="any" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Presión arterial media</mat-label>
+                        <input matInput [(ngModel)]="form.pam" class="w-full" placeholder="pam (mmHg)" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Temperatura corporal (°C)</mat-label>
+                        <input matInput [(ngModel)]="form.temperatura" type="number" step="any" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Pulso / min</mat-label>
+                        <input matInput [(ngModel)]="form.pulso" type="number" min="0" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Frec. respiratoria</mat-label>
+                        <input matInput [(ngModel)]="form.frecuencia_respiratoria" type="number" min="0" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Frec. cardíaca / min</mat-label>
+                        <input matInput [(ngModel)]="form.frecuencia_cardiaca" type="number" min="0" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Perímetro cefálico (cm)</mat-label>
+                        <input matInput [(ngModel)]="form.pc" type="number" step="any" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Peso (kg)</mat-label>
+                        <input matInput [(ngModel)]="form.peso" type="number" step="any" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Talla (m)</mat-label>
+                        <input matInput [(ngModel)]="tallaMts" type="number" min="0" max="3" step="any" />
+                      </mat-form-field>
 
                         <!-- CALCULADOS -->
                         <div class="field sv-calc">
@@ -544,10 +559,10 @@ function defaultAntPrenatales(): AntPrenatales {
                         </div>
 
                       </div>
-                    </p-tabpanel>
+                    </mat-tab>
 
                     <!-- TAB 2: EXAMEN POR SISTEMAS -->
-                    <p-tabpanel value="ef">
+                    <mat-tab label="Examen por Sistemas">
                       <p style="font-size:0.82rem;color:#94a3b8;margin:0 0 1rem">
                         Marque los sistemas con hallazgos anormales e ingrese la descripción. Los no marcados se guardan como <strong>Normal</strong>.
                       </p>
@@ -555,13 +570,12 @@ function defaultAntPrenatales(): AntPrenatales {
                         @for (item of efItems; track item.key) {
                           <div class="ef-row">
                             <div class="ef-check-label">
-                              <p-checkbox [(ngModel)]="efState[item.key].anormal" [binary]="true"
-                                [inputId]="'ef_' + item.key" (ngModelChange)="onEfCheck(item.key)" />
-                              <label [for]="'ef_' + item.key"
-                                [class.ef-anormal]="efState[item.key].anormal">{{ item.label }}</label>
+                              <mat-checkbox [(ngModel)]="efState[item.key].anormal"
+                                (ngModelChange)="onEfCheck(item.key)"
+                                [class.ef-anormal]="efState[item.key].anormal">{{ item.label }}</mat-checkbox>
                             </div>
                             @if (efState[item.key].anormal) {
-                              <input pInputText [(ngModel)]="efState[item.key].texto" class="ef-text-input"
+                              <input [(ngModel)]="efState[item.key].texto" class="ef-text-input"
                                 [placeholder]="'Hallazgo en ' + item.label.toLowerCase() + '...'" />
                             } @else {
                               <span class="ef-normal-badge">Normal</span>
@@ -569,35 +583,31 @@ function defaultAntPrenatales(): AntPrenatales {
                           </div>
                         }
                       </div>
-                      <div class="field" style="margin-top:1.25rem">
-                        <label>Hallazgos generales</label>
-                        <textarea pTextarea [(ngModel)]="form.ef_hallazgos" rows="4" class="w-full"
+                      <mat-form-field appearance="outline" style="margin-top:1.25rem">
+                        <mat-label>Hallazgos generales</mat-label>
+                        <textarea matInput [(ngModel)]="form.ef_hallazgos" rows="4" class="w-full"
                           placeholder="Observaciones generales del examen físico..."></textarea>
-                      </div>
-                    </p-tabpanel>
-
-                  </p-tabpanels>
-                </p-tabs>
+                      </mat-form-field>
+                    </mat-tab>
+                </mat-tab-group>
 
                 <div class="step-actions">
-                  <p-button label="Anterior" icon="pi pi-chevron-left" [text]="true" (onClick)="activateCallback(1)" />
-                  <p-button label="Siguiente" icon="pi pi-chevron-right" iconPos="right" (onClick)="onNextExamen(activateCallback)" />
+                  <button matButton (click)="irAPaso(1)"><i class="pi pi-chevron-left"></i> Anterior</button>
+                  <button matButton="filled" (click)="onNextExamen()">Siguiente <i class="pi pi-chevron-right"></i></button>
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
             <!-- PASO 3: DIAGNÓSTICO CIE-10 -->
-            <p-step-panel [value]="3">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
+            <mat-step label="Diagnóstico">
                 <div class="form-grid">
-                  <div class="field">
-                    <label>Código CIE-10 principal</label>
-                    <input pInputText [(ngModel)]="form.diagnostico_principal" class="w-full" placeholder="Ej: J06.9" />
-                  </div>
-                  <div class="field">
-                    <label>Código CIE-10 relacionado</label>
-                    <input pInputText [(ngModel)]="form.diagnostico_relacionado1" class="w-full" placeholder="Código adicional" />
-                  </div>
+                  <mat-form-field appearance="outline">
+                        <mat-label>Código CIE-10 principal</mat-label>
+                        <input matInput [(ngModel)]="form.diagnostico_principal" class="w-full" placeholder="Ej: J06.9" />
+                      </mat-form-field>
+                  <mat-form-field appearance="outline">
+                        <mat-label>Código CIE-10 relacionado</mat-label>
+                        <input matInput [(ngModel)]="form.diagnostico_relacionado1" class="w-full" placeholder="Código adicional" />
+                      </mat-form-field>
                   <!--
                     Finalidad y causa: los dos van al RIPS y hasta el 2026-08-02
                     NO se podían elegir. El sistema los rellenaba —«10» y «13»—
@@ -607,47 +617,52 @@ function defaultAntPrenatales(): AntPrenatales {
                     Van sin valor inicial a propósito: vacío es «falta», y el
                     generador del RIPS lo pide al cerrar el mes.
                   -->
-                  <div class="field">
-                    <label>Finalidad de la atención</label>
-                    <p-select [(ngModel)]="form.finalidad" [options]="finalidades()"
-                      optionLabel="nombre" optionValue="codigo" [filter]="true" filterBy="nombre"
-                      placeholder="Para qué se atendió (Resolución 948)" class="w-full"
-                      appendTo="body" [showClear]="true" />
-                  </div>
-                  <div class="field">
-                    <label>Causa o motivo de la atención</label>
-                    <p-select [(ngModel)]="form.causa_externa" [options]="causasMotivo()"
-                      optionLabel="nombre" optionValue="codigo" [filter]="true" filterBy="nombre"
-                      placeholder="Por qué se atendió (Resolución 948)" class="w-full"
-                      appendTo="body" [showClear]="true" />
-                  </div>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Finalidad de la atención</mat-label>
+                    <mat-select [(ngModel)]="form.finalidad"
+                      placeholder="Para qué se atendió (Resolución 948)">
+                      <!-- Sin opción por defecto y a propósito: hasta el
+                           2026-08-02 este campo salía con un código de la tabla
+                           ANTERIOR a la 948, puesto por el sistema en nombre del
+                           médico. Vacío es «nadie lo dijo», que es la verdad. -->
+                      <mat-option [value]="null">— Sin elegir —</mat-option>
+                      @for (f of finalidades(); track f.codigo) {
+                        <mat-option [value]="f.codigo">{{ f.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Causa o motivo de la atención</mat-label>
+                    <mat-select [(ngModel)]="form.causa_externa"
+                      placeholder="Por qué se atendió (Resolución 948)">
+                      <mat-option [value]="null">— Sin elegir —</mat-option>
+                      @for (c of causasMotivo(); track c.codigo) {
+                        <mat-option [value]="c.codigo">{{ c.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
                 </div>
                 <div class="step-actions">
-                  <p-button label="Anterior" icon="pi pi-chevron-left" [text]="true" (onClick)="activateCallback(2)" />
-                  <p-button label="Siguiente" icon="pi pi-chevron-right" iconPos="right" (onClick)="activateCallback(4)" />
+                  <button matButton (click)="irAPaso(2)"><i class="pi pi-chevron-left"></i> Anterior</button>
+                  <button matButton="filled" (click)="irAPaso(4)">Siguiente <i class="pi pi-chevron-right"></i></button>
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
             <!-- PASO 4: PLAN -->
-            <p-step-panel [value]="4">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
-                <div class="field-full">
-                  <label>Plan de Tratamiento</label>
-                  <textarea pTextarea [(ngModel)]="form.plan_tratamiento" rows="8" class="w-full"
+            <mat-step label="Plan">
+                <mat-form-field appearance="outline" class="ancho">
+                  <mat-label>Plan de tratamiento</mat-label>
+                  <textarea matInput [(ngModel)]="form.plan_tratamiento" rows="8"
                     placeholder="Plan de manejo y tratamiento..."></textarea>
-                </div>
+                </mat-form-field>
                 <div class="step-actions">
-                  <p-button label="Anterior" icon="pi pi-chevron-left" [text]="true" (onClick)="activateCallback(3)" />
-                  <p-button label="Guardar y continuar" icon="pi pi-save"
-                    [loading]="saving()" (onClick)="guardarYContinuar(activateCallback)" />
+                  <button matButton (click)="irAPaso(3)"><i class="pi pi-chevron-left"></i> Anterior</button>
+                  <button matButton="filled" [disabled]="saving()" (click)="guardarYContinuar()"><i [class]="saving() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar y continuar</button>
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
             <!-- PASO 5: FÓRMULA MÉDICA -->
-            <p-step-panel [value]="5">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
+            <mat-step label="Fórmula Médica">
 
                 @if (!historia()?.id) {
                   <div class="formula-aviso">
@@ -659,7 +674,7 @@ function defaultAntPrenatales(): AntPrenatales {
                   <!-- Botón nueva fórmula -->
                   @if (!mostrarFormFormula()) {
                     <div style="margin-bottom:1rem">
-                      <p-button label="Agregar medicamento" icon="pi pi-plus" (onClick)="abrirFormFormula()" />
+                      <button matButton="filled" (click)="abrirFormFormula()"><i class="pi pi-plus"></i> Agregar medicamento</button>
                     </div>
                   }
 
@@ -674,18 +689,18 @@ function defaultAntPrenatales(): AntPrenatales {
                       <div class="field" style="margin-bottom:1rem">
                         <label>Buscar en catálogo INVIMA <span style="color:#94a3b8;font-weight:400">(o ingrese manualmente)</span></label>
                         <div class="med-search-wrap">
-                          <p-inputgroup>
-                            <p-inputgroup-addon><i class="pi pi-search"></i></p-inputgroup-addon>
-                            <input pInputText
-                              [(ngModel)]="termMed"
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ancho">
+                            <mat-label>Medicamento</mat-label>
+                            <input matInput [(ngModel)]="termMed"
                               (ngModelChange)="onTermMedChange($event)"
                               placeholder="Nombre o código CUM..."
-                              class="w-full"
                               autocomplete="off" />
                             @if (buscandoMed()) {
-                              <p-inputgroup-addon><i class="pi pi-spin pi-spinner"></i></p-inputgroup-addon>
+                              <i class="pi pi-spin pi-spinner" matSuffix></i>
+                            } @else {
+                              <i class="pi pi-search" matSuffix></i>
                             }
-                          </p-inputgroup>
+                          </mat-form-field>
                           @if (resultadosMed().length > 0) {
                             <div class="med-dropdown">
                               @for (m of resultadosMed(); track m.id) {
@@ -702,109 +717,115 @@ function defaultAntPrenatales(): AntPrenatales {
 
                       <!-- Campos del formulario -->
                       <div class="form-grid">
-                        <div class="field" style="grid-column:1/-1">
-                          <label>Medicamento *</label>
-                          <input pInputText [(ngModel)]="fForm.medicamento" class="w-full"
+                        <mat-form-field appearance="outline" style="grid-column:1/-1">
+                        <mat-label>Medicamento *</mat-label>
+                        <input matInput [(ngModel)]="fForm.medicamento" class="w-full"
                             placeholder="Nombre del medicamento (manual o desde búsqueda)" />
-                        </div>
-                        <div class="field">
-                          <label>Código CUM</label>
-                          <input pInputText [(ngModel)]="fForm.codigo_cum" class="w-full"
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Código CUM</mat-label>
+                        <input matInput [(ngModel)]="fForm.codigo_cum" class="w-full"
                             placeholder="Auto desde búsqueda o manual" />
-                        </div>
-                        <div class="field">
-                          <label>Dosis *</label>
-                          <input pInputText [(ngModel)]="fForm.dosis" class="w-full"
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Dosis *</mat-label>
+                        <input matInput [(ngModel)]="fForm.dosis" class="w-full"
                             placeholder="Ej: 500mg cada 8h por 7 días" />
-                        </div>
-                        <div class="field">
-                          <label>Cantidad *</label>
-                          <p-inputNumber [(ngModel)]="fForm.cantidad" [min]="1" class="w-full" />
-                        </div>
-                        <div class="field">
-                          <label>Unidad *</label>
-                          <p-select [(ngModel)]="fForm.unidad" [options]="unidades()"
-                            optionLabel="nombre" optionValue="nombre"
-                            placeholder="Elija la presentación" class="w-full"
-                            appendTo="body" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Cantidad *</mat-label>
+                        <input matInput [(ngModel)]="fForm.cantidad" type="number" min="1" />
+                      </mat-form-field>
+                        <div class="campo-con-nota">
+                          <mat-form-field appearance="outline">
+                            <mat-label>Unidad *</mat-label>
+                            <mat-select [(ngModel)]="fForm.unidad" placeholder="Elija la presentación">
+                              @for (u of unidades(); track u.nombre) {
+                                <mat-option [value]="u.nombre">{{ u.nombre }}</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
                           <small class="text-color-secondary">
                             El RIPS la pide como código. Si la presentación no
                             está en la lista, queda anotada al cerrar el mes.
                           </small>
                         </div>
-                        <div class="field">
-                          <label>Días de tratamiento *</label>
-                          <p-inputNumber [(ngModel)]="fForm.dias_tratamiento" [min]="1"
-                            class="w-full" placeholder="Ej: 7" />
-                          <small class="text-color-secondary">
-                            Obligatorio en el RIPS y mayor que cero. No se deduce
-                            de la dosis.
-                          </small>
-                        </div>
-                        <div class="field" style="grid-column:1/-1">
-                          <label>Observaciones</label>
-                          <textarea pTextarea [(ngModel)]="fForm.observaciones" rows="2" class="w-full"
+                        <mat-form-field appearance="outline">
+                        <mat-label>Días de tratamiento *</mat-label>
+                        <input matInput [(ngModel)]="fForm.dias_tratamiento" type="number" min="1" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline" style="grid-column:1/-1">
+                        <mat-label>Observaciones</mat-label>
+                        <textarea matInput [(ngModel)]="fForm.observaciones" rows="2" class="w-full"
                             placeholder="Indicaciones adicionales para el paciente o farmacia..."></textarea>
-                        </div>
+                      </mat-form-field>
                       </div>
 
                       <div class="step-actions">
-                        <p-button label="Cancelar" [text]="true" (onClick)="cerrarFormFormula()" />
-                        <p-button
-                          [label]="formulaEditando() ? 'Actualizar' : 'Agregar'"
-                          icon="pi pi-check"
-                          [loading]="savingFormula()"
-                          (onClick)="guardarFormula()" />
+                        <button matButton (click)="cerrarFormFormula()">Cancelar</button>
+                        <button matIconButton [disabled]="savingFormula()" (click)="guardarFormula()"><i [class]="savingFormula() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i></button>
                       </div>
                     </div>
                   }
 
                   <!-- Tabla de fórmulas existentes -->
                   @if (formulas().length > 0) {
-                    <p-table [value]="formulas()" styleClass="p-datatable-sm" style="margin-top:1rem">
-                      <ng-template pTemplate="header">
-                        <tr>
-                          <th>Medicamento</th>
-                          <th>Dosis</th>
-                          <th style="text-align:center">Cantidad</th>
-                          <th>Unidad</th>
-                          <th>Observaciones</th>
-                          <th style="text-align:center">Estado</th>
-                          <th style="text-align:center">Acciones</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template pTemplate="body" let-f>
-                        <tr>
-                          <td>
-                            <strong>{{ f.medicamento }}</strong>
-                            @if (f.codigo_cum) {
-                              <div style="font-size:0.75rem;color:#94a3b8">CUM: {{ f.codigo_cum }}</div>
-                            }
-                          </td>
-                          <td>{{ f.dosis }}</td>
-                          <td style="text-align:center">{{ f.cantidad }}</td>
-                          <td>{{ f.unidad }}</td>
-                          <td class="col-truncate">{{ f.observaciones }}</td>
-                          <td style="text-align:center">
-                            @if (f.dispensada) {
-                              <x-etiqueta value="Dispensada" severity="success" icon="pi pi-check" />
-                            } @else {
-                              <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
-                            }
-                          </td>
-                          <td style="text-align:center">
-                            @if (!f.dispensada && !historia()?.firmada) {
-                              <div style="display:flex;gap:0.4rem;justify-content:center">
-                                <p-button icon="pi pi-pencil" [text]="true" size="small"
-                                  matTooltip="Editar" (onClick)="editarFormula(f)" />
-                                <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                                  matTooltip="Eliminar" (onClick)="confirmarEliminarFormula(f)" />
-                              </div>
-                            }
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
+                    <table mat-table [dataSource]="formulas()" class="tabla" style="margin-top:1rem">
+                      <ng-container matColumnDef="medicamento">
+                        <th mat-header-cell *matHeaderCellDef>Medicamento</th>
+                        <td mat-cell *matCellDef="let f">
+                          <strong>{{ f.medicamento }}</strong>
+                          @if (f.codigo_cum) {
+                            <div style="font-size:0.75rem;color:#94a3b8">CUM: {{ f.codigo_cum }}</div>
+                          }
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="dosis">
+                        <th mat-header-cell *matHeaderCellDef>Dosis</th>
+                        <td mat-cell *matCellDef="let f">{{ f.dosis }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="cantidad">
+                        <th mat-header-cell *matHeaderCellDef class="centro">Cantidad</th>
+                        <td mat-cell *matCellDef="let f" class="centro">{{ f.cantidad }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="unidad">
+                        <th mat-header-cell *matHeaderCellDef>Unidad</th>
+                        <td mat-cell *matCellDef="let f">{{ f.unidad }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="observaciones">
+                        <th mat-header-cell *matHeaderCellDef>Observaciones</th>
+                        <td mat-cell *matCellDef="let f" class="col-truncate">{{ f.observaciones }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="estado">
+                        <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                        <td mat-cell *matCellDef="let f" class="centro">
+                          @if (f.dispensada) {
+                            <x-etiqueta value="Dispensada" severity="success" icon="pi pi-check" />
+                          } @else {
+                            <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
+                          }
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="acciones">
+                        <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+                        <td mat-cell *matCellDef="let f" class="centro">
+                          @if (!f.dispensada && !historia()?.firmada) {
+                            <div style="display:flex;gap:0.4rem;justify-content:center">
+                              <button matIconButton matTooltip="Editar" (click)="editarFormula(f)">
+                                <i class="pi pi-pencil"></i>
+                              </button>
+                              <button matIconButton class="peligro" matTooltip="Eliminar"
+                                (click)="confirmarEliminarFormula(f)">
+                                <i class="pi pi-trash"></i>
+                              </button>
+                            </div>
+                          }
+                        </td>
+                      </ng-container>
+
+                      <tr mat-header-row *matHeaderRowDef="columnasFormulas"></tr>
+                      <tr mat-row *matRowDef="let fila; columns: columnasFormulas"></tr>
+                    </table>
                   } @else if (!mostrarFormFormula()) {
                     <div class="sin-resultados" style="padding:2rem">
                       <i class="pi pi-file-o" style="font-size:1.5rem;opacity:0.4"></i>
@@ -815,17 +836,15 @@ function defaultAntPrenatales(): AntPrenatales {
                 }
 
                 <div class="step-actions" style="margin-top:1.5rem">
-                  <p-button label="Anterior" icon="pi pi-chevron-left" [text]="true" (onClick)="activateCallback(4)" />
+                  <button matButton (click)="irAPaso(4)"><i class="pi pi-chevron-left"></i> Anterior</button>
                   @if (historia()?.id) {
-                    <p-button label="Siguiente" icon="pi pi-chevron-right" iconPos="right" (onClick)="activateCallback(6)" />
+                    <button matButton="filled" (click)="irAPaso(6)">Siguiente <i class="pi pi-chevron-right"></i></button>
                   }
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
             <!-- PASO 6: ÓRDENES MÉDICAS -->
-            <p-step-panel [value]="6">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
+            <mat-step label="Órdenes">
 
                 @if (!historia()?.id) {
                   <div class="formula-aviso">
@@ -836,7 +855,7 @@ function defaultAntPrenatales(): AntPrenatales {
 
                   @if (!mostrarFormOrden()) {
                     <div style="margin-bottom:1rem">
-                      <p-button label="Agregar orden" icon="pi pi-plus" (onClick)="abrirFormOrden()" />
+                      <button matButton="filled" (click)="abrirFormOrden()"><i class="pi pi-plus"></i> Agregar orden</button>
                     </div>
                   }
 
@@ -844,87 +863,91 @@ function defaultAntPrenatales(): AntPrenatales {
                     <div class="formula-form">
                       <h4 style="margin:0 0 1rem;color:#f1f5f9">Nueva orden médica</h4>
                       <div class="form-grid">
-                        <div class="field">
-                          <label>Tipo de orden *</label>
-                          <p-select
-                            [(ngModel)]="oForm.tipo"
-                            [options]="tiposOrden"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Seleccione tipo"
-                            class="w-full" />
-                        </div>
-                        <div class="field">
-                          <label>Código CUPS</label>
-                          <input pInputText [(ngModel)]="oForm.codigo_cups" class="w-full" placeholder="Opcional" />
-                        </div>
-                        <div class="field" style="grid-column:1/-1">
-                          <label>Descripción *</label>
-                          <input pInputText [(ngModel)]="oForm.descripcion" class="w-full"
+                        <mat-form-field appearance="outline">
+                          <mat-label>Tipo de orden *</mat-label>
+                          <mat-select [(ngModel)]="oForm.tipo">
+                            @for (t of tiposOrden; track t.value) {
+                              <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                        <mat-form-field appearance="outline">
+                        <mat-label>Código CUPS</mat-label>
+                        <input matInput [(ngModel)]="oForm.codigo_cups" class="w-full" placeholder="Opcional" />
+                      </mat-form-field>
+                        <mat-form-field appearance="outline" style="grid-column:1/-1">
+                        <mat-label>Descripción *</mat-label>
+                        <input matInput [(ngModel)]="oForm.descripcion" class="w-full"
                             placeholder="Ej: Hemograma completo, Rayos X de tórax..." />
-                        </div>
-                        <div class="field" style="grid-column:1/-1">
-                          <label>Justificación clínica *</label>
-                          <textarea pTextarea [(ngModel)]="oForm.justificacion" rows="3" class="w-full"
+                      </mat-form-field>
+                        <mat-form-field appearance="outline" style="grid-column:1/-1">
+                        <mat-label>Justificación clínica *</mat-label>
+                        <textarea matInput [(ngModel)]="oForm.justificacion" rows="3" class="w-full"
                             placeholder="Motivo clínico de la orden..."></textarea>
-                        </div>
+                      </mat-form-field>
                         @if (oForm.tipo === 'Remisión Especialista') {
-                          <div class="field" style="grid-column:1/-1">
-                            <label>Especialidad destino</label>
-                            <p-select
-                              [(ngModel)]="oForm.especialidad_destino_id"
-                              [options]="especialidades()"
-                              optionLabel="nombre"
-                              optionValue="id"
-                              placeholder="Seleccione especialidad"
-                              [filter]="true"
-                              filterPlaceholder="Buscar..."
-                              class="w-full" />
-                          </div>
+                          <mat-form-field appearance="outline" style="grid-column:1/-1">
+                            <mat-label>Especialidad destino</mat-label>
+                            <mat-select [(ngModel)]="oForm.especialidad_destino_id">
+                              @for (e of especialidades(); track e.id) {
+                                <mat-option [value]="e.id">{{ e.nombre }}</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
                         }
                       </div>
                       <div class="step-actions">
-                        <p-button label="Cancelar" [text]="true" (onClick)="cerrarFormOrden()" />
-                        <p-button label="Agregar" icon="pi pi-check"
-                          [loading]="savingOrden()" (onClick)="guardarOrden()" />
+                        <button matButton (click)="cerrarFormOrden()">Cancelar</button>
+                        <button matButton="filled" [disabled]="savingOrden()" (click)="guardarOrden()"><i [class]="savingOrden() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Agregar</button>
                       </div>
                     </div>
                   }
 
                   @if (ordenes().length > 0) {
-                    <p-table [value]="ordenes()" styleClass="p-datatable-sm" style="margin-top:1rem">
-                      <ng-template pTemplate="header">
-                        <tr>
-                          <th>Tipo</th>
-                          <th>Descripción</th>
-                          <th>Especialidad / CUPS</th>
-                          <th>Justificación</th>
-                          <th style="text-align:center">Estado</th>
-                          <th style="text-align:center">Acciones</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template pTemplate="body" let-o>
-                        <tr>
-                          <td><x-etiqueta [value]="o.tipo" [severity]="ordenSeverity(o.tipo)" /></td>
-                          <td><strong>{{ o.descripcion }}</strong></td>
-                          <td class="col-truncate">
-                            @if (o.especialidad_nombre) { {{ o.especialidad_nombre }} }
-                            @else if (o.codigo_cups) { CUPS: {{ o.codigo_cups }} }
-                            @else { — }
-                          </td>
-                          <td class="col-truncate">{{ o.justificacion }}</td>
-                          <td style="text-align:center">
-                            <x-etiqueta [value]="o.estado" [severity]="estadoOrdenSeverity(o.estado)" />
-                          </td>
-                          <td style="text-align:center">
-                            @if (!historia()?.firmada) {
-                              <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                                matTooltip="Eliminar" (onClick)="confirmarEliminarOrden(o)" />
-                            }
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
+                    <table mat-table [dataSource]="ordenes()" class="tabla" style="margin-top:1rem">
+                      <ng-container matColumnDef="tipo">
+                        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                        <td mat-cell *matCellDef="let o">
+                          <x-etiqueta [value]="o.tipo" [severity]="ordenSeverity(o.tipo)" />
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="descripcion">
+                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                        <td mat-cell *matCellDef="let o"><strong>{{ o.descripcion }}</strong></td>
+                      </ng-container>
+                      <ng-container matColumnDef="destino">
+                        <th mat-header-cell *matHeaderCellDef>Especialidad / CUPS</th>
+                        <td mat-cell *matCellDef="let o" class="col-truncate">
+                          @if (o.especialidad_nombre) { {{ o.especialidad_nombre }} }
+                          @else if (o.codigo_cups) { CUPS: {{ o.codigo_cups }} }
+                          @else { — }
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="justificacion">
+                        <th mat-header-cell *matHeaderCellDef>Justificación</th>
+                        <td mat-cell *matCellDef="let o" class="col-truncate">{{ o.justificacion }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="estado">
+                        <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                        <td mat-cell *matCellDef="let o" class="centro">
+                          <x-etiqueta [value]="o.estado" [severity]="estadoOrdenSeverity(o.estado)" />
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="acciones">
+                        <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+                        <td mat-cell *matCellDef="let o" class="centro">
+                          @if (!historia()?.firmada) {
+                            <button matIconButton class="peligro" matTooltip="Eliminar"
+                              (click)="confirmarEliminarOrden(o)">
+                              <i class="pi pi-trash"></i>
+                            </button>
+                          }
+                        </td>
+                      </ng-container>
+
+                      <tr mat-header-row *matHeaderRowDef="columnasOrdenes"></tr>
+                      <tr mat-row *matRowDef="let fila; columns: columnasOrdenes"></tr>
+                    </table>
                   } @else if (!mostrarFormOrden()) {
                     <div class="sin-resultados" style="padding:2rem">
                       <i class="pi pi-clipboard" style="font-size:1.5rem;opacity:0.4"></i>
@@ -935,17 +958,15 @@ function defaultAntPrenatales(): AntPrenatales {
                 }
 
                 <div class="step-actions" style="margin-top:1.5rem">
-                  <p-button label="Anterior" icon="pi pi-chevron-left" [text]="true" (onClick)="activateCallback(5)" />
+                  <button matButton (click)="irAPaso(5)"><i class="pi pi-chevron-left"></i> Anterior</button>
                   @if (historia()?.id) {
-                    <p-button label="Siguiente" icon="pi pi-chevron-right" iconPos="right" (onClick)="activateCallback(7)" />
+                    <button matButton="filled" (click)="irAPaso(7)">Siguiente <i class="pi pi-chevron-right"></i></button>
                   }
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
             <!-- PASO 7: IMÁGENES DIAGNÓSTICAS -->
-            <p-step-panel [value]="7">
-              <ng-template pTemplate="content" let-activateCallback="activateCallback">
+            <mat-step label="Imágenes">
 
                 @if (!historia()?.id) {
                   <div class="formula-aviso">
@@ -962,53 +983,54 @@ function defaultAntPrenatales(): AntPrenatales {
                           <input #fileInput type="file" style="display:none"
                             accept="image/*,.pdf,.dcm"
                             (change)="onFileSelected($event)" />
-                          <p-button label="Seleccionar archivo" icon="pi pi-upload" [text]="true"
-                            (onClick)="fileInput.click()" />
+                          <button matButton (click)="fileInput.click()"><i class="pi pi-upload"></i> Seleccionar archivo</button>
                           @if (imagenArchivoSeleccionado) {
                             <span style="font-size:0.85rem;color:#94a3b8">{{ imagenArchivoSeleccionado.name }}</span>
                           }
                         </div>
                       </div>
-                      <div class="field">
-                        <label>Descripción</label>
-                        <input pInputText [(ngModel)]="imagenDescripcion" class="w-full"
+                      <mat-form-field appearance="outline">
+                        <mat-label>Descripción</mat-label>
+                        <input matInput [(ngModel)]="imagenDescripcion" class="w-full"
                           placeholder="Ej: Rx tórax PA, ECG, foto lesión..." />
-                      </div>
+                      </mat-form-field>
                     </div>
-                    <p-button label="Subir imagen" icon="pi pi-cloud-upload"
-                      [loading]="uploadingImagen()"
-                      [disabled]="!imagenArchivoSeleccionado"
-                      (onClick)="subirImagen()" />
+                    <button matButton="filled" [disabled]="!imagenArchivoSeleccionado || uploadingImagen()" (click)="subirImagen()"><i [class]="uploadingImagen() ? 'pi pi-spin pi-spinner' : 'pi pi-cloud-upload'"></i> Subir imagen</button>
                   </div>
 
                   @if (imagenes().length > 0) {
-                    <p-table [value]="imagenes()" styleClass="p-datatable-sm" style="margin-top:1.5rem">
-                      <ng-template pTemplate="header">
-                        <tr>
-                          <th>Archivo</th>
-                          <th>Descripción</th>
-                          <th>Fecha</th>
-                          <th style="text-align:center">Acciones</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template pTemplate="body" let-img>
-                        <tr>
-                          <td>
-                            <a [href]="urlImagen(img.id)" target="_blank" style="color:#818cf8">
-                              <i class="pi pi-file" style="margin-right:0.4rem"></i>{{ img.nombre_original }}
-                            </a>
-                          </td>
-                          <td>{{ img.descripcion }}</td>
-                          <td>{{ img.fecha_subida | date:'dd/MM/yyyy HH:mm' }}</td>
-                          <td style="text-align:center">
-                            @if (!historia()?.firmada) {
-                              <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                                matTooltip="Eliminar" (onClick)="confirmarEliminarImagen(img)" />
-                            }
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
+                    <table mat-table [dataSource]="imagenes()" class="tabla" style="margin-top:1.5rem">
+                      <ng-container matColumnDef="archivo">
+                        <th mat-header-cell *matHeaderCellDef>Archivo</th>
+                        <td mat-cell *matCellDef="let img">
+                          <a [href]="urlImagen(img.id)" target="_blank" style="color:#818cf8">
+                            <i class="pi pi-file" style="margin-right:0.4rem"></i>{{ img.nombre_original }}
+                          </a>
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="descripcion">
+                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                        <td mat-cell *matCellDef="let img">{{ img.descripcion }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="fecha">
+                        <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                        <td mat-cell *matCellDef="let img">{{ img.fecha_subida | date:'dd/MM/yyyy HH:mm' }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="acciones">
+                        <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+                        <td mat-cell *matCellDef="let img" class="centro">
+                          @if (!historia()?.firmada) {
+                            <button matIconButton class="peligro" matTooltip="Eliminar"
+                              (click)="confirmarEliminarImagen(img)">
+                              <i class="pi pi-trash"></i>
+                            </button>
+                          }
+                        </td>
+                      </ng-container>
+
+                      <tr mat-header-row *matHeaderRowDef="columnasImagenes"></tr>
+                      <tr mat-row *matRowDef="let fila; columns: columnasImagenes"></tr>
+                    </table>
                   } @else {
                     <div class="sin-resultados" style="padding:2rem">
                       <i class="pi pi-images" style="font-size:1.5rem;opacity:0.4"></i>
@@ -1019,18 +1041,14 @@ function defaultAntPrenatales(): AntPrenatales {
                 }
 
                 <div class="step-actions" style="margin-top:1.5rem">
-                  <p-button label="Anterior" icon="pi pi-chevron-left" [text]="true" (onClick)="activateCallback(6)" />
+                  <button matButton (click)="irAPaso(6)"><i class="pi pi-chevron-left"></i> Anterior</button>
                   @if (historia()?.id) {
-                    <p-button label="Firmar Historia" icon="pi pi-lock"
-                      [loading]="signing()" [disabled]="!!historia()?.firmada"
-                      (onClick)="firmarHistoria()" />
+                    <button matButton="filled" [disabled]="!!historia()?.firmada || signing()" (click)="firmarHistoria()"><i [class]="signing() ? 'pi pi-spin pi-spinner' : 'pi pi-lock'"></i> Firmar Historia</button>
                   }
                 </div>
-              </ng-template>
-            </p-step-panel>
+            </mat-step>
 
-          </p-step-panels>
-        </p-stepper>
+        </mat-stepper>
       }
 
     </div>
@@ -1190,6 +1208,19 @@ export class HistoriasComponent implements OnInit {
   paciente = signal<PacienteInfo | null>(null);
   medico = signal<MedicoInfo | null>(null);
   activeStep = signal(1);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnasHistorias = ['codigo', 'fecha', 'motivo', 'diagnostico', 'medico',
+                                'estado', 'acciones'];
+  readonly columnasFormulas = ['medicamento', 'dosis', 'cantidad', 'unidad',
+                               'observaciones', 'estado', 'acciones'];
+  readonly columnasOrdenes = ['tipo', 'descripcion', 'destino', 'justificacion',
+                              'estado', 'acciones'];
+  readonly columnasImagenes = ['archivo', 'descripcion', 'fecha', 'acciones'];
+
+  /** Mover el paso activo. La señal es la única fuente: la cabecera del stepper
+   *  la escribe por (selectionChange) y la lee por [selectedIndex]. */
+  irAPaso(n: number): void { this.activeStep.set(n); }
   saving = signal(false);
   signing = signal(false);
 
@@ -1497,13 +1528,13 @@ export class HistoriasComponent implements OnInit {
     if (!this.efState[key].anormal) this.efState[key].texto = '';
   }
 
-  onNextExamen(activateCallback: (n: number) => void): void {
+  onNextExamen(): void {
     // Aplica el estado de checkboxes al form antes de avanzar
     for (const item of this.efItems) {
       const s = this.efState[item.key];
       (this.form as any)[item.key] = s?.anormal ? (s.texto.trim() || 'Anormal') : 'Normal';
     }
-    activateCallback(3);
+    this.irAPaso(3);
   }
 
   // ── Signos vitales — cálculos ────────────────────────────────
@@ -1581,7 +1612,7 @@ export class HistoriasComponent implements OnInit {
     };
   }
 
-  guardarYContinuar(activateCallback: (step: number) => void): void {
+  guardarYContinuar(): void {
     const pacienteId = this.form.paciente_id ?? this.historia()?.paciente_id;
     if (!pacienteId) return;
     this.saving.set(true);
@@ -1608,7 +1639,7 @@ export class HistoriasComponent implements OnInit {
             this._cargarOrdenes(h.id);
             this._cargarImagenes(h.id);
             this._cargarEspecialidades();
-            activateCallback(5);
+            this.irAPaso(5);
           },
           error: () => {
             this.saving.set(false);

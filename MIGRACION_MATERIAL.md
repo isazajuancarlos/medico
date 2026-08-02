@@ -27,10 +27,15 @@ Angular: informes ya está en 22.1.0).
 
 ## Orden decidido
 
-1. PrimeNG → Material **con Angular 21**, verde.
-2. Después, el salto de medico a Angular 22.
+1. PrimeNG → Material **con Angular 21**, verde. — **HECHO el 2026-08-02.**
+2. Después, el salto de medico a Angular 22 (#254), que esto desbloquea.
 
 Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
+
+> **Terminado.** `primeng` y `@primeuix/themes` salieron del `package.json` y de
+> `node_modules`; `providePrimeNG` salió de `app.config.ts`. Quedan **cero**
+> importaciones `from 'primeng/…'`. `primeicons` se queda: es MIT, es solo una
+> fuente de iconos y no tiene el problema de licencia de `primeng`.
 
 ## Estado
 
@@ -47,6 +52,15 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras estadísticas (y el gráfico propio) | 112 | 17 |
 | tras evoluciones | 107 | 16 |
 | tras epicrisis | 102 | 15 |
+| tras citas y rehabilitación | 87 | 13 |
+| tras nota operatoria e interconsultas | 77 | 11 |
+| tras ambulancias y hospitalización | 65 | 9 |
+| tras agenda médica y laboratorio | 46 | 7 |
+| tras nutrición y quirófano | 34 | 5 |
+| tras farmacia | 27 | 4 |
+| tras facturación | 21 | 3 |
+| tras administración | 14 | 2 |
+| **tras historias clínicas y `app.config`** | **0** | **0** |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -98,6 +112,25 @@ comprobar es **una ausencia en una lista**, y una ausencia no se ve ejecutando.
 Cada marca admite varios módulos —`MatInputModule` reexporta
 `MatFormFieldModule`— para no producir alarmas falsas (directiva 23), y lleva la
 misma guardia de recuento que el banco de humo.
+
+> **El guardián no discriminaba, y se midió (2026-08-02).** Comprobaba que el
+> nombre del módulo apareciera **en el archivo**, no en la lista de `imports`
+> del componente. Se le quitó `MatTooltipModule` de la lista a `historias`
+> dejando arriba su línea `import` —el caso exacto que dice cazar— y las 295
+> pruebas siguieron en verde. Dos agujeros, no uno:
+>
+> 1. la línea `import { MatTooltipModule } from …` hacía verdadera la
+>    comprobación aunque Angular no viera el módulo por ningún lado;
+> 2. desde que los diálogos son componentes propios, **un archivo lleva de dos a
+>    cinco componentes**, y el `imports` de la pantalla tapaba el del diálogo.
+>
+> Hoy corta el fuente por `@Component(` —lo que deja fuera la cabecera del
+> archivo a propósito— y comprueba cada componente contra **su** lista. Pasó de
+> 156 a 227 comprobaciones y **discrimina**: con la lista rota nombra
+> `HistoriasComponent` y solo a él.
+>
+> La lección es la de siempre: *el guardián que nadie ha visto ponerse rojo no
+> es un guardián.*
 
 `src/entorno-de-pruebas.ts` suple `ResizeObserver`, que jsdom no trae y cualquier
 navegador sí. Lo destapó `agenda-medica`; lo pedirá igual Material
@@ -341,25 +374,25 @@ de diferencia.
    (directiva 20). En cambio `acceptButtonStyleClass: 'p-button-danger'` sí se
    tradujo a `peligroso: true` — vocabulario ajeno que no había que heredar.
 
-## Lo que queda, y por qué no se hace con sustitución ciega
+## Cómo se hizo lo caro (y por qué no con sustitución ciega)
 
-140 importaciones, todas de los cuatro vocabularios caros (los usos son los que
-había al empezar; van bajando con cada lote):
+Los cuatro vocabularios caros —`p-button`, `p-table`, `pInputText`/`textarea`,
+`p-select`, `p-dialog`— fueron **pantalla por pantalla y a mano**, de la más
+pequeña a la mayor, con `ng build` y las pruebas entre lote y lote. Ninguno
+mapea 1:1: `severity`/`text`/`outlined` no son `matButton`/`="filled"`/
+`="outlined"`, y un reemplazo ciego produce botones equivocados **que
+compilan**; `p-table` cambia de paradigma (`pTemplate="body"` → un
+`matColumnDef` por columna); `pInputText` exige envolver en `<mat-form-field>`.
 
-| pendiente | usos | dificultad |
-|---|---|---|
-| `p-button` | 29 | `severity`/`text`/`outlined`/`raised` no mapean 1:1 a `matButton`/`="filled"`/`="outlined"`/`="tonal"`/`matIconButton`. Un reemplazo ciego produce botones equivocados **que compilan**. |
-| `p-table` | 25 | cambia de paradigma: `<ng-template pTemplate="body">` → `matColumnDef` por columna. Es reescribir la tabla, no traducirla. |
-| `pInputText` / `textarea` | 41 | Material exige envolver en `<mat-form-field>` con su `<mat-label>`; no es un cambio de atributo. |
-| `p-select` | 21 | `optionLabel`/`optionValue` → `<mat-option>` con `*ngFor`. |
-| `p-dialog` | 13 | declarativo con `[(visible)]` → `MatDialog` imperativo. |
-| cola | ~21 | checkbox, card, datepicker (necesita adaptador de fecha y locale es-CO), toggleswitch, tabs, panel, inputnumber, inputgroup, stepper, progressbar, chart, avatar, autocomplete |
+**Dos veces sí se automatizó, y con la misma regla**: en `admin` (46 campos) y
+en `historias` (40) los bloques `<div class="field"><label>…</label><control/>`
+se convirtieron con un **recorrido consciente de bloques** —contando los `<div>`
+anidados—, no con una expresión regular sobre el HTML (directiva 17). Lo que no
+encajaba en «etiqueta + un control» se apartó y se hizo a mano: 8 en `admin`,
+7 en `historias`. El recuento de convertidos y apartados se imprime, porque un
+transformador que salta en silencio es peor que uno que no corre.
 
-Estos van **pantalla por pantalla y a mano**, de la más pequeña a la mayor, con
-`ng build` y las pruebas entre lote y lote. Hechas ya con este método: `login`,
-`rips`, `contrarreferencia`, `pacientes`, `remisiones`, `incapacidades`,
-`consentimiento`, y las dos piezas compartidas (`barra-crud` y `header`). Las
-que fijan un patrón:
+Las pantallas que fijan un patrón:
 
 | pantalla | fija |
 |---|---|
@@ -372,6 +405,13 @@ que fijan un patrón:
 | `superadmin` | dos paginadores en una pantalla; el calendario y el ojo de la clave |
 | `paciente-form` | el diálogo que **el padre** abría con `[abierto]` |
 | `barra-crud` | el botón de icono y el color por CSS |
+| `ambulancias` | el diálogo que recibe por `MAT_DIALOG_DATA` una lista **calculada** (las que pueden salir), y el que pide sus propios datos |
+| `quirófano` | el diálogo que guarda por dentro (el checklist) y devuelve solo la acción |
+| `farmacia` | el selector que hay que **poblar antes de abrir**, para que nadie concluya «no hay proveedores» |
+| `facturación` | el diálogo con dos salidas distintas (aceptar / rechazar la glosa), que no es una confirmación |
+| `agenda médica` | `mat-stepper` no; aquí `mat-tab-group` y el `datetime-local` que quita la conversión de zona |
+| `historias` | `mat-stepper` gobernado por una señal: `[selectedIndex]` la lee, `(selectionChange)` la escribe |
+| `laboratorio` | la rejilla densa que NO se envuelve en `mat-form-field`: `input` desnudos con CSS de la página |
 
 ## Lo que NO se toca en esta migración
 
