@@ -20,7 +20,7 @@ consultorio de un cliente real (`/mnt/data/aprograms`, fuente autoritativa;
 `/mnt/data/repoNuevo`, el generador de RIPS y epidemiológicos). No es un producto
 de cero: cada decisión se contrasta contra lo que el prestador ya usa.
 
-Backend **FastAPI + SQLModel + PostgreSQL** en `backend/`, frontend **Angular 21 +
+Backend **FastAPI + SQLModel + PostgreSQL** en `backend/`, frontend **Angular 22 +
 `@angular/material`** en `frontend/`. Multi-institucional, con licencia por
 institución que decide qué módulos se ven.
 
@@ -43,12 +43,15 @@ institución que decide qué módulos se ven.
 > offline a casa de un cliente no puede llevar dentro una clave que caduca; se
 > probó entero en SIGER y se descartó por eso.
 >
-> **Esto desbloquea #254** (Angular 21 → 22), que era lo que el peer
-> `@angular/core ^21.0.7` de PrimeNG 21 impedía. El orden fue el decidido:
-> primero Material con Angular 21, después el salto. Medido de paso: Angular 22
-> con PrimeNG 21 *sí* compilaba, así que había atajo — no se tomó, porque dejaba
-> una librería corriendo fuera de su rango declarado en un producto que se
-> instala offline.
+> **#254 se hizo a continuación, el mismo día**: Angular 22.1.0, Material
+> 22.1.0, CDK 22.1.0 y TypeScript 6.0.3, que es lo que corre `informes`. El
+> orden fue el decidido: primero Material con Angular 21, después el salto.
+> Medido de paso: Angular 22 con PrimeNG 21 *sí* compilaba, así que había atajo
+> — no se tomó, porque dejaba una librería corriendo fuera de su rango declarado
+> en un producto que se instala offline. Ver [La subida a Angular 22](#la-subida-a-angular-22).
+>
+> **`--legacy-peer-deps` se fue con PrimeNG**: era su bandera. `npm ci` limpio
+> funciona, y así están el CI y `construir.sh`.
 >
 > **La receta, las equivalencias y las trampas ya pagadas están en
 > [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md)** — leerlo antes de tocar una
@@ -94,7 +97,7 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 
 # === FRONTEND ===
 cd frontend
-npm install --legacy-peer-deps                   # el árbol se instaló así; queda hasta la próxima limpieza
+npm ci                                           # sin banderas: --legacy-peer-deps era por PrimeNG
 npm start                                        # :4200, proxy /api → :8000
 npm test                                         # vitest vía `ng test`: 11 specs, 366 pruebas
 npm run build
@@ -125,7 +128,7 @@ el Rust dejaría sin red al producto vivo.
 |---|---|
 | `rust` | `cargo clippy --workspace --all-targets -- -D warnings` + `cargo test --workspace --all-targets` |
 | `backend` | `pytest -q` en `backend/`, con `pip install -r requirements-recuperado.txt` |
-| `frontend` | `npm ci --legacy-peer-deps` + `npx ng build` + `npx ng test --watch=false` |
+| `frontend` | `npm ci` + `npx ng build` + `npx ng test --watch=false` |
 | `auditoria-deps` | `cargo audit` (RustSec; el único *ignore* vive en `.cargo/audit.toml`) |
 | `cadena-suministro` | `cargo deny check` (fuentes, bans, licencias; config en `deny.toml`) |
 
@@ -148,6 +151,85 @@ empujada sin PR no tiene CI.**
 > facturación—. Mientras dure, el único verde es el **local con los siete comandos
 > de la tabla**, y hay que decirlo al afirmar que algo pasa: `gh run list` no va a
 > mostrar nada.
+
+## La subida a Angular 22
+
+Hecha el 2026-08-02, justo después de que saliera PrimeNG (#254). Angular
+22.1.0, Material 22.1.0, CDK 22.1.0, TypeScript 6.0.3 — lo mismo que corre
+`informes`, que era el objetivo: **una sola versión de Angular en todos los
+desarrollos**.
+
+Se hizo con `ng update @angular/core@22 @angular/cli@22` y después
+`ng update @angular/material@22` (exige el árbol limpio entre una y otra).
+Material no tocó **una sola plantilla**: el vocabulario de la 21 y el de la 22
+son el mismo, que era la apuesta de hacer #255 primero.
+
+**Las migraciones de la 22 escriben tres opt-out, y los tres hay que leerlos**,
+porque los tres dicen «quédate como estabas»:
+
+| lo que cambió la 22 | lo que escribió la migración | qué se hizo |
+|---|---|---|
+| **OnPush pasa a ser el defecto** (`Default` queda deprecado como alias de `Eager`) | `changeDetection: ChangeDetectionStrategy.Eager` en 71 componentes | **se deja**, ver abajo |
+| El cliente HTTP pasa a `fetch` | `provideHttpClient(withXhr(), …)` | **se deja hasta comprobarlo contra el servidor real** |
+| Dos diagnósticos nuevos de plantilla | `extendedDiagnostics: suppress` en los dos tsconfig | **se quitó**, y se arregló la causa |
+
+**El silenciador se quitó porque tapaba UN aviso, y era verdadero.** Sin él, el
+proyecto entero produce un solo aviso: `config()!.dias_atencion?.includes(…)` en
+`admin`, diciendo que el `?.` sobra porque el tipo no admite nulo. La respuesta
+no era quitar el `?.`: **el tipo mentía**. La columna del servidor es un JSON sin
+`NOT NULL`, así que una fila anterior a que el campo existiera lo trae vacío — y
+el código ya se defendía dos veces a mano. Hoy `dias_atencion: string[] | null`
+dice la verdad, las dos defensas quedan justificadas y el aviso desaparece solo.
+Silenciarlo habría dejado el tipo mintiendo y las defensas pareciendo
+redundantes: el siguiente que pasara las habría borrado.
+
+**`Eager` se deja, y no por comodidad.** Adoptar OnPush exige auditar componente
+por componente que ningún campo que la plantilla lee se escriba desde un
+callback asíncrono sin señal de por medio. El fallo de esa auditoría es una
+pantalla que no se refresca **sin que nada falle**, que es exactamente lo que ni
+el banco de humo ni el guardián ven. Un cambio a la vez.
+
+**El `--legacy-peer-deps` se fue con PrimeNG.** Era su bandera: `npm ci` limpio
+funciona desde que la librería no está. Quitado del CI, de `construir.sh`, del
+README y de aquí.
+
+### La fuente que solo se vio abriendo la aplicación
+
+Con las 366 pruebas en verde y el binario construido, se abrió el producto en un
+navegador — y los campos, los botones y los diálogos de Material salían **con
+serifas**, mientras el resto de la página iba en Inter.
+
+La causa: el CSS precompilado `prebuilt-themes/azure-blue.css` trae **30 tokens
+`--mat-sys-*` con `Roboto` dentro**, y Roboto no viaja en el binario. La única
+fuente que empaquetamos es Inter (`@fontsource`). En un equipo con internet no
+se nota; en el portátil offline de un consultorio, el navegador cae a su fuente
+por defecto.
+
+El arreglo es generar el tema con la API Sass en vez de usar el precompilado
+—misma paleta `azure`, así que los colores no cambian— y fijar la familia una
+sola vez:
+
+```scss
+:root {
+  color-scheme: light;
+  @include mat.theme((color: mat.$azure-palette,
+                      typography: (plain-family: (Inter, …), brand-family: (Inter, …)),
+                      density: 0));
+}
+```
+
+`color-scheme: light` va porque `mat.theme` emite los colores con `light-dark()`
+y por tanto seguiría el modo del SISTEMA, cosa que el precompilado no hacía: un
+equipo en modo oscuro habría pintado la página clara con los controles oscuros.
+Se conserva lo de antes; el modo oscuro, si algún día se hace, se decide.
+
+Medido después: **cero** apariciones de `Roboto` en el CSS producido, y
+`getComputedStyle` sobre un `mat-label` y un `input` del binario real devuelve
+Inter donde antes devolvía Roboto.
+
+**La lección, que es la de la directiva 28**: 366 pruebas en verde, `ng build`
+en verde, el guardián de las directivas en verde — y el producto se veía mal. Lo
+que ninguna de las redes mira es cómo QUEDA la pantalla.
 
 ## El workspace Rust
 
@@ -667,7 +749,7 @@ tramo «0 años» va del recién nacido al de once meses.
 
 ## Frontend
 
-Angular 21.2 + `@angular/material` 21.2, standalone, 30 páginas y 50 entradas en
+Angular 22.1 + `@angular/material` 22.1, standalone, 30 páginas y 50 entradas en
 `app.routes.ts` (47 con `loadComponent`, el resto redirecciones), con `authGuard`,
 `roleGuard` y `modulo.guard`. Medido el 2026-08-01.
 
@@ -719,7 +801,7 @@ falta.
 - **Aislamiento**: toda consulta de paciente/historia/cita filtrada por institución, y
   todo acceso por id vía `obtener()`.
 - **N+1**: `joinedload()` / `selectinload()`. El pool son 20 conexiones.
-- **Frontend**: siempre `npm install --legacy-peer-deps`.
+- **Frontend**: `npm ci` a secas. El `--legacy-peer-deps` era de PrimeNG y se fue con él (2026-08-02).
 - Los `.py` de la raíz (`models.py`, `database.py`, `seed.py`, `auditoria.py`,
   `seguridad.py`, `importer.py`, `reset_db.py`) son **copias antiguas de la etapa
   NiceGUI**, idénticas o casi a las de `backend/`. El código vivo es el de `backend/`.

@@ -18,7 +18,7 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 | | producto vivo | port en curso |
 |---|---|---|
 | **Backend** | FastAPI + SQLModel + PostgreSQL (`backend/`) | axum + SQLx + SQLite (`crates/`) |
-| **Interfaz** | Angular 21 + `@angular/material` (`frontend/`) | la misma, **empotrada en el binario** |
+| **Interfaz** | Angular 22 + `@angular/material` (`frontend/`) | la misma, **empotrada en el binario** |
 | **Entrega** | proceso + base de datos | **un archivo** |
 | **Ramas** | `main`, `master` | `feat/*` |
 
@@ -33,8 +33,16 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 > que caduca. De la familia solo queda `primeicons`, que es MIT y es una fuente
 > de iconos.
 
-Con eso queda desbloqueado el salto a Angular 22 (#254), que era lo que el peer
-de PrimeNG 21 impedía.
+**Y el salto se hizo el mismo día**: Angular 22.1.0, Material 22.1.0, CDK 22.1.0
+y TypeScript 6.0.3 (#254). Con eso los dos desarrollos —medico e informes— corren
+la misma versión de Angular, que era el objetivo. Dos migraciones de la 22 hay
+que leerlas y no solo aceptarlas: en la 22 **OnPush pasa a ser el defecto**
+(`ChangeDetectionStrategy.Eager` es el opt-out que dejó la herramienta en 71
+componentes, y ahí sigue a propósito), y el cliente HTTP pasa a `fetch`
+(`withXhr()` es el opt-out).
+
+El `--legacy-peer-deps` desapareció con PrimeNG: `npm ci` limpio funciona, y así
+está el CI y `construir.sh`.
 
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
@@ -75,7 +83,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---
 cd frontend
-npm install --legacy-peer-deps         # el árbol se instaló así; queda hasta la próxima limpieza
+npm ci                                 # sin --legacy-peer-deps: era por PrimeNG, y PrimeNG ya no está
 npm start                              # :4200 con proxy a :8000
 ```
 
