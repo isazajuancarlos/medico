@@ -1,12 +1,14 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { SelectModule } from 'primeng/select';
-import { ChartModule } from 'primeng/chart';
+import { ChartOptions } from 'chart.js';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { GraficoComponent } from '../../shared/ui/grafico.component';
 import { Avisos } from '../../shared/ui/avisos.service';
 import {
   EstadisticasService, Resumen, EstadisticasCitas, EstadisticasPacientes,
@@ -30,8 +32,8 @@ const TRIAGE_COLORS: Record<string, string> = {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, EtiquetaComponent, TableModule, MatTooltipModule, SelectModule,
-    ChartModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule,
+    MatTooltipModule, EtiquetaComponent, GraficoComponent,
   ],
   template: `
     <div class="page-card">
@@ -39,12 +41,23 @@ const TRIAGE_COLORS: Record<string, string> = {
       <div class="list-header">
         <h2 class="page-title">Estadísticas e Indicadores</h2>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <input type="date" [(ngModel)]="fechaInicio" class="p-inputtext p-component" style="height:2.25rem" />
-          <span style="color:#64748b">a</span>
-          <input type="date" [(ngModel)]="fechaFin" class="p-inputtext p-component" style="height:2.25rem" />
-          <p-button label="Aplicar" icon="pi pi-filter" size="small" (onClick)="aplicarFiltro()" />
-          <p-button label="Este mes" [text]="true" size="small" (onClick)="setEsteMes()" />
-          <p-button label="Este año" [text]="true" size="small" (onClick)="setEsteAnio()" />
+          <!-- Estos dos campos llevaban las clases p-inputtext y p-component a
+               mano: eran las clases de PrimeNG puestas sobre un input crudo, no
+               su directiva. Se habrían quedado sin estilo el día que salga la
+               hoja de PrimeNG, sin que ningún import lo delatara. -->
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Desde</mat-label>
+            <input matInput type="date" [(ngModel)]="fechaInicio" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Hasta</mat-label>
+            <input matInput type="date" [(ngModel)]="fechaFin" />
+          </mat-form-field>
+          <button matButton="filled" (click)="aplicarFiltro()">
+            <i class="pi pi-filter"></i> Aplicar
+          </button>
+          <button matButton (click)="setEsteMes()">Este mes</button>
+          <button matButton (click)="setEsteAnio()">Este año</button>
         </div>
       </div>
 
@@ -134,21 +147,21 @@ const TRIAGE_COLORS: Record<string, string> = {
           <div class="chart-row">
             <div class="chart-box">
               <h4 class="chart-title">Por Estado</h4>
-              <p-chart type="doughnut" [data]="citasEstadoChart()" [options]="doughnutOpts" height="260px" />
+              <x-grafico type="doughnut" [data]="citasEstadoChart()" [options]="doughnutOpts" height="260px" />
             </div>
             <div class="chart-box">
               <h4 class="chart-title">Por Tipo</h4>
-              <p-chart type="doughnut" [data]="citasTipoChart()" [options]="doughnutOpts" height="260px" />
+              <x-grafico type="doughnut" [data]="citasTipoChart()" [options]="doughnutOpts" height="260px" />
             </div>
             <div class="chart-box" style="flex:2">
               <h4 class="chart-title">Tendencia</h4>
-              <p-chart type="bar" [data]="citasTendenciaChart()" [options]="barOpts" height="260px" />
+              <x-grafico type="bar" [data]="citasTendenciaChart()" [options]="barOpts" height="260px" />
             </div>
           </div>
           <div class="chart-row" style="margin-top:1rem">
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Producción por Médico</h4>
-              <p-chart type="bar" [data]="citasMedicoChart()" [options]="hbarOpts" height="300px" />
+              <x-grafico type="bar" [data]="citasMedicoChart()" [options]="hbarOpts" height="300px" />
             </div>
           </div>
         } @else {
@@ -163,25 +176,25 @@ const TRIAGE_COLORS: Record<string, string> = {
           <div class="chart-row">
             <div class="chart-box">
               <h4 class="chart-title">Por Sexo</h4>
-              <p-chart type="pie" [data]="pacSexoChart()" [options]="doughnutOpts" height="260px" />
+              <x-grafico type="pie" [data]="pacSexoChart()" [options]="doughnutOpts" height="260px" />
             </div>
             <div class="chart-box">
               <h4 class="chart-title">Por Régimen</h4>
-              <p-chart type="doughnut" [data]="pacTipoChart()" [options]="doughnutOpts" height="260px" />
+              <x-grafico type="doughnut" [data]="pacTipoChart()" [options]="doughnutOpts" height="260px" />
             </div>
             <div class="chart-box">
               <h4 class="chart-title">Por Zona</h4>
-              <p-chart type="pie" [data]="pacZonaChart()" [options]="doughnutOpts" height="260px" />
+              <x-grafico type="pie" [data]="pacZonaChart()" [options]="doughnutOpts" height="260px" />
             </div>
           </div>
           <div class="chart-row" style="margin-top:1rem">
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Pirámide de Edad</h4>
-              <p-chart type="bar" [data]="pacEdadChart()" [options]="barOpts" height="260px" />
+              <x-grafico type="bar" [data]="pacEdadChart()" [options]="barOpts" height="260px" />
             </div>
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Top EPS</h4>
-              <p-chart type="bar" [data]="pacEpsChart()" [options]="hbarOpts" height="260px" />
+              <x-grafico type="bar" [data]="pacEpsChart()" [options]="hbarOpts" height="260px" />
             </div>
           </div>
         } @else {
@@ -195,26 +208,30 @@ const TRIAGE_COLORS: Record<string, string> = {
           <div class="chart-row">
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Top 10 Diagnósticos (CIE-10)</h4>
-              <p-chart type="bar" [data]="dxChart()" [options]="hbarOpts" height="420px" />
+              <x-grafico type="bar" [data]="dxChart()" [options]="hbarOpts" height="420px" />
             </div>
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Detalle</h4>
-              <p-table [value]="diagnosticos()!.diagnosticos" [scrollable]="true" scrollHeight="380px">
-                <ng-template #header>
-                  <tr>
-                    <th style="width:90px">Código</th>
-                    <th>Descripción</th>
-                    <th style="width:80px;text-align:right">Casos</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-dx>
-                  <tr>
-                    <td><span class="badge-code">{{ dx.codigo }}</span></td>
-                    <td style="font-size:.85rem">{{ dx.descripcion }}</td>
-                    <td style="text-align:right;font-weight:600">{{ dx.cantidad }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <!-- El scroll va en un div: mat-table no trae el
+                   [scrollable]/scrollHeight que tenía p-table. -->
+              <div class="con-scroll" style="max-height:380px">
+                <table mat-table [dataSource]="diagnosticos()!.diagnosticos">
+                  <ng-container matColumnDef="codigo">
+                    <th mat-header-cell *matHeaderCellDef style="width:90px">Código</th>
+                    <td mat-cell *matCellDef="let dx"><span class="badge-code">{{ dx.codigo }}</span></td>
+                  </ng-container>
+                  <ng-container matColumnDef="descripcion">
+                    <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                    <td mat-cell *matCellDef="let dx" class="menudo">{{ dx.descripcion }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="casos">
+                    <th mat-header-cell *matHeaderCellDef class="derecha" style="width:80px">Casos</th>
+                    <td mat-cell *matCellDef="let dx" class="derecha fuerte">{{ dx.cantidad }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="colDx; sticky: true"></tr>
+                  <tr mat-row *matRowDef="let fila; columns: colDx"></tr>
+                </table>
+              </div>
             </div>
           </div>
         } @else {
@@ -228,28 +245,32 @@ const TRIAGE_COLORS: Record<string, string> = {
           <div class="chart-row">
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Citas Atendidas por Médico</h4>
-              <p-chart type="bar" [data]="prodChart()" [options]="hbarOpts" height="360px" />
+              <x-grafico type="bar" [data]="prodChart()" [options]="hbarOpts" height="360px" />
             </div>
             <div class="chart-box" style="flex:1.2">
               <h4 class="chart-title">Detalle de Producción</h4>
-              <p-table [value]="produccion()!.medicos" [scrollable]="true" scrollHeight="340px">
-                <ng-template #header>
-                  <tr>
-                    <th>Médico</th>
-                    <th style="width:120px">Especialidad</th>
-                    <th style="width:90px;text-align:right">Citas</th>
-                    <th style="width:90px;text-align:right">Historias</th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-m>
-                  <tr>
-                    <td>{{ m.nombre }}</td>
-                    <td style="font-size:.82rem;color:#64748b">{{ m.especialidad || '—' }}</td>
-                    <td style="text-align:right;font-weight:600;color:#3b82f6">{{ m.citas_atendidas }}</td>
-                    <td style="text-align:right;font-weight:600;color:#10b981">{{ m.historias_creadas }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <div class="con-scroll" style="max-height:340px">
+                <table mat-table [dataSource]="produccion()!.medicos">
+                  <ng-container matColumnDef="medico">
+                    <th mat-header-cell *matHeaderCellDef>Médico</th>
+                    <td mat-cell *matCellDef="let m">{{ m.nombre }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="especialidad">
+                    <th mat-header-cell *matHeaderCellDef style="width:120px">Especialidad</th>
+                    <td mat-cell *matCellDef="let m" class="tenue">{{ m.especialidad || '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="citas">
+                    <th mat-header-cell *matHeaderCellDef class="derecha" style="width:90px">Citas</th>
+                    <td mat-cell *matCellDef="let m" class="derecha fuerte azul">{{ m.citas_atendidas }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="historias">
+                    <th mat-header-cell *matHeaderCellDef class="derecha" style="width:90px">Historias</th>
+                    <td mat-cell *matCellDef="let m" class="derecha fuerte verde">{{ m.historias_creadas }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="colProd; sticky: true"></tr>
+                  <tr mat-row *matRowDef="let fila; columns: colProd"></tr>
+                </table>
+              </div>
             </div>
           </div>
         } @else {
@@ -267,43 +288,59 @@ const TRIAGE_COLORS: Record<string, string> = {
           <div class="chart-row">
             <div class="chart-box">
               <h4 class="chart-title">Facturas por Estado</h4>
-              <p-chart type="doughnut" [data]="finEstadoChart()" [options]="doughnutOpts" height="260px" />
+              <x-grafico type="doughnut" [data]="finEstadoChart()" [options]="doughnutOpts" height="260px" />
             </div>
             <div class="chart-box" style="flex:2">
               <h4 class="chart-title">Tendencia Mensual (valor)</h4>
-              <p-chart type="line" [data]="finTendenciaChart()" [options]="lineOpts" height="260px" />
+              <x-grafico type="line" [data]="finTendenciaChart()" [options]="lineOpts" height="260px" />
             </div>
           </div>
           <div class="chart-row" style="margin-top:1rem">
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Glosas por Estado</h4>
-              <p-table [value]="financiero()!.glosas">
-                <ng-template #header>
-                  <tr><th>Estado</th><th style="text-align:right">Cantidad</th><th style="text-align:right">Valor</th></tr>
-                </ng-template>
-                <ng-template #body let-g>
-                  <tr>
-                    <td><x-etiqueta [value]="g.estado" [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'ACEPTADA' ? 'danger' : 'success'" /></td>
-                    <td style="text-align:right">{{ g.cantidad }}</td>
-                    <td style="text-align:right;font-weight:600">{{ g.valor | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <table mat-table [dataSource]="financiero()!.glosas">
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let g">
+                    <x-etiqueta [value]="g.estado" [severity]="severidadGlosa(g.estado)" />
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="cantidad">
+                  <th mat-header-cell *matHeaderCellDef class="derecha">Cantidad</th>
+                  <td mat-cell *matCellDef="let g" class="derecha">{{ g.cantidad }}</td>
+                </ng-container>
+                <ng-container matColumnDef="valor">
+                  <th mat-header-cell *matHeaderCellDef class="derecha">Valor</th>
+                  <td mat-cell *matCellDef="let g" class="derecha fuerte">
+                    {{ g.valor | currency:'COP':'symbol-narrow':'1.0-0' }}
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="colGlosas"></tr>
+                <tr mat-row *matRowDef="let fila; columns: colGlosas"></tr>
+              </table>
             </div>
             <div class="chart-box" style="flex:2">
               <h4 class="chart-title">Detalle por Estado</h4>
-              <p-table [value]="financiero()!.by_estado">
-                <ng-template #header>
-                  <tr><th>Estado</th><th style="text-align:right">Facturas</th><th style="text-align:right">Valor Total</th></tr>
-                </ng-template>
-                <ng-template #body let-e>
-                  <tr>
-                    <td><x-etiqueta [value]="e.estado" [severity]="estadoSev(e.estado)" /></td>
-                    <td style="text-align:right">{{ e.cantidad }}</td>
-                    <td style="text-align:right;font-weight:600">{{ e.valor | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
-                  </tr>
-                </ng-template>
-              </p-table>
+              <table mat-table [dataSource]="financiero()!.by_estado">
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let e">
+                    <x-etiqueta [value]="e.estado" [severity]="estadoSev(e.estado)" />
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="facturas">
+                  <th mat-header-cell *matHeaderCellDef class="derecha">Facturas</th>
+                  <td mat-cell *matCellDef="let e" class="derecha">{{ e.cantidad }}</td>
+                </ng-container>
+                <ng-container matColumnDef="valor">
+                  <th mat-header-cell *matHeaderCellDef class="derecha">Valor Total</th>
+                  <td mat-cell *matCellDef="let e" class="derecha fuerte">
+                    {{ e.valor | currency:'COP':'symbol-narrow':'1.0-0' }}
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="colFacturas"></tr>
+                <tr mat-row *matRowDef="let fila; columns: colFacturas"></tr>
+              </table>
             </div>
           </div>
         } @else {
@@ -321,11 +358,11 @@ const TRIAGE_COLORS: Record<string, string> = {
           <div class="chart-row">
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Distribución por Triage</h4>
-              <p-chart type="doughnut" [data]="triageChart()" [options]="doughnutOpts" height="300px" />
+              <x-grafico type="doughnut" [data]="triageChart()" [options]="doughnutOpts" height="300px" />
             </div>
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Destino de Salida</h4>
-              <p-chart type="bar" [data]="destinoChart()" [options]="barOpts" height="300px" />
+              <x-grafico type="bar" [data]="destinoChart()" [options]="barOpts" height="300px" />
             </div>
             <div class="chart-box" style="flex:1">
               <h4 class="chart-title">Triage — Semáforo</h4>
@@ -349,6 +386,15 @@ const TRIAGE_COLORS: Record<string, string> = {
     </div>
   `,
   styles: [`
+    table { width:100% }
+    .con-scroll { overflow:auto }
+    .derecha { text-align:right }
+    .fuerte { font-weight:600 }
+    .menudo { font-size:.85rem }
+    .tenue { font-size:.82rem; color:#64748b }
+    .azul { color:#3b82f6 }
+    .verde { color:#10b981 }
+
     .list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:.5rem }
     .page-title { font-size:1.4rem; font-weight:700; color:#1e293b; margin:0 }
 
@@ -411,22 +457,31 @@ export class EstadisticasComponent implements OnInit {
   ];
 
   // Chart options
-  readonly doughnutOpts = {
+  readonly colDx = ['codigo', 'descripcion', 'casos'];
+  readonly colProd = ['medico', 'especialidad', 'citas', 'historias'];
+  readonly colGlosas = ['estado', 'cantidad', 'valor'];
+  readonly colFacturas = ['estado', 'facturas', 'valor'];
+
+  // La anotación de tipo es la que hace que se comprueben: p-chart recibía any,
+  // así que un position: 'abajo' habría compilado y chart.js lo habría ignorado
+  // en silencio, dejando la leyenda donde no era. Y va aquí, en la declaración,
+  // no en el input del componente: ese es polimórfico y no puede cerrarse.
+  readonly doughnutOpts: ChartOptions = {
     plugins: { legend: { position: 'bottom' } },
     responsive: true, maintainAspectRatio: false,
   };
-  readonly barOpts = {
+  readonly barOpts: ChartOptions = {
     plugins: { legend: { display: false } },
     responsive: true, maintainAspectRatio: false,
     scales: { x: { grid: { display: false } } },
   };
-  readonly hbarOpts = {
-    indexAxis: 'y' as const,
+  readonly hbarOpts: ChartOptions<'bar'> = {
+    indexAxis: 'y',
     plugins: { legend: { display: false } },
     responsive: true, maintainAspectRatio: false,
     scales: { x: { grid: { color: '#f1f5f9' } } },
   };
-  readonly lineOpts = {
+  readonly lineOpts: ChartOptions<'line'> = {
     plugins: { legend: { display: false } },
     responsive: true, maintainAspectRatio: false,
     scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' } } },
@@ -642,5 +697,16 @@ export class EstadisticasComponent implements OnInit {
       PAGADA: 'success', GLOSADA: 'warn', ANULADA: 'danger',
     };
     return m[estado] ?? 'secondary';
+  }
+
+  /**
+   * Una glosa ACEPTADA se pinta en rojo, y no es una errata: aceptarla
+   * significa que el prestador da por buena la objeción y **no cobra** ese
+   * valor. Estaba escrito como una cadena de ternarios dentro de la plantilla.
+   */
+  severidadGlosa(estado: string): 'warn' | 'danger' | 'success' {
+    if (estado === 'PENDIENTE') return 'warn';
+    if (estado === 'ACEPTADA') return 'danger';
+    return 'success';
   }
 }

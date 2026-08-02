@@ -44,6 +44,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras urgencias y superadmin | 128 | 20 |
 | tras el formulario de paciente | 122 | 19 |
 | tras imágenes diagnósticas | 116 | 18 |
+| tras estadísticas (y el gráfico propio) | 112 | 17 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -104,7 +105,7 @@ probado un camino que en las pruebas no ocurre.
 
 ## Lo que Material no da, y se hace propio
 
-En `src/app/shared/ui/`. Son cuatro piezas y ningún paquete nuevo.
+En `src/app/shared/ui/`. Son cinco piezas y ningún paquete nuevo.
 
 | pieza | sustituye a | por qué propia |
 |---|---|---|
@@ -112,6 +113,7 @@ En `src/app/shared/ui/`. Son cuatro piezas y ningún paquete nuevo.
 | `Avisos` | `MessageService` + `<p-toast>` | sobre `MatSnackBar` |
 | `Confirmar` | `ConfirmationService` + `<p-confirmDialog>` | sobre `MatDialog` |
 | `<x-mensaje>` | `<p-message>` | el aviso que se queda en la página mientras la condición dure, no el que se va solo. Material solo tiene `mat-error` (atado a un `mat-form-field`) y la Snackbar, que es temporal. |
+| `<x-grafico>` | `<p-chart>` | Material no trae gráficos, y **`chart.js` ya era dependencia directa**: `p-chart` no era más que una envoltura de Angular alrededor de ella. Quitarla no añade un paquete; quita uno. |
 
 **`Avisos` y `Confirmar` conservan la firma de PrimeNG a propósito** —
 `add({ severity, summary, detail })` y `confirm({ header, message, accept })`.
@@ -238,6 +240,28 @@ Lo destructivo y lo afirmativo van por CSS, con las clases `.peligro` y `.exito`
 - **`[loading]` de `p-button`** → el icono pasa a `pi pi-spin pi-spinner` y el
   botón queda inerte. Las dos cosas, no solo la segunda: un botón que se apaga
   sin decir por qué se lee como averiado.
+
+## El gráfico: lo que probarlo puede y no puede alcanzar
+
+`x-grafico` conserva la firma de `p-chart` —`type`, `[data]`, `[options]`,
+`height`— por la misma razón que `Avisos` y `Confirmar`.
+
+Dos cosas que el cambio destapó:
+
+- **El tipo empezó a comprobar.** `p-chart` recibía `any`, así que
+  `plugins: { legend: { position: 'bottom' } }` se ensanchaba a `string` y un
+  `'abajo'` habría compilado, con chart.js ignorándolo en silencio. La
+  anotación va en la **declaración** (`readonly hbarOpts: ChartOptions<'bar'>`),
+  no en el input del componente: ese es polimórfico —`indexAxis` solo existe en
+  barras, `elements.line` solo en líneas— y cerrarlo rechazaría la mitad de los
+  quince gráficos.
+- **El banco de humo no lo alcanza.** Abre `estadisticas` en la pestaña
+  «resumen», donde no hay ningún gráfico; y jsdom no da contexto 2D, así que un
+  lienzo de chart.js no llega a existir en pruebas. Por eso la regla que decide
+  *si aparece un gráfico* se sacó a una función exportada, `hayQueDibujar()`,
+  con sus propias pruebas: un `datasets: [{ data: [] }]` es la espera, no un
+  gráfico vacío, y dibujarlo pinta ejes en cero que en un panel de indicadores
+  se leen como «no hubo atenciones». Un cero **sí** es un dato y sí se dibuja.
 
 ## El calendario
 
