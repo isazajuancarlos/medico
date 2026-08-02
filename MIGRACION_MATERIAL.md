@@ -46,6 +46,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras imágenes diagnósticas | 116 | 18 |
 | tras estadísticas (y el gráfico propio) | 112 | 17 |
 | tras evoluciones | 107 | 16 |
+| tras epicrisis | 102 | 15 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.

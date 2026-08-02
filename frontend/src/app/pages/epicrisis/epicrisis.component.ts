@@ -1,13 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { SelectModule } from 'primeng/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { Confirmar } from '../../shared/ui/confirmar.service';
@@ -20,8 +20,8 @@ type Vista = 'lista' | 'form' | 'detalle';
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, MatTooltipModule, SelectModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule,
+    EtiquetaComponent, MatTooltipModule, MatSelectModule,
     MatDividerModule,
   ],
   template: `
@@ -33,7 +33,9 @@ type Vista = 'lista' | 'form' | 'detalle';
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Epicrisis</h2>
-          <p-button label="Nueva epicrisis" icon="pi pi-plus" (onClick)="abrirNueva()" />
+          <button matButton="filled" (click)="abrirNueva()">
+            <i class="pi pi-plus"></i> Nueva epicrisis
+          </button>
         </div>
 
         @if (cargando()) {
@@ -44,54 +46,67 @@ type Vista = 'lista' | 'form' | 'detalle';
             <p>No hay epicrisis registradas.</p>
           </div>
         } @else {
-          <p-table [value]="lista()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Médico tratante</th>
-                <th>Ingreso</th>
-                <th>Egreso</th>
-                <th style="text-align:center">Días</th>
-                <th style="text-align:center">Pronóstico</th>
-                <th style="text-align:center">Incapacidad</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-e>
-              <tr>
-                <td>
-                  <strong>{{ e.paciente_nombre || '—' }}</strong>
-                  @if (e.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ e.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ e.medico_nombre || '—' }}</td>
-                <td style="font-size:0.85rem">{{ e.fecha_ingreso | date:'dd/MM/yyyy' }}</td>
-                <td style="font-size:0.85rem">{{ e.fecha_egreso | date:'dd/MM/yyyy' }}</td>
-                <td style="text-align:center">
-                  <span class="dias-badge">{{ e.dias_estancia }}</span>
-                </td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="e.pronostico" [severity]="pronosticoSeverity(e.pronostico)" />
-                </td>
-                <td style="text-align:center;font-size:0.85rem">
-                  @if (e.incapacidad_dias > 0) {
-                    <span style="color:#fbbf24">{{ e.incapacidad_dias }} días</span>
-                  } @else {
-                    <span style="color:#475569">—</span>
-                  }
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-eye" [text]="true" size="small"
-                    matTooltip="Ver detalle" (onClick)="abrirDetalle(e)" />
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    matTooltip="Editar" (onClick)="abrirEditar(e)" />
-                  <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    matTooltip="Eliminar" (onClick)="confirmarEliminar(e)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="lista()">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let e">
+                <strong>{{ e.paciente_nombre || '—' }}</strong>
+                @if (e.paciente_identificacion) {
+                  <div class="sub">{{ e.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="medico">
+              <th mat-header-cell *matHeaderCellDef>Médico tratante</th>
+              <td mat-cell *matCellDef="let e" class="menudo">{{ e.medico_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="ingreso">
+              <th mat-header-cell *matHeaderCellDef>Ingreso</th>
+              <td mat-cell *matCellDef="let e" class="menudo">{{ e.fecha_ingreso | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="egreso">
+              <th mat-header-cell *matHeaderCellDef>Egreso</th>
+              <td mat-cell *matCellDef="let e" class="menudo">{{ e.fecha_egreso | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="dias">
+              <th mat-header-cell *matHeaderCellDef class="centro">Días</th>
+              <td mat-cell *matCellDef="let e" class="centro">
+                <span class="dias-badge">{{ e.dias_estancia }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="pronostico">
+              <th mat-header-cell *matHeaderCellDef class="centro">Pronóstico</th>
+              <td mat-cell *matCellDef="let e" class="centro">
+                <x-etiqueta [value]="e.pronostico" [severity]="pronosticoSeverity(e.pronostico)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="incapacidad">
+              <th mat-header-cell *matHeaderCellDef class="centro">Incapacidad</th>
+              <td mat-cell *matCellDef="let e" class="centro menudo">
+                @if (e.incapacidad_dias > 0) {
+                  <span style="color:#fbbf24">{{ e.incapacidad_dias }} días</span>
+                } @else {
+                  <span class="nada">—</span>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let e" class="centro sin-cortar">
+                <button matIconButton matTooltip="Ver detalle" (click)="abrirDetalle(e)"
+                  aria-label="Ver detalle"><i class="pi pi-eye"></i></button>
+                <button matIconButton matTooltip="Editar" (click)="abrirEditar(e)"
+                  aria-label="Editar"><i class="pi pi-file-edit"></i></button>
+                <button matIconButton class="peligro" matTooltip="Eliminar"
+                  (click)="confirmarEliminar(e)" aria-label="Eliminar">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
         }
       }
 
@@ -100,7 +115,9 @@ type Vista = 'lista' | 'form' | 'detalle';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'form') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()" matTooltip="Volver" aria-label="Volver">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">
             {{ editando() ? 'Editar epicrisis' : 'Nueva epicrisis' }}
           </h2>
@@ -112,23 +129,28 @@ type Vista = 'lista' | 'form' | 'detalle';
           @if (!editando()) {
             <div class="form-section">
               <div class="section-label">Paciente</div>
-              <div style="display:flex;gap:0.5rem;align-items:flex-end">
-                <div class="field" style="flex:1">
-                  <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
-                    placeholder="Nombre o identificación..."
-                    (keyup.enter)="buscarPaciente()" />
-                </div>
-                <p-button label="Buscar" icon="pi pi-search"
-                  [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+              <div style="display:flex;gap:0.5rem;align-items:flex-start">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                  <mat-label>Nombre o identificación</mat-label>
+                  <input matInput [(ngModel)]="busquedaPaciente" (keyup.enter)="buscarPaciente()" />
+                </mat-form-field>
+                <button matButton="filled" [disabled]="buscandoPaciente()" (click)="buscarPaciente()">
+                  <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i>
+                  Buscar
+                </button>
               </div>
               @if (resultadosPaciente().length > 0) {
-                <div style="margin-top:0.75rem">
-                  <p-select [(ngModel)]="pacienteSeleccionado"
-                    [options]="resultadosPaciente()"
-                    optionLabel="nombre_completo" [filter]="true"
-                    placeholder="Seleccione paciente..."
-                    class="w-full" style="width:100%" />
-                </div>
+                <!-- La identificación va en la opción: mat-select no trae el
+                     buscador de p-select, y es lo que distingue a dos pacientes
+                     con el mismo nombre. -->
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full separa">
+                  <mat-label>Seleccione paciente</mat-label>
+                  <mat-select [(ngModel)]="pacienteSeleccionado">
+                    @for (pa of resultadosPaciente(); track pa.id) {
+                      <mat-option [value]="pa">{{ pa.nombre_completo }} — {{ pa.identificacion }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
               }
               @if (pacienteSeleccionado) {
                 <div class="paciente-chip">
@@ -151,21 +173,18 @@ type Vista = 'lista' | 'form' | 'detalle';
           <div class="form-section">
             <div class="section-label">Período de hospitalización</div>
             <div class="grid-3">
-              <div class="field">
-                <label>Fecha de ingreso *</label>
-                <input pInputText [(ngModel)]="f.fecha_ingreso" type="datetime-local"
-                  class="w-full" (change)="calcularDias()" />
-              </div>
-              <div class="field">
-                <label>Fecha de egreso *</label>
-                <input pInputText [(ngModel)]="f.fecha_egreso" type="datetime-local"
-                  class="w-full" (change)="calcularDias()" />
-              </div>
-              <div class="field">
-                <label>Días de estancia</label>
-                <input pInputText [(ngModel)]="f.dias_estancia" type="number"
-                  class="w-full" min="0" />
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Fecha de ingreso *</mat-label>
+                <input matInput [(ngModel)]="f.fecha_ingreso" type="datetime-local" (change)="calcularDias()" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Fecha de egreso *</mat-label>
+                <input matInput [(ngModel)]="f.fecha_egreso" type="datetime-local" (change)="calcularDias()" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Días de estancia</mat-label>
+                <input matInput [(ngModel)]="f.dias_estancia" type="number" min="0" />
+              </mat-form-field>
             </div>
           </div>
 
@@ -175,21 +194,18 @@ type Vista = 'lista' | 'form' | 'detalle';
           <div class="form-section">
             <div class="section-label">Diagnósticos</div>
             <div class="grid-3">
-              <div class="field">
-                <label>Diagnóstico de ingreso (CIE-10) *</label>
-                <input pInputText [(ngModel)]="f.diagnostico_ingreso"
-                  class="w-full" placeholder="Ej: J18.9" />
-              </div>
-              <div class="field">
-                <label>Diagnóstico de egreso (CIE-10) *</label>
-                <input pInputText [(ngModel)]="f.diagnostico_egreso"
-                  class="w-full" placeholder="Ej: J18.0" />
-              </div>
-              <div class="field">
-                <label>Complicaciones</label>
-                <input pInputText [(ngModel)]="f.complicaciones"
-                  class="w-full" placeholder="Ninguna / descripción..." />
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Diagnóstico de ingreso (CIE-10) *</mat-label>
+                <input matInput [(ngModel)]="f.diagnostico_ingreso" placeholder="Ej: J18.9" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Diagnóstico de egreso (CIE-10) *</mat-label>
+                <input matInput [(ngModel)]="f.diagnostico_egreso" placeholder="Ej: J18.0" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Complicaciones</mat-label>
+                <input matInput [(ngModel)]="f.complicaciones" placeholder="Ninguna / descripción…" />
+              </mat-form-field>
             </div>
           </div>
 
@@ -199,21 +215,21 @@ type Vista = 'lista' | 'form' | 'detalle';
           <div class="form-section">
             <div class="section-label">Resumen clínico</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Resumen de evolución *</label>
-                <textarea pTextarea [(ngModel)]="f.resumen_evolucion" rows="5" class="w-full"
-                  placeholder="Evolución del paciente durante la hospitalización, respuesta al tratamiento..."></textarea>
-              </div>
-              <div class="field">
-                <label>Procedimientos realizados *</label>
-                <textarea pTextarea [(ngModel)]="f.procedimientos_realizados" rows="5" class="w-full"
-                  placeholder="Cirugías, procedimientos diagnósticos, terapias realizadas..."></textarea>
-              </div>
-              <div class="field" style="grid-column:1/-1">
-                <label>Exámenes relevantes</label>
-                <textarea pTextarea [(ngModel)]="f.examenes_relevantes" rows="3" class="w-full"
-                  placeholder="Resultados de laboratorio, imágenes diagnósticas relevantes..."></textarea>
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Resumen de evolución *</mat-label>
+                <textarea matInput [(ngModel)]="f.resumen_evolucion" rows="5"
+                  placeholder="Evolución del paciente durante la hospitalización, respuesta al tratamiento…"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Procedimientos realizados *</mat-label>
+                <textarea matInput [(ngModel)]="f.procedimientos_realizados" rows="5"
+                  placeholder="Cirugías, procedimientos diagnósticos, terapias realizadas…"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ancho-total">
+                <mat-label>Exámenes relevantes</mat-label>
+                <textarea matInput [(ngModel)]="f.examenes_relevantes" rows="3"
+                  placeholder="Resultados de laboratorio, imágenes diagnósticas relevantes…"></textarea>
+              </mat-form-field>
             </div>
           </div>
 
@@ -223,45 +239,46 @@ type Vista = 'lista' | 'form' | 'detalle';
           <div class="form-section">
             <div class="section-label">Plan de egreso</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Recomendaciones de egreso *</label>
-                <textarea pTextarea [(ngModel)]="f.recomendaciones_egreso" rows="4" class="w-full"
-                  placeholder="Cuidados en casa, restricciones, signos de alarma..."></textarea>
-              </div>
-              <div class="field">
-                <label>Medicamentos al egreso</label>
-                <textarea pTextarea [(ngModel)]="f.medicamentos_egreso" rows="4" class="w-full"
-                  placeholder="Nombre, dosis, frecuencia, duración..."></textarea>
-              </div>
-              <div class="field">
-                <label>Controles programados</label>
-                <textarea pTextarea [(ngModel)]="f.controles_programados" rows="3" class="w-full"
-                  placeholder="Citas de seguimiento, especialidades, fechas sugeridas..."></textarea>
-              </div>
-              <div class="field">
-                <div style="display:flex;gap:1rem">
-                  <div class="field" style="flex:1">
-                    <label>Pronóstico</label>
-                    <p-select [(ngModel)]="f.pronostico" [options]="opcionesPronostico"
-                      optionLabel="label" optionValue="value"
-                      class="w-full" style="width:100%" />
-                  </div>
-                  <div class="field" style="flex:1">
-                    <label>Incapacidad (días)</label>
-                    <input pInputText [(ngModel)]="f.incapacidad_dias" type="number"
-                      class="w-full" min="0" placeholder="0" />
-                  </div>
-                </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Recomendaciones de egreso *</mat-label>
+                <textarea matInput [(ngModel)]="f.recomendaciones_egreso" rows="4"
+                  placeholder="Cuidados en casa, restricciones, signos de alarma…"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Medicamentos al egreso</mat-label>
+                <textarea matInput [(ngModel)]="f.medicamentos_egreso" rows="4"
+                  placeholder="Nombre, dosis, frecuencia, duración…"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Controles programados</mat-label>
+                <textarea matInput [(ngModel)]="f.controles_programados" rows="3"
+                  placeholder="Citas de seguimiento, especialidades, fechas sugeridas…"></textarea>
+              </mat-form-field>
+              <div style="display:flex;gap:1rem">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                  <mat-label>Pronóstico</mat-label>
+                  <mat-select [(ngModel)]="f.pronostico">
+                    @for (o of opcionesPronostico; track o.value) {
+                      <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                  <mat-label>Incapacidad (días)</mat-label>
+                  <input matInput [(ngModel)]="f.incapacidad_dias" type="number"
+                    min="0" placeholder="0" />
+                </mat-form-field>
               </div>
             </div>
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button [label]="editando() ? 'Guardar cambios' : 'Registrar epicrisis'"
-              icon="pi pi-check" [loading]="guardando()"
-              [disabled]="camposRequeridos()"
-              (onClick)="guardar()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="guardar()"
+              [disabled]="guardando() || camposRequeridos()">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i>
+              {{ editando() ? 'Guardar cambios' : 'Registrar epicrisis' }}
+            </button>
           </div>
         </div>
       }
@@ -271,11 +288,14 @@ type Vista = 'lista' | 'form' | 'detalle';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'detalle' && actual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()" matTooltip="Volver" aria-label="Volver">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">Epicrisis — Resumen de egreso</h2>
           <div style="margin-left:auto">
-            <p-button icon="pi pi-file-edit" [text]="true" label="Editar"
-              (onClick)="abrirEditar(actual()!)" />
+            <button matButton (click)="abrirEditar(actual()!)">
+              <i class="pi pi-file-edit"></i> Editar
+            </button>
           </div>
         </div>
 
@@ -371,6 +391,16 @@ type Vista = 'lista' | 'form' | 'detalle';
     </div>
   `,
   styles: [`
+    table { width: 100%; }
+    .centro { text-align: center; }
+    .menudo { font-size: 0.85rem; }
+    .sin-cortar { white-space: nowrap; }
+    .sub { font-size: 0.78rem; color: #94a3b8; }
+    .nada { color: #475569; }
+    .separa { margin-top: 0.75rem; }
+    .ancho-total { grid-column: 1 / -1; }
+    .peligro:not(:disabled) { color: #dc2626; }
+
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
@@ -443,6 +473,11 @@ export class EpicrisisComponent implements OnInit {
   private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
+  readonly columnas = [
+    'paciente', 'medico', 'ingreso', 'egreso',
+    'dias', 'pronostico', 'incapacidad', 'acciones',
+  ];
+
   cargando = signal(false);
   lista = signal<Epicrisis[]>([]);
   actual = signal<Epicrisis | null>(null);

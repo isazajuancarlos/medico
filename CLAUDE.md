@@ -36,13 +36,13 @@ decide qué módulos se ven.
 > en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
 > no 21 → 22. Queda en 21.1.2 hasta que salga del todo.
 >
-> Avance medido: **287 → 107** importaciones `from 'primeng/…'` (35 → 16
+> Avance medido: **287 → 102** importaciones `from 'primeng/…'` (35 → 15
 > archivos), con `ng build` y las pruebas del frontend en verde en cada lote (82
 > antes del banco de humo, 130 con él, **197** con el guardián de las directivas
-> mudas; **220** hoy).
+> mudas; **224** hoy).
 > Hechos: los dos servicios (avisos y confirmación), etiqueta, separador,
 > tooltip, mensaje, la pantalla de acceso, las dos piezas compartidas
-> (`barra-crud` y `header`) y trece pantallas. Queda lo caro: `button`,
+> (`barra-crud` y `header`) y catorce pantallas. Queda lo caro: `button`,
 > `table`, `inputtext`/`textarea`, `select`, `dialog` y la cola.
 > **La receta, las equivalencias y las siete trampas ya pagadas están en
 > [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md)** — leerlo antes de seguir.
@@ -86,7 +86,7 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 cd frontend
 npm install --legacy-peer-deps                   # obligatorio: conflictos de peers de PrimeNG
 npm start                                        # :4200, proxy /api → :8000
-npm test                                         # vitest vía `ng test`: 11 specs, 220 pruebas
+npm test                                         # vitest vía `ng test`: 11 specs, 224 pruebas
 npm run build
 
 # === DOCKER (pila completa) ===
