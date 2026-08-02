@@ -12,6 +12,7 @@ import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { CardModule } from 'primeng/card';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CitaService } from '../../services/cita.service';
 import { MedicoDisponible } from '../../models/appointment.models';
 
@@ -51,7 +52,7 @@ function aInstante(d: Date | null | undefined): string | null {
     CommonModule, FormsModule,
     TabsModule, TableModule, ButtonModule, DialogModule,
     InputTextModule, SelectModule, DatePickerModule, EtiquetaComponent,
-    CardModule, ToggleSwitchModule,
+    CardModule, ToggleSwitchModule, MatTooltipModule,
   ],
   template: `
 <div class="page-card">

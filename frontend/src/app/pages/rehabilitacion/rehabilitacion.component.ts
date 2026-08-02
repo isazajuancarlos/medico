@@ -10,6 +10,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { RehabilitacionService, PlanRehabilitacion, SesionTerapia, PlanCreate, SesionCreate } from '../../services/rehabilitacion.service';
 
@@ -22,7 +23,7 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
     CommonModule, FormsModule,
     ButtonModule, TableModule, EtiquetaComponent, CardModule,
     InputTextModule, TextareaModule, SelectModule, InputNumberModule,
-    ProgressBarModule,
+    ProgressBarModule, MatTooltipModule,
   ],
   template: `
 <div class="p-4">

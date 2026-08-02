@@ -11,6 +11,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { Avisos } from '../../shared/ui/avisos.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CitaService } from '../../services/cita.service';
 import { PacienteService } from '../../services/paciente.service';
 import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from '../../models/appointment.models';
@@ -22,6 +23,7 @@ import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from
     CommonModule, FormsModule,
     TableModule, ButtonModule, EtiquetaComponent, DialogModule,
     InputTextModule, SelectModule, DatePickerModule, AutoCompleteModule,
+    MatTooltipModule,
   ],
   template: `
 <div class="page-card">
