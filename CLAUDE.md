@@ -37,7 +37,8 @@ decide qué módulos se ven.
 > no 21 → 22. Queda en 21.1.2 hasta que salga del todo.
 >
 > Avance medido: **287 → 170** importaciones `from 'primeng/…'` (35 → 30
-> archivos), con `ng build` y las 82 pruebas del frontend en verde en cada lote.
+> archivos), con `ng build` y las pruebas del frontend en verde en cada lote (82 antes del
+> banco de humo, 130 después).
 > Hechos: los dos servicios (avisos y confirmación), etiqueta, separador,
 > tooltip, mensaje y la pantalla de acceso. Queda lo caro: `button` (29),
 > `table` (25), `inputtext`/`textarea` (41), `select` (21), `dialog` (13) y la
@@ -75,7 +76,7 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 cd frontend
 npm install --legacy-peer-deps                   # obligatorio: conflictos de peers de PrimeNG
 npm start                                        # :4200, proxy /api → :8000
-npm test                                         # vitest vía `ng test`: 7 specs, 74 pruebas
+npm test                                         # vitest vía `ng test`: 9 specs, 130 pruebas
 npm run build
 
 # === DOCKER (pila completa) ===

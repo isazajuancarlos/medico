@@ -39,8 +39,39 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | antes | 287 | 35 |
 | tras servicios + vocabulario barato | 170 | 30 |
 
-`ng build` y las 82 pruebas del frontend en verde en **cada** paso — esa es la
-red, y por eso los lotes son pequeños.
+`ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
+y por eso los lotes son pequeños.
+
+## La red: el banco de humo
+
+De las 30 páginas, **tres** tenían prueba. Para las otras 27 la única red era
+`ng build`, que dice que el TypeScript compila y **no** dice si la pantalla se
+abre: cambiar un `<p-table>` por un `<table mat-table>` puede dejar la tabla
+vacía sin que nada falle. Migrar 18 000 líneas así es migrar a ciegas.
+
+`src/app/pantallas-montan.spec.ts` monta **todas** las pantallas y comprueba que
+un ciclo de detección de cambios no lanza. Pasó de 82 a **130 pruebas**.
+
+Dos decisiones que lo hacen útil:
+
+- **No enumera componentes: recorre `app.routes.ts`.** Una pantalla nueva entra
+  sola y una borrada sale sola. Un banco escrito a mano nace completo y caduca en
+  el primer commit. Lleva además una guardia que falla si la tabla de rutas deja
+  de exponer pantallas — si no, un refactor convertiría el bucle en cero
+  iteraciones y pasaría en verde sin probar nada.
+- **Las peticiones se interceptan y no se responden**, y no hay `http.verify()`:
+  se comprueba el montaje con la pantalla vacía, que es el estado en el que
+  siempre se abre de verdad. Dejar peticiones sin atender es el caso, no un
+  descuido.
+
+**Discrimina, comprobado**: con un `throw` en el `ngOnInit` de una pantalla, el
+banco la señala a ella y solo a ella.
+
+`src/entorno-de-pruebas.ts` suple `ResizeObserver`, que jsdom no trae y cualquier
+navegador sí. Lo destapó `agenda-medica`; lo pedirá igual Material
+(`mat-tab-group`, observadores del CDK). El doble es **inerte a propósito** —
+registra y no dispara nada—: uno que inventara redimensiones haría pasar por
+probado un camino que en las pruebas no ocurre.
 
 ## Lo que Material no da, y se hace propio
 

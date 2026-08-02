@@ -105,6 +105,9 @@
             ],
             "reporters": [
               "default"
+            ],
+            "setupFiles": [
+              "src/entorno-de-pruebas.ts"
             ]
           }
         }
