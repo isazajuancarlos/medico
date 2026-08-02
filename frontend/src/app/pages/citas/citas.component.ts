@@ -1,401 +1,399 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
-import { DatePickerModule } from 'primeng/datepicker';
-import { AutoCompleteModule } from 'primeng/autocomplete';
-import { Avisos } from '../../shared/ui/avisos.service';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { diaLocal } from '../../shared/fecha';
 import { CitaService } from '../../services/cita.service';
 import { PacienteService } from '../../services/paciente.service';
-import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from '../../models/appointment.models';
+import { Appointment, AppointmentCreate, MedicoDisponible } from '../../models/appointment.models';
+
+/** Un paciente tal como lo propone el buscador del diálogo. */
+interface PacienteSugerido {
+  id: number;
+  label: string;
+  identificacion: string;
+}
+
+/**
+ * Alta de una cita. Devuelve la cita completa por afterClosed(), o nada.
+ *
+ * El formulario vive DENTRO del diálogo —es el patrón (b) de
+ * MIGRACION_MATERIAL.md—: con p-dialog los ocho campos eran de la pantalla
+ * anfitriona y openNew() no hacía más que limpiarlos. Ahora el componente nace
+ * vacío y muere con el diálogo, así que cerrar por Escape no deja media cita
+ * esperando al siguiente paciente.
+ */
+@Component({
+  selector: 'app-cita-nueva',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule, MatDatepickerModule, MatAutocompleteModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Nueva cita</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ancho">
+          <mat-label>Paciente *</mat-label>
+          <input matInput [matAutocomplete]="ac" [(ngModel)]="paciente"
+            (ngModelChange)="buscar($event)"
+            placeholder="Buscar por nombre o identificación…" />
+          <mat-autocomplete #ac="matAutocomplete" [displayWith]="mostrar">
+            @for (p of sugerencias(); track p.id) {
+              <mat-option [value]="p">
+                {{ p.label }} <small class="tenue">{{ p.identificacion }}</small>
+              </mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Médico *</mat-label>
+          <mat-select [(ngModel)]="medicoId">
+            @for (m of medicos; track m.id) {
+              <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Tipo de cita *</mat-label>
+          <mat-select [(ngModel)]="tipo">
+            @for (t of tipos; track t) {
+              <mat-option [value]="t">{{ t }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Fecha *</mat-label>
+          <input matInput [matDatepicker]="cal" [(ngModel)]="fecha" [min]="hoy" />
+          <mat-datepicker-toggle matIconSuffix [for]="cal" />
+          <mat-datepicker #cal />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Duración</mat-label>
+          <mat-select [(ngModel)]="duracion">
+            @for (d of duraciones; track d) {
+              <mat-option [value]="d">{{ d }} min</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Hora a mano: la agenda por turnos del servidor todavía no está
+             portada al medico-api. -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Hora *</mat-label>
+          <input matInput type="time" [(ngModel)]="hora" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ancho">
+          <mat-label>Motivo de consulta</mat-label>
+          <input matInput [(ngModel)]="motivo" placeholder="Motivo de la visita" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Agendar cita
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla {
+      display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding-top:.5rem;
+      min-width:min(34rem, 80vw);
+    }
+    .ancho { grid-column:1/-1; }
+    .tenue { color:#64748b; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class CitaNuevaComponent {
+  private pacienteSvc = inject(PacienteService);
+
+  /** Los médicos los trae la pantalla, que ya los había pedido para el filtro:
+   *  pedirlos otra vez al abrir el diálogo sería una petición por cada alta. */
+  readonly medicos: MedicoDisponible[];
+
+  constructor(@Inject(MAT_DIALOG_DATA) datos: { medicos: MedicoDisponible[] }) {
+    this.medicos = datos.medicos;
+  }
+
+  readonly tipos = ['Primera Vez', 'Control / Revisión', 'Urgencia'];
+  readonly duraciones = [20, 30, 45, 60];
+  readonly hoy = new Date();
+
+  /**
+   * Mientras se escribe es la cadena tecleada; al elegir una opción pasa a ser
+   * el paciente. Esa distinción ES la validación: escribir un nombre a mano y
+   * no elegirlo de la lista deja el diálogo incompleto, que era lo que hacía
+   * forceSelection en el autocompletado de PrimeNG.
+   */
+  paciente: PacienteSugerido | string = '';
+  sugerencias = signal<PacienteSugerido[]>([]);
+
+  medicoId: number | null = null;
+  tipo = 'Primera Vez';
+  fecha: Date | null = null;
+  duracion = 30;
+  hora = '';
+  motivo = '';
+
+  readonly mostrar = (p: PacienteSugerido | string): string =>
+    typeof p === 'string' ? p : (p?.label ?? '');
+
+  buscar(valor: PacienteSugerido | string): void {
+    if (typeof valor !== 'string') return;   // ya eligió: no hay nada que buscar
+    const q = valor.trim();
+    if (q.length < 2) { this.sugerencias.set([]); return; }
+    this.pacienteSvc.buscar(q).subscribe({
+      next: (items: any[]) => this.sugerencias.set(items.map((p) => ({
+        id: p.id,
+        label: `${p.nombre1} ${p.apellido1}`,
+        identificacion: p.identificacion,
+      }))),
+      error: () => this.sugerencias.set([]),
+    });
+  }
+
+  completo(): boolean {
+    return typeof this.paciente === 'object' && !!this.medicoId && !!this.fecha && !!this.hora;
+  }
+
+  /** Lo que sale por afterClosed(). Null si falta algo: el botón ya está
+   *  inerte, pero un diálogo capaz de cerrarse con media cita la agendaría sin
+   *  paciente. */
+  resultado(): AppointmentCreate | null {
+    if (!this.completo()) return null;
+    return {
+      paciente_id: (this.paciente as PacienteSugerido).id,
+      medico_id: this.medicoId!,
+      fecha: diaLocal(this.fecha!),
+      hora: this.hora,
+      tipo: this.tipo as any,
+      motivo: this.motivo,
+      duracion_minutos: this.duracion,
+    };
+  }
+}
 
 @Component({
   selector: 'app-citas',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    TableModule, ButtonModule, EtiquetaComponent, DialogModule,
-    InputTextModule, SelectModule, DatePickerModule, AutoCompleteModule,
-    MatTooltipModule,
+    FormsModule, MatTableModule, MatPaginatorModule, MatButtonModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule,
+    MatProgressBarModule, MatTooltipModule, EtiquetaComponent,
   ],
   template: `
 <div class="page-card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-    <h2 class="page-title" style="margin-bottom:0">Agenda de Citas</h2>
-    <p-button label="Nueva Cita" icon="pi pi-plus" size="small" (onClick)="openNew()" />
+  <div class="cabecera">
+    <h2 class="page-title">Agenda de Citas</h2>
+    <button matButton="filled" (click)="nueva()">
+      <i class="pi pi-plus"></i> Nueva cita
+    </button>
   </div>
 
-  <!-- Filters -->
-  <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
-    <p-datepicker
-      [(ngModel)]="filtroFecha"
-      placeholder="Filtrar por fecha"
-      dateFormat="yy-mm-dd"
-      [showClear]="true"
-      (onSelect)="applyFilters()"
-      (onClear)="applyFilters()"
-      inputStyleClass="p-inputtext-sm"
-    />
-    <p-select
-      [(ngModel)]="filtroMedico"
-      [options]="medicos()"
-      optionLabel="nombre"
-      optionValue="id"
-      placeholder="Todos los médicos"
-      [showClear]="true"
-      (onChange)="applyFilters()"
-      styleClass="p-inputtext-sm"
-    />
-    <p-select
-      [(ngModel)]="filtroEstado"
-      [options]="estadoOpts"
-      placeholder="Todos los estados"
-      [showClear]="true"
-      (onChange)="applyFilters()"
-      styleClass="p-inputtext-sm"
-    />
+  <div class="filtros">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Filtrar por fecha</mat-label>
+      <input matInput [matDatepicker]="cal" [(ngModel)]="filtroFecha" (dateChange)="cargar()" />
+      @if (filtroFecha) {
+        <button matIconButton matSuffix matTooltip="Quitar el filtro"
+          (click)="filtroFecha = null; cargar()">
+          <i class="pi pi-times"></i>
+        </button>
+      }
+      <mat-datepicker-toggle matIconSuffix [for]="cal" />
+      <mat-datepicker #cal />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Médico</mat-label>
+      <mat-select [(ngModel)]="filtroMedico" (selectionChange)="cargar()">
+        <mat-option [value]="null">Todos los médicos</mat-option>
+        @for (m of medicos(); track m.id) {
+          <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Estado</mat-label>
+      <mat-select [(ngModel)]="filtroEstado" (selectionChange)="cargar()">
+        <mat-option [value]="null">Todos los estados</mat-option>
+        @for (e of estados; track e) {
+          <mat-option [value]="e">{{ e }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
   </div>
 
-  <p-table
-    [value]="citas()"
-    [loading]="loading()"
-    dataKey="id"
-    styleClass="p-datatable-sm"
-    [paginator]="true"
-    [rows]="20"
-  >
-    <ng-template pTemplate="header">
-      <tr>
-        <th>Fecha</th><th>Hora</th><th>Paciente</th><th>Médico</th>
-        <th>Tipo</th><th>Motivo</th><th>Estado</th><th>Acciones</th>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-c>
-      <tr>
-        <td>{{ c.fecha }}</td>
-        <td>{{ c.hora }}</td>
-        <td>{{ c.paciente_nombre || c.paciente_id }}</td>
-        <td>{{ c.medico_nombre || c.medico_id }}</td>
-        <!-- «—» y no una celda vacía: la cita anterior a la migración 0035 no
-             trae tipo, y un hueco se lee como un fallo de la pantalla. -->
-        <td>{{ c.tipo || '—' }}</td>
-        <td>{{ c.motivo }}</td>
-        <td>
-          <x-etiqueta [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
-        </td>
-        <td style="display:flex;gap:.25rem">
-          @if (c.estado === 'Pendiente' || c.estado === 'Confirmada') {
-            <p-button
-              label="Atender" icon="pi pi-play" size="small" severity="success"
-              (onClick)="atenderCita(c)"
-              [loading]="attendingId() === c.id"
-            />
-            <p-button
-              icon="pi pi-times" size="small" severity="danger" [text]="true"
-              matTooltip="Cancelar cita"
-              (onClick)="cancelarCita(c)"
-            />
-          }
-        </td>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="emptymessage">
-      <tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748b">
-        No hay citas para los filtros seleccionados
-      </td></tr>
-    </ng-template>
-  </p-table>
+  @if (cargando()) { <mat-progress-bar mode="indeterminate" /> }
+
+  <table mat-table [dataSource]="datos" class="tabla">
+    <ng-container matColumnDef="fecha">
+      <th mat-header-cell *matHeaderCellDef>Fecha</th>
+      <td mat-cell *matCellDef="let c">{{ c.fecha }}</td>
+    </ng-container>
+    <ng-container matColumnDef="hora">
+      <th mat-header-cell *matHeaderCellDef>Hora</th>
+      <td mat-cell *matCellDef="let c">{{ c.hora }}</td>
+    </ng-container>
+    <ng-container matColumnDef="paciente">
+      <th mat-header-cell *matHeaderCellDef>Paciente</th>
+      <td mat-cell *matCellDef="let c">{{ c.paciente_nombre || c.paciente_id }}</td>
+    </ng-container>
+    <ng-container matColumnDef="medico">
+      <th mat-header-cell *matHeaderCellDef>Médico</th>
+      <td mat-cell *matCellDef="let c">{{ c.medico_nombre || c.medico_id }}</td>
+    </ng-container>
+    <ng-container matColumnDef="tipo">
+      <th mat-header-cell *matHeaderCellDef>Tipo</th>
+      <!-- «—» y no una celda vacía: la cita anterior a la migración 0035 no
+           trae tipo, y un hueco se lee como un fallo de la pantalla. -->
+      <td mat-cell *matCellDef="let c">{{ c.tipo || '—' }}</td>
+    </ng-container>
+    <ng-container matColumnDef="motivo">
+      <th mat-header-cell *matHeaderCellDef>Motivo</th>
+      <td mat-cell *matCellDef="let c">{{ c.motivo }}</td>
+    </ng-container>
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef>Estado</th>
+      <td mat-cell *matCellDef="let c">
+        <x-etiqueta [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>Acciones</th>
+      <td mat-cell *matCellDef="let c">
+        @if (c.estado === 'Pendiente' || c.estado === 'Confirmada') {
+          <button matButton (click)="atender(c)" [disabled]="atendiendo() === c.id">
+            <i [class]="atendiendo() === c.id ? 'pi pi-spin pi-spinner' : 'pi pi-play'"></i>
+            Atender
+          </button>
+          <button matIconButton class="peligro" matTooltip="Cancelar cita" (click)="cancelar(c)">
+            <i class="pi pi-times"></i>
+          </button>
+        }
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+    <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+  </table>
+
+  <!-- El «no hay nada» va fuera de la tabla: mat-table no hereda la plantilla
+       de vacío de p-table, y una tabla sin filas y sin frase se lee como
+       «todavía está cargando». -->
+  @if (!cargando() && datos.data.length === 0) {
+    <p class="vacio">No hay citas para los filtros seleccionados.</p>
+  }
+  <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
 </div>
-
-<!-- Nueva Cita Dialog -->
-<p-dialog
-  [(visible)]="showDialog"
-  header="Nueva Cita"
-  [modal]="true"
-  [style]="{width:'650px'}"
-  [closable]="true"
->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:.5rem 0">
-
-    <!-- Paciente search -->
-    <div style="grid-column:1/-1">
-      <label class="form-label">Paciente *</label>
-      <p-autoComplete
-        [(ngModel)]="selectedPaciente"
-        [suggestions]="pacienteSuggestions()"
-        (completeMethod)="searchPaciente($event)"
-        field="label"
-        placeholder="Buscar por nombre o identificación..."
-        [style]="{width:'100%'}"
-        (onSelect)="onPacienteSelect($event)"
-        [forceSelection]="true"
-      >
-        <ng-template pTemplate="item" let-item>
-          <div>{{ item.label }}</div>
-          <small style="color:#64748b">{{ item.identificacion }}</small>
-        </ng-template>
-      </p-autoComplete>
-    </div>
-
-    <!-- Médico -->
-    <div>
-      <label class="form-label">Médico *</label>
-      <p-select
-        [(ngModel)]="form.medico_id"
-        [options]="medicos()"
-        optionLabel="nombre"
-        optionValue="id"
-        placeholder="Seleccionar médico"
-        [style]="{width:'100%'}"
-        (onChange)="onMedicoChange()"
-      />
-    </div>
-
-    <!-- Tipo -->
-    <div>
-      <label class="form-label">Tipo de Cita *</label>
-      <p-select
-        [(ngModel)]="form.tipo"
-        [options]="tipoOpts"
-        placeholder="Tipo"
-        [style]="{width:'100%'}"
-      />
-    </div>
-
-    <!-- Fecha -->
-    <div>
-      <label class="form-label">Fecha *</label>
-      <p-datepicker
-        [(ngModel)]="form.fecha"
-        dateFormat="yy-mm-dd"
-        [minDate]="today"
-        placeholder="Seleccionar fecha"
-        [style]="{width:'100%'}"
-        (onSelect)="onFechaChange()"
-      />
-    </div>
-
-    <!-- Duración -->
-    <div>
-      <label class="form-label">Duración (min)</label>
-      <p-select
-        [(ngModel)]="form.duracion_minutos"
-        [options]="duracionOpts"
-        [style]="{width:'100%'}"
-      />
-    </div>
-
-    <!-- Hora (alta manual: la agenda por slots aún no está portada al medico-api) -->
-    <div>
-      <label class="form-label">Hora *</label>
-      <input
-        type="time"
-        [(ngModel)]="form.hora"
-        style="width:100%;padding:.5rem;border:1px solid #e2e8f0;border-radius:.375rem"
-      />
-    </div>
-
-    <!-- Motivo -->
-    <div style="grid-column:1/-1">
-      <label class="form-label">Motivo de consulta</label>
-      <input pInputText [(ngModel)]="form.motivo" placeholder="Motivo de la visita" style="width:100%" />
-    </div>
-  </div>
-
-  <ng-template pTemplate="footer">
-    <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showDialog=false" />
-    <p-button
-      label="Agendar Cita" icon="pi pi-check"
-      (onClick)="saveCita()"
-      [loading]="saving()"
-      [disabled]="!isFormValid()"
-    />
-  </ng-template>
-</p-dialog>
   `,
   styles: [`
-    .form-label { display:block; font-size:.875rem; font-weight:500; color:#374151; margin-bottom:.25rem }
-    .slot-btn {
-      padding:.25rem .5rem; border-radius:.375rem; font-size:.8rem; cursor:pointer;
-      border:1px solid #e2e8f0; background:#f8fafc; transition:all .15s;
-    }
-    .slot-disponible:hover { background:#dbeafe; border-color:#3b82f6 }
-    .slot-ocupado { background:#fee2e2; color:#9ca3af; cursor:not-allowed; border-color:#fca5a5 }
-    .slot-selected { background:#3b82f6 !important; color:#fff !important; border-color:#2563eb !important }
+    .cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .cabecera .page-title { margin-bottom:0; }
+    .filtros { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .tabla { width:100%; }
+    .vacio { text-align:center; padding:2rem; color:#64748b; }
+    .peligro { color:#dc2626; }
   `],
 })
 export class CitasComponent implements OnInit {
   private svc = inject(CitaService);
-  private pacienteSvc = inject(PacienteService);
-  private router = inject(Router);
+  private dialogo = inject(MatDialog);
   private msg = inject(Avisos);
 
-  citas = signal<Appointment[]>([]);
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['fecha', 'hora', 'paciente', 'medico', 'tipo', 'motivo', 'estado', 'acciones'];
+  readonly datos = new MatTableDataSource<Appointment>([]);
+
+  /** Por setter: la tabla convive con un @if de carga, así que el paginador
+   *  aparece y desaparece. Ver MIGRACION_MATERIAL.md. */
+  @ViewChild(MatPaginator)
+  set paginador(p: MatPaginator | undefined) { if (p) this.datos.paginator = p; }
+
   medicos = signal<MedicoDisponible[]>([]);
-  slots = signal<SlotDisponible[]>([]);
-  pacienteSuggestions = signal<any[]>([]);
+  cargando = signal(true);
+  atendiendo = signal<number | null>(null);
 
-  loading = signal(true);
-  loadingSlots = signal(false);
-  saving = signal(false);
-  attendingId = signal<number | null>(null);
+  readonly estados = ['Pendiente', 'Confirmada', 'Atendida', 'Cancelada', 'No Asistió'];
 
-  showDialog = false;
-  today = new Date();
-
-  // Filters
   filtroFecha: Date | null = null;
   filtroMedico: number | null = null;
   filtroEstado: string | null = null;
 
-  // Form state
-  selectedPaciente: any = null;
-  form: Partial<AppointmentCreate> & { fecha?: Date } = {
-    tipo: 'Primera Vez',
-    duracion_minutos: 30,
-    motivo: '',
-  };
-
-  estadoOpts = ['Pendiente', 'Confirmada', 'Atendida', 'Cancelada', 'No Asistió'];
-  tipoOpts = ['Primera Vez', 'Control / Revisión', 'Urgencia'];
-  duracionOpts = [
-    { label: '20 min', value: 20 },
-    { label: '30 min', value: 30 },
-    { label: '45 min', value: 45 },
-    { label: '60 min', value: 60 },
-  ];
-
   ngOnInit(): void {
-    this.loadCitas();
+    this.cargar();
     this.svc.getMedicos().subscribe(m => this.medicos.set(m));
   }
 
-  loadCitas(): void {
-    this.loading.set(true);
-    const fechaStr = this.filtroFecha ? this.toDateStr(this.filtroFecha) : undefined;
-    this.svc.list(1, 100, fechaStr, this.filtroMedico ?? undefined, this.filtroEstado ?? undefined).subscribe({
-      next: r => { this.citas.set(r.items); this.loading.set(false); },
-      error: () => this.loading.set(false),
-    });
+  cargar(): void {
+    this.cargando.set(true);
+    const fecha = this.filtroFecha ? diaLocal(this.filtroFecha) : undefined;
+    this.svc.list(1, 100, fecha, this.filtroMedico ?? undefined, this.filtroEstado ?? undefined)
+      .subscribe({
+        next: r => { this.datos.data = r.items; this.cargando.set(false); },
+        error: () => this.cargando.set(false),
+      });
   }
 
-  applyFilters(): void {
-    this.loadCitas();
+  nueva(): void {
+    this.dialogo
+      .open(CitaNuevaComponent, { data: { medicos: this.medicos() }, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((cita?: AppointmentCreate) => { if (cita) this.guardar(cita); });
   }
 
-  openNew(): void {
-    this.selectedPaciente = null;
-    this.form = { tipo: 'Primera Vez', duracion_minutos: 30, motivo: '' };
-    this.slots.set([]);
-    this.showDialog = true;
-  }
-
-  searchPaciente(event: { query: string }): void {
-    this.pacienteSvc.buscar(event.query).subscribe({
-      next: (items: any[]) => {
-        this.pacienteSuggestions.set(
-          items.map((p: any) => ({
-            id: p.id,
-            label: `${p.nombre1} ${p.apellido1}`,
-            identificacion: p.identificacion,
-          }))
-        );
-      },
-      error: () => this.pacienteSuggestions.set([]),
-    });
-  }
-
-  onPacienteSelect(item: any): void {
-    this.form.paciente_id = item.id;
-  }
-
-  onMedicoChange(): void {
-    this.form.hora = undefined;
-    this.slots.set([]);
-    if (this.form.medico_id && this.form.fecha) {
-      this.loadSlots();
-    }
-  }
-
-  onFechaChange(): void {
-    this.form.hora = undefined;
-    this.slots.set([]);
-    if (this.form.medico_id && this.form.fecha) {
-      this.loadSlots();
-    }
-  }
-
-  loadSlots(): void {
-    if (!this.form.medico_id || !this.form.fecha) return;
-    this.loadingSlots.set(true);
-    const fechaStr = this.toDateStr(this.form.fecha as Date);
-    this.svc.getSlots(this.form.medico_id, fechaStr).subscribe({
-      next: s => { this.slots.set(s); this.loadingSlots.set(false); },
-      error: () => this.loadingSlots.set(false),
-    });
-  }
-
-  selectSlot(slot: SlotDisponible): void {
-    if (slot.disponible) this.form.hora = slot.hora;
-  }
-
-  isFormValid(): boolean {
-    return !!(this.form.paciente_id && this.form.medico_id && this.form.fecha && this.form.hora);
-  }
-
-  saveCita(): void {
-    if (!this.isFormValid()) return;
-    this.saving.set(true);
-    const payload: AppointmentCreate = {
-      paciente_id: this.form.paciente_id!,
-      medico_id: this.form.medico_id!,
-      fecha: this.toDateStr(this.form.fecha as Date),
-      hora: this.form.hora!,
-      tipo: this.form.tipo as any,
-      motivo: this.form.motivo,
-      duracion_minutos: this.form.duracion_minutos ?? 30,
-    };
-    this.svc.create(payload).subscribe({
+  private guardar(cita: AppointmentCreate): void {
+    this.svc.create(cita).subscribe({
       next: () => {
-        this.saving.set(false);
-        this.showDialog = false;
         this.msg.add({ severity: 'success', summary: 'Cita agendada', detail: 'La cita fue registrada exitosamente' });
-        this.loadCitas();
+        this.cargar();
       },
       error: (err) => {
-        this.saving.set(false);
         const detail = err?.error?.detail ?? 'No se pudo agendar la cita';
         this.msg.add({ severity: 'error', summary: 'Error', detail });
       },
     });
   }
 
-  atenderCita(cita: Appointment): void {
-    this.attendingId.set(cita.id);
+  atender(cita: Appointment): void {
+    this.atendiendo.set(cita.id);
     // La apertura de la historia clínica llegará cuando ese módulo se porte; por
     // ahora, atender = registrar el estado ATENDIDA.
     this.svc.marcarAtendida(cita.id).subscribe({
       next: () => {
-        this.attendingId.set(null);
+        this.atendiendo.set(null);
         this.msg.add({ severity: 'success', summary: 'Cita atendida' });
-        this.loadCitas();
+        this.cargar();
       },
-      error: () => this.attendingId.set(null),
+      error: () => this.atendiendo.set(null),
     });
   }
 
-  cancelarCita(cita: Appointment): void {
+  cancelar(cita: Appointment): void {
     this.svc.cancel(cita.id).subscribe({
       next: () => {
         this.msg.add({ severity: 'info', summary: 'Cita cancelada' });
-        this.loadCitas();
+        this.cargar();
       },
     });
   }
@@ -406,9 +404,5 @@ export class CitasComponent implements OnInit {
       'Atendida': 'success', 'Cancelada': 'danger', 'No Asistió': 'secondary',
     };
     return map[estado] ?? 'secondary';
-  }
-
-  private toDateStr(d: Date): string {
-    return d.toISOString().slice(0, 10);
   }
 }

@@ -15,6 +15,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { Avisos } from '../../shared/ui/avisos.service';
+import { diaLocal } from '../../shared/fecha';
 import { SuperadminService, Institucion, UsuarioResumen } from '../../services/superadmin.service';
 
 /** Alta de una IPS. Devuelve los dos datos, o nada. */
@@ -105,12 +106,9 @@ export class SuperadminLicenciaComponent {
     if (!this.completo()) return null;
     return {
       max_usuarios: Number(this.maxUsuarios),
-      // El día LOCAL, no el UTC. El calendario entrega la medianoche local, y
-      // `toISOString().slice(0,10)` —que es lo que había— la traduce a UTC: en
-      // Colombia (UTC-5) sale el mismo día y no se nota, pero al este de
-      // Greenwich sale el ANTERIOR. Una licencia que vence un día antes de lo
-      // pactado bloquea el alta de usuarios sin que nadie sepa por qué, y el
-      // día en que se descubra no habrá forma de reproducirlo desde Medellín.
+      // El día LOCAL, no el UTC: una licencia que vence un día antes de lo
+      // pactado bloquea el alta de usuarios sin que nadie sepa por qué. Ver
+      // `shared/fecha.ts`.
       vence: this.vence ? diaLocal(this.vence) : null,
     };
   }
@@ -171,13 +169,6 @@ export class SuperadminAdminComponent {
     if (!this.completo()) return null;
     return { nombre: this.nombre.trim(), email: this.email.trim(), clave: this.clave };
   }
-}
-
-/** `2026-08-02` en la zona del navegador. Ver el comentario de arriba. */
-function diaLocal(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 @Component({
