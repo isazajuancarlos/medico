@@ -32,10 +32,13 @@ El port a Rust **no reemplaza** al Python todavía, y este README no va a decir 
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
 recolector de datos faltantes—, y sin él no hay facturación electrónica, que es
 por lo que le pagan al prestador. Comparados los prefijos de `rutas.rs` contra los
-de `backend/routers/` el 2026-08-01, siguen sin backend en Rust once prefijos.
-Seis los llama la interfaz, así que hoy romperían una pantalla: `/api/rips`,
+de `backend/routers/` el 2026-08-01, siguen sin backend en Rust diez prefijos y
+uno va a medias. Cinco los llama la interfaz, así que hoy romperían una pantalla:
 `/api/facturacion`, `/api/estadisticas`, `/api/admin`, `/api/quirofano` y
-`/api/consentimiento`. Los otros cinco no los llama nadie desde Angular, pero son
+`/api/consentimiento`. `/api/rips` ya existe pero **solo emite el AC**, y se
+niega a hacerlo sin un `parcial=true` explícito: un archivo sin los
+procedimientos ni los medicamentos parece completo y no lo está. Los otros cinco
+no los llama nadie desde Angular, pero son
 Python que sigue vivo: `/api/superadmin`, `/api/epicrisis`, `/api/evoluciones`,
 `/api/interconsultas` y `/api/nota-operatoria`. El ADR
 no autoriza apagar Python hasta que la generación del RIPS sea byte a byte

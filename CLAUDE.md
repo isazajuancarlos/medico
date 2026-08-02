@@ -190,13 +190,26 @@ lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.
 existir en Rust:
 
 ```
-los que el frontend SÍ llama — hoy romperían la pantalla (6):
-  rips  facturacion  estadisticas  admin  quirofano  consentimiento
+los que el frontend SÍ llama — hoy romperían la pantalla (5):
+  facturacion  estadisticas  admin  quirofano  consentimiento
 
 los que no llama nadie desde Angular — no rompen nada, pero son Python
 que sigue vivo (5):
   superadmin  epicrisis  evoluciones  interconsultas  nota-operatoria
+
+a medias (1):
+  rips — existe desde el 2026-08-02, pero SOLO emite el AC
 ```
+
+**`/api/rips` se niega por defecto, y esa negativa es la característica.** Emite
+únicamente el AC; AP, AM, AU y AH no están portados. Un archivo con las consultas
+y sin los procedimientos ni los medicamentos **tiene la forma de un RIPS
+completo**: se sube, el validador lo acepta, y lo que falta no aparece por ningún
+lado — es sub-reporte, o sea dinero que no se cobra e información incompleta ante
+la Supersalud. Por eso responde **409** salvo que se pida `parcial=true`, igual
+que `permitir_supuestos`: el camino permisivo existe, lo pide el llamante, y la
+respuesta lleva siempre `sin_portar` con lo que falta. El RIPS de verdad se sigue
+generando con el Python.
 
 **Son dos medidas distintas y hay que decir cuál se usa.** La ficha #236 mide lo
 primero —cruce de los `/api/…` que piden los `.ts` contra los `.route(` de
@@ -551,8 +564,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 36, de `0001_fundacion.sql` a
-    `0036_una_cita_por_hora.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 37, de `0001_fundacion.sql` a
+    `0037_campos_que_el_rips_exige.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==

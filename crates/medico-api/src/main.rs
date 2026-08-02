@@ -7,6 +7,7 @@ mod config;
 mod estaticos;
 mod maestros;
 mod modulos;
+mod rips;
 mod rutas;
 mod sesion;
 mod tipos;

@@ -234,6 +234,9 @@ pub fn router(estado: Estado) -> Router {
         // El menú que ve cada institución (#65). Leerlo basta con estar
         // autenticado; cambiar la licencia es del vendedor, no del cliente.
         .route("/api/modulos", get(crate::modulos::listar))
+        // El RIPS del periodo (#250). Solo emite el AC todavía, y se niega a
+        // hacerlo sin que se lo pidan: ver la cabecera de `crate::rips`.
+        .route("/api/rips", get(crate::rips::generar))
         .route(
             "/api/instituciones/{id}/modulos",
             put(crate::modulos::fijar),
@@ -5219,6 +5222,212 @@ mod pruebas {
             .await
             .unwrap();
             assert_eq!(n.0, 0);
+        }
+    }
+    /// `GET /api/rips` por la ruta de verdad (#250).
+    ///
+    /// Lo que aquí importa no es que el JSON salga —eso lo prueba
+    /// `medico_dominio::rips::ac`— sino las tres puertas del endpoint: quién
+    /// puede pedirlo, que NO emita un archivo a medias sin que se lo pidan, y
+    /// que un dato que falta salga como 422 con la lista y no como un 500.
+    mod generacion_del_rips {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        const ADMIN: i64 = 40;
+        const MEDICO: i64 = 2;
+
+        async fn con_admin_y_una_consulta() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo,\
+                 tipo_documento,numero_documento) \
+                 VALUES (40,'Admin','adm-rips@x.co',?,'admin',1,1,'CC','71234567')",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query("UPDATE institucion SET codigo_habilitacion='050010123401' WHERE id=1")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            sqlx::query(
+                "UPDATE usuario SET tipo_documento='CC', numero_documento='80000000' WHERE id=2",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                 fecha_nacimiento,sexo,institucion_id,tipo_usuario,cod_pais,cod_municipio,zona,\
+                 cod_pais_origen) \
+                 VALUES (10,'CC','111','Ana','Ruiz','1990-01-01','F',1,'01','170','05001','01','170')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,creado_por,\
+                 motivo_consulta,enfermedad_actual,plan_tratamiento,diagnostico_principal,\
+                 cod_consulta_cups,modalidad_grupo_servicio,grupo_servicios,cod_servicio,\
+                 valor_servicio,concepto_recaudo,finalidad,tipo_diagnostico,causa_externa) \
+                 VALUES (1,'2026-03-15 14:30:00','H1',10,2,2,'dolor','desde ayer','reposo','A000',\
+                 '890201','01','01',328,45000,'05','11','01','13')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        async fn enviar(e: &Estado, uri: &str, quien: i64) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn cuerpo(r: Response) -> serde_json::Value {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 22).await.unwrap();
+            serde_json::from_slice(&b).unwrap()
+        }
+
+        #[tokio::test]
+        async fn sin_pedir_parcial_se_niega_y_dice_que_falta() {
+            // La puerta que impide entregar un archivo que PARECE un RIPS
+            // completo. Sin ella, quien lo descargue no tiene forma de saber que
+            // le faltan los procedimientos y los medicamentos.
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::CONFLICT);
+            let v = cuerpo(r).await;
+            assert_eq!(v["sin_portar"], serde_json::json!(["AP", "AM", "AU", "AH"]));
+            assert!(v["mensaje"].as_str().unwrap().contains("no se cobran"));
+        }
+
+        #[tokio::test]
+        async fn el_medico_no_genera_el_rips_por_defecto() {
+            // El archivo lleva las atenciones de TODOS los pacientes y de él
+            // depende el pago: el defecto son los dos roles que ya exigía el
+            // Python. Un prestador de una sola persona se lo concede en su
+            // matriz de capacidades.
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true", MEDICO)
+                .await;
+            assert_eq!(r.status(), StatusCode::FORBIDDEN);
+        }
+
+        #[tokio::test]
+        async fn con_parcial_sale_el_ac_con_la_consulta_dentro() {
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            assert_eq!(v["archivos"]["AC"]["numDocumentoIdObligado"], "900");
+            let u = &v["archivos"]["AC"]["usuarios"][0];
+            assert_eq!(u["numDocumentoIdentificacion"], "111");
+            let c = &u["servicios"]["consultas"][0];
+            assert_eq!(c["codPrestador"], "050010123401");
+            assert_eq!(c["fechaInicioAtencion"], "2026-03-15 09:30");
+            // El documento del MÉDICO, no el del paciente. Es el fallo que el
+            // MUV destapó en el Python y la razón de que el SELECT aliase las
+            // columnas homónimas.
+            assert_eq!(c["numDocumentoIdentificacion"], "80000000");
+            assert_eq!(c["codDiagnosticoPrincipalCIE11"], "1A00&XN8P1&XN8P1");
+            // Y la respuesta declara SIEMPRE lo que no lleva.
+            assert_eq!(v["sin_portar"], serde_json::json!(["AP", "AM", "AU", "AH"]));
+        }
+
+        #[tokio::test]
+        async fn lo_que_falta_sale_como_422_con_la_lista_y_no_como_500() {
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query("UPDATE historia SET valor_servicio = NULL, concepto_recaudo = NULL")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let v = cuerpo(r).await;
+            let faltantes = v["faltantes"].as_array().unwrap();
+            assert_eq!(faltantes.len(), 2);
+            let campos: Vec<&str> = faltantes
+                .iter()
+                .map(|f| f["campo"].as_str().unwrap())
+                .collect();
+            assert!(campos.contains(&"valor_servicio"), "{campos:?}");
+            assert!(faltantes[0]["registro"].as_i64().is_some(), "dice CUÁL historia");
+        }
+
+        #[tokio::test]
+        async fn con_supuestos_permitidos_sale_y_la_respuesta_los_lleva() {
+            // Lo supuesto viaja EN el archivo, no en un log aparte: quien lo
+            // firma tiene que verlo antes de firmarlo.
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query("UPDATE historia SET valor_servicio = NULL")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true&permitir_supuestos=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            assert_eq!(v["supuestos"]["valor del servicio"], 1);
+            assert_eq!(
+                v["archivos"]["AC"]["usuarios"][0]["servicios"]["consultas"][0]["vrServicio"],
+                0
+            );
+        }
+
+        #[tokio::test]
+        async fn un_periodo_al_reves_se_rechaza() {
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-31&fin=2026-03-01&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+        }
+
+        #[tokio::test]
+        async fn fuera_del_periodo_no_sale_la_consulta() {
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-04-01&fin=2026-04-30&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            assert_eq!(v["archivos"]["AC"]["usuarios"].as_array().unwrap().len(), 0);
         }
     }
 }

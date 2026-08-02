@@ -209,6 +209,12 @@ impl Exige for GestionarAgenda {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarAgenda;
 }
 
+/// Generar el RIPS de un periodo: el archivo con el que se factura.
+pub struct GenerarRips;
+impl Exige for GenerarRips {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GenerarRips;
+}
+
 /// Parque de ambulancias y despacho de traslados.
 pub struct GestionarAmbulancias;
 impl Exige for GestionarAmbulancias {

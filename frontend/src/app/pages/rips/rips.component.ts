@@ -77,9 +77,14 @@ export class RipsComponent {
         a.click();
         URL.revokeObjectURL(url);
       },
-      error: (err: { error?: { detail?: string } }) => {
+      // Los dos backends nombran distinto el motivo: FastAPI lo manda en
+      // `detail` y el binario de Rust en `mensaje`. Mientras convivan hay que
+      // mirar los dos, o el aviso que explica QUÉ pasó —qué documentos faltan,
+      // qué historia no tiene valor de servicio— se pierde y el usuario ve un
+      // «Error generando RIPS» que no le dice nada.
+      error: (err: { error?: { mensaje?: string; detail?: string } }) => {
         this.loading.set(false);
-        this.error.set(err.error?.detail || 'Error generando RIPS');
+        this.error.set(err.error?.mensaje || err.error?.detail || 'Error generando RIPS');
       },
     });
   }
