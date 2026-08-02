@@ -1,14 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { CardModule } from 'primeng/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { SelectModule } from 'primeng/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { Confirmar } from '../../shared/ui/confirmar.service';
@@ -21,9 +20,9 @@ type Vista = 'lista' | 'informe';
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, CardModule, MatDividerModule,
-    SelectModule, MatTooltipModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule,
+    EtiquetaComponent, MatDividerModule,
+    MatSelectModule, MatTooltipModule,
   ],
   template: `
     <div class="page-card">
@@ -34,14 +33,14 @@ type Vista = 'lista' | 'informe';
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Imágenes Diagnósticas</h2>
-          <p-select
-            [(ngModel)]="filtroEstado"
-            [options]="opcionesEstado"
-            optionLabel="label"
-            optionValue="value"
-            (onChange)="cargarOrdenes()"
-            placeholder="Todos los estados"
-            style="width:190px" />
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filtro">
+            <mat-label>Estado</mat-label>
+            <mat-select [(ngModel)]="filtroEstado" (ngModelChange)="cargarOrdenes()">
+              @for (o of opcionesEstado; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         </div>
 
         @if (cargando()) {
@@ -52,52 +51,65 @@ type Vista = 'lista' | 'informe';
             <p>No hay órdenes de imagenología con el filtro seleccionado.</p>
           </div>
         } @else {
-          <p-table [value]="ordenes()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Estudio solicitado</th>
-                <th>Médico solicitante</th>
-                <th>Fecha</th>
-                <th style="text-align:center">Estado</th>
-                <th style="text-align:center">Informe</th>
-                <th style="text-align:center">Acción</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-o>
-              <tr>
-                <td>
-                  <strong>{{ o.paciente_nombre || '—' }}</strong>
-                  @if (o.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ o.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td>
-                  <span style="font-weight:500">{{ o.descripcion }}</span>
-                  @if (o.codigo_cups) {
-                    <div style="font-size:0.75rem;color:#64748b">CUPS: {{ o.codigo_cups }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ o.medico_nombre || '—' }}</td>
-                <td style="font-size:0.85rem">{{ o.fecha_orden | date:'dd/MM/yyyy' }}</td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="o.estado" [severity]="estadoSeverity(o.estado)" />
-                </td>
-                <td style="text-align:center">
-                  @if (o.tiene_resultado) {
-                    <x-etiqueta value="Emitido" severity="success" icon="pi pi-file-check" />
-                  } @else {
-                    <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
-                  }
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    [matTooltip]="o.tiene_resultado ? 'Ver / editar informe' : 'Crear informe'"
-                    (onClick)="abrirOrden(o)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="ordenes()">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let o">
+                <strong>{{ o.paciente_nombre || '—' }}</strong>
+                @if (o.paciente_identificacion) {
+                  <div class="sub">{{ o.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estudio">
+              <th mat-header-cell *matHeaderCellDef>Estudio solicitado</th>
+              <td mat-cell *matCellDef="let o">
+                <span style="font-weight:500">{{ o.descripcion }}</span>
+                @if (o.codigo_cups) {
+                  <div class="sub">CUPS: {{ o.codigo_cups }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="medico">
+              <th mat-header-cell *matHeaderCellDef>Médico solicitante</th>
+              <td mat-cell *matCellDef="let o" class="menudo">{{ o.medico_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let o" class="menudo">
+                {{ o.fecha_orden | date:'dd/MM/yyyy' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let o" class="centro">
+                <x-etiqueta [value]="o.estado" [severity]="estadoSeverity(o.estado)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="informe">
+              <th mat-header-cell *matHeaderCellDef class="centro">Informe</th>
+              <td mat-cell *matCellDef="let o" class="centro">
+                @if (o.tiene_resultado) {
+                  <x-etiqueta value="Emitido" severity="success" icon="pi pi-file-check" />
+                } @else {
+                  <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="accion">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acción</th>
+              <td mat-cell *matCellDef="let o" class="centro">
+                <button matIconButton (click)="abrirOrden(o)"
+                  [matTooltip]="o.tiene_resultado ? 'Ver / editar informe' : 'Crear informe'"
+                  [attr.aria-label]="o.tiene_resultado ? 'Ver o editar informe' : 'Crear informe'">
+                  <i class="pi pi-file-edit"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
         }
       }
 
@@ -106,7 +118,9 @@ type Vista = 'lista' | 'informe';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'informe' && ordenActual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
+          <button matIconButton (click)="volverLista()" matTooltip="Volver" aria-label="Volver">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">Informe Radiológico</h2>
         </div>
 
@@ -136,8 +150,9 @@ type Vista = 'lista' | 'informe';
             </div>
             @if (ordenActual()!.estado === 'Pendiente') {
               <div style="margin-top:0.5rem">
-                <p-button label="Iniciar" icon="pi pi-play" size="small"
-                  [loading]="cambiandoEstado()" (onClick)="iniciarProceso()" />
+                <button matButton="filled" [disabled]="cambiandoEstado()" (click)="iniciarProceso()">
+                  <i [class]="cambiandoEstado() ? 'pi pi-spin pi-spinner' : 'pi pi-play'"></i> Iniciar
+                </button>
               </div>
             }
           </div>
@@ -151,40 +166,40 @@ type Vista = 'lista' | 'informe';
 
         <!-- Formulario del informe -->
         <div class="informe-form">
-          <div class="field-full">
-            <label>Técnica utilizada *</label>
-            <input pInputText [(ngModel)]="iForm.tecnica" class="w-full"
-              placeholder="Ej: Proyecciones PA y lateral de tórax con equipo digital..."
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full">
+            <mat-label>Técnica utilizada *</mat-label>
+            <input matInput [(ngModel)]="iForm.tecnica"
+              placeholder="Ej: Proyecciones PA y lateral de tórax con equipo digital…"
               [disabled]="informeFirmado()" />
-          </div>
+          </mat-form-field>
 
-          <div class="field-full" style="margin-top:1rem">
-            <label>Hallazgos *</label>
-            <textarea pTextarea [(ngModel)]="iForm.hallazgos" rows="6" class="w-full"
-              placeholder="Descripción detallada de los hallazgos observados en el estudio..."
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full separa">
+            <mat-label>Hallazgos *</mat-label>
+            <textarea matInput [(ngModel)]="iForm.hallazgos" rows="6"
+              placeholder="Descripción detallada de los hallazgos observados en el estudio…"
               [disabled]="informeFirmado()"></textarea>
-          </div>
+          </mat-form-field>
 
-          <div class="field-full" style="margin-top:1rem">
-            <label>Impresión diagnóstica *</label>
-            <textarea pTextarea [(ngModel)]="iForm.impresion_diagnostica" rows="4" class="w-full"
-              placeholder="Conclusión e impresión diagnóstica del estudio..."
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full separa">
+            <mat-label>Impresión diagnóstica *</mat-label>
+            <textarea matInput [(ngModel)]="iForm.impresion_diagnostica" rows="4"
+              placeholder="Conclusión e impresión diagnóstica del estudio…"
               [disabled]="informeFirmado()"></textarea>
-          </div>
+          </mat-form-field>
 
-          <div class="form-grid" style="margin-top:1rem">
-            <div class="field">
-              <label>Recomendaciones</label>
-              <textarea pTextarea [(ngModel)]="iForm.recomendaciones" rows="3" class="w-full"
-                placeholder="Estudios complementarios sugeridos, seguimiento..."
+          <div class="form-grid separa">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Recomendaciones</mat-label>
+              <textarea matInput [(ngModel)]="iForm.recomendaciones" rows="3"
+                placeholder="Estudios complementarios sugeridos, seguimiento…"
                 [disabled]="informeFirmado()"></textarea>
-            </div>
-            <div class="field">
-              <label>Clasificación (BIRADS, BI-RADS, etc.)</label>
-              <input pInputText [(ngModel)]="iForm.clasificacion" class="w-full"
-                placeholder="Ej: BIRADS 3, ACR C, Lung-RADS 2..."
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Clasificación (BIRADS, ACR, Lung-RADS…)</mat-label>
+              <input matInput [(ngModel)]="iForm.clasificacion"
+                placeholder="Ej: BIRADS 3, ACR C, Lung-RADS 2…"
                 [disabled]="informeFirmado()" />
-            </div>
+            </mat-form-field>
           </div>
 
           <!-- Archivos adjuntos -->
@@ -197,9 +212,10 @@ type Vista = 'lista' | 'informe';
                     <input #fileInput type="file" style="display:none"
                       accept="image/*,.pdf,.dcm"
                       (change)="onFileSelected($event)" />
-                    <p-button label="Adjuntar imagen" icon="pi pi-upload" size="small"
-                      [text]="true" [loading]="uploadingFile()"
-                      (onClick)="fileInput.click()" />
+                    <button matButton [disabled]="uploadingFile()" (click)="fileInput.click()">
+                      <i [class]="uploadingFile() ? 'pi pi-spin pi-spinner' : 'pi pi-upload'"></i>
+                      Adjuntar imagen
+                    </button>
                   </div>
                 }
               </div>
@@ -222,22 +238,26 @@ type Vista = 'lista' | 'informe';
         <!-- Acciones -->
         <div class="step-actions">
           @if (!informeFirmado()) {
-            <p-button label="Guardar informe" icon="pi pi-save"
-              [loading]="guardando()"
-              [disabled]="!iForm.tecnica || !iForm.hallazgos || !iForm.impresion_diagnostica"
-              (onClick)="guardarInforme()" />
+            <button matButton="filled" (click)="guardarInforme()"
+              [disabled]="guardando() || !completo()">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i>
+              Guardar informe
+            </button>
             @if (informeActual()) {
-              <p-button label="Firmar y completar" icon="pi pi-check-circle"
-                severity="success" [loading]="firmando()"
-                [disabled]="!iForm.tecnica || !iForm.hallazgos || !iForm.impresion_diagnostica"
-                (onClick)="confirmarFirmar()" />
+              <button matButton="filled" class="exito" (click)="confirmarFirmar()"
+                [disabled]="firmando() || !completo()">
+                <i [class]="firmando() ? 'pi pi-spin pi-spinner' : 'pi pi-check-circle'"></i>
+                Firmar y completar
+              </button>
             }
           } @else {
             <div style="display:flex;align-items:center;gap:0.75rem;color:#4ade80">
               <i class="pi pi-check-circle"></i>
               <span>Informe firmado — solo lectura</span>
             </div>
-            <p-button label="Volver" icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+            <button matButton (click)="volverLista()">
+              <i class="pi pi-arrow-left"></i> Volver
+            </button>
           }
         </div>
       }
@@ -272,11 +292,17 @@ type Vista = 'lista' | 'informe';
       background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07);
       border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem;
     }
-    .field { display: flex; flex-direction: column; gap: 0.4rem; }
-    .field label, .field-full label { font-weight: 500; font-size: 0.875rem; color: #e2e8f0; }
-    .field-full { display: flex; flex-direction: column; gap: 0.4rem; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .w-full { width: 100%; }
+    .separa { margin-top: 1rem; }
+    table { width: 100%; }
+    .filtro { width: 190px; }
+    .centro { text-align: center; }
+    .menudo { font-size: 0.85rem; }
+    .sub { font-size: 0.78rem; color: #94a3b8; }
+
+    /* El tema es M3: el input color de MatButton no pinta nada ahí. */
+    .exito:not(:disabled) { background: #16a34a; color: #fff; }
 
     .archivos-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .archivo-chip {
@@ -297,6 +323,10 @@ export class ImagenesComponent implements OnInit {
   private svc = inject(ImagenesService);
   private messageService = inject(Avisos);
   private confirmationService = inject(Confirmar);
+
+  readonly columnas = [
+    'paciente', 'estudio', 'medico', 'fecha', 'estado', 'informe', 'accion',
+  ];
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -320,6 +350,14 @@ export class ImagenesComponent implements OnInit {
   uploadingFile = signal(false);
 
   informeFirmado = () => !!this.informeActual()?.firmado;
+
+  /**
+   * Los tres campos que el informe no puede no tener. Estaba escrito tres veces
+   * en la plantilla y una cuarta en `guardarInforme()`; con Material había que
+   * escribirlo otra vez, así que pasa a ser uno solo.
+   */
+  completo = () =>
+    !!this.iForm.tecnica && !!this.iForm.hallazgos && !!this.iForm.impresion_diagnostica;
 
   ngOnInit(): void {
     this.cargarOrdenes();
@@ -374,7 +412,7 @@ export class ImagenesComponent implements OnInit {
 
   guardarInforme(): void {
     const o = this.ordenActual();
-    if (!o || !this.iForm.tecnica || !this.iForm.hallazgos || !this.iForm.impresion_diagnostica) return;
+    if (!o || !this.completo()) return;
     const payload = this.iForm as InformeCreate;
     this.guardando.set(true);
     const obs$ = this.informeActual()

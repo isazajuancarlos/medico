@@ -43,6 +43,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras barra CRUD, cabecera, incapacidades y consentimiento | 140 | 22 |
 | tras urgencias y superadmin | 128 | 20 |
 | tras el formulario de paciente | 122 | 19 |
+| tras imágenes diagnósticas | 116 | 18 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
