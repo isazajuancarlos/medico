@@ -36,9 +36,9 @@ decide qué módulos se ven.
 > en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
 > no 21 → 22. Queda en 21.1.2 hasta que se migre.
 >
-> Tamaño medido el 2026-07-31: 34 archivos, ~20 componentes distintos, ~250
+> Tamaño medido el 2026-08-01: 34 archivos, 29 componentes distintos, 284
 > importaciones. El grueso es `button` (30), `table` (25), `inputtext` (25),
-> `tag` (25) y `toast` (21).
+> `tag` (25), `toast` (21), `select` (21) y `api` (21).
 
 El eje del trabajo actual es la **cadena RIPS → FEV-RIPS → MUV**: producir el JSON
 de la Resolución 948 de 2026 y que el Mecanismo Único de Validación de MinSalud lo
@@ -84,6 +84,39 @@ python reset_db.py && python seed.py             # PELIGRO: borra todo
 **Nunca canalizar `pytest` a `tail`/`head` sin `set -o pipefail`**: el código de
 salida se pierde y un fallo se lee como verde. Un hook global lo bloquea. Redirigir
 a archivo y comprobar `$?` es la forma limpia.
+
+## El CI — cinco trabajos, y las dependencias NO salen de `requirements.txt`
+
+`.github/workflows/ci.yml`. Cubre **los dos sistemas** más el frontend: probar solo
+el Rust dejaría sin red al producto vivo.
+
+| trabajo | comando exacto |
+|---|---|
+| `rust` | `cargo clippy --workspace --all-targets -- -D warnings` + `cargo test --workspace --all-targets` |
+| `backend` | `pytest -q` en `backend/`, con `pip install -r requirements-recuperado.txt` |
+| `frontend` | `npm ci --legacy-peer-deps` + `npx ng build` + `npx ng test --watch=false` |
+| `auditoria-deps` | `cargo audit` (RustSec; el único *ignore* vive en `.cargo/audit.toml`) |
+| `cadena-suministro` | `cargo deny check` (fuentes, bans, licencias; config en `deny.toml`) |
+
+Para reproducir el verde en local se copian **esos** comandos, no unos parecidos.
+Dos trampas medidas:
+
+- **Las dependencias de prueba salen de `requirements-recuperado.txt`, en la RAÍZ**
+  —el *freeze* completo del entorno que funciona—, no de `backend/requirements.txt`,
+  que no trae `pytest`. Instalar el segundo y ver fallar la colección es el camino
+  largo.
+- `rust` instala `libsqlite3-dev`: `libsqlite3-sys` 0.30 enlaza el SQLite del
+  sistema, no el *bundled*. Sin cabeceras no compila.
+
+Corre en `push` **solo a `main`** y en `pull_request` contra `main`; antes disparaba
+los dos eventos sobre el mismo commit y los cinco checks corrían por duplicado, que
+en un repositorio privado son minutos facturados. **Consecuencia declarada: una rama
+empujada sin PR no tiene CI.**
+
+> **Desde el 2026-07-31 21:35 el CI de GitHub no arranca** —repositorio privado,
+> facturación—. Mientras dure, el único verde es el **local con los siete comandos
+> de la tabla**, y hay que decirlo al afirmar que algo pasa: `gh run list` no va a
+> mostrar nada.
 
 ## El workspace Rust
 
@@ -143,19 +176,36 @@ Y `autenticar` verifica contra un **hash de descarte** cuando el usuario no
 existe o está inactivo: sin eso respondía al instante con un correo falso y tras
 ~100 ms con uno real, y esa diferencia se mide con un bucle de `curl`.
 
-Para arrancarlo hace falta `SECRET_KEY` (≥ 32 bytes, sin valores conocidos) y
-`DATABASE_URL`; el binario **no arranca sin secreto**, a propósito. Y abre la base
+Para arrancarlo hace falta `SECRET_KEY` (≥ 32 bytes, sin valores conocidos); el
+binario **no arranca sin secreto**, a propósito. `DATABASE_URL` sí tiene defecto
+—`sqlite://medico.db`—, que es lo contrario de un secreto: no hay dato falso, hay
+un archivo local. Y abre la base
 relativa a su directorio de trabajo: arrancarlo desde otro sitio crea una base
 vacía y el acceso responde «credenciales incorrectas», que es indistinguible de
 «esta base no tiene a nadie». Ya costó una tarde.
 
-**Lo que el port todavía NO cubre**, para no confundir avance con paridad:
-FEV-RIPS no existe en Rust, y el ADR no autoriza apagar Python hasta que sea byte
-a byte idéntico al de Python. Tampoco existen en Rust `/api/modulos` —el catálogo
-de módulos por licencia, que hoy solo sirve Python— ni `/api/agenda/*`, así que la
-pantalla de **Agenda Médica** no carga contra el binario Rust. Las ramas Rust
-viven en `feat/cie11-mapeo-oms`; `main` y `master` siguen siendo el sistema
-Python, que es el producto vivo.
+**Lo que el port todavía NO cubre**, para no confundir avance con paridad. La
+lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.rs`
+(106 rutas) contra los de `backend/routers/*.py`; medido el 2026-08-01, siguen sin
+existir en Rust:
+
+```
+rips  facturacion  estadisticas  admin  superadmin  quirofano
+epicrisis  evoluciones  interconsultas  consentimiento  nota-operatoria
+```
+
+**FEV-RIPS es el que decide**: sin él no hay facturación electrónica, que es por
+lo que le pagan al prestador, y el ADR no autoriza apagar Python hasta que la
+generación del RIPS sea byte a byte idéntica. En Rust solo está el recolector de
+datos faltantes (`medico-dominio/src/rips.rs`).
+
+`/api/modulos` y `/api/agenda/*` **sí existen ya en Rust** (`rutas.rs:236` y
+`rutas.rs:260`…), así que la pantalla de Agenda Médica carga contra el binario —
+lo contrario estuvo escrito aquí hasta el 2026-08-01 y era falso.
+
+**El workspace Rust está en `main`**, no en una rama aparte: `crates/`, `Cargo.toml`,
+`construir.sh` y `deny.toml` van versionados ahí junto al backend Python. Los dos
+sistemas conviven en el mismo árbol; el producto vivo sigue siendo el Python.
 
 **Sí cubre, desde el 2026-07-31**: farmacia e inventario con dispensación contra
 fórmula, proveedores, laboratorio, imágenes diagnósticas y ambulancias. Ver
@@ -204,6 +254,20 @@ SECRET_KEY=<mínimo 32 caracteres>
 
 Opcionales: `ENCRYPTION_KEY`, `SMTP_*`, `PORT`, `HOST`.
 
+**`.env.example` NO es el ejemplo de este `.env`**: documenta el binario **Rust**,
+que no carga ningún archivo —lee el entorno del proceso— y comparte los nombres
+`SECRET_KEY` y `DATABASE_URL` con el Python **con otro contenido**
+(`sqlite://medico.db` frente a `postgresql://…`). Exportar el `DATABASE_URL` del
+Python y arrancar el binario es pedirle a SQLx que abra Postgres.
+
+Y una trampa ya pagada: ese ejemplo traía
+`SECRET_KEY=CAMBIE_ESTO_por_un_valor_aleatorio_de_32_o_mas_caracteres`, que
+**pasaba** la validación —54 caracteres, y no figuraba en la lista de valores
+prohibidos—, así que copiar el ejemplo dejaba el servidor firmando sesiones con
+una clave publicada en el repositorio. Hoy va **vacío a propósito** y el arranque
+falla; lo ata la prueba `el_ejemplo_no_entrega_un_secreto_que_sirva`
+(`crates/medico-api/src/config.rs:211`). Esa línea no se «completa por comodidad».
+
 **No hay valores por defecto para los secretos y no debe haberlos.** `core/config.py`
 levanta `ConfiguracionInsegura` y el proceso no arranca si falta `SECRET_KEY` o si es
 una de las conocidas (`changeme`, …). Un token firmado con una clave pública se
@@ -220,7 +284,7 @@ borra al terminar.
 ```
 main.py            lifespan (init_db + auto_seed), CORS, registro de routers
 database.py        engine, pool=20, _run_migrations() (52 ALTER idempotentes)
-models.py          83 tablas SQLModel, 25 enums  (~89 000 líneas de definiciones)
+models.py          83 tablas SQLModel, 25 enums (2 399 líneas, ~99 kB)
 core/
   config.py        secretos: falla al arrancar, no se degrada
   security.py      JWT (python-jose)
@@ -238,10 +302,18 @@ schemas/           Pydantic de petición/respuesta, separados de las tablas
    `WHERE institucion_id = …`.
 2. **Acceso por identificador**: `core/aislamiento.obtener(db, Modelo, id, user)`.
    `db.get(Modelo, id)` **no** pasa por la capa 1 — bastaba incrementar un número en
-   la URL para leer, y con `PUT` modificar, la historia de otra institución. Hay 169
-   llamadas a `db.get` en los routers; en vez de parchear cada una, existe `obtener()`
-   y `tests/test_guardia_aislamiento.py` falla si un router vuelve a usar `db.get`
-   directo sobre un modelo con dueño.
+   la URL para leer, y con `PUT` modificar, la historia de otra institución. En vez
+   de parchear cada llamada existe `obtener()`, y `tests/test_guardia_aislamiento.py`
+   falla si un router vuelve a usar `db.get` directo sobre un modelo con dueño.
+
+   La guardia **no lleva lista de excepciones por línea** —se desactualiza en el
+   primer refactor y acaba silenciando lo que vigila—. Cada `db.get` legítimo lleva
+   su razón escrita al lado: `# aislamiento: <por qué>`, con **mínimo 15 caracteres
+   de razón**, para que la marca no se convierta en un silenciador. Medido el
+   2026-08-01: 87 `db.get` en los routers, 84 de ellos con marca; el resto son
+   modelos de `SIN_DUENNO` (catálogos, `Institucion`, `Cama`…), alineado con
+   `core.aislamiento.COMPARTIDOS`. La lista `PENDIENTES_DE_MIGRAR` está **vacía**:
+   llegó a tener diecinueve routers.
 
 Reglas que sostienen esa capa:
 
@@ -420,8 +492,9 @@ tramo «0 años» va del recién nacido al de once meses.
 
 ## Frontend
 
-Angular 21.2 + PrimeNG 21.1, standalone, 29 páginas, 49 rutas con `authGuard`,
-`roleGuard` y `modulo.guard`.
+Angular 21.2 + PrimeNG 21.1, standalone, 30 páginas y 50 entradas en
+`app.routes.ts` (47 con `loadComponent`, el resto redirecciones), con `authGuard`,
+`roleGuard` y `modulo.guard`. Medido el 2026-08-01.
 
 `src/app/shared/formulario/` es el hallazgo que cambió el método de migración: **los
 37 formularios de VFP no son 37 diseños**, todos instancian el mismo marco (zoom con
@@ -455,9 +528,15 @@ falta.
 ## Convenciones
 
 - **`db.commit()` no es automático** en SQLModel.
-- **Migraciones sin Alembic**: añadir a la lista `sql_migrations` de
-  `database.py:_run_migrations()`, con `ADD COLUMN IF NOT EXISTS`. Corren en cada
-  arranque y son idempotentes.
+- **Los dos sistemas migran distinto, y se confunden:**
+  - **Python, sin Alembic**: añadir a la lista `sql_migrations` de
+    `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
+    `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
+  - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
+    `crates/medico-datos/migrations/` (hoy 36, de `0001_fundacion.sql` a
+    `0036_una_cita_por_hora.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
+    una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==
   EstadoCita.PENDIENTE`), no por cadena.
 - **Router nuevo**: crearlo en `backend/routers/`, importarlo en `main.py`, añadirlo a

@@ -31,9 +31,12 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
 recolector de datos faltantes—, y sin él no hay facturación electrónica, que es
-por lo que le pagan al prestador. Siguen sin backend en Rust `/api/admin`,
-`/api/facturacion`, `/api/quirofano` y `/api/estadisticas`. El ADR no autoriza
-apagar Python hasta que la generación del RIPS sea byte a byte idéntica.
+por lo que le pagan al prestador. Comparados los prefijos de `rutas.rs` contra los
+de `backend/routers/` el 2026-08-01, siguen sin backend en Rust `/api/rips`,
+`/api/facturacion`, `/api/estadisticas`, `/api/admin`, `/api/superadmin`,
+`/api/quirofano`, `/api/epicrisis`, `/api/evoluciones`, `/api/interconsultas`,
+`/api/consentimiento` y `/api/nota-operatoria`. El ADR no autoriza apagar Python
+hasta que la generación del RIPS sea byte a byte idéntica.
 
 Lo que el port **sí** cubre: pacientes, historia clínica con firma, urgencias,
 hospitalización, nutrición, rehabilitación, remisiones y contrarreferencia,
