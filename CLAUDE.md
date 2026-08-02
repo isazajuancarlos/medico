@@ -36,7 +36,7 @@ decide qué módulos se ven.
 > en SIGER y se descartó por eso. El camino de medico es **PrimeNG → Material**,
 > no 21 → 22. Queda en 21.1.2 hasta que salga del todo.
 >
-> Avance medido: **287 → 170** importaciones `from 'primeng/…'` (35 → 30
+> Avance medido: **287 → 159** importaciones `from 'primeng/…'` (35 → 27
 > archivos), con `ng build` y las pruebas del frontend en verde en cada lote (82 antes del
 > banco de humo, 130 después).
 > Hechos: los dos servicios (avisos y confirmación), etiqueta, separador,

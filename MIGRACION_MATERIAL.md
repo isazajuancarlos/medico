@@ -38,6 +38,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 |---|---|---|
 | antes | 287 | 35 |
 | tras servicios + vocabulario barato | 170 | 30 |
+| tras rips, contrarreferencia y pacientes | 159 | 27 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -106,12 +107,59 @@ servicio es propio; PrimeNG no queda debajo.
 | `<p-button>` | `<button matButton>` | **no es 1:1**, ver abajo |
 | `<p-table>` | `<table mat-table>` | **cambia de paradigma**, ver abajo |
 
+## Las tablas: dos patrones, y elegir mal no falla
+
+`p-table` aparece 25 veces y **no** hay un solo reemplazo. Hay dos, según de
+dónde salga la paginación:
+
+**(a) Paginación en cliente** — la tabla recibe todas las filas
+(`contrarreferencia`):
+
+```ts
+readonly columnas = ['fecha', 'paciente', /* … */];
+readonly datos = new MatTableDataSource<Fila>([]);
+
+// Por SETTER, no por @ViewChild a secas: la tabla vive dentro de un @if en
+// varias pantallas, así que el elemento aparece y desaparece. Con la forma
+// estática se engancha una vez —o ninguna— y la paginación queda muerta sin
+// que nada falle.
+@ViewChild(MatPaginator)
+set paginador(p: MatPaginator | undefined) { if (p) this.datos.paginator = p; }
+```
+
+**(b) Paginación del servidor** — la tabla recibe una página (`pacientes`):
+
+```html
+<table mat-table [dataSource]="filas()">…</table>
+<mat-paginator [length]="total()" [pageSize]="pageSize" (page)="alPaginar($event)" />
+```
+
+**Darle un `MatTableDataSource` a una tabla paginada por el servidor lo pagina en
+cliente sobre lo que ya tiene**: con miles de pacientes muestra veinte y afirma
+que no hay más. Compila, se ve bien, y es falso.
+
+Y una tercera cosa que no se hereda: **`mat-table` no tiene plantilla de vacío**
+como el `pTemplate="emptymessage"` de `p-table`. El «no hay nada» va fuera de la
+tabla, y hay que ponerlo: una tabla sin filas y sin frase se lee como «todavía
+está cargando».
+
+## El calendario
+
+`provideNativeDateAdapter()` y `{ provide: MAT_DATE_LOCALE, useValue: 'es-CO' }`,
+una vez en `app.config.ts` para las cinco pantallas que lo usan. **El locale no
+es cosmético**: sin él Material escribe las fechas en el formato de Estados
+Unidos —mes/día/año—, y «03/04» leído al revés en una historia clínica es un mes
+de diferencia.
+
 ## Trampas ya pagadas
 
-1. **Backticks dentro del template literal.** Escribir un comentario HTML que
-   nombre `` `p-password` `` cierra la cadena del `template:` y el compilador
-   escupe diez errores sin relación (`shorthand property 'p'`, `Cannot find name
-   'styles'`). Si aparecen errores absurdos tras editar una plantilla, es esto.
+1. **Backticks dentro del template literal. LA MÁS FÁCIL DE REPETIR — ya cayó
+   dos veces.** Escribir un comentario HTML que nombre `` `p-password` `` cierra
+   la cadena del `template:`, y el compilador escupe diez errores sin relación
+   (`shorthand property 'p'`, `Cannot find name 'styles'`, `Incorrect number of
+   arguments to @Component`). Si aparecen errores absurdos tras editar una
+   plantilla, es esto y solo esto. **En un comentario dentro de una plantilla,
+   los nombres de componente van sin comillas invertidas.**
 
 2. **`tooltipPosition="bottom"` no es `matTooltipPosition="bottom"`.** Material
    usa `above`/`below`/`before`/`after`. Traducirlo mal no falla: deja el
@@ -132,7 +180,15 @@ servicio es propio; PrimeNG no queda debajo.
    selector que `<p-confirmDialog />`, así que una sustitución por la forma
    camelCase se deja uno atrás.
 
-6. **Datos que la interfaz nueva descartaría en silencio.** El compilador cazó
+6. **El banco de humo montaba una aplicación que no existía.** Traía su propia
+   lista de proveedores, así que nada de `app.config.ts` estaba bajo prueba: lo
+   destapó `/rips`, que falló por un `DateAdapter` que *sí* estaba en la
+   aplicación. Ahora extiende `appConfig.providers` y solo pisa lo que una
+   prueba debe pisar (HttpClient de pruebas, router vacío, animaciones inertes),
+   aprovechando que en Angular gana el último proveedor. Una lista paralela se
+   desincroniza en el primer cambio.
+
+7. **Datos que la interfaz nueva descartaría en silencio.** El compilador cazó
    `life: 3000` en los avisos y `icon` en las etiquetas: alguien eligió esos
    valores, así que el tipo propio los acepta en vez de perderlos
    (directiva 20). En cambio `acceptButtonStyleClass: 'p-button-danger'` sí se
@@ -152,7 +208,9 @@ servicio es propio; PrimeNG no queda debajo.
 | cola | ~21 | checkbox, card, datepicker (necesita adaptador de fecha y locale es-CO), toggleswitch, tabs, panel, inputnumber, inputgroup, stepper, progressbar, chart, avatar, autocomplete |
 
 Estos van **pantalla por pantalla y a mano**, de la más pequeña a la mayor, con
-`ng build` y las pruebas entre lote y lote.
+`ng build` y las pruebas entre lote y lote. Hechas ya con este método: `login`,
+`rips`, `contrarreferencia` y `pacientes` — las dos últimas fijan los dos
+patrones de tabla.
 
 ## Lo que NO se toca en esta migración
 
