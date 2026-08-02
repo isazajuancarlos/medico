@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -160,6 +160,7 @@ type AccionDetalle = 'iniciar' | 'cancelar';
       </div>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width: min(36rem, 88vw); }
     .detalle-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
@@ -257,6 +258,7 @@ export class QuirofanoDetalleComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .ficha { margin-bottom:1rem; padding:0.75rem; background:rgba(99,102,241,0.1);
       border-radius:6px; border:1px solid rgba(99,102,241,0.2); }
@@ -579,6 +581,7 @@ export class QuirofanoCompletarComponent {
     </div>
 
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }

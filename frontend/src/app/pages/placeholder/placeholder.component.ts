@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MensajeComponent } from '../../shared/ui/mensaje.component';
 
@@ -6,6 +6,7 @@ import { MensajeComponent } from '../../shared/ui/mensaje.component';
   selector: 'app-placeholder',
   standalone: true,
   imports: [MensajeComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="page-card">
       <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">

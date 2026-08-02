@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -76,6 +76,7 @@ const TIPOS_DE_EGRESO = [
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { margin-bottom:1rem; min-width:min(28rem, 80vw); }
     .rotulo { color:#94a3b8; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
@@ -387,6 +388,7 @@ export class HospitalizacionEgresoComponent {
     </div>
 
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }

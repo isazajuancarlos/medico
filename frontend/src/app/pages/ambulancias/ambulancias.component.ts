@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -79,6 +79,7 @@ const TIPOS = [
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla {
       display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
@@ -183,6 +184,7 @@ export class AmbulanciaFormComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla {
       display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
@@ -478,6 +480,7 @@ export class AmbulanciaDespachoComponent {
       }
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0; }

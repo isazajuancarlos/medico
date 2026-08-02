@@ -25,7 +25,7 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { Type } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Routes } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -126,7 +126,7 @@ describe('todas las pantallas se montan', () => {
           ...appConfig.providers,
           // Y encima lo propio de una prueba. Van DESPUÉS a propósito: en
           // Angular gana el último, así que estos pisan a los de arriba.
-          provideHttpClient(),
+          provideHttpClient(withXhr()),
           provideHttpClientTesting(),
           provideRouter([]),
           provideNoopAnimations(),

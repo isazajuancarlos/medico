@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, inject, OnInit, ViewChild, signal } from '@angular/core';
+import { Component, Inject, inject, OnInit, ViewChild, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -74,6 +74,7 @@ interface Consentimiento {
       <button matButton mat-dialog-close>Cerrar</button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     x-mensaje { display:block; margin-bottom:1rem; }
     .detalle { display:grid; grid-template-columns:auto 1fr; gap:.4rem 1rem; margin:0; }
@@ -120,6 +121,7 @@ export class ConsentimientoDetalleComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .aviso { font-size:.85rem; color:var(--text-color-secondary); margin:0 0 .75rem; }
     .ancho { width:100%; }
@@ -209,6 +211,7 @@ export class ConsentimientoRevocacionComponent {
       <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
     table { width:100%; }

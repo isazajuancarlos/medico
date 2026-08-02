@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -1053,6 +1053,7 @@ function defaultAntPrenatales(): AntPrenatales {
 
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     /* ── Búsqueda ── */
     .search-hint { color: #94a3b8; margin-bottom: 1.5rem; font-size: 0.9rem; }

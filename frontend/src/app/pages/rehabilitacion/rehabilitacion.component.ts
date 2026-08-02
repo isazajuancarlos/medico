@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -370,6 +370,7 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
   </ng-container>
 </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .filtros { display:grid; grid-template-columns:auto auto 1fr; gap:.75rem; align-items:center; }
     .buscador { display:flex; gap:.5rem; align-items:flex-start; }

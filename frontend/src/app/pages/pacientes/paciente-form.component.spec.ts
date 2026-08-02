@@ -6,7 +6,7 @@
  * paciente solo entraba por el script de semillas.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -120,7 +120,7 @@ describe('el formulario', () => {
     TestBed.configureTestingModule({
       imports: [PacienteFormComponent],
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
         provideNoopAnimations(),
         { provide: MAT_DIALOG_DATA, useValue: paciente },

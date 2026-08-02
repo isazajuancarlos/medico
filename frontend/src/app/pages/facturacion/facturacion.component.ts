@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -66,6 +66,7 @@ const TARIFAS = [
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width:min(26rem, 85vw); display:flex; flex-direction:column; gap:.5rem; }
     .ficha { margin-bottom:.5rem; padding:.75rem; background:rgba(99,102,241,0.1);
@@ -121,6 +122,7 @@ export class FacturacionRadicarComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem;
       min-width:min(28rem, 85vw); }
@@ -174,6 +176,7 @@ export class FacturacionServicioComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width:min(28rem, 85vw); display:flex; flex-direction:column; gap:.5rem; }
     mat-form-field { width:100%; }
@@ -239,6 +242,7 @@ export class FacturacionGlosaComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width:min(28rem, 85vw); }
     .ficha { margin-bottom:1rem; padding:.75rem; background:rgba(99,102,241,0.1);
@@ -319,6 +323,7 @@ export class FacturacionResponderGlosaComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem;
       min-width:min(32rem, 85vw); }
@@ -1010,6 +1015,7 @@ export class FacturacionContratoComponent {
     </div>
 
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0; }

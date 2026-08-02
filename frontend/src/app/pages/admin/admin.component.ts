@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -132,6 +132,7 @@ const DIAS_SEMANA = [
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(32rem, 85vw); }
@@ -194,6 +195,7 @@ export class AdminUsuarioComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width:min(22rem, 85vw); }
     .quien { color:#64748b; margin-bottom:1rem; }
@@ -247,6 +249,7 @@ export class AdminResetClaveComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(26rem, 85vw); }
@@ -301,6 +304,7 @@ export class AdminCampoComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(26rem, 85vw); }
@@ -1058,6 +1062,7 @@ export class AdminEntidadComponent {
     </div>
 
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:.5rem }
     .tabla { width:100% }

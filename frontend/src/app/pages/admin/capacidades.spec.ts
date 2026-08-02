@@ -8,7 +8,7 @@
  * 550 pruebas en verde. Aquí se monta el componente de verdad y se mira el DOM.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { AdminComponent } from './admin.component';
 import { MatrizCapacidades } from '../../services/admin.service';
@@ -49,7 +49,7 @@ describe('la pestaña de permisos se dibuja', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AdminComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(withXhr()), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AdminComponent);

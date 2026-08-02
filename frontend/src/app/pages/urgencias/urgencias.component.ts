@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -92,6 +92,7 @@ export interface EgresoNuevo {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .dlg { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
     .buscador { display:flex; gap:.5rem; align-items:flex-start; }
@@ -180,6 +181,7 @@ export class UrgenciasTriageComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .dlg { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
     mat-form-field { width:100%; }
@@ -262,6 +264,7 @@ export class UrgenciasEgresoComponent {
       }
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; }
     .list-header .page-title { margin-bottom:0; }

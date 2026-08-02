@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -156,6 +156,7 @@ interface AgendaForm {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1.25rem; }
     .bloques-cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
@@ -265,6 +266,7 @@ export class AgendaDialogoComponent {
       </button>
     </mat-dialog-actions>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .campos {
       display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding-top:.5rem;
@@ -580,6 +582,7 @@ export class BloqueoDialogoComponent {
   </mat-tab-group>
 </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .normativa { font-size:.8rem; color:#64748b; margin-top:-.5rem; margin-bottom:1rem; }
     .panel { padding-top:1rem; }

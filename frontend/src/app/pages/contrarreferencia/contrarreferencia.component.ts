@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, ViewChild, signal } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -103,6 +103,7 @@ interface Contrarreferencia {
       <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
     .tabla { width: 100%; }

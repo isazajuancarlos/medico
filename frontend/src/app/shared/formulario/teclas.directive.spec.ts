@@ -6,13 +6,14 @@
  * BAJE al siguiente campo en vez de enviar: quien lleva años digitando «dato,
  * Enter, dato, Enter» guardaría la historia a medio llenar una y otra vez.
  */
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TeclasDirective } from './teclas.directive';
 
 @Component({
   standalone: true,
   imports: [TeclasDirective],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <form
       appTeclas

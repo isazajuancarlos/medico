@@ -14,7 +14,7 @@
  */
 import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Avisos } from '../shared/ui/avisos.service';
@@ -60,7 +60,7 @@ describe('cerrar sesión en todos los dispositivos', () => {
     );
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withXhr()),
         provideHttpClientTesting(),
         provideRouter([]),
         Avisos,

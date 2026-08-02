@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -97,6 +97,7 @@ import { PaginatedResponse } from '../../models/common.models';
       />
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .tabla { width: 100%; }
     .buscador { width: 100%; max-width: 400px; margin-bottom: 1rem; }

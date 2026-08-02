@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, inject, OnInit, signal } from '@angular/core';
+import { Component, Inject, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import {
@@ -249,6 +249,7 @@ export function hoyISO(): string {
       </form>
     </mat-dialog-content>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));

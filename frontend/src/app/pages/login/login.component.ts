@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -64,6 +64,7 @@ import { MensajeComponent } from '../../shared/ui/mensaje.component';
       </div>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .login-wrapper {
       min-height: 100vh; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);

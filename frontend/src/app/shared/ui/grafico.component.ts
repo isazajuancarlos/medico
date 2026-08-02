@@ -6,6 +6,7 @@ import {
   OnChanges,
   OnDestroy,
   ViewChild,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { Chart, ChartData, ChartOptions, ChartType, registerables } from 'chart.js';
 
@@ -56,6 +57,7 @@ export function hayQueDibujar(data: ChartData | null | undefined): boolean {
       <canvas #lienzo></canvas>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .lienzo { position: relative; width: 100%; }
     canvas { display: block; }
