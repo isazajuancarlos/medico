@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
-import { DividerModule } from 'primeng/divider';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { SelectModule } from 'primeng/select';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import { EvolucionService, Evolucion, EvolucionCreate } from '../../services/evolucion.service';
 
 type Vista = 'lista' | 'form';
@@ -19,12 +18,11 @@ type Vista = 'lista' | 'form';
 @Component({
   selector: 'app-evoluciones',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, DividerModule,
-    SelectModule, ConfirmDialogModule,
+    EtiquetaComponent, MatTooltipModule, MatDividerModule,
+    SelectModule,
   ],
   template: `
     <div class="page-card">
@@ -48,9 +46,9 @@ type Vista = 'lista' | 'form';
                 (keyup.enter)="cargar()" />
             </div>
             <p-button icon="pi pi-search" [outlined]="true"
-              [loading]="cargando()" (onClick)="cargar()" pTooltip="Buscar" />
+              [loading]="cargando()" (onClick)="cargar()" matTooltip="Buscar" />
             <p-button icon="pi pi-refresh" [text]="true"
-              (onClick)="limpiarFiltros()" pTooltip="Limpiar filtros" />
+              (onClick)="limpiarFiltros()" matTooltip="Limpiar filtros" />
           </div>
           <div style="display:flex;gap:0.5rem">
             <input pInputText [(ngModel)]="filtroDesde" type="date"
@@ -96,16 +94,16 @@ type Vista = 'lista' | 'form';
                 </td>
                 <td style="text-align:center">
                   @if (e.tension_arterial || e.frecuencia_cardiaca || e.temperatura || e.peso) {
-                    <i class="pi pi-heart" style="color:#f472b6" pTooltip="Signos vitales registrados"></i>
+                    <i class="pi pi-heart" style="color:#f472b6" matTooltip="Signos vitales registrados"></i>
                   } @else {
                     <span style="color:#475569;font-size:0.8rem">—</span>
                   }
                 </td>
                 <td style="text-align:center">
                   <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Ver / editar" (onClick)="abrirEditar(e)" />
+                    matTooltip="Ver / editar" (onClick)="abrirEditar(e)" />
                   <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    pTooltip="Eliminar" (onClick)="confirmarEliminar(e)" />
+                    matTooltip="Eliminar" (onClick)="confirmarEliminar(e)" />
                 </td>
               </tr>
             </ng-template>
@@ -118,7 +116,7 @@ type Vista = 'lista' | 'form';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'form') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver" />
+          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
           <h2 class="page-title" style="margin:0">
             {{ editando() ? 'Editar evolución' : 'Nueva evolución médica' }}
           </h2>
@@ -159,7 +157,7 @@ type Vista = 'lista' | 'form';
                 </div>
               }
             </div>
-            <p-divider />
+            <mat-divider />
           } @else {
             <div class="paciente-chip" style="margin-bottom:1rem">
               <i class="pi pi-user" style="color:#818cf8"></i>
@@ -209,7 +207,7 @@ type Vista = 'lista' | 'form';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Signos vitales -->
           <div class="form-section">
@@ -249,8 +247,6 @@ type Vista = 'lista' | 'form';
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -307,8 +303,8 @@ type Vista = 'lista' | 'form';
 })
 export class EvolucionesComponent implements OnInit {
   private svc = inject(EvolucionService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -447,7 +443,7 @@ export class EvolucionesComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.delete(e.id).subscribe({
           next: () => {

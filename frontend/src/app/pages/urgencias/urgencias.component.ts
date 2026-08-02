@@ -3,13 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { DialogModule } from 'primeng/dialog';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   UrgenciasService, EntradaCola, NIVELES_TRIAGE, DESTINOS_SALIDA,
 } from '../../services/urgencias.service';
@@ -22,13 +21,11 @@ import {
 @Component({
   selector: 'app-urgencias',
   standalone: true,
-  providers: [MessageService],
   imports: [
-    CommonModule, FormsModule, TableModule, ButtonModule, TagModule,
-    SelectModule, InputTextModule, TextareaModule, DialogModule, ToastModule,
+    CommonModule, FormsModule, TableModule, ButtonModule, EtiquetaComponent,
+    SelectModule, InputTextModule, TextareaModule, DialogModule,
   ],
   template: `
-    <p-toast />
     <div class="page-card">
       <div class="list-header">
         <h2 class="page-title">Urgencias — Cola de triage</h2>
@@ -44,7 +41,7 @@ import {
         </ng-template>
         <ng-template pTemplate="body" let-p>
           <tr>
-            <td><p-tag [value]="p.triage_label" [severity]="severidad(p.triage)" /></td>
+            <td><x-etiqueta [value]="p.triage_label" [severity]="severidad(p.triage)" /></td>
             <td>{{ p.paciente_id }}</td>
             <td>{{ p.motivo_consulta }}</td>
             <td>{{ p.fecha_ingreso | date:'HH:mm' }}</td>
@@ -129,7 +126,7 @@ import {
 })
 export class UrgenciasComponent implements OnInit {
   private svc = inject(UrgenciasService);
-  private messages = inject(MessageService);
+  private messages = inject(Avisos);
 
   readonly niveles = NIVELES_TRIAGE;
   readonly destinos = DESTINOS_SALIDA;

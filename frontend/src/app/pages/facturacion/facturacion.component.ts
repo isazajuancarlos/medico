@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
-import { MessageService } from 'primeng/api';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   FacturacionService, Factura, FacturaCreate, DetalleCreate, DetalleFactura,
   Glosa, Contrato, ContratoCreate, Entidad, StatsFacturacion,
@@ -23,12 +22,11 @@ type Vista = 'lista' | 'detalle' | 'nueva';
 @Component({
   selector: 'app-facturacion',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule,
+    EtiquetaComponent, SelectModule, MatTooltipModule,
+    DialogModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -149,7 +147,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                     }
                   </td>
                   <td style="text-align:center">
-                    <p-tag [value]="estadoLabel(f.estado)" [severity]="estadoSeverity(f.estado)" />
+                    <x-etiqueta [value]="estadoLabel(f.estado)" [severity]="estadoSeverity(f.estado)" />
                     @if (f.glosada) {
                       <div style="font-size:0.68rem;color:#fbbf24;margin-top:2px">⚠ glosada</div>
                     }
@@ -159,23 +157,23 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                   </td>
                   <td style="text-align:center;white-space:nowrap">
                     <p-button icon="pi pi-eye" [text]="true" size="small"
-                      pTooltip="Ver detalle" (onClick)="abrirDetalle(f.id)" />
+                      matTooltip="Ver detalle" (onClick)="abrirDetalle(f.id)" />
                     @if (f.estado === 'BORRADOR') {
                       <p-button icon="pi pi-send" [text]="true" size="small"
-                        severity="success" pTooltip="Radicar"
+                        severity="success" matTooltip="Radicar"
                         (onClick)="abrirRadicar(f)" />
                       <p-button icon="pi pi-trash" [text]="true" size="small"
-                        severity="danger" pTooltip="Eliminar"
+                        severity="danger" matTooltip="Eliminar"
                         (onClick)="eliminarFactura(f)" />
                     }
                     @if (f.estado === 'RADICADA') {
                       <p-button icon="pi pi-check" [text]="true" size="small"
-                        severity="success" pTooltip="Marcar aceptada"
+                        severity="success" matTooltip="Marcar aceptada"
                         (onClick)="cambiarEstado(f, 'ACEPTADA')" />
                     }
                     @if (f.estado === 'ACEPTADA') {
                       <p-button icon="pi pi-dollar" [text]="true" size="small"
-                        severity="success" pTooltip="Marcar pagada"
+                        severity="success" matTooltip="Marcar pagada"
                         (onClick)="cambiarEstado(f, 'PAGADA')" />
                     }
                   </td>
@@ -213,7 +211,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                   <td style="font-size:0.82rem;color:#94a3b8">{{ c.numero_contrato }}</td>
                   <td style="font-size:0.85rem">{{ c.entidad_nombre || '—' }}</td>
                   <td>
-                    <p-tag [value]="c.tipo_tarifa" severity="secondary" />
+                    <x-etiqueta [value]="c.tipo_tarifa" severity="secondary" />
                     @if (c.porcentaje_incremento) {
                       <span style="font-size:0.75rem;color:#94a3b8;margin-left:4px">+{{ c.porcentaje_incremento }}%</span>
                     }
@@ -222,15 +220,15 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                     {{ c.fecha_inicio | date:'dd/MM/yyyy' }} – {{ c.fecha_fin | date:'dd/MM/yyyy' }}
                   </td>
                   <td style="text-align:center">
-                    <p-tag [value]="c.activo ? 'Activo' : 'Inactivo'"
+                    <x-etiqueta [value]="c.activo ? 'Activo' : 'Inactivo'"
                       [severity]="c.activo ? 'success' : 'secondary'" />
                   </td>
                   <td style="text-align:center">
                     <p-button icon="pi pi-pencil" [text]="true" size="small"
-                      pTooltip="Editar" (onClick)="abrirFormContrato(c)" />
+                      matTooltip="Editar" (onClick)="abrirFormContrato(c)" />
                     <p-button [icon]="c.activo ? 'pi pi-ban' : 'pi pi-check'" [text]="true"
                       size="small" [severity]="c.activo ? 'warn' : 'success'"
-                      [pTooltip]="c.activo ? 'Desactivar' : 'Activar'"
+                      [matTooltip]="c.activo ? 'Desactivar' : 'Activar'"
                       (onClick)="toggleContrato(c)" />
                   </td>
                 </tr>
@@ -277,15 +275,15 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                   </td>
                   <td style="font-size:0.82rem">{{ g.fecha_glosa | date:'dd/MM/yyyy' }}</td>
                   <td style="text-align:center">
-                    <p-tag [value]="g.estado"
+                    <x-etiqueta [value]="g.estado"
                       [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'RECHAZADA' ? 'danger' : 'success'" />
                   </td>
                   <td style="text-align:center">
                     @if (g.estado === 'PENDIENTE') {
                       <p-button icon="pi pi-reply" [text]="true" size="small"
-                        pTooltip="Responder glosa" (onClick)="abrirResponderGlosa(g)" />
+                        matTooltip="Responder glosa" (onClick)="abrirResponderGlosa(g)" />
                     } @else {
-                      <span style="font-size:0.75rem;color:#64748b" pTooltip="{{ g.respuesta }}">
+                      <span style="font-size:0.75rem;color:#64748b" matTooltip="{{ g.respuesta }}">
                         {{ g.fecha_respuesta | date:'dd/MM/yy' }}
                       </span>
                     }
@@ -343,7 +341,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Líneas de detalle -->
           <div class="form-section">
@@ -411,7 +409,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
           <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
           <h2 class="page-title" style="margin:0">{{ facturaDetalle()!.numero_factura }}</h2>
-          <p-tag [value]="estadoLabel(facturaDetalle()!.estado)"
+          <x-etiqueta [value]="estadoLabel(facturaDetalle()!.estado)"
             [severity]="estadoSeverity(facturaDetalle()!.estado)" />
         </div>
 
@@ -465,7 +463,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Detalles -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
@@ -515,7 +513,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
 
           <!-- Glosas -->
           @if (facturaDetalle()!.glosas.length > 0) {
-            <p-divider />
+            <mat-divider />
             <div class="section-title">Glosas ({{ facturaDetalle()!.glosas.length }})</div>
             <p-table [value]="facturaDetalle()!.glosas" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
@@ -533,7 +531,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
                   <td style="font-size:0.82rem">{{ g.motivo }}</td>
                   <td style="text-align:right;color:#f87171;font-weight:600">{{ g.valor_glosado | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                   <td style="text-align:center">
-                    <p-tag [value]="g.estado"
+                    <x-etiqueta [value]="g.estado"
                       [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'RECHAZADA' ? 'danger' : 'success'" />
                   </td>
                   <td style="font-size:0.78rem;color:#94a3b8">{{ g.respuesta || '—' }}</td>
@@ -543,7 +541,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
           }
 
           <!-- Acciones -->
-          <p-divider />
+          <mat-divider />
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;flex-wrap:wrap">
             @if (facturaDetalle()!.estado === 'BORRADOR') {
               <p-button label="Agregar glosa" icon="pi pi-exclamation-circle" [outlined]="true"
@@ -746,7 +744,6 @@ type Vista = 'lista' | 'detalle' | 'nueva';
       </div>
     </p-dialog>
 
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -851,7 +848,7 @@ type Vista = 'lista' | 'detalle' | 'nueva';
 })
 export class FacturacionComponent implements OnInit {
   private svc = inject(FacturacionService);
-  private messageService = inject(MessageService);
+  private messageService = inject(Avisos);
 
   vista = signal<Vista>('lista');
   tab = signal<Tab>('facturas');

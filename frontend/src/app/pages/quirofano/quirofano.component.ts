@@ -5,14 +5,13 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
+import { MatDividerModule } from '@angular/material/divider';
 import { CheckboxModule } from 'primeng/checkbox';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   QuirofanoService, Sala, Programacion, ProgramacionCreate,
   ChecklistUpdate, CompletarCirugia, MedicoBasic,
@@ -24,12 +23,11 @@ type Tab = 'agenda' | 'salas';
 @Component({
   selector: 'app-quirofano',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule, CheckboxModule,
+    EtiquetaComponent, SelectModule, MatTooltipModule,
+    DialogModule, MatDividerModule, CheckboxModule,
   ],
   template: `
     <div class="page-card">
@@ -136,19 +134,19 @@ type Tab = 'agenda' | 'salas';
                     </span>
                   </td>
                   <td style="text-align:center">
-                    <p-tag [value]="estadoLabel(p.estado)" [severity]="estadoSeverity(p.estado)" />
+                    <x-etiqueta [value]="estadoLabel(p.estado)" [severity]="estadoSeverity(p.estado)" />
                   </td>
                   <td style="text-align:center">
                     <p-button icon="pi pi-eye" [text]="true" size="small"
-                      pTooltip="Ver detalle" (onClick)="abrirDetalle(p)" />
+                      matTooltip="Ver detalle" (onClick)="abrirDetalle(p)" />
                     @if (p.estado === 'PROGRAMADA') {
                       <p-button icon="pi pi-play" [text]="true" size="small"
-                        severity="success" pTooltip="Iniciar cirugía"
+                        severity="success" matTooltip="Iniciar cirugía"
                         (onClick)="iniciarCirugia(p)" />
                     }
                     @if (p.estado === 'EN_CURSO') {
                       <p-button icon="pi pi-stop-circle" [text]="true" size="small"
-                        severity="warn" pTooltip="Completar cirugía"
+                        severity="warn" matTooltip="Completar cirugía"
                         (onClick)="abrirCompletar(p)" />
                     }
                   </td>
@@ -185,7 +183,7 @@ type Tab = 'agenda' | 'salas';
       <!-- ═══════════════════════════ VISTA PROGRAMAR ═══════════════════════ -->
       @if (vista() === 'programar') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver" />
+          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
           <h2 class="page-title" style="margin:0">Nueva Programación Quirúrgica</h2>
         </div>
 
@@ -227,7 +225,7 @@ type Tab = 'agenda' | 'salas';
             }
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Procedimiento -->
           <div class="form-section">
@@ -254,7 +252,7 @@ type Tab = 'agenda' | 'salas';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Sala, cirujano, fecha -->
           <div class="form-section">
@@ -321,11 +319,11 @@ type Tab = 'agenda' | 'salas';
             <div class="det-valor">{{ progDetalle()!.paciente_nombre || '—' }}</div>
             <div class="det-sub">{{ progDetalle()!.paciente_identificacion }}</div>
           </div>
-          <p-tag [value]="estadoLabel(progDetalle()!.estado)"
+          <x-etiqueta [value]="estadoLabel(progDetalle()!.estado)"
             [severity]="estadoSeverity(progDetalle()!.estado)" />
         </div>
 
-        <p-divider />
+        <mat-divider />
 
         <div class="det-grid">
           <div>
@@ -374,7 +372,7 @@ type Tab = 'agenda' | 'salas';
 
         <!-- Checklist -->
         @if (progDetalle()!.estado === 'PROGRAMADA') {
-          <p-divider />
+          <mat-divider />
           <div class="section-title" style="margin-bottom:0.75rem">Checklist prequirúrgico</div>
           <div class="checklist-grid">
             <div class="checklist-item">
@@ -402,7 +400,7 @@ type Tab = 'agenda' | 'salas';
 
         <!-- Nota quirúrgica (completada) -->
         @if (progDetalle()!.nota_quirurgica) {
-          <p-divider />
+          <mat-divider />
           <div class="det-label">Nota quirúrgica</div>
           <div class="nota-box">{{ progDetalle()!.nota_quirurgica }}</div>
         }
@@ -478,7 +476,6 @@ type Tab = 'agenda' | 'salas';
       }
     </p-dialog>
 
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -582,7 +579,7 @@ type Tab = 'agenda' | 'salas';
 })
 export class QuirofanoComponent implements OnInit {
   private svc = inject(QuirofanoService);
-  private messageService = inject(MessageService);
+  private messageService = inject(Avisos);
 
   vista = signal<Vista>('lista');
   tab = signal<Tab>('agenda');

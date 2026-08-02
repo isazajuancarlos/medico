@@ -17,7 +17,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../shared/ui/avisos.service';
 import { AuthService } from '../core/auth.service';
 
 /**
@@ -63,7 +63,7 @@ describe('cerrar sesión en todos los dispositivos', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        MessageService,
+        Avisos,
       ],
     });
     auth = TestBed.inject(AuthService);

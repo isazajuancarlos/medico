@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { TagModule } from 'primeng/tag';
-import { TooltipModule } from 'primeng/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { PacienteFormComponent } from './paciente-form.component';
 import { PacienteService } from '../../services/paciente.service';
@@ -15,7 +15,7 @@ import { PaginatedResponse } from '../../models/common.models';
 @Component({
   selector: 'app-pacientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule, TagModule, TooltipModule, PacienteFormComponent],
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule, EtiquetaComponent, MatTooltipModule, PacienteFormComponent],
   template: `
     <div class="page-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -66,9 +66,9 @@ import { PaginatedResponse } from '../../models/common.models';
               </span>
             </td>
             <td>
-              <p-button icon="pi pi-eye" [text]="true" size="small" pTooltip="Ver Historia"
+              <p-button icon="pi pi-eye" [text]="true" size="small" matTooltip="Ver Historia"
                 (onClick)="verHistoria(p)" />
-              <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Editar"
+              <p-button icon="pi pi-pencil" [text]="true" size="small" matTooltip="Editar"
                 severity="secondary" (onClick)="editar(p)" />
             </td>
           </tr>

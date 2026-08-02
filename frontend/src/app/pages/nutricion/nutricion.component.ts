@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SelectModule } from 'primeng/select';
-import { DividerModule } from 'primeng/divider';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import {
   NutricionService, ValoracionNutricional, PlanAlimentacion,
   ValoracionCreate, PlanCreate,
@@ -22,12 +21,11 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
 @Component({
   selector: 'app-nutricion',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, SelectModule,
-    DividerModule, ConfirmDialogModule,
+    EtiquetaComponent, MatTooltipModule, SelectModule,
+    MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -83,15 +81,15 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
                 </td>
                 <td style="text-align:center;font-size:0.82rem">{{ v.screening_nutricional }}</td>
                 <td style="text-align:center">
-                  <p-tag [value]="v.riesgo_nutricional" [severity]="riesgoSeverity(v.riesgo_nutricional)" />
+                  <x-etiqueta [value]="v.riesgo_nutricional" [severity]="riesgoSeverity(v.riesgo_nutricional)" />
                 </td>
                 <td style="text-align:center">
                   <p-button icon="pi pi-eye" [text]="true" size="small"
-                    pTooltip="Ver detalle" (onClick)="abrirDetalle(v)" />
+                    matTooltip="Ver detalle" (onClick)="abrirDetalle(v)" />
                   <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(v)" />
+                    matTooltip="Editar" (onClick)="abrirEditar(v)" />
                   <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    pTooltip="Eliminar" (onClick)="confirmarEliminar(v)" />
+                    matTooltip="Eliminar" (onClick)="confirmarEliminar(v)" />
                 </td>
               </tr>
             </ng-template>
@@ -138,7 +136,7 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
                 </div>
               }
             </div>
-            <p-divider />
+            <mat-divider />
           } @else {
             <div class="paciente-chip" style="margin-bottom:1rem">
               <i class="pi pi-user" style="color:#818cf8"></i>
@@ -193,7 +191,7 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Screening y riesgo -->
           <div class="form-section">
@@ -219,7 +217,7 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Diagnóstico y requerimientos -->
           <div class="form-section">
@@ -291,7 +289,7 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           <div class="info-block sep">
             <div class="info-label">Riesgo nutricional</div>
             <div style="margin-top:0.25rem">
-              <p-tag [value]="actual()!.riesgo_nutricional" [severity]="riesgoSeverity(actual()!.riesgo_nutricional)" />
+              <x-etiqueta [value]="actual()!.riesgo_nutricional" [severity]="riesgoSeverity(actual()!.riesgo_nutricional)" />
             </div>
           </div>
         </div>
@@ -343,7 +341,7 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
           </div>
         }
 
-        <p-divider />
+        <mat-divider />
 
         <!-- Plan de alimentación -->
         <div class="section-label" style="margin-bottom:0.75rem">Plan de alimentación</div>
@@ -412,7 +410,7 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
               <div style="display:flex;align-items:center;gap:0.75rem">
                 <span class="plan-kcal">{{ planActual()!.calorias_totales }} kcal/día</span>
                 <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                  pTooltip="Editar plan" (onClick)="editarPlanActual()" />
+                  matTooltip="Editar plan" (onClick)="editarPlanActual()" />
               </div>
             </div>
             @if (planActual()!.restricciones) {
@@ -438,8 +436,6 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -516,8 +512,8 @@ type Vista = 'lista' | 'valoracion' | 'detalle';
 })
 export class NutricionComponent implements OnInit {
   private svc = inject(NutricionService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -703,7 +699,7 @@ export class NutricionComponent implements OnInit {
       message: `¿Eliminar la valoración de <strong>${v.paciente_nombre}</strong>?`,
       header: 'Confirmar', icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar', rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.deleteValoracion(v.id).subscribe({
           next: () => { this.lista.update(vs => vs.filter(x => x.id !== v.id)); this.ok('Eliminado'); },

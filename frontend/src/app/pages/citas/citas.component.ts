@@ -4,14 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AutoCompleteModule } from 'primeng/autocomplete';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import { CitaService } from '../../services/cita.service';
 import { PacienteService } from '../../services/paciente.service';
 import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from '../../models/appointment.models';
@@ -21,12 +20,10 @@ import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    TableModule, ButtonModule, TagModule, DialogModule,
-    InputTextModule, SelectModule, DatePickerModule, AutoCompleteModule, ToastModule,
+    TableModule, ButtonModule, EtiquetaComponent, DialogModule,
+    InputTextModule, SelectModule, DatePickerModule, AutoCompleteModule,
   ],
-  providers: [MessageService],
   template: `
-<p-toast />
 <div class="page-card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <h2 class="page-title" style="margin-bottom:0">Agenda de Citas</h2>
@@ -89,7 +86,7 @@ import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from
         <td>{{ c.tipo || '—' }}</td>
         <td>{{ c.motivo }}</td>
         <td>
-          <p-tag [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
+          <x-etiqueta [value]="c.estado" [severity]="estadoSeverity(c.estado)" />
         </td>
         <td style="display:flex;gap:.25rem">
           @if (c.estado === 'Pendiente' || c.estado === 'Confirmada') {
@@ -100,7 +97,7 @@ import { Appointment, AppointmentCreate, SlotDisponible, MedicoDisponible } from
             />
             <p-button
               icon="pi pi-times" size="small" severity="danger" [text]="true"
-              pTooltip="Cancelar cita"
+              matTooltip="Cancelar cita"
               (onClick)="cancelarCita(c)"
             />
           }
@@ -236,7 +233,7 @@ export class CitasComponent implements OnInit {
   private svc = inject(CitaService);
   private pacienteSvc = inject(PacienteService);
   private router = inject(Router);
-  private msg = inject(MessageService);
+  private msg = inject(Avisos);
 
   citas = signal<Appointment[]>([]);
   medicos = signal<MedicoDisponible[]>([]);

@@ -3,15 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import { RehabilitacionService, PlanRehabilitacion, SesionTerapia, PlanCreate, SesionCreate } from '../../services/rehabilitacion.service';
 
 type Vista = 'lista' | 'nuevo' | 'detalle';
@@ -21,14 +20,12 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, TableModule, TagModule, CardModule,
+    ButtonModule, TableModule, EtiquetaComponent, CardModule,
     InputTextModule, TextareaModule, SelectModule, InputNumberModule,
-    ProgressBarModule, ToastModule,
+    ProgressBarModule,
   ],
-  providers: [MessageService],
   template: `
 <div class="p-4">
-  <p-toast />
 
   <!-- LISTA -->
   <ng-container *ngIf="vista === 'lista'">
@@ -84,12 +81,12 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
           </td>
           <td class="text-sm">{{ p.frecuencia }}</td>
           <td>
-            <p-tag [value]="p.activo ? 'Activo' : 'Cerrado'"
+            <x-etiqueta [value]="p.activo ? 'Activo' : 'Cerrado'"
               [severity]="p.activo ? 'success' : 'secondary'" />
           </td>
           <td>
             <p-button icon="pi pi-eye" [text]="true" size="small"
-              (onClick)="verDetalle(p)" pTooltip="Ver detalle" />
+              (onClick)="verDetalle(p)" matTooltip="Ver detalle" />
           </td>
         </tr>
       </ng-template>
@@ -177,7 +174,7 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Plan de Rehabilitación</h2>
         <p class="text-gray-500 text-sm">{{ planActual.paciente_nombre }} · {{ planActual.tipo_terapia }}</p>
       </div>
-      <p-tag [value]="planActual.activo ? 'Activo' : 'Cerrado'"
+      <x-etiqueta [value]="planActual.activo ? 'Activo' : 'Cerrado'"
         [severity]="planActual.activo ? 'success' : 'secondary'" />
     </div>
 
@@ -290,7 +287,7 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
                 [ngClass]="dolorClass(s.dolor_eva)">{{ s.dolor_eva }}</span>
             </td>
             <td>
-              <p-tag *ngIf="s.progreso" [value]="s.progreso"
+              <x-etiqueta *ngIf="s.progreso" [value]="s.progreso"
                 [severity]="progresoSeverity(s.progreso)" />
             </td>
           </tr>
@@ -369,7 +366,7 @@ export class RehabilitacionComponent implements OnInit {
   f: PlanCreate = this.emptyPlan();
   fs: SesionCreate = this.emptySesion();
 
-  constructor(private svc: RehabilitacionService, private msg: MessageService) {}
+  constructor(private svc: RehabilitacionService, private msg: Avisos) {}
 
   ngOnInit() { this.cargarPlanes(); }
 

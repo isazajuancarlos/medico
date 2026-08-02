@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
-import { MessageService } from 'primeng/api';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   HospitalizacionService, Hospitalizacion, Cama,
   MedicoBasic, IngresoCreate, EgresoUpdate,
@@ -23,12 +22,11 @@ type Tab = 'pacientes' | 'camas';
 @Component({
   selector: 'app-hospitalizacion',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule,
+    EtiquetaComponent, SelectModule, MatTooltipModule,
+    DialogModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -125,12 +123,12 @@ type Tab = 'pacientes' | 'camas';
                     <span class="dias-badge">{{ diasEstancia(h.fecha_ingreso) }}</span>
                   </td>
                   <td style="text-align:center">
-                    <p-tag [value]="h.estado" [severity]="estadoSeverity(h.estado)" />
+                    <x-etiqueta [value]="h.estado" [severity]="estadoSeverity(h.estado)" />
                   </td>
                   <td style="text-align:center">
                     @if (h.estado === 'ACTIVA') {
                       <p-button icon="pi pi-sign-out" [text]="true" size="small"
-                        severity="warn" pTooltip="Registrar egreso"
+                        severity="warn" matTooltip="Registrar egreso"
                         (onClick)="abrirEgreso(h)" />
                     } @else {
                       <span style="font-size:0.78rem;color:#64748b">{{ h.fecha_egreso | date:'dd/MM/yy' }}</span>
@@ -160,13 +158,13 @@ type Tab = 'pacientes' | 'camas';
                   <div class="cama-estado">{{ cama.estado }}</div>
                   <div class="cama-icons">
                     @if (cama.tiene_oxigeno) {
-                      <i class="pi pi-circle-fill" pTooltip="Oxígeno" style="color:#38bdf8;font-size:0.6rem"></i>
+                      <i class="pi pi-circle-fill" matTooltip="Oxígeno" style="color:#38bdf8;font-size:0.6rem"></i>
                     }
                     @if (cama.tiene_monitor) {
-                      <i class="pi pi-heart-fill" pTooltip="Monitor" style="color:#f472b6;font-size:0.6rem"></i>
+                      <i class="pi pi-heart-fill" matTooltip="Monitor" style="color:#f472b6;font-size:0.6rem"></i>
                     }
                     @if (cama.es_aislamiento) {
-                      <i class="pi pi-lock" pTooltip="Aislamiento" style="color:#fb923c;font-size:0.6rem"></i>
+                      <i class="pi pi-lock" matTooltip="Aislamiento" style="color:#fb923c;font-size:0.6rem"></i>
                     }
                   </div>
                 </div>
@@ -181,7 +179,7 @@ type Tab = 'pacientes' | 'camas';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'ingresar') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver" />
+          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
           <h2 class="page-title" style="margin:0">Nuevo Ingreso Hospitalario</h2>
         </div>
 
@@ -224,7 +222,7 @@ type Tab = 'pacientes' | 'camas';
             }
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Cama y médico -->
           <div class="form-section">
@@ -263,7 +261,7 @@ type Tab = 'pacientes' | 'camas';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Notas clínicas -->
           <div class="form-section">
@@ -330,7 +328,6 @@ type Tab = 'pacientes' | 'camas';
       }
     </p-dialog>
 
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -418,7 +415,7 @@ type Tab = 'pacientes' | 'camas';
 })
 export class HospitalizacionComponent implements OnInit {
   private svc = inject(HospitalizacionService);
-  private messageService = inject(MessageService);
+  private messageService = inject(Avisos);
 
   vista = signal<Vista>('lista');
   tab = signal<Tab>('pacientes');

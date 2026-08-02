@@ -4,9 +4,9 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../core/auth.service';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
-import { TooltipModule } from 'primeng/tooltip';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Avisos } from '../shared/ui/avisos.service';
+import { Confirmar } from '../shared/ui/confirmar.service';
 
 /**
  * La cabecera, con las DOS formas de cerrar sesión.
@@ -23,8 +23,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, ButtonModule, AvatarModule, TooltipModule, ConfirmDialogModule],
-  providers: [ConfirmationService],
+  imports: [CommonModule, ButtonModule, AvatarModule, MatTooltipModule],
   template: `
     <div class="header-left">
       <span class="page-breadcrumb">MED-SYS Pro</span>
@@ -48,8 +47,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
           severity="secondary"
           [loading]="cerrandoTodo()"
           (onClick)="confirmarCerrarTodo()"
-          pTooltip="Cerrar sesión en todos los dispositivos"
-          tooltipPosition="bottom"
+          matTooltip="Cerrar sesión en todos los dispositivos"
+          matTooltipPosition="below"
           ariaLabel="Cerrar sesión en todos los dispositivos"
         />
         <p-button
@@ -57,13 +56,12 @@ import { ConfirmationService, MessageService } from 'primeng/api';
           [text]="true"
           severity="secondary"
           (onClick)="logout()"
-          pTooltip="Cerrar sesión"
-          tooltipPosition="bottom"
+          matTooltip="Cerrar sesión"
+          matTooltipPosition="below"
           ariaLabel="Cerrar sesión"
         />
       }
     </div>
-    <p-confirmdialog />
   `,
   styles: [`
     :host {
@@ -81,8 +79,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 export class HeaderComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
-  private confirmationService = inject(ConfirmationService);
-  private messageService = inject(MessageService);
+  private confirmationService = inject(Confirmar);
+  private messageService = inject(Avisos);
 
   readonly user = this.authService.currentUser;
   readonly cerrandoTodo = signal(false);
@@ -113,7 +111,7 @@ export class HeaderComponent {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Cerrar en todos',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => this.cerrarTodo(),
     });
   }

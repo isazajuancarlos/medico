@@ -8,6 +8,13 @@ export interface Aviso {
   severity: Severidad;
   summary: string;
   detail?: string;
+  /**
+   * Milisegundos en pantalla. Se conserva —lo traía `MessageService`— porque hay
+   * sitios que lo fijan a mano (3 000 para un «OK», 6 000 para un «no se pudo»):
+   * alguien eligió esos números y descartarlos sería sustituir un dato por un
+   * defecto. Sin él manda la regla de abajo.
+   */
+  life?: number;
 }
 
 /**
@@ -32,7 +39,7 @@ export class Avisos {
     const grave = aviso.severity === 'error';
     const texto = aviso.detail ? `${aviso.summary}: ${aviso.detail}` : aviso.summary;
     this.barra.open(texto, grave ? 'Cerrar' : '', {
-      duration: grave ? 8000 : 4000,
+      duration: aviso.life ?? (grave ? 8000 : 4000),
       horizontalPosition: 'right',
       verticalPosition: 'top',
       panelClass: ['x-aviso', `x-aviso-${aviso.severity}`],

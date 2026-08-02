@@ -5,14 +5,13 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
+import { MatDividerModule } from '@angular/material/divider';
 import { CheckboxModule } from 'primeng/checkbox';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   FarmaciaService, ItemInventario, ItemInventarioCreate,
   EntradaStock, FormulaPendiente, DispensarCreate,
@@ -25,12 +24,11 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
 @Component({
   selector: 'app-farmacia',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule, CheckboxModule,
+    EtiquetaComponent, SelectModule, MatTooltipModule,
+    DialogModule, MatDividerModule, CheckboxModule,
   ],
   template: `
     <div class="page-card">
@@ -146,7 +144,7 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
                     <span class="tag-controlado">Controlado</span>
                   }
                 </td>
-                <td><p-tag [value]="item.tipo" severity="secondary" /></td>
+                <td><x-etiqueta [value]="item.tipo" severity="secondary" /></td>
                 <td style="text-align:center">
                   <span [class]="item.alerta_stock ? 'stock-bajo' : 'stock-ok'">
                     {{ item.cantidad_actual }} {{ item.unidad_medida }}
@@ -171,12 +169,12 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
                 </td>
                 <td style="text-align:center;white-space:nowrap">
                   <p-button icon="pi pi-arrow-down" [text]="true" size="small"
-                    severity="success" pTooltip="Entrada de stock"
+                    severity="success" matTooltip="Entrada de stock"
                     (onClick)="abrirEntrada(item)" />
                   <p-button icon="pi pi-pencil" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(item)" />
+                    matTooltip="Editar" (onClick)="abrirEditar(item)" />
                   <p-button icon="pi pi-trash" [text]="true" size="small"
-                    severity="danger" pTooltip="Eliminar"
+                    severity="danger" matTooltip="Eliminar"
                     (onClick)="eliminarItem(item)" />
                 </td>
               </tr>
@@ -314,7 +312,7 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
               <tr>
                 <td><strong>{{ m.item_nombre || '—' }}</strong></td>
                 <td style="text-align:center">
-                  <p-tag [value]="m.tipo_movimiento" [severity]="movSeverity(m.tipo_movimiento)" />
+                  <x-etiqueta [value]="m.tipo_movimiento" [severity]="movSeverity(m.tipo_movimiento)" />
                 </td>
                 <td style="text-align:center">
                   <span [class]="m.tipo_movimiento === 'ENTRADA' ? 'cant-entrada' : 'cant-salida'">
@@ -389,22 +387,22 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
                 <td style="font-size:0.82rem;color:#94a3b8">{{ p.suministra || '—' }}</td>
                 <td style="text-align:center"><span class="dur-badge">{{ p.entradas }}</span></td>
                 <td style="text-align:center">
-                  <p-tag [value]="p.activo ? 'Activo' : 'Inactivo'"
+                  <x-etiqueta [value]="p.activo ? 'Activo' : 'Inactivo'"
                     [severity]="p.activo ? 'success' : 'secondary'" />
                 </td>
                 <td style="text-align:right">
                   <p-button icon="pi pi-pencil" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditarProveedor(p)" />
+                    matTooltip="Editar" (onClick)="abrirEditarProveedor(p)" />
                   <!-- Con remesas registradas no se ofrece borrar: se desactiva.
                        Ofrecer el botón para que el servidor conteste 409 es hacer
                        que el usuario descubra la regla chocándose con ella. -->
                   @if (p.entradas === 0) {
                     <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                      pTooltip="Eliminar" (onClick)="eliminarProveedor(p)" />
+                      matTooltip="Eliminar" (onClick)="eliminarProveedor(p)" />
                   } @else {
                     <p-button [icon]="p.activo ? 'pi pi-ban' : 'pi pi-check'" [text]="true" size="small"
                       [severity]="p.activo ? 'warn' : 'success'"
-                      [pTooltip]="p.activo ? 'Desactivar' : 'Reactivar'"
+                      [matTooltip]="p.activo ? 'Desactivar' : 'Reactivar'"
                       (onClick)="alternarProveedor(p)" />
                   }
                 </td>
@@ -659,7 +657,6 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
       </div>
     </p-dialog>
 
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -739,7 +736,7 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
 })
 export class FarmaciaComponent implements OnInit {
   private svc = inject(FarmaciaService);
-  private messageService = inject(MessageService);
+  private messageService = inject(Avisos);
 
   readonly String = String;
 

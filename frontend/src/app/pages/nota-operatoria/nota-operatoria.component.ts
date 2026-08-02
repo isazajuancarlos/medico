@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SelectModule } from 'primeng/select';
-import { DividerModule } from 'primeng/divider';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import { NotaOperatoriaService, NotaOperatoria, NotaOperatoriaCreate } from '../../services/nota-operatoria.service';
 import { ESTADOS_SALIDA, duracion, estadoValido, formatoDuracion, revisar } from './nota-operatoria.dominio';
 
@@ -28,16 +27,13 @@ type Vista = 'lista' | 'form' | 'detalle';
 @Component({
   selector: 'app-nota-operatoria',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, SelectModule,
-    DividerModule, ConfirmDialogModule,
+    EtiquetaComponent, MatTooltipModule, SelectModule,
+    MatDividerModule,
   ],
   template: `
-    <p-toast />
-    <p-confirmDialog />
     <div class="page-card">
 
       <!-- ═══════════════ LISTA ═══════════════ -->
@@ -79,23 +75,23 @@ type Vista = 'lista' | 'form' | 'detalle';
                 <td style="font-size:0.85rem">{{ n.procedimiento_realizado }}</td>
                 <td style="text-align:center;font-size:0.85rem">{{ duracionTexto(n) }}</td>
                 <td style="text-align:center">
-                  <p-tag [value]="n.estado_paciente_salida || '—'"
+                  <x-etiqueta [value]="n.estado_paciente_salida || '—'"
                     [severity]="estadoSeverity(n.estado_paciente_salida)" />
                 </td>
                 <td style="font-size:0.85rem">{{ n.cirujano_nombre || '—' }}</td>
                 <td style="text-align:center">
                   @if (avisosDe(n).length) {
                     <i class="pi pi-exclamation-triangle" style="color:#fbbf24"
-                      [pTooltip]="avisosDe(n).join(' · ')"></i>
+                      [matTooltip]="avisosDe(n).join(' · ')"></i>
                   } @else { <span style="color:#475569">—</span> }
                 </td>
                 <td style="text-align:center">
                   <p-button icon="pi pi-eye" [text]="true" size="small"
-                    pTooltip="Ver detalle" (onClick)="abrirDetalle(n)" />
+                    matTooltip="Ver detalle" (onClick)="abrirDetalle(n)" />
                   <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(n)" />
+                    matTooltip="Editar" (onClick)="abrirEditar(n)" />
                   <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    pTooltip="Eliminar" (onClick)="confirmarEliminar(n)" />
+                    matTooltip="Eliminar" (onClick)="confirmarEliminar(n)" />
                 </td>
               </tr>
             </ng-template>
@@ -140,7 +136,7 @@ type Vista = 'lista' | 'form' | 'detalle';
                 </div>
               }
             </div>
-            <p-divider />
+            <mat-divider />
           } @else {
             <div class="paciente-chip" style="margin-bottom:1rem">
               <i class="pi pi-user" style="color:#818cf8"></i>
@@ -170,7 +166,7 @@ type Vista = 'lista' | 'form' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Procedimiento y diagnósticos -->
           <div class="form-section">
@@ -199,7 +195,7 @@ type Vista = 'lista' | 'form' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Salida -->
           <div class="form-section">
@@ -251,7 +247,7 @@ type Vista = 'lista' | 'form' | 'detalle';
               <p-button icon="pi pi-verified" [text]="true" label="Firmar" (onClick)="firmar(actual()!)" />
               <p-button icon="pi pi-file-edit" [text]="true" label="Editar" (onClick)="abrirEditar(actual()!)" />
             } @else {
-              <p-tag value="Firmada" severity="success" icon="pi pi-lock" />
+              <x-etiqueta value="Firmada" severity="success" icon="pi pi-lock" />
             }
           </div>
         </div>
@@ -348,8 +344,8 @@ Post: {{ actual()!.diagnostico_postoperatorio || '—' }}</div>
 })
 export class NotaOperatoriaComponent implements OnInit {
   private svc = inject(NotaOperatoriaService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -497,7 +493,7 @@ export class NotaOperatoriaComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.delete(n.id).subscribe({
           next: () => { this.lista.update(ns => ns.filter(x => x.id !== n.id)); this.ok('Eliminada'); },

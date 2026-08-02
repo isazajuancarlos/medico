@@ -6,7 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { ZoomDirective } from '../../shared/formulario/zoom.directive';
 
 /**
@@ -49,7 +49,7 @@ interface Resumen {
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
-    TagModule, DialogModule, ZoomDirective,
+    EtiquetaComponent, DialogModule, ZoomDirective,
   ],
   template: `
     <div class="page-card">
@@ -115,11 +115,11 @@ interface Resumen {
             <td appZoom>{{ i.diagnostico }}</td>
             <td>{{ i.fecha_inicio ?? '—' }}</td>
             <td>{{ i.fecha_fin ?? '—' }}</td>
-            <td><p-tag [value]="i.dias" severity="info" /></td>
+            <td><x-etiqueta [value]="i.dias" severity="info" /></td>
             <td>{{ i.medico }}</td>
             <td>
               <p-button icon="pi pi-file" [text]="true" size="small"
-                pTooltip="Certificación" (onClick)="verDetalle(i)" />
+                matTooltip="Certificación" (onClick)="verDetalle(i)" />
             </td>
           </tr>
         </ng-template>

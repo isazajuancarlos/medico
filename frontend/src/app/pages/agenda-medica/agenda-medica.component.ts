@@ -8,9 +8,8 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { Avisos } from '../../shared/ui/avisos.service';
 import { CardModule } from 'primeng/card';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { CitaService } from '../../services/cita.service';
@@ -51,12 +50,10 @@ function aInstante(d: Date | null | undefined): string | null {
   imports: [
     CommonModule, FormsModule,
     TabsModule, TableModule, ButtonModule, DialogModule,
-    InputTextModule, SelectModule, DatePickerModule, TagModule,
-    ToastModule, CardModule, ToggleSwitchModule,
+    InputTextModule, SelectModule, DatePickerModule, EtiquetaComponent,
+    CardModule, ToggleSwitchModule,
   ],
-  providers: [MessageService],
   template: `
-<p-toast />
 <div class="page-card">
   <h2 class="page-title">Agenda Médica</h2>
   <p style="font-size:.8rem;color:#64748b;margin-top:-.5rem;margin-bottom:1rem">
@@ -129,10 +126,10 @@ function aInstante(d: Date | null | undefined): string | null {
                 </div>
               </td>
               <td>
-                <p-tag [value]="a.activa ? 'Activa' : 'Inactiva'" [severity]="a.activa ? 'success' : 'secondary'" />
+                <x-etiqueta [value]="a.activa ? 'Activa' : 'Inactiva'" [severity]="a.activa ? 'success' : 'secondary'" />
               </td>
               <td style="display:flex;gap:.25rem">
-                <p-button icon="pi pi-pencil" size="small" [text]="true" (onClick)="editAgenda(a)" pTooltip="Editar bloques" />
+                <p-button icon="pi pi-pencil" size="small" [text]="true" (onClick)="editAgenda(a)" matTooltip="Editar bloques" />
                 <p-button icon="pi pi-trash" size="small" severity="danger" [text]="true" (onClick)="deleteAgenda(a.id)" />
               </td>
             </tr>
@@ -161,7 +158,7 @@ function aInstante(d: Date | null | undefined): string | null {
           <ng-template pTemplate="body" let-b>
             <tr>
               <td>{{ b.medico_nombre }}</td>
-              <td><p-tag [value]="tipoEnPantalla(b.tipo)" severity="warn" /></td>
+              <td><x-etiqueta [value]="tipoEnPantalla(b.tipo)" severity="warn" /></td>
               <td>{{ b.inicio }}</td>
               <td>{{ b.fin }}</td>
               <td>{{ b.motivo }}</td>
@@ -448,7 +445,7 @@ function aInstante(d: Date | null | undefined): string | null {
 })
 export class AgendaMedicaComponent implements OnInit {
   private svc = inject(CitaService);
-  private msg = inject(MessageService);
+  private msg = inject(Avisos);
 
   activeTab = 'agendas';
   medicos = signal<MedicoDisponible[]>([]);

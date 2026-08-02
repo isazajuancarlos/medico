@@ -6,7 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MessageModule } from 'primeng/message';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { ZoomDirective } from '../../shared/formulario/zoom.directive';
 
 /**
@@ -33,7 +33,7 @@ interface Contrarreferencia {
 @Component({
   selector: 'app-contrarreferencia',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TagModule,
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, EtiquetaComponent,
             MessageModule, CheckboxModule, ZoomDirective],
   template: `
     <div class="page-card">
@@ -64,18 +64,18 @@ interface Contrarreferencia {
             <td appZoom>{{ c.diagnostico_final }}</td>
             <td>
               @if (c.requiere_seguimiento) {
-                <p-tag [value]="c.fecha_control_sugerida || 'Sí'" severity="warn" />
+                <x-etiqueta [value]="c.fecha_control_sugerida || 'Sí'" severity="warn" />
               } @else { <span class="tenue">—</span> }
             </td>
             <td>
               @if (c.recibida) {
-                <p-tag [value]="(c.fecha_recepcion | date: 'yyyy-MM-dd') ?? 'Recibida'" severity="success" />
-              } @else { <p-tag value="Pendiente" severity="warn" /> }
+                <x-etiqueta [value]="(c.fecha_recepcion | date: 'yyyy-MM-dd') ?? 'Recibida'" severity="success" />
+              } @else { <x-etiqueta value="Pendiente" severity="warn" /> }
             </td>
             <td>
               @if (!c.recibida) {
                 <p-button icon="pi pi-check" [text]="true" size="small"
-                  pTooltip="Acusar recibo" (onClick)="recibir(c)" />
+                  matTooltip="Acusar recibo" (onClick)="recibir(c)" />
               }
             </td>
           </tr>

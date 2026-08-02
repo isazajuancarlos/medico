@@ -6,7 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { MessageModule } from 'primeng/message';
 import { ZoomDirective } from '../../shared/formulario/zoom.directive';
 
@@ -47,7 +47,7 @@ interface Resumen {
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
-    SelectModule, TagModule, MessageModule, ZoomDirective,
+    SelectModule, EtiquetaComponent, MessageModule, ZoomDirective,
   ],
   template: `
     <div class="page-card">
@@ -106,7 +106,7 @@ interface Resumen {
             <td appZoom>{{ r.identificacion }}</td>
             <td appZoom>{{ r.especialidad_destino || r.descripcion }}</td>
             <td appZoom>{{ r.justificacion }}</td>
-            <td><p-tag [value]="r.estado" [severity]="colorDe(r.estado)" /></td>
+            <td><x-etiqueta [value]="r.estado" [severity]="colorDe(r.estado)" /></td>
             <td>
               @if (r.estados_posibles.length) {
                 <p-select [options]="r.estados_posibles" placeholder="—"

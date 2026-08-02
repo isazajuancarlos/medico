@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   AccionCrud,
   EstadoBarra,
@@ -25,47 +25,47 @@ import {
 @Component({
   selector: 'app-barra-crud',
   standalone: true,
-  imports: [CommonModule, ButtonModule, TooltipModule],
+  imports: [CommonModule, ButtonModule, MatTooltipModule],
   template: `
     <div class="barra-crud">
       <p-button
         icon="pi pi-plus" severity="secondary" size="small"
         [disabled]="!barra().nuevo" (onClick)="ejecutar('nuevo')"
-        pTooltip="Nuevo" tooltipPosition="bottom" />
+        matTooltip="Nuevo" matTooltipPosition="below" />
       <p-button
         icon="pi pi-pencil" severity="secondary" size="small"
         [disabled]="!barra().editar" (onClick)="ejecutar('editar')"
-        pTooltip="Editar" tooltipPosition="bottom" />
+        matTooltip="Editar" matTooltipPosition="below" />
       <p-button
         icon="pi pi-trash" severity="danger" size="small"
         [disabled]="!barra().eliminar" (onClick)="ejecutar('eliminar')"
-        pTooltip="Eliminar" tooltipPosition="bottom" />
+        matTooltip="Eliminar" matTooltipPosition="below" />
 
       <span class="separador"></span>
 
       <p-button
         icon="pi pi-check" severity="success" size="small"
         [disabled]="!barra().guardar" (onClick)="ejecutar('guardar')"
-        pTooltip="Guardar (Ctrl+Enter)" tooltipPosition="bottom" />
+        matTooltip="Guardar (Ctrl+Enter)" matTooltipPosition="below" />
       <p-button
         icon="pi pi-undo" severity="secondary" size="small"
         [disabled]="!barra().deshacer" (onClick)="ejecutar('deshacer')"
-        pTooltip="Deshacer (Esc)" tooltipPosition="bottom" />
+        matTooltip="Deshacer (Esc)" matTooltipPosition="below" />
 
       @if (mostrarNavegacion) {
         <span class="separador"></span>
         <p-button icon="pi pi-angle-double-left" severity="secondary" size="small"
           [disabled]="!barra().navegar" (onClick)="navegar.emit('primero')"
-          pTooltip="Primero" tooltipPosition="bottom" />
+          matTooltip="Primero" matTooltipPosition="below" />
         <p-button icon="pi pi-angle-left" severity="secondary" size="small"
           [disabled]="!barra().navegar" (onClick)="navegar.emit('anterior')"
-          pTooltip="Anterior" tooltipPosition="bottom" />
+          matTooltip="Anterior" matTooltipPosition="below" />
         <p-button icon="pi pi-angle-right" severity="secondary" size="small"
           [disabled]="!barra().navegar" (onClick)="navegar.emit('siguiente')"
-          pTooltip="Siguiente" tooltipPosition="bottom" />
+          matTooltip="Siguiente" matTooltipPosition="below" />
         <p-button icon="pi pi-angle-double-right" severity="secondary" size="small"
           [disabled]="!barra().navegar" (onClick)="navegar.emit('ultimo')"
-          pTooltip="Último" tooltipPosition="bottom" />
+          matTooltip="Último" matTooltipPosition="below" />
       }
 
       @if (modo !== 'consulta') {

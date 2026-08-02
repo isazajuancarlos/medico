@@ -5,14 +5,13 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
+import { MatDividerModule } from '@angular/material/divider';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   AdminService, Institucion, ConfiguracionInstitucion, PoliticaSeguridad,
   UsuarioAdmin, ConfigCampo, AuditoriaItem, Especialidad, EntidadEPS,
@@ -75,15 +74,13 @@ const DIAS_SEMANA = [
 @Component({
   selector: 'app-admin',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule, DialogModule,
-    DividerModule, ToggleSwitchModule,
+    EtiquetaComponent, SelectModule, MatTooltipModule, DialogModule,
+    MatDividerModule, ToggleSwitchModule,
   ],
   template: `
-    <p-toast />
     <div class="page-card">
 
       <div class="list-header">
@@ -132,7 +129,7 @@ const DIAS_SEMANA = [
                   placeholder="Seleccionar" />
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Ubicación y Contacto</h3>
             <div class="form-grid">
               <div class="field-group" style="grid-column:span 2">
@@ -156,7 +153,7 @@ const DIAS_SEMANA = [
                 <input pInputText type="email" [(ngModel)]="institucion()!.email" />
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Representante Legal</h3>
             <div class="form-grid">
               <div class="field-group">
@@ -168,7 +165,7 @@ const DIAS_SEMANA = [
                 <input pInputText [(ngModel)]="institucion()!.identificacion_representante" />
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Branding</h3>
             <div class="form-grid">
               <div class="field-group">
@@ -234,7 +231,7 @@ const DIAS_SEMANA = [
                 <input pInputText type="number" [(ngModel)]="config()!.dias_maximos_agendamiento" min="1" />
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Facturación</h3>
             <div class="form-grid">
               <div class="field-group">
@@ -254,7 +251,7 @@ const DIAS_SEMANA = [
                 <input pInputText type="number" [(ngModel)]="config()!.rango_hasta" />
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Opciones del Sistema</h3>
             <div class="toggle-grid">
               <div class="toggle-item">
@@ -331,26 +328,26 @@ const DIAS_SEMANA = [
               <td>
                 {{ u.nombre_completo }}
                 @if (u.cuenta_bloqueada) {
-                  <p-tag value="Bloqueado" severity="danger" style="margin-left:.5rem" />
+                  <x-etiqueta value="Bloqueado" severity="danger" style="margin-left:.5rem" />
                 }
                 @if (u.requiere_cambio_password) {
-                  <p-tag value="Cambiar clave" severity="warn" style="margin-left:.25rem" />
+                  <x-etiqueta value="Cambiar clave" severity="warn" style="margin-left:.25rem" />
                 }
               </td>
               <td><code style="font-size:.82rem">{{ u.username }}</code></td>
               <td style="font-size:.85rem">{{ rolLabel(u.rol) }}</td>
               <td style="font-size:.82rem;color:#64748b">{{ u.especialidad_nombre || '—' }}</td>
               <td style="text-align:center">
-                <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'secondary'" />
+                <x-etiqueta [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'secondary'" />
               </td>
               <td>
                 <div style="display:flex;gap:.25rem;justify-content:flex-end">
-                  <p-button icon="pi pi-pencil" [text]="true" size="small" pTooltip="Editar" (onClick)="abrirFormUsuario(u)" />
+                  <p-button icon="pi pi-pencil" [text]="true" size="small" matTooltip="Editar" (onClick)="abrirFormUsuario(u)" />
                   @if (u.cuenta_bloqueada) {
-                    <p-button icon="pi pi-unlock" [text]="true" size="small" severity="warn" pTooltip="Desbloquear" (onClick)="desbloquear(u)" />
+                    <p-button icon="pi pi-unlock" [text]="true" size="small" severity="warn" matTooltip="Desbloquear" (onClick)="desbloquear(u)" />
                   }
-                  <p-button icon="pi pi-key" [text]="true" size="small" pTooltip="Reset contraseña" (onClick)="abrirResetPassword(u)" />
-                  <p-button icon="pi pi-ban" [text]="true" size="small" severity="danger" pTooltip="Desactivar" (onClick)="desactivarUsuario(u)" />
+                  <p-button icon="pi pi-key" [text]="true" size="small" matTooltip="Reset contraseña" (onClick)="abrirResetPassword(u)" />
+                  <p-button icon="pi pi-ban" [text]="true" size="small" severity="danger" matTooltip="Desactivar" (onClick)="desactivarUsuario(u)" />
                 </div>
               </td>
             </tr>
@@ -398,7 +395,7 @@ const DIAS_SEMANA = [
                 <span>Requiere carácter especial</span>
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Sesiones</h3>
             <div class="form-grid">
               <div class="field-group">
@@ -416,7 +413,7 @@ const DIAS_SEMANA = [
                 <span>Cerrar otras sesiones al iniciar</span>
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Intentos de Login y Bloqueo</h3>
             <div class="form-grid">
               <div class="field-group">
@@ -428,7 +425,7 @@ const DIAS_SEMANA = [
                 <input pInputText type="number" [(ngModel)]="politica()!.tiempo_bloqueo_minutos" min="1" />
               </div>
             </div>
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Autenticación de Dos Factores (2FA)</h3>
             <div class="toggle-grid">
               <div class="toggle-item">
@@ -450,7 +447,7 @@ const DIAS_SEMANA = [
                 </div>
               </div>
             }
-            <p-divider />
+            <mat-divider />
             <h3 class="section-title">Auditoría y Notificaciones</h3>
             <div class="form-grid">
               <div class="field-group">
@@ -506,7 +503,7 @@ const DIAS_SEMANA = [
             <tr [class.row-inactivo]="!c.activo">
               <td style="text-align:center;color:#94a3b8">{{ c.orden }}</td>
               <td><strong>{{ c.etiqueta }}</strong></td>
-              <td><p-tag [value]="c.tipo" severity="info" /></td>
+              <td><x-etiqueta [value]="c.tipo" severity="info" /></td>
               <td style="font-size:.82rem;color:#64748b">{{ c.opciones || '—' }}</td>
               <td style="text-align:center">
                 <p-toggleswitch [ngModel]="c.activo" (ngModelChange)="toggleCampo(c, $event)" />
@@ -557,7 +554,7 @@ const DIAS_SEMANA = [
               <td style="text-align:center;font-size:.82rem">{{ a.registro_id }}</td>
               <td style="font-size:.78rem;color:#94a3b8">{{ a.ip_address || '—' }}</td>
               <td style="text-align:center">
-                <p-tag [value]="a.exitoso ? 'OK' : 'Err'" [severity]="a.exitoso ? 'success' : 'danger'" />
+                <x-etiqueta [value]="a.exitoso ? 'OK' : 'Err'" [severity]="a.exitoso ? 'success' : 'danger'" />
               </td>
             </tr>
           </ng-template>
@@ -680,7 +677,7 @@ const DIAS_SEMANA = [
                       <th class="cap">
                         {{ etiquetaCapacidad(f.capacidad) }}
                         @if (!f.configurable) {
-                          <i class="pi pi-lock" pTooltip="Se gobierna por encima de la institución"></i>
+                          <i class="pi pi-lock" matTooltip="Se gobierna por encima de la institución"></i>
                         }
                       </th>
                       @for (c of f.roles; track c.rol) {
@@ -688,7 +685,7 @@ const DIAS_SEMANA = [
                           class="celda"
                           [class.apartada]="c.apartado"
                           [class.bloqueada]="!c.configurable"
-                          [pTooltip]="explicar(f, c)">
+                          [matTooltip]="explicar(f, c)">
                           <input
                             type="checkbox"
                             [checked]="c.permitido"
@@ -921,7 +918,7 @@ const DIAS_SEMANA = [
 })
 export class AdminComponent implements OnInit {
   private svc = inject(AdminService);
-  private msg = inject(MessageService);
+  private msg = inject(Avisos);
 
   tab = signal<Tab>('institucion');
   catTab = signal<CatTab>('especialidades');

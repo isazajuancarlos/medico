@@ -2,13 +2,12 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { TableModule } from 'primeng/table';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SelectModule } from 'primeng/select';
 import { ChartModule } from 'primeng/chart';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   EstadisticasService, Resumen, EstadisticasCitas, EstadisticasPacientes,
   EstadisticasDiagnosticos, EstadisticasProduccion, EstadisticasFinanciero,
@@ -29,14 +28,12 @@ const TRIAGE_COLORS: Record<string, string> = {
 @Component({
   selector: 'app-estadisticas',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, TagModule, TableModule, ToastModule, TooltipModule, SelectModule,
+    ButtonModule, EtiquetaComponent, TableModule, MatTooltipModule, SelectModule,
     ChartModule,
   ],
   template: `
-    <p-toast />
     <div class="page-card">
 
       <div class="list-header">
@@ -286,7 +283,7 @@ const TRIAGE_COLORS: Record<string, string> = {
                 </ng-template>
                 <ng-template #body let-g>
                   <tr>
-                    <td><p-tag [value]="g.estado" [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'ACEPTADA' ? 'danger' : 'success'" /></td>
+                    <td><x-etiqueta [value]="g.estado" [severity]="g.estado === 'PENDIENTE' ? 'warn' : g.estado === 'ACEPTADA' ? 'danger' : 'success'" /></td>
                     <td style="text-align:right">{{ g.cantidad }}</td>
                     <td style="text-align:right;font-weight:600">{{ g.valor | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                   </tr>
@@ -301,7 +298,7 @@ const TRIAGE_COLORS: Record<string, string> = {
                 </ng-template>
                 <ng-template #body let-e>
                   <tr>
-                    <td><p-tag [value]="e.estado" [severity]="estadoSev(e.estado)" /></td>
+                    <td><x-etiqueta [value]="e.estado" [severity]="estadoSev(e.estado)" /></td>
                     <td style="text-align:right">{{ e.cantidad }}</td>
                     <td style="text-align:right;font-weight:600">{{ e.valor | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                   </tr>

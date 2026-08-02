@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SelectModule } from 'primeng/select';
-import { DividerModule } from 'primeng/divider';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import { EpicrisisService, Epicrisis, EpicrisisCreate } from '../../services/epicrisis.service';
 
 type Vista = 'lista' | 'form' | 'detalle';
@@ -19,12 +18,11 @@ type Vista = 'lista' | 'form' | 'detalle';
 @Component({
   selector: 'app-epicrisis',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, SelectModule,
-    DividerModule, ConfirmDialogModule,
+    EtiquetaComponent, MatTooltipModule, SelectModule,
+    MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -74,7 +72,7 @@ type Vista = 'lista' | 'form' | 'detalle';
                   <span class="dias-badge">{{ e.dias_estancia }}</span>
                 </td>
                 <td style="text-align:center">
-                  <p-tag [value]="e.pronostico" [severity]="pronosticoSeverity(e.pronostico)" />
+                  <x-etiqueta [value]="e.pronostico" [severity]="pronosticoSeverity(e.pronostico)" />
                 </td>
                 <td style="text-align:center;font-size:0.85rem">
                   @if (e.incapacidad_dias > 0) {
@@ -85,11 +83,11 @@ type Vista = 'lista' | 'form' | 'detalle';
                 </td>
                 <td style="text-align:center">
                   <p-button icon="pi pi-eye" [text]="true" size="small"
-                    pTooltip="Ver detalle" (onClick)="abrirDetalle(e)" />
+                    matTooltip="Ver detalle" (onClick)="abrirDetalle(e)" />
                   <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(e)" />
+                    matTooltip="Editar" (onClick)="abrirEditar(e)" />
                   <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    pTooltip="Eliminar" (onClick)="confirmarEliminar(e)" />
+                    matTooltip="Eliminar" (onClick)="confirmarEliminar(e)" />
                 </td>
               </tr>
             </ng-template>
@@ -140,7 +138,7 @@ type Vista = 'lista' | 'form' | 'detalle';
                 </div>
               }
             </div>
-            <p-divider />
+            <mat-divider />
           } @else {
             <div class="paciente-chip" style="margin-bottom:1rem">
               <i class="pi pi-user" style="color:#818cf8"></i>
@@ -171,7 +169,7 @@ type Vista = 'lista' | 'form' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Diagnósticos -->
           <div class="form-section">
@@ -195,7 +193,7 @@ type Vista = 'lista' | 'form' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Resumen clínico -->
           <div class="form-section">
@@ -219,7 +217,7 @@ type Vista = 'lista' | 'form' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Plan de egreso -->
           <div class="form-section">
@@ -302,7 +300,7 @@ type Vista = 'lista' | 'form' | 'detalle';
           <div class="info-block sep">
             <div class="info-label">Pronóstico</div>
             <div style="margin-top:0.25rem">
-              <p-tag [value]="actual()!.pronostico" [severity]="pronosticoSeverity(actual()!.pronostico)" />
+              <x-etiqueta [value]="actual()!.pronostico" [severity]="pronosticoSeverity(actual()!.pronostico)" />
             </div>
             @if (actual()!.incapacidad_dias > 0) {
               <div class="info-row" style="margin-top:0.3rem;color:#fbbf24">
@@ -348,7 +346,7 @@ type Vista = 'lista' | 'form' | 'detalle';
           }
         </div>
 
-        <p-divider />
+        <mat-divider />
 
         <div class="detalle-grid">
           <div class="detalle-bloque">
@@ -371,8 +369,6 @@ type Vista = 'lista' | 'form' | 'detalle';
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -443,8 +439,8 @@ type Vista = 'lista' | 'form' | 'detalle';
 })
 export class EpicrisisComponent implements OnInit {
   private svc = inject(EpicrisisService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -572,7 +568,7 @@ export class EpicrisisComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.delete(e.id).subscribe({
           next: () => { this.lista.update(es => es.filter(x => x.id !== e.id)); this.ok('Eliminado'); },

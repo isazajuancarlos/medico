@@ -8,7 +8,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { TextareaModule } from 'primeng/textarea';
 import { ZoomDirective } from '../../shared/formulario/zoom.directive';
 
@@ -44,7 +44,7 @@ interface Consentimiento {
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
-    TagModule, DialogModule, MessageModule, CheckboxModule, TextareaModule,
+    EtiquetaComponent, DialogModule, MessageModule, CheckboxModule, TextareaModule,
     ZoomDirective,
   ],
   template: `
@@ -75,20 +75,20 @@ interface Consentimiento {
             <td appZoom>{{ c.tipo_procedimiento }}</td>
             <td>
               @if (c.revocado) {
-                <p-tag value="Revocado" severity="danger" />
+                <x-etiqueta value="Revocado" severity="danger" />
               } @else if (c.valido) {
-                <p-tag value="Completo" severity="success" />
+                <x-etiqueta value="Completo" severity="success" />
               } @else {
-                <p-tag value="Incompleto" severity="warn" />
+                <x-etiqueta value="Incompleto" severity="warn" />
               }
             </td>
             <td>{{ c.medico }}</td>
             <td class="acciones">
               <p-button icon="pi pi-eye" [text]="true" size="small"
-                pTooltip="Ver" (onClick)="ver(c)" />
+                matTooltip="Ver" (onClick)="ver(c)" />
               @if (!c.revocado) {
                 <p-button icon="pi pi-ban" [text]="true" size="small" severity="danger"
-                  pTooltip="Registrar revocación" (onClick)="pedirRevocacion(c)" />
+                  matTooltip="Registrar revocación" (onClick)="pedirRevocacion(c)" />
               }
             </td>
           </tr>

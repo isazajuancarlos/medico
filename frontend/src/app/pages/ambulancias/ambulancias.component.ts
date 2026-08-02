@@ -5,12 +5,11 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { MessageService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   AmbulanciasService, Ambulancia, AmbulanciaCreate, Traslado, TrasladoCreate,
 } from '../../services/ambulancias.service';
@@ -35,10 +34,9 @@ type Tab = 'parque' | 'traslados';
 @Component({
   selector: 'app-ambulancias',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule, ButtonModule, InputTextModule, TextareaModule,
-    TableModule, TagModule, ToastModule, SelectModule, TooltipModule, DialogModule,
+    TableModule, EtiquetaComponent, SelectModule, MatTooltipModule, DialogModule,
   ],
   template: `
     <div class="page-card">
@@ -134,14 +132,14 @@ type Tab = 'parque' | 'traslados';
                   }
                 </td>
                 <td style="text-align:center">
-                  <p-tag [value]="a.tipo" [severity]="a.tipo === 'TAM' ? 'warn' : 'info'"
-                    [pTooltip]="a.tipo === 'TAM' ? 'Transporte asistencial medicalizado' : 'Transporte asistencial básico'" />
+                  <x-etiqueta [value]="a.tipo" [severity]="a.tipo === 'TAM' ? 'warn' : 'info'"
+                    [matTooltip]="a.tipo === 'TAM' ? 'Transporte asistencial medicalizado' : 'Transporte asistencial básico'" />
                 </td>
                 <td style="font-size:0.82rem;color:#94a3b8">
                   {{ a.marca || '—' }} {{ a.modelo || '' }}
                 </td>
                 <td style="text-align:center">
-                  <p-tag [value]="a.activa ? a.estado : 'Dada de baja'"
+                  <x-etiqueta [value]="a.activa ? a.estado : 'Dada de baja'"
                     [severity]="colorEstado(a)" />
                   @if (a.traslado_en_curso) {
                     <div style="font-size:0.7rem;color:#64748b">traslado #{{ a.traslado_en_curso }}</div>
@@ -160,11 +158,11 @@ type Tab = 'parque' | 'traslados';
                 </td>
                 <td style="text-align:right">
                   <p-button icon="pi pi-pencil" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(a)" />
+                    matTooltip="Editar" (onClick)="abrirEditar(a)" />
                   @if (!a.traslado_en_curso) {
                     <p-button [icon]="a.activa ? 'pi pi-ban' : 'pi pi-check'" [text]="true" size="small"
                       [severity]="a.activa ? 'warn' : 'success'"
-                      [pTooltip]="a.activa ? 'Dar de baja' : 'Reactivar'"
+                      [matTooltip]="a.activa ? 'Dar de baja' : 'Reactivar'"
                       (onClick)="alternarBaja(a)" />
                   }
                 </td>
@@ -206,14 +204,14 @@ type Tab = 'parque' | 'traslados';
                   <div style="font-size:0.72rem;color:#64748b">{{ t.ambulancia_tipo }}</div>
                 </td>
                 <td style="text-align:center">
-                  <p-tag [value]="t.tipo_traslado" severity="secondary" />
+                  <x-etiqueta [value]="t.tipo_traslado" severity="secondary" />
                 </td>
                 <td style="font-size:0.82rem">
                   {{ t.origen }} <i class="pi pi-arrow-right" style="font-size:0.7rem;opacity:0.5"></i> {{ t.destino }}
                   <div style="font-size:0.72rem;color:#64748b">{{ t.motivo }}</div>
                 </td>
                 <td style="text-align:center">
-                  <p-tag [value]="t.estado" [severity]="colorTraslado(t.estado)" />
+                  <x-etiqueta [value]="t.estado" [severity]="colorTraslado(t.estado)" />
                 </td>
                 <td style="font-size:0.78rem">
                   {{ t.fecha_salida | date:'dd/MM HH:mm' }}
@@ -226,9 +224,9 @@ type Tab = 'parque' | 'traslados';
                 <td style="text-align:right">
                   @if (t.estado === 'En Curso') {
                     <p-button icon="pi pi-check" [text]="true" size="small" severity="success"
-                      pTooltip="Finalizar" (onClick)="finalizar(t)" />
+                      matTooltip="Finalizar" (onClick)="finalizar(t)" />
                     <p-button icon="pi pi-times" [text]="true" size="small" severity="danger"
-                      pTooltip="Cancelar" (onClick)="cancelar(t)" />
+                      matTooltip="Cancelar" (onClick)="cancelar(t)" />
                   }
                 </td>
               </tr>
@@ -337,7 +335,6 @@ type Tab = 'parque' | 'traslados';
       </div>
     </p-dialog>
 
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -380,7 +377,7 @@ type Tab = 'parque' | 'traslados';
 export class AmbulanciasComponent implements OnInit {
   private svc = inject(AmbulanciasService);
   private pacientes = inject(PacienteService);
-  private toast = inject(MessageService);
+  private toast = inject(Avisos);
 
   tab = signal<Tab>('parque');
   ambulancias = signal<Ambulancia[]>([]);

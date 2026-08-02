@@ -9,22 +9,21 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { CheckboxModule } from 'primeng/checkbox';
 import { StepperModule } from 'primeng/stepper';
 import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { MatDividerModule } from '@angular/material/divider';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { PanelModule } from 'primeng/panel';
 import { TableModule } from 'primeng/table';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { TabsModule } from 'primeng/tabs';
 import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { HistoriaService, Historia, PacienteInfo, MedicoInfo, Formula, FormulaCreate, MedicamentoInfo, Orden, OrdenCreate, ImagenDiagnostica, EspecialidadInfo,
          UnidadDispensacion, Finalidad, CausaMotivo } from '../../services/historia.service';
 import { PacienteService } from '../../services/paciente.service';
 import { Patient } from '../../models/patient.models';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import { Subject, Observable } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -93,14 +92,13 @@ function defaultAntPrenatales(): AntPrenatales {
 @Component({
   selector: 'app-historias',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, InputNumberModule,
-    CheckboxModule, StepperModule, CardModule, DividerModule, TagModule,
-    ToastModule, PanelModule, TableModule, ConfirmDialogModule,
+    CheckboxModule, StepperModule, CardModule, MatDividerModule, EtiquetaComponent,
+    PanelModule, TableModule,
     InputGroupModule, InputGroupAddonModule, TabsModule,
-    SelectModule, TooltipModule,
+    SelectModule, MatTooltipModule,
   ],
   template: `
     <div class="page-card">
@@ -213,18 +211,18 @@ function defaultAntPrenatales(): AntPrenatales {
                 <td>{{ h.medico?.nombre_completo }}</td>
                 <td style="text-align:center">
                   @if (h.firmada) {
-                    <p-tag value="Firmada" severity="success" icon="pi pi-lock" />
+                    <x-etiqueta value="Firmada" severity="success" icon="pi pi-lock" />
                   } @else {
-                    <p-tag value="Borrador" severity="warn" icon="pi pi-pencil" />
+                    <x-etiqueta value="Borrador" severity="warn" icon="pi pi-pencil" />
                   }
                 </td>
                 <td style="text-align:center">
                   <div style="display:flex;gap:0.4rem;justify-content:center">
                     <p-button icon="pi pi-eye" [text]="true" size="small"
-                      pTooltip="Ver / Editar" (onClick)="editarHistoria(h)" />
+                      matTooltip="Ver / Editar" (onClick)="editarHistoria(h)" />
                     @if (!h.firmada) {
                       <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                        pTooltip="Eliminar" (onClick)="confirmarEliminar(h)" />
+                        matTooltip="Eliminar" (onClick)="confirmarEliminar(h)" />
                     }
                   </div>
                 </td>
@@ -287,7 +285,7 @@ function defaultAntPrenatales(): AntPrenatales {
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
           <div style="display:flex;align-items:center;gap:0.75rem">
-            <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver a la lista" />
+            <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver a la lista" />
             <h2 class="page-title" style="margin-bottom:0">
               {{ historia()?.id ? 'Editar Historia' : 'Nueva Historia' }}
             </h2>
@@ -341,7 +339,7 @@ function defaultAntPrenatales(): AntPrenatales {
                     <div class="chk"><p-checkbox [(ngModel)]="antPers.tbc" [binary]="true" inputId="fp_tbc" /><label for="fp_tbc">TBC</label></div>
                     <div class="chk"><p-checkbox [(ngModel)]="antPers.asma" [binary]="true" inputId="fp_asm" /><label for="fp_asm">Asma</label></div>
                   </div>
-                  <p-divider />
+                  <mat-divider />
                   <div class="cond-row">
                     <div class="chk"><p-checkbox [(ngModel)]="antPers.cancer_activo" [binary]="true" inputId="fp_can" /><label for="fp_can">Cáncer</label></div>
                     @if (antPers.cancer_activo) {
@@ -360,7 +358,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       <input pInputText [(ngModel)]="antPers.its_desc" class="cond-input" placeholder="Descripción..." />
                     }
                   </div>
-                  <p-divider />
+                  <mat-divider />
                   <div class="form-grid">
                     <div class="field">
                       <label>Otros antecedentes</label>
@@ -411,7 +409,7 @@ function defaultAntPrenatales(): AntPrenatales {
                           placeholder="Semanas" class="cond-input" />
                       }
                     </div>
-                    <p-divider />
+                    <mat-divider />
                     <div class="obstetrico-grid">
                       <div class="field"><label>G (Gestas)</label><p-inputNumber [(ngModel)]="antGineco.gestas" [min]="0" class="w-full" /></div>
                       <div class="field"><label>P (Partos)</label><p-inputNumber [(ngModel)]="antGineco.partos" [min]="0" class="w-full" /></div>
@@ -536,7 +534,7 @@ function defaultAntPrenatales(): AntPrenatales {
                           <div class="calc-value">
                             @if (form.imc) {
                               {{ form.imc | number:'1.1-1' }}
-                              <p-tag [value]="imcLabel()" [severity]="imcSeverity()" style="margin-left:0.5rem" />
+                              <x-etiqueta [value]="imcLabel()" [severity]="imcSeverity()" style="margin-left:0.5rem" />
                             } @else { — }
                           </div>
                         </div>
@@ -789,18 +787,18 @@ function defaultAntPrenatales(): AntPrenatales {
                           <td class="col-truncate">{{ f.observaciones }}</td>
                           <td style="text-align:center">
                             @if (f.dispensada) {
-                              <p-tag value="Dispensada" severity="success" icon="pi pi-check" />
+                              <x-etiqueta value="Dispensada" severity="success" icon="pi pi-check" />
                             } @else {
-                              <p-tag value="Pendiente" severity="warn" icon="pi pi-clock" />
+                              <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
                             }
                           </td>
                           <td style="text-align:center">
                             @if (!f.dispensada && !historia()?.firmada) {
                               <div style="display:flex;gap:0.4rem;justify-content:center">
                                 <p-button icon="pi pi-pencil" [text]="true" size="small"
-                                  pTooltip="Editar" (onClick)="editarFormula(f)" />
+                                  matTooltip="Editar" (onClick)="editarFormula(f)" />
                                 <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                                  pTooltip="Eliminar" (onClick)="confirmarEliminarFormula(f)" />
+                                  matTooltip="Eliminar" (onClick)="confirmarEliminarFormula(f)" />
                               </div>
                             }
                           </td>
@@ -907,7 +905,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       </ng-template>
                       <ng-template pTemplate="body" let-o>
                         <tr>
-                          <td><p-tag [value]="o.tipo" [severity]="ordenSeverity(o.tipo)" /></td>
+                          <td><x-etiqueta [value]="o.tipo" [severity]="ordenSeverity(o.tipo)" /></td>
                           <td><strong>{{ o.descripcion }}</strong></td>
                           <td class="col-truncate">
                             @if (o.especialidad_nombre) { {{ o.especialidad_nombre }} }
@@ -916,12 +914,12 @@ function defaultAntPrenatales(): AntPrenatales {
                           </td>
                           <td class="col-truncate">{{ o.justificacion }}</td>
                           <td style="text-align:center">
-                            <p-tag [value]="o.estado" [severity]="estadoOrdenSeverity(o.estado)" />
+                            <x-etiqueta [value]="o.estado" [severity]="estadoOrdenSeverity(o.estado)" />
                           </td>
                           <td style="text-align:center">
                             @if (!historia()?.firmada) {
                               <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                                pTooltip="Eliminar" (onClick)="confirmarEliminarOrden(o)" />
+                                matTooltip="Eliminar" (onClick)="confirmarEliminarOrden(o)" />
                             }
                           </td>
                         </tr>
@@ -1005,7 +1003,7 @@ function defaultAntPrenatales(): AntPrenatales {
                           <td style="text-align:center">
                             @if (!historia()?.firmada) {
                               <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                                pTooltip="Eliminar" (onClick)="confirmarEliminarImagen(img)" />
+                                matTooltip="Eliminar" (onClick)="confirmarEliminarImagen(img)" />
                             }
                           </td>
                         </tr>
@@ -1036,8 +1034,6 @@ function defaultAntPrenatales(): AntPrenatales {
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     /* ── Búsqueda ── */
@@ -1173,8 +1169,8 @@ export class HistoriasComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private svc = inject(HistoriaService);
   private pacienteSvc = inject(PacienteService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   // ── Estado de vistas ──
   vista = signal<Vista>('busqueda');
@@ -1434,7 +1430,7 @@ export class HistoriasComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => this._eliminarHistoria(h),
     });
   }
@@ -1769,7 +1765,7 @@ export class HistoriasComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.deleteFormula(this.historia()!.id, f.id).subscribe({
           next: () => {
@@ -1840,7 +1836,7 @@ export class HistoriasComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.deleteOrden(this.historia()!.id, o.id).subscribe({
           next: () => {
@@ -1919,7 +1915,7 @@ export class HistoriasComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.deleteImagen(img.id).subscribe({
           next: () => {

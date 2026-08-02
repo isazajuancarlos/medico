@@ -18,7 +18,12 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'x-etiqueta',
   standalone: true,
-  template: `<span class="x-etiqueta" [class]="'tono-' + severity">{{ value }}</span>`,
+  template: `<span class="x-etiqueta" [class]="'tono-' + severity">
+    @if (icon) {
+      <i [class]="icon"></i>
+    }
+    {{ value }}
+  </span>`,
   styles: [
     `
       .x-etiqueta {
@@ -56,4 +61,11 @@ import { Component, Input } from '@angular/core';
 export class EtiquetaComponent {
   @Input() value = '';
   @Input() severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary' = 'secondary';
+  /**
+   * Clase del icono (`pi pi-…`). Existe porque nueve de las etiquetas ya lo
+   * traían: descartarlo al cambiar de librería sería quitar de la pantalla algo
+   * que alguien puso, y en una tabla de estados el icono es la mitad de la
+   * lectura.
+   */
+  @Input() icon?: string;
 }

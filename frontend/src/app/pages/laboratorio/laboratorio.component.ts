@@ -5,18 +5,17 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
+import { MatDividerModule } from '@angular/material/divider';
 import { PanelModule } from 'primeng/panel';
 import { SelectModule } from 'primeng/select';
 import { CheckboxModule } from 'primeng/checkbox';
-import { TooltipModule } from 'primeng/tooltip';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import {
   LaboratorioService, OrdenLab, ResultadoLab, ResultadoCreate,
   PerfilLab, PerfilCreate, ParametroResultado,
@@ -40,12 +39,11 @@ function defaultFila(): FilaResultado {
 @Component({
   selector: 'app-laboratorio',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, CardModule, DividerModule, PanelModule,
-    SelectModule, CheckboxModule, TooltipModule, ConfirmDialogModule,
+    EtiquetaComponent, CardModule, MatDividerModule, PanelModule,
+    SelectModule, CheckboxModule, MatTooltipModule,
     InputGroupModule, InputGroupAddonModule,
   ],
   template: `
@@ -108,18 +106,18 @@ function defaultFila(): FilaResultado {
                 <td style="font-size:0.85rem">{{ o.medico_nombre || '—' }}</td>
                 <td style="font-size:0.85rem">{{ o.fecha_orden | date:'dd/MM/yyyy HH:mm' }}</td>
                 <td style="text-align:center">
-                  <p-tag [value]="o.estado" [severity]="estadoSeverity(o.estado)" />
+                  <x-etiqueta [value]="o.estado" [severity]="estadoSeverity(o.estado)" />
                 </td>
                 <td style="text-align:center">
                   @if (o.tiene_resultado) {
-                    <p-tag value="Registrado" severity="success" icon="pi pi-check-circle" />
+                    <x-etiqueta value="Registrado" severity="success" icon="pi pi-check-circle" />
                   } @else {
-                    <p-tag value="Pendiente" severity="warn" icon="pi pi-clock" />
+                    <x-etiqueta value="Pendiente" severity="warn" icon="pi pi-clock" />
                   }
                 </td>
                 <td style="text-align:center">
                   <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    [pTooltip]="o.tiene_resultado ? 'Ver / editar resultado' : 'Ingresar resultado'"
+                    [matTooltip]="o.tiene_resultado ? 'Ver / editar resultado' : 'Ingresar resultado'"
                     (onClick)="abrirOrden(o)" />
                 </td>
               </tr>
@@ -133,7 +131,7 @@ function defaultFila(): FilaResultado {
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'procesar' && ordenActual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver" />
+          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
           <h2 class="page-title" style="margin:0">Procesar Examen de Laboratorio</h2>
         </div>
 
@@ -159,7 +157,7 @@ function defaultFila(): FilaResultado {
           <div class="info-block" style="border-left:1px solid rgba(255,255,255,0.1);padding-left:1.25rem;flex:0 0 auto">
             <div class="info-label">Estado</div>
             <div style="margin-top:0.25rem">
-              <p-tag [value]="ordenActual()!.estado" [severity]="estadoSeverity(ordenActual()!.estado)" />
+              <x-etiqueta [value]="ordenActual()!.estado" [severity]="estadoSeverity(ordenActual()!.estado)" />
             </div>
             @if (ordenActual()!.estado === 'Pendiente') {
               <div style="margin-top:0.5rem">
@@ -354,7 +352,7 @@ function defaultFila(): FilaResultado {
                   </div>
                 </div>
                 <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                  pTooltip="Desactivar perfil" (onClick)="confirmarEliminarPerfil(p)" />
+                  matTooltip="Desactivar perfil" (onClick)="confirmarEliminarPerfil(p)" />
               </div>
             </div>
           }
@@ -362,8 +360,6 @@ function defaultFila(): FilaResultado {
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -441,8 +437,8 @@ function defaultFila(): FilaResultado {
 })
 export class LaboratorioComponent implements OnInit {
   private svc = inject(LaboratorioService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -642,7 +638,7 @@ export class LaboratorioComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Desactivar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.deletePerfil(p.id).subscribe({
           next: () => {

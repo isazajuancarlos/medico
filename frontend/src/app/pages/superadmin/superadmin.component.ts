@@ -7,9 +7,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { DialogModule } from 'primeng/dialog';
 import { DatePickerModule } from 'primeng/datepicker';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { Avisos } from '../../shared/ui/avisos.service';
 import { SuperadminService, Institucion, UsuarioResumen } from '../../services/superadmin.service';
 
 @Component({
@@ -17,11 +16,9 @@ import { SuperadminService, Institucion, UsuarioResumen } from '../../services/s
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
-    PasswordModule, DialogModule, DatePickerModule, TagModule, ToastModule,
+    PasswordModule, DialogModule, DatePickerModule, EtiquetaComponent,
   ],
-  providers: [MessageService],
   template: `
-<p-toast />
 <div class="page-card">
   <div class="fila-titulo">
     <div>
@@ -42,7 +39,7 @@ import { SuperadminService, Institucion, UsuarioResumen } from '../../services/s
       <tr>
         <td>{{ i.nombre }}</td>
         <td>{{ i.nit }}</td>
-        <td><p-tag [value]="i.activa ? 'Activa' : 'Inactiva'" [severity]="i.activa ? 'success' : 'secondary'" /></td>
+        <td><x-etiqueta [value]="i.activa ? 'Activa' : 'Inactiva'" [severity]="i.activa ? 'success' : 'secondary'" /></td>
         <td style="white-space:nowrap">
           <p-button label="Licencia" icon="pi pi-id-card" [text]="true" size="small" (onClick)="abrirLicencia(i)" />
           <p-button label="Crear admin" icon="pi pi-user-plus" [text]="true" size="small" severity="secondary" (onClick)="abrirAdmin(i)" />
@@ -65,7 +62,7 @@ import { SuperadminService, Institucion, UsuarioResumen } from '../../services/s
         <td>{{ u.email }}</td>
         <td>{{ u.rol }}</td>
         <td>{{ nombreInstitucion(u.institucion_id) }}</td>
-        <td><p-tag [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'secondary'" /></td>
+        <td><x-etiqueta [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'secondary'" /></td>
       </tr>
     </ng-template>
     <ng-template pTemplate="emptymessage">
@@ -114,7 +111,7 @@ import { SuperadminService, Institucion, UsuarioResumen } from '../../services/s
 })
 export class SuperadminComponent implements OnInit {
   private svc = inject(SuperadminService);
-  private msg = inject(MessageService);
+  private msg = inject(Avisos);
 
   instituciones = signal<Institucion[]>([]);
   usuarios = signal<UsuarioResumen[]>([]);

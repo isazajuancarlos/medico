@@ -5,13 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SelectModule } from 'primeng/select';
-import { DividerModule } from 'primeng/divider';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import {
   InterconsultaService, Interconsulta, InterconsultaCreate, InterconsultaResponder,
 } from '../../services/interconsulta.service';
@@ -21,12 +20,11 @@ type Vista = 'lista' | 'nueva' | 'detalle';
 @Component({
   selector: 'app-interconsultas',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, SelectModule,
-    DividerModule, ConfirmDialogModule,
+    EtiquetaComponent, MatTooltipModule, SelectModule,
+    MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -93,14 +91,14 @@ type Vista = 'lista' | 'nueva' | 'detalle';
                 <td style="font-size:0.85rem">{{ ic.medico_solicita_nombre || '—' }}</td>
                 <td style="font-size:0.85rem;white-space:nowrap">{{ ic.fecha_solicitud | date:'dd/MM/yyyy' }}</td>
                 <td style="text-align:center">
-                  <p-tag [value]="ic.prioridad" [severity]="prioridadSeverity(ic.prioridad)" />
+                  <x-etiqueta [value]="ic.prioridad" [severity]="prioridadSeverity(ic.prioridad)" />
                 </td>
                 <td style="text-align:center">
-                  <p-tag [value]="estadoLabel(ic.estado)" [severity]="estadoSeverity(ic.estado)" />
+                  <x-etiqueta [value]="estadoLabel(ic.estado)" [severity]="estadoSeverity(ic.estado)" />
                 </td>
                 <td style="text-align:center">
                   <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Ver detalle" (onClick)="abrirDetalle(ic)" />
+                    matTooltip="Ver detalle" (onClick)="abrirDetalle(ic)" />
                 </td>
               </tr>
             </ng-template>
@@ -148,7 +146,7 @@ type Vista = 'lista' | 'nueva' | 'detalle';
             }
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Especialidad, prioridad -->
           <div class="form-section">
@@ -231,10 +229,10 @@ type Vista = 'lista' | 'nueva' | 'detalle';
           <div class="info-block sep" style="flex:0 0 auto">
             <div class="info-label">Prioridad</div>
             <div style="margin-top:0.25rem">
-              <p-tag [value]="icActual()!.prioridad" [severity]="prioridadSeverity(icActual()!.prioridad)" />
+              <x-etiqueta [value]="icActual()!.prioridad" [severity]="prioridadSeverity(icActual()!.prioridad)" />
             </div>
             <div style="margin-top:0.4rem">
-              <p-tag [value]="estadoLabel(icActual()!.estado)" [severity]="estadoSeverity(icActual()!.estado)" />
+              <x-etiqueta [value]="estadoLabel(icActual()!.estado)" [severity]="estadoSeverity(icActual()!.estado)" />
             </div>
           </div>
         </div>
@@ -252,7 +250,7 @@ type Vista = 'lista' | 'nueva' | 'detalle';
           </div>
         }
 
-        <p-divider />
+        <mat-divider />
 
         <!-- Respuesta -->
         @if (icActual()!.estado === 'RESPONDIDA') {
@@ -306,8 +304,6 @@ type Vista = 'lista' | 'nueva' | 'detalle';
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -371,8 +367,8 @@ type Vista = 'lista' | 'nueva' | 'detalle';
 })
 export class InterconsultasComponent implements OnInit {
   private svc = inject(InterconsultaService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   tabActivo = signal<'todas' | 'mias' | 'para_mi'>('todas');
@@ -519,7 +515,7 @@ export class InterconsultasComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Cancelar solicitud',
       rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.accionando.set(true);
         this.svc.cancelar(ic.id).subscribe({
