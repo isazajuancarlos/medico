@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { PacienteFormComponent } from './paciente-form.component';
 import { PacienteService } from '../../services/paciente.service';
@@ -17,8 +18,7 @@ import { PaginatedResponse } from '../../models/common.models';
   selector: 'app-pacientes',
   standalone: true,
   imports: [CommonModule, FormsModule, MatTableModule, MatPaginatorModule, MatButtonModule,
-            MatFormFieldModule, MatInputModule, MatTooltipModule,
-            PacienteFormComponent],
+            MatFormFieldModule, MatInputModule, MatTooltipModule],
   template: `
     <div class="page-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -96,13 +96,6 @@ import { PaginatedResponse } from '../../models/common.models';
         (page)="alPaginar($event)"
       />
     </div>
-
-    <app-paciente-form
-      [abierto]="formularioAbierto()"
-      [paciente]="enEdicion()"
-      (abiertoChange)="formularioAbierto.set($event)"
-      (guardado)="alGuardar()"
-    />
   `,
   styles: [`
     .tabla { width: 100%; }
@@ -113,6 +106,7 @@ import { PaginatedResponse } from '../../models/common.models';
 export class PacientesComponent implements OnInit {
   private svc = inject(PacienteService);
   private router = inject(Router);
+  private dialogo = inject(MatDialog);
 
   readonly columnas = ['identificacion', 'nombre', 'nacimiento', 'celular', 'tipo', 'acciones'];
   pacientes = signal<Patient[]>([]);
@@ -152,17 +146,32 @@ export class PacientesComponent implements OnInit {
     this.searchTimer = setTimeout(() => this.loadPacientes(0, this.pageSize), 400);
   }
 
-  formularioAbierto = signal(false);
-  enEdicion = signal<Patient | null>(null);
-
   nuevo(): void {
-    this.enEdicion.set(null);
-    this.formularioAbierto.set(true);
+    this.abrirFormulario(null);
   }
 
   editar(p: Patient): void {
-    this.enEdicion.set(p);
-    this.formularioAbierto.set(true);
+    this.abrirFormulario(p);
+  }
+
+  /**
+   * El formulario es un `MatDialog`, no un hijo con `[abierto]`.
+   *
+   * `disableClose` porque cerrarlo con cambios pendientes pregunta —lo hace el
+   * propio formulario, como en el FoxPro—; un clic fuera del cuadro no es una
+   * respuesta.
+   */
+  private abrirFormulario(paciente: Patient | null): void {
+    this.dialogo
+      .open(PacienteFormComponent, {
+        data: paciente,
+        width: '52rem',
+        maxWidth: '95vw',
+        disableClose: true,
+      })
+      .afterClosed()
+      // Solo recarga si volvió un paciente: cerrar sin guardar no cambió nada.
+      .subscribe((guardado?: Patient) => { if (guardado) this.alGuardar(); });
   }
 
   verHistoria(p: Patient): void {
