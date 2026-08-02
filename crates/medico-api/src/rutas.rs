@@ -600,7 +600,13 @@ async fn obtener_paciente(
     Path(id): Path<i64>,
 ) -> Result<Json<Paciente>, StatusCode> {
     match paciente::obtener(&e.pool, u.ambito(), id).await {
-        Ok(Some(p)) => Ok(Json(p)),
+        Ok(Some(p)) => {
+            // La ficha del paciente ES el dato personal, y hasta el 2026-08-02
+            // abrirla no dejaba rastro: se anotaba su historia y su documento,
+            // pero no él. Un recurso único, que es lo que es.
+            registrar_acceso(&e, &u, "ver", "paciente", id, id).await;
+            Ok(Json(p))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -785,9 +791,10 @@ async fn registrar_acceso(
         institucion_id: u.institucion_id,
         accion: accion.to_string(),
         recurso: recurso.to_string(),
-        recurso_id: Some(recurso_id),
-        paciente_id: Some(paciente_id),
-        alcance: None,
+        objeto: acceso::Objeto::Recurso {
+            paciente_id,
+            recurso_id,
+        },
         ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     };
     if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {
@@ -795,8 +802,48 @@ async fn registrar_acceso(
     }
 }
 
-/// Registra un acceso a una **colección** —un listado o una exportación— con la
-/// misma política best-effort que [`registrar_acceso`].
+/// El registro de un acceso a un CONJUNTO, best-effort como [`registrar_acceso`].
+/// No se llama directamente: entra por [`registrar_coleccion`] o por
+/// [`registrar_coleccion_de_un_titular`], que son las que eligen la forma.
+async fn registrar_conjunto(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    objeto: acceso::Objeto,
+) {
+    let evento = acceso::Evento {
+        usuario_id: u.id,
+        rol: u.rol.clone(),
+        institucion_id: u.institucion_id,
+        accion: accion.to_string(),
+        recurso: recurso.to_string(),
+        objeto,
+        ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    };
+    if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {
+        eprintln!("⚠️  bitácora de acceso: no se registró {accion} de {recurso}: {err}");
+    }
+}
+
+/// El alcance de un conjunto visto por `u`. El ámbito sale del usuario, nunca de
+/// un parámetro: es la misma regla que el RIPS aprendió a la mala.
+fn alcance_visto_por(
+    u: &medico_datos::usuario::Usuario,
+    filtro: Option<String>,
+    n: usize,
+    pacientes: Vec<i64>,
+) -> acceso::Alcance {
+    acceso::Alcance {
+        ambito: acceso::describir_ambito(u.ambito()),
+        filtro,
+        n: n as i64,
+        pacientes,
+    }
+}
+
+/// Un conjunto que **atraviesa titulares**: el directorio de pacientes, una
+/// exportación de RIPS.
 ///
 /// La diferencia con un recurso único no es cosmética (ver `acceso::Alcance`):
 /// un **listado** anota a qué ámbito se consultó, con qué filtro y cuántos
@@ -813,25 +860,39 @@ pub(crate) async fn registrar_coleccion(
     n: usize,
     pacientes: Vec<i64>,
 ) {
-    let evento = acceso::Evento {
-        usuario_id: u.id,
-        rol: u.rol.clone(),
-        institucion_id: u.institucion_id,
-        accion: accion.to_string(),
-        recurso: recurso.to_string(),
-        recurso_id: None,
-        paciente_id: None,
-        alcance: Some(acceso::Alcance {
-            ambito: acceso::describir_ambito(u.ambito()),
-            filtro,
-            n: n as i64,
-            pacientes,
-        }),
-        ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-    };
-    if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {
-        eprintln!("⚠️  bitácora de acceso: no se registró {accion} de {recurso} (n={n}): {err}");
-    }
+    let alcance = alcance_visto_por(u, filtro, n, pacientes);
+    registrar_conjunto(e, u, accion, recurso, acceso::Objeto::Coleccion { alcance }).await;
+}
+
+/// Un conjunto de registros de **UN titular**: sus historias, sus documentos,
+/// sus resultados de laboratorio.
+///
+/// No lleva `pacientes` y no es negociable: esa lista significa «el dato salió
+/// del sistema», y aquí no salió — el titular ya va nombrado aparte, que es lo
+/// que hace que el acceso aparezca en SU rastro. En el rastro se lee
+/// `pacientes_n: 0`, y esa es justo la diferencia que él necesita ver entre
+/// alguien que consultó su expediente y alguien que se lo llevó.
+pub(crate) async fn registrar_coleccion_de_un_titular(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    paciente_id: i64,
+    filtro: Option<String>,
+    n: usize,
+) {
+    let alcance = alcance_visto_por(u, filtro, n, vec![]);
+    registrar_conjunto(
+        e,
+        u,
+        accion,
+        recurso,
+        acceso::Objeto::DeUnTitular {
+            paciente_id,
+            alcance,
+        },
+    )
+    .await;
 }
 
 async fn obtener_historia(
@@ -955,7 +1016,9 @@ async fn contexto_paciente(
     Path(paciente_id): Path<i64>,
 ) -> Result<Json<Contexto>, StatusCode> {
     match paciente::info(&e.pool, u.ambito(), paciente_id).await {
-        Ok(Some(paciente)) => Ok(Json(Contexto {
+        Ok(Some(paciente)) => {
+            registrar_acceso(&e, &u, "ver", "paciente", paciente_id, paciente_id).await;
+            Ok(Json(Contexto {
             paciente,
             medico: InfoMedico {
                 id: u.id,
@@ -966,7 +1029,8 @@ async fn contexto_paciente(
                 especialidad: None,
                 registro_medico: None,
             },
-        })),
+            }))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -991,10 +1055,12 @@ async fn listar_historias_paciente(
     Autenticado(u): Autenticado,
     Path(paciente_id): Path<i64>,
 ) -> Result<Json<Vec<Historia>>, StatusCode> {
-    historia::listar_por_paciente(&e.pool, u.ambito(), paciente_id)
+    let hs = historia::listar_por_paciente(&e.pool, u.ambito(), paciente_id)
         .await
-        .map(Json)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    registrar_coleccion_de_un_titular(&e, &u, "listar", "historias", paciente_id, None, hs.len())
+        .await;
+    Ok(Json(hs))
 }
 
 // --- Documentos clínicos (evolución, epicrisis, interconsulta, …) ------------
@@ -1014,10 +1080,21 @@ async fn listar_documentos(
     Autenticado(u): Autenticado,
     Query(f): Query<FiltroDocumentos>,
 ) -> Result<Json<Vec<DocumentoVista>>, StatusCode> {
-    documento::listar_ambito(&e.pool, u.ambito(), f.paciente_id, f.tipo.as_deref())
+    let ds = documento::listar_ambito(&e.pool, u.ambito(), f.paciente_id, f.tipo.as_deref())
         .await
-        .map(Json)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // El mismo endpoint cae en DOS formas según lo que se pida, y es la regla la
+    // que decide, no el caso: con `paciente_id` es el expediente de un titular y
+    // entra en SU rastro; sin él atraviesa titulares y es una colección.
+    let filtro = f.tipo.as_ref().map(|t| format!("tipo={t}"));
+    match f.paciente_id {
+        Some(p) => {
+            registrar_coleccion_de_un_titular(&e, &u, "listar", "documentos", p, filtro, ds.len())
+                .await
+        }
+        None => registrar_coleccion(&e, &u, "listar", "documentos", filtro, ds.len(), vec![]).await,
+    }
+    Ok(Json(ds))
 }
 
 /// Crea un documento. El autor es el usuario autenticado —no un campo del
@@ -2610,7 +2687,19 @@ async fn lab_validar(
 
 async fn lab_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
     match diagnostico::resultados_de_paciente(&e.pool, u.ambito(), id).await {
-        Ok(rs) => Json(rs).into_response(),
+        Ok(rs) => {
+            registrar_coleccion_de_un_titular(
+                &e,
+                &u,
+                "listar",
+                "resultados_laboratorio",
+                id,
+                None,
+                rs.len(),
+            )
+            .await;
+            Json(rs).into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -2751,7 +2840,19 @@ async fn img_firmar(
 
 async fn img_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
     match diagnostico::informes_de_paciente(&e.pool, u.ambito(), id).await {
-        Ok(is) => Json(is).into_response(),
+        Ok(is) => {
+            registrar_coleccion_de_un_titular(
+                &e,
+                &u,
+                "listar",
+                "informes_imagenologia",
+                id,
+                None,
+                is.len(),
+            )
+            .await;
+            Json(is).into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -5539,8 +5640,8 @@ mod pruebas {
         mod bitacora_de_colecciones {
             use super::*;
 
-            /// Los eslabones de colección que hay en la base, ya parseados.
-            async fn colecciones(e: &Estado, recurso: &str) -> Vec<serde_json::Value> {
+            /// Los eslabones que hay en la base para un recurso, ya parseados.
+            async fn eslabones_de(e: &Estado, recurso: &str) -> Vec<serde_json::Value> {
                 let filas: Vec<(String,)> =
                     sqlx::query_as("SELECT contenido FROM acceso ORDER BY secuencia ASC")
                         .fetch_all(&e.pool)
@@ -5593,7 +5694,7 @@ mod pruebas {
                 .await;
                 assert_eq!(r.status(), StatusCode::OK);
 
-                let evs = colecciones(&e, "rips").await;
+                let evs = eslabones_de(&e, "rips").await;
                 assert_eq!(evs.len(), 1, "un eslabón por exportación");
                 let v = &evs[0];
                 assert_eq!(v["accion"], "exportar");
@@ -5631,7 +5732,7 @@ mod pruebas {
                     ADMIN,
                 )
                 .await;
-                let evs = colecciones(&e, "rips").await;
+                let evs = eslabones_de(&e, "rips").await;
                 assert_eq!(evs.len(), 1);
                 assert!(
                     evs[0]["alcance"]["filtro"]
@@ -5652,7 +5753,7 @@ mod pruebas {
                 let e = con_admin_y_una_consulta().await;
                 let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
                 assert_eq!(r.status(), StatusCode::CONFLICT);
-                assert!(colecciones(&e, "rips").await.is_empty(), "el 409 no exportó nada");
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 409 no exportó nada");
 
                 // (b) 422: faltaban datos obligatorios.
                 let e = con_admin_y_una_consulta().await;
@@ -5667,7 +5768,7 @@ mod pruebas {
                 )
                 .await;
                 assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
-                assert!(colecciones(&e, "rips").await.is_empty(), "el 422 no exportó nada");
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 422 no exportó nada");
 
                 // (c) 403: el rol no podía generarlo.
                 let e = con_admin_y_una_consulta().await;
@@ -5678,7 +5779,7 @@ mod pruebas {
                 )
                 .await;
                 assert_eq!(r.status(), StatusCode::FORBIDDEN);
-                assert!(colecciones(&e, "rips").await.is_empty(), "el 403 no exportó nada");
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 403 no exportó nada");
             }
 
             /// Un listado anota ámbito y cuántos, **nunca los ids**: ver un nombre
@@ -5691,7 +5792,7 @@ mod pruebas {
                 let r = enviar(&e, "/api/pacientes", ADMIN).await;
                 assert_eq!(r.status(), StatusCode::OK);
 
-                let evs = colecciones(&e, "pacientes").await;
+                let evs = eslabones_de(&e, "pacientes").await;
                 assert_eq!(evs.len(), 1);
                 assert_eq!(evs[0]["accion"], "listar");
                 assert_eq!(evs[0]["alcance"]["n"], 2);
@@ -5711,7 +5812,7 @@ mod pruebas {
                 sqlx::query("DELETE FROM historia").execute(&e.pool).await.unwrap();
                 sqlx::query("DELETE FROM paciente").execute(&e.pool).await.unwrap();
                 enviar(&e, "/api/pacientes", ADMIN).await;
-                let evs = colecciones(&e, "pacientes").await;
+                let evs = eslabones_de(&e, "pacientes").await;
                 assert_eq!(evs.len(), 1);
                 assert_eq!(evs[0]["alcance"]["n"], 0);
             }
@@ -5746,6 +5847,111 @@ mod pruebas {
                 // hora, y eso haría intermitente una prueba de fuga.)
                 let crudo = serde_json::to_string(alcance).unwrap();
                 assert!(!crudo.contains("11"), "el id del otro paciente se coló: {crudo}");
+            }
+
+            // === LA TERCERA FORMA (#186.b) ============================
+
+            /// Listar el expediente de un paciente entra en SU rastro. Antes no
+            /// entraba en el de nadie: como colección no guarda ids, así que
+            /// quien abría las historias de alguien por esta vía no dejaba
+            /// huella — el agujero que abrió la ficha #186.b.
+            #[tokio::test]
+            async fn listar_el_expediente_de_un_paciente_entra_en_su_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                segundo_paciente(&e).await;
+                assert_eq!(
+                    enviar(&e, "/api/pacientes/10/historias", ADMIN).await.status(),
+                    StatusCode::OK
+                );
+
+                let v = cuerpo(enviar(&e, "/api/pacientes/10/accesos", ADMIN).await).await;
+                let evs = v.as_array().unwrap();
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["accion"], "listar");
+                assert_eq!(evs[0]["recurso"], "historias");
+                assert_eq!(evs[0]["alcance"]["n"], 1, "una historia suya");
+                assert_eq!(evs[0]["recurso_id"], serde_json::Value::Null, "no hay UN id");
+                // Y dice que NADA salió del sistema: es una consulta, no una
+                // exportación. Esa distinción es el motivo de la tercera forma.
+                assert_eq!(evs[0]["alcance"]["pacientes_n"], 0);
+
+                // No ensucia el rastro del otro paciente de la misma institución.
+                let v = cuerpo(enviar(&e, "/api/pacientes/11/accesos", ADMIN).await).await;
+                assert!(v.as_array().unwrap().is_empty());
+            }
+
+            /// **Es la regla la que decide, no el caso** (directiva 23): el mismo
+            /// endpoint cae en una forma o en otra según lo que se le pida.
+            #[tokio::test]
+            async fn el_mismo_endpoint_cae_en_dos_formas_segun_lo_que_se_pida() {
+                let e = con_admin_y_una_consulta().await;
+
+                // Con paciente: expediente de un titular → entra en su rastro.
+                enviar(&e, "/api/documentos?paciente_id=10&tipo=epicrisis", ADMIN).await;
+                let evs = eslabones_de(&e, "documentos").await;
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["paciente_id"], 10);
+                assert_eq!(evs[0]["alcance"]["filtro"], "tipo=epicrisis");
+                assert_eq!(evs[0]["alcance"]["pacientes"], serde_json::json!([]));
+
+                // Sin paciente: atraviesa titulares → colección, sin titular.
+                enviar(&e, "/api/documentos", ADMIN).await;
+                let evs = eslabones_de(&e, "documentos").await;
+                assert_eq!(evs.len(), 2);
+                assert_eq!(evs[1]["paciente_id"], serde_json::Value::Null);
+                assert_eq!(evs[1]["alcance"]["filtro"], serde_json::Value::Null);
+
+                // Y ese segundo no aparece en el rastro de nadie.
+                let v = cuerpo(enviar(&e, "/api/pacientes/10/accesos", ADMIN).await).await;
+                assert_eq!(v.as_array().unwrap().len(), 1, "solo el acotado a él");
+            }
+
+            /// El hueco que la tercera forma dejó a la vista: abrir la ficha de un
+            /// paciente no dejaba rastro ninguno. Se anotaba su historia y su
+            /// documento, pero no él.
+            #[tokio::test]
+            async fn abrir_la_ficha_de_un_paciente_deja_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                assert_eq!(
+                    enviar(&e, "/api/pacientes/10", ADMIN).await.status(),
+                    StatusCode::OK
+                );
+                let v = cuerpo(enviar(&e, "/api/pacientes/10/accesos", ADMIN).await).await;
+                let evs = v.as_array().unwrap();
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["accion"], "ver");
+                assert_eq!(evs[0]["recurso"], "paciente");
+                assert_eq!(evs[0]["recurso_id"], 10);
+                assert!(evs[0].get("alcance").is_none(), "un recurso único no lleva alcance");
+            }
+
+            /// Y una ficha de otra institución no deja rastro, porque no hubo
+            /// acceso: el 404 es anterior. Discrimina el hook de `obtener_paciente`
+            /// contra el error de anotar antes de comprobar el ámbito.
+            #[tokio::test]
+            async fn una_ficha_ajena_no_deja_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (2,'Otra','901')")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                     fecha_nacimiento,sexo,institucion_id) \
+                     VALUES (99,'CC','999','Ajena','Pérez','1990-01-01','F',2)",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+                assert_eq!(
+                    enviar(&e, "/api/pacientes/99", ADMIN).await.status(),
+                    StatusCode::NOT_FOUND
+                );
+                let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+                assert_eq!(n.0, 0, "no hubo acceso que anotar");
             }
         }
     }

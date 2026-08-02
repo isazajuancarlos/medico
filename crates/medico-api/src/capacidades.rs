@@ -288,14 +288,16 @@ async fn registrar_cambio(
         institucion_id: u.institucion_id,
         accion: "configurar".into(),
         recurso: "capacidad_rol".into(),
-        recurso_id: None,
-        paciente_id: None,
-        alcance: Some(medico_datos::acceso::Alcance {
-            ambito: format!("institucion:{institucion_id}"),
-            filtro: Some(detalle),
-            n: cambios.len() as i64,
-            pacientes: vec![],
-        }),
+        objeto: medico_datos::acceso::Objeto::Coleccion {
+            alcance: medico_datos::acceso::Alcance {
+                ambito: medico_datos::acceso::describir_ambito(
+                    medico_dominio::Ambito::institucion(institucion_id),
+                ),
+                filtro: Some(detalle),
+                n: cambios.len() as i64,
+                pacientes: vec![],
+            },
+        },
         ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     };
     medico_datos::acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await

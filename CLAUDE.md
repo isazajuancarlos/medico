@@ -127,7 +127,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 479 pruebas (~2 min)
+cargo test  --workspace --all-targets                   # 488 pruebas (~2 min)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -266,7 +266,7 @@ adjunto de la historia y la imagen de un informe radiológico — con su tipo
 deducido de la firma de los bytes y su cifrado en reposo. Un segundo almacén sería
 la puerta por donde entrase el SVG que `tipos.rs` existe para no admitir.
 
-### La bitácora de acceso (Ley 1581) — dos formas de evento, y no se mezclan
+### La bitácora de acceso (Ley 1581) — tres formas de evento, y las fija el tipo
 
 `medico_datos::acceso` encadena por hash y firma cada acceso a dato de paciente
 (sobre `guaca::auditoria`): borrar o reordenar un eslabón rompe la cadena, no solo
@@ -274,15 +274,35 @@ lo altera. Se registra **best-effort** —si falla, se grita en el log y NO se
 bloquea la atención—, y `GET /api/acceso/verificar` (solo superadmin) da el
 veredicto de la cadena entera.
 
-|  | recurso único | colección |
-|---|---|---|
-| cuándo | ver/editar una historia, un documento, una imagen | un listado o una exportación |
-| lleva | `paciente_id` + `recurso_id` | `alcance` (ámbito, filtro, `n`) |
-| helper | `rutas::registrar_acceso` | `rutas::registrar_coleccion` |
+`acceso::Objeto` es un **enum de tres variantes**, y eso es el diseño, no un
+detalle: hasta el 2026-08-02 eran tres `Option` con un `debug_assert` encima
+—«uno u otro, nunca ambos ni ninguno»—, que solo grita en depuración y solo si
+alguien ejecuta esa línea. La afirmación que sostiene todo el rastro dependía de
+que una prueba pasara por ahí; hoy un evento mal formado **no compila**.
 
-Ninguna forma rellena la otra (directiva 20), y un evento de recurso único **no
-inserta la clave `alcance`**: su contenido canónico es byte a byte el de antes de
-existir las colecciones, así que las cadenas ya selladas siguen verificando.
+| variante | cuándo | lleva | ¿entra en el rastro del titular? |
+|---|---|---|---|
+| `Recurso` | ver/editar su historia, un documento, una imagen, su ficha | `paciente_id` + `recurso_id` | sí |
+| `DeUnTitular` | sus historias, sus documentos, sus resultados | `paciente_id` + `alcance` | sí |
+| `Coleccion` | el directorio de pacientes, una exportación, un cambio de configuración | `alcance` | solo si es exportación y su id está en `alcance.pacientes` |
+
+Helpers: `rutas::registrar_acceso`, `registrar_coleccion_de_un_titular`,
+`registrar_coleccion`.
+
+Ninguna forma rellena la otra (directiva 20), y `Recurso` **no inserta la clave
+`alcance`**: su contenido canónico es byte a byte el de antes de existir las
+colecciones y el de antes del enum, así que las cadenas ya selladas siguen
+verificando. Lo fija `el_contenido_canonico_del_recurso_unico_esta_congelado`
+comparando contra la **cadena literal** — comparar contra algo construido con el
+mismo código no comprobaría nada.
+
+**Por qué `DeUnTitular` es una forma propia y no una colección con el id dentro.**
+Como `Coleccion` desaparecía del rastro de su titular (un listado no guarda ids, y
+con razón), así que quien abría el expediente entero de alguien por la vía de los
+listados no dejaba huella. Y meterle el id en `alcance.pacientes` habría dicho que
+el dato **salió** del sistema, que es lo que significa esa lista. En el rastro se
+lee `pacientes_n: 0`, y esa es justo la diferencia que el titular necesita ver
+entre alguien que consultó su expediente y alguien que se lo llevó.
 
 **Un listado NO guarda ids; una exportación SÍ.** Ver un nombre en una lista
 filtrada no es abrir el expediente, y un eslabón por fila ahogaría la cadena; una
@@ -297,19 +317,35 @@ mismo archivo — que en una exportación de superadmin son de otras institucion
 Lo almacenado conserva los ids (son los que entraron en el hash); lo proyectado
 **no es el contenido sellado**, y la verificación va contra la columna.
 
-Cableado hoy (2026-08-02): `GET /api/pacientes` como listado y `GET /api/rips`
-como exportación, esta última **solo cuando el archivo llegó a salir** —un 409 por
-`parcial`, un 422 por datos faltantes o un 403 por rol no dejan rastro, porque una
-bitácora que registra lo que no ocurrió es peor que una que no registra—. El resto
-de listados clínicos (urgencias, hospitalización, remisiones…) todavía no anota:
-el modelo los soporta y el helper es de una línea.
+Cableado (2026-08-02):
 
-**Lo que sigue abierto es una decisión, no un cableado**: un listado acotado a UN
-paciente (`/api/documentos?paciente_id=10`, `/api/pacientes/10/historias`) no
-encaja en ninguna de las dos formas. Como colección desaparece del rastro del
-titular —un listado no guarda ids—, y meterle `alcance.pacientes = [10]` lo
-convertiría en una exportación, que es decir que el dato salió cuando no salió.
-Hace falta elegir la tercera forma antes de cablearlos, no cablearlos y ver.
+| ruta | forma |
+|---|---|
+| `GET /api/pacientes/{id}`, `GET /api/historias/paciente/{id}/contexto` | `Recurso` |
+| `GET /api/pacientes/{id}/historias` | `DeUnTitular` |
+| `GET /api/documentos?paciente_id=…` | `DeUnTitular` |
+| `GET /api/laboratorio/paciente/{id}/resultados` | `DeUnTitular` |
+| `GET /api/imagenes/paciente/{id}/informes` | `DeUnTitular` |
+| `GET /api/pacientes`, `GET /api/documentos` (sin filtro) | `Coleccion` |
+| `GET /api/rips` | `Coleccion` con `pacientes` |
+
+`/api/documentos` sale dos veces a propósito: **es la regla la que decide, no el
+caso** (directiva 23). Con `paciente_id` es el expediente de un titular; sin él
+atraviesa titulares. La regla, en una frase: *se anota como `DeUnTitular` toda
+lectura que devuelve un conjunto de registros clínicos de UN paciente
+identificado en la petición.*
+
+La exportación se anota **solo cuando el archivo llegó a salir** —un 409 por
+`parcial`, un 422 por datos faltantes o un 403 por rol no dejan rastro, porque una
+bitácora que registra lo que no ocurrió es peor que una que no registra—; y una
+ficha de otra institución tampoco, porque el 404 es anterior al acceso.
+
+**Lo que falta, dicho para que no pase por cubierto**: los listados clínicos que
+atraviesan pacientes (urgencias, hospitalización, remisiones, incapacidades,
+agenda) todavía no anotan. El helper es de una línea; el freno es el volumen de
+eslabones por refresco de pantalla, que hay que medir antes. Y las sublistas de
+una historia (`/api/historias/{id}/formulas`, `/ordenes`) quedan fuera por la
+regla: el paciente no va en la petición, se deriva.
 
 El contenido ilegible no puede acortar el rastro, y el guardián sale gratis: el
 índice de expresión `json_extract(contenido,'$.paciente_id')` de la migración

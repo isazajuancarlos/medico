@@ -21,17 +21,6 @@ use serde_json::Value;
 
 /// Un acceso que se va a registrar. `ts` en UTC (RFC 3339); el llamante lo pone
 /// para no atar el módulo al reloj.
-///
-/// El **objeto** del acceso tiene dos formas y nunca se mezclan (directiva #20:
-/// no se rellena el que no aplica con un valor falso):
-/// - **recurso único** (ver/editar una historia, un documento, una imagen):
-///   lleva `paciente_id = Some` y `recurso_id = Some`, con `alcance = None`.
-/// - **colección** (un listado o una exportación): lleva `alcance = Some`, con
-///   `paciente_id = None` y `recurso_id = None` — no hay UN paciente ni UN id.
-///
-/// Un evento de recurso único NO inserta la clave `alcance`, así que su contenido
-/// canónico es byte a byte el mismo de antes de existir las colecciones: las
-/// cadenas ya selladas siguen verificando.
 #[derive(Debug, Clone)]
 pub struct Evento {
     pub usuario_id: i64,
@@ -42,15 +31,78 @@ pub struct Evento {
     pub accion: String,
     /// `historia`, `documento`, `imagen`, `paciente`, `pacientes`…
     pub recurso: String,
-    /// Id del recurso único; `None` en una colección (no hay uno solo).
-    pub recurso_id: Option<i64>,
-    /// El paciente cuyo dato se tocó — la clave del rastro de la Ley 1581.
-    /// `None` en una colección (el conjunto va en `alcance`).
-    pub paciente_id: Option<i64>,
-    /// El alcance de una colección (listado o exportación); `None` en un recurso
-    /// único.
-    pub alcance: Option<Alcance>,
+    /// QUÉ se tocó. Ver [`Objeto`].
+    pub objeto: Objeto,
     pub ts: String,
+}
+
+/// El objeto del acceso: **qué** se tocó. Son tres formas y no se mezclan
+/// (directiva #20: no se rellena el que no aplica con un valor falso).
+///
+/// Fue un enum el 2026-08-02, y ese es el punto: antes eran tres `Option`
+/// —`paciente_id`, `recurso_id`, `alcance`— con un `debug_assert` que exigía
+/// «uno u otro, nunca ambos ni ninguno». Un `debug_assert` solo grita en
+/// depuración y solo si alguien ejecuta esa línea, así que la afirmación que
+/// sostiene todo el rastro dependía de que una prueba pasara por ahí. Ahora un
+/// evento mal formado **no se puede escribir** (memoria: la afirmación necesita
+/// su prueba en el TIPO).
+///
+/// La tercera forma —`DeUnTitular`— es la que faltaba, y sin ella los listados
+/// acotados a un paciente no tenían dónde ir: como `Coleccion` desaparecían del
+/// rastro de su titular (un listado no guarda ids, y con razón), y meterles el id
+/// en `alcance.pacientes` habría dicho que el dato SALIÓ del sistema, que es lo
+/// que significa esa lista.
+#[derive(Debug, Clone)]
+pub enum Objeto {
+    /// **Un recurso concreto de un paciente**: ver o editar su historia, un
+    /// documento, una imagen. Hay un id y hay un titular.
+    ///
+    /// Es la forma de siempre, y su contenido canónico NO inserta la clave
+    /// `alcance`: byte a byte el mismo de antes de existir las colecciones, para
+    /// que las cadenas ya selladas sigan verificando.
+    Recurso { paciente_id: i64, recurso_id: i64 },
+
+    /// **Un conjunto de registros de UN titular**: los documentos del paciente
+    /// 10, sus resultados de laboratorio, sus historias. No hay un id —hay
+    /// varios— pero sí hay un titular, así que entra en SU rastro.
+    ///
+    /// `alcance.pacientes` va vacío: el titular ya está nombrado aparte, y esa
+    /// lista significa «se lo llevó», no «lo miró». En el rastro se lee como
+    /// `pacientes_n: 0`, que es la diferencia que el titular necesita ver entre
+    /// alguien que consultó y alguien que exportó.
+    DeUnTitular { paciente_id: i64, alcance: Alcance },
+
+    /// **Un conjunto que atraviesa titulares**: el directorio de pacientes, una
+    /// exportación de RIPS, un cambio de configuración. Solo entra en el rastro
+    /// de alguien si es una exportación y su id está en `alcance.pacientes`.
+    Coleccion { alcance: Alcance },
+}
+
+impl Objeto {
+    /// El titular, si el acceso tuvo uno. Es la clave del rastro de la Ley 1581.
+    fn paciente_id(&self) -> Option<i64> {
+        match self {
+            Objeto::Recurso { paciente_id, .. } | Objeto::DeUnTitular { paciente_id, .. } => {
+                Some(*paciente_id)
+            }
+            Objeto::Coleccion { .. } => None,
+        }
+    }
+
+    /// El id del recurso, solo cuando hay UNO.
+    fn recurso_id(&self) -> Option<i64> {
+        match self {
+            Objeto::Recurso { recurso_id, .. } => Some(*recurso_id),
+            _ => None,
+        }
+    }
+
+    fn alcance(&self) -> Option<&Alcance> {
+        match self {
+            Objeto::Recurso { .. } => None,
+            Objeto::DeUnTitular { alcance, .. } | Objeto::Coleccion { alcance } => Some(alcance),
+        }
+    }
 }
 
 /// El alcance de un acceso a una **colección**. Un **listado** guarda a qué
@@ -90,12 +142,10 @@ impl Alcance {
 
 /// El contenido canónico que se hashea y firma. Única fuente: registrar y
 /// verificar lo construyen igual, o el hash no cuadraría. La clave `alcance` solo
-/// aparece en una colección — un recurso único produce el contenido de siempre.
+/// aparece cuando hay conjunto — un recurso único produce el contenido de
+/// siempre, y por eso las cadenas selladas antes de 2026-07-29 siguen verificando
+/// (lo fija `el_contenido_canonico_del_recurso_unico_esta_congelado`).
 fn contenido_de(e: &Evento) -> BTreeMap<String, Value> {
-    debug_assert!(
-        e.paciente_id.is_some() != e.alcance.is_some(),
-        "un evento es de recurso único (paciente_id) O de colección (alcance), nunca ambos ni ninguno",
-    );
     let mut m = BTreeMap::new();
     m.insert("v".into(), Value::from(1));
     m.insert("usuario_id".into(), Value::from(e.usuario_id));
@@ -108,13 +158,13 @@ fn contenido_de(e: &Evento) -> BTreeMap<String, Value> {
     m.insert("recurso".into(), Value::from(e.recurso.clone()));
     m.insert(
         "recurso_id".into(),
-        e.recurso_id.map_or(Value::Null, Value::from),
+        e.objeto.recurso_id().map_or(Value::Null, Value::from),
     );
     m.insert(
         "paciente_id".into(),
-        e.paciente_id.map_or(Value::Null, Value::from),
+        e.objeto.paciente_id().map_or(Value::Null, Value::from),
     );
-    if let Some(a) = &e.alcance {
+    if let Some(a) = e.objeto.alcance() {
         m.insert("alcance".into(), a.a_valor());
     }
     m.insert("ts".into(), Value::from(e.ts.clone()));
@@ -375,14 +425,25 @@ mod pruebas {
             institucion_id: Some(1),
             accion: accion.into(),
             recurso: "historia".into(),
-            recurso_id: Some(paciente),
-            paciente_id: Some(paciente),
-            alcance: None,
+            objeto: Objeto::Recurso {
+                paciente_id: paciente,
+                recurso_id: paciente,
+            },
             ts: "2026-07-29T17:00:00Z".into(),
         }
     }
 
-    /// Un acceso a una COLECCIÓN. `pacientes` vacío = listado; con ids = export.
+    fn alcance_de(n: i64, pacientes: Vec<i64>) -> Alcance {
+        Alcance {
+            ambito: "institucion:1".into(),
+            filtro: Some("apellido=Ruiz".into()),
+            n,
+            pacientes,
+        }
+    }
+
+    /// Un acceso a una COLECCIÓN que atraviesa titulares. `pacientes` vacío =
+    /// listado; con ids = exportación.
     fn coleccion(usuario: i64, accion: &str, recurso: &str, n: i64, pacientes: Vec<i64>) -> Evento {
         Evento {
             usuario_id: usuario,
@@ -390,14 +451,25 @@ mod pruebas {
             institucion_id: Some(1),
             accion: accion.into(),
             recurso: recurso.into(),
-            recurso_id: None,
-            paciente_id: None,
-            alcance: Some(Alcance {
-                ambito: "institucion:1".into(),
-                filtro: Some("apellido=Ruiz".into()),
-                n,
-                pacientes,
-            }),
+            objeto: Objeto::Coleccion {
+                alcance: alcance_de(n, pacientes),
+            },
+            ts: "2026-07-29T17:00:00Z".into(),
+        }
+    }
+
+    /// Un listado acotado a UN titular: la tercera forma (#186.b).
+    fn de_un_titular(usuario: i64, paciente_id: i64, recurso: &str, n: i64) -> Evento {
+        Evento {
+            usuario_id: usuario,
+            rol: "medico".into(),
+            institucion_id: Some(1),
+            accion: "listar".into(),
+            recurso: recurso.into(),
+            objeto: Objeto::DeUnTitular {
+                paciente_id,
+                alcance: alcance_de(n, vec![]),
+            },
             ts: "2026-07-29T17:00:00Z".into(),
         }
     }
@@ -540,8 +612,8 @@ mod pruebas {
         let mut export = coleccion(1, "exportar", "rips", 2, vec![10, 77]);
         export.institucion_id = None;
         export.rol = "superadmin".into();
-        if let Some(a) = export.alcance.as_mut() {
-            a.ambito = describir_ambito(Ambito::Superadmin);
+        if let Objeto::Coleccion { alcance } = &mut export.objeto {
+            alcance.ambito = describir_ambito(Ambito::Superadmin);
         }
         registrar(&pool, &export, None).await.unwrap();
 
@@ -669,16 +741,99 @@ mod pruebas {
         assert_eq!(v.get("recurso_id"), Some(&Value::from(10)));
     }
 
-    /// Una cadena que MEZCLA recurso único, listado y exportación verifica entera:
-    /// las tres formas conviven bajo el mismo sellado.
+    /// Una cadena que MEZCLA las tres formas del objeto verifica entera: conviven
+    /// bajo el mismo sellado.
     #[tokio::test]
     async fn una_cadena_mixta_verifica() {
         let pool = base().await;
         let (vk, sk) = guaca::firma::generar_claves();
         registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
         registrar(&pool, &coleccion(2, "listar", "pacientes", 5, vec![]), Some(&sk)).await.unwrap();
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), Some(&sk)).await.unwrap();
         registrar(&pool, &coleccion(2, "exportar", "rips", 2, vec![10, 20]), Some(&sk)).await.unwrap();
         assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
+    }
+
+    /// **El contrato de compatibilidad, congelado byte a byte.** El contenido de
+    /// un recurso único es lo que se selló en las cadenas de producción antes de
+    /// que existieran las colecciones y antes de que el objeto fuese un enum:
+    /// cambiar una clave, su orden o un `null` invalidaría todas las firmas ya
+    /// escritas, y la bitácora entera pasaría a reportarse ROTA.
+    ///
+    /// Por eso se fija la cadena literal y no «los campos esperados»: comparar
+    /// contra algo que se construye con el mismo código no comprueba nada.
+    #[test]
+    fn el_contenido_canonico_del_recurso_unico_esta_congelado() {
+        let cont = contenido_de(&evento(2, 10, "ver"));
+        assert_eq!(
+            serde_json::to_string(&cont).unwrap(),
+            r#"{"accion":"ver","institucion_id":1,"paciente_id":10,"recurso":"historia","recurso_id":10,"rol":"medico","ts":"2026-07-29T17:00:00Z","usuario_id":2,"v":1}"#,
+            "un recurso único NO lleva la clave `alcance` y sus claves van en este orden"
+        );
+    }
+
+    /// Y el de una colección, igual de congelado: los eventos de `capacidad_rol`
+    /// se sellan con esta forma desde julio.
+    #[test]
+    fn el_contenido_canonico_de_la_coleccion_esta_congelado() {
+        let cont = contenido_de(&coleccion(2, "listar", "pacientes", 5, vec![]));
+        assert_eq!(
+            serde_json::to_string(&cont).unwrap(),
+            r#"{"accion":"listar","alcance":{"ambito":"institucion:1","filtro":"apellido=Ruiz","n":5,"pacientes":[]},"institucion_id":1,"paciente_id":null,"recurso":"pacientes","recurso_id":null,"rol":"medico","ts":"2026-07-29T17:00:00Z","usuario_id":2,"v":1}"#
+        );
+    }
+
+    // === LA TERCERA FORMA (#186.b) ========================================
+
+    /// Lo que la tercera forma existe para arreglar: un listado acotado a un
+    /// paciente entra en SU rastro. Como `Coleccion` no entraba en el de nadie
+    /// —un listado no guarda ids—, y ese era el agujero: quien abría el
+    /// expediente entero de alguien por la vía de los listados no dejaba huella.
+    #[tokio::test]
+    async fn un_listado_de_un_titular_entra_en_su_rastro() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 20, 1).await;
+        let (_, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), Some(&sk)).await.unwrap();
+
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 1, "el titular tiene que ver quién listó su expediente");
+        assert_eq!(rastro[0]["accion"], Value::from("listar"));
+        assert_eq!(rastro[0]["recurso"], Value::from("documentos"));
+        assert_eq!(rastro[0]["alcance"]["n"], Value::from(4), "cuántos registros vio");
+        // No es un recurso único: no hay UN id, y no se inventa uno.
+        assert_eq!(rastro[0]["recurso_id"], Value::Null);
+        // Y no ensucia el de otro paciente de la misma institución.
+        assert!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().is_empty());
+    }
+
+    /// Y **no dice que el dato salió**. Esa es la razón de que sea una forma
+    /// propia y no una `Coleccion` con `pacientes = [10]`: en el rastro del
+    /// titular, `pacientes_n: 0` distingue a quien consultó de quien exportó.
+    /// Prueba que discrimina: si se cablease con el id dentro, el 0 sería 1.
+    #[tokio::test]
+    async fn un_listado_de_un_titular_no_dice_que_el_dato_salio() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), None).await.unwrap();
+        registrar(&pool, &coleccion(2, "exportar", "rips", 1, vec![10]), None).await.unwrap();
+
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 2);
+        assert_eq!(rastro[0]["alcance"]["pacientes_n"], Value::from(0), "consultó");
+        assert_eq!(rastro[1]["alcance"]["pacientes_n"], Value::from(1), "se lo llevó");
+    }
+
+    /// El ámbito manda también sobre la tercera forma: el rastro de un paciente
+    /// ajeno sigue siendo indistinguible de «sin accesos».
+    #[tokio::test]
+    async fn la_tercera_forma_respeta_el_ambito() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), None).await.unwrap();
+        assert!(por_paciente(&pool, Ambito::institucion(2), 10).await.unwrap().is_empty());
+        assert_eq!(por_paciente(&pool, Ambito::Superadmin, 10).await.unwrap().len(), 1);
     }
 
     /// Directiva #8: 100 accesos que compiten entre sí no bifurcan la cadena ni
