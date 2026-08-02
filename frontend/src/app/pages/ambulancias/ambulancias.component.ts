@@ -1,14 +1,14 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
-import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { SelectModule } from 'primeng/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DialogModule } from 'primeng/dialog';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
 import { Avisos } from '../../shared/ui/avisos.service';
 import {
   AmbulanciasService, Ambulancia, AmbulanciaCreate, Traslado, TrasladoCreate,
@@ -16,6 +16,215 @@ import {
 import { PacienteService } from '../../services/paciente.service';
 
 type Tab = 'parque' | 'traslados';
+
+const TIPOS = [
+  { label: 'TAB — básico', value: 'TAB' },
+  { label: 'TAM — medicalizado', value: 'TAM' },
+];
+
+/** Alta y edición de una ambulancia. Devuelve los campos, o nada. */
+@Component({
+  selector: 'app-ambulancia-form',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar ambulancia' : 'Nueva ambulancia' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline">
+          <mat-label>Placa *</mat-label>
+          <input matInput [(ngModel)]="f.placa" placeholder="WXY123" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo *</mat-label>
+          <mat-select [(ngModel)]="f.tipo">
+            @for (t of tipos; track t.value) {
+              <mat-option [value]="t.value">{{ t.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Número interno</mat-label>
+          <input matInput [(ngModel)]="f.numero_interno" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Marca</mat-label>
+          <input matInput [(ngModel)]="f.marca" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Modelo</mat-label>
+          <input matInput [(ngModel)]="f.modelo" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Vence SOAT</mat-label>
+          <input matInput type="date" [(ngModel)]="f.vence_soat" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Vence tecnomecánica</mat-label>
+          <input matInput type="date" [(ngModel)]="f.vence_tecnomecanica" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput [(ngModel)]="f.observaciones" rows="2"></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!f.placa" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> {{ editando ? 'Guardar' : 'Crear' }}
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla {
+      display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(34rem, 80vw);
+    }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class AmbulanciaFormComponent {
+  readonly tipos = TIPOS;
+  readonly editando: boolean;
+  f: Partial<AmbulanciaCreate>;
+
+  constructor(@Inject(MAT_DIALOG_DATA) a: Ambulancia | null) {
+    this.editando = !!a;
+    this.f = a
+      ? {
+          placa: a.placa, tipo: a.tipo, numero_interno: a.numero_interno,
+          marca: a.marca, modelo: a.modelo, vence_soat: a.vence_soat,
+          vence_tecnomecanica: a.vence_tecnomecanica, observaciones: a.observaciones,
+        }
+      : { tipo: 'TAB' };
+  }
+
+  resultado(): Partial<AmbulanciaCreate> | null {
+    return this.f.placa ? this.f : null;
+  }
+}
+
+/**
+ * Despacho de una ambulancia.
+ *
+ * El selector ofrece SOLO las que el servidor dejaría salir ahora mismo —la
+ * lista la calcula la pantalla y entra por MAT_DIALOG_DATA—, porque hacer que
+ * el usuario descubra la regla chocándose con un 409 es enseñársela dos veces.
+ * Los pacientes los pide el propio diálogo: es su campo, no el de la pantalla.
+ */
+@Component({
+  selector: 'app-ambulancia-despacho',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Despachar ambulancia</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Ambulancia *</mat-label>
+          <mat-select [(ngModel)]="f.ambulancia_id"
+            placeholder="Solo se ofrecen las que pueden salir ahora">
+            @for (a of ambulancias; track a.value) {
+              <mat-option [value]="a.value">{{ a.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Paciente *</mat-label>
+          <mat-select [(ngModel)]="f.paciente_id">
+            @for (p of pacientes(); track p.value) {
+              <mat-option [value]="p.value">{{ p.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de traslado *</mat-label>
+          <mat-select [(ngModel)]="f.tipo_traslado">
+            @for (t of tiposTraslado; track t.value) {
+              <mat-option [value]="t.value">{{ t.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Conductor</mat-label>
+          <input matInput [(ngModel)]="f.conductor" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Origen *</mat-label>
+          <input matInput [(ngModel)]="f.origen" placeholder="Vía Las Palmas km 12" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Destino *</mat-label>
+          <input matInput [(ngModel)]="f.destino" placeholder="Urgencias sede norte" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Motivo *</mat-label>
+          <input matInput [(ngModel)]="f.motivo" placeholder="Accidente de tránsito" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Personal asistencial</mat-label>
+          <input matInput [(ngModel)]="f.personal_asistencial" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="exito" [disabled]="!completo()"
+        [mat-dialog-close]="resultado()">
+        <i class="pi pi-send"></i> Despachar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla {
+      display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(34rem, 80vw);
+    }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+    .exito { background:#16a34a; color:#fff; }
+  `],
+})
+export class AmbulanciaDespachoComponent {
+  private pacienteSvc = inject(PacienteService);
+
+  readonly tiposTraslado = [
+    { label: 'Primario — desde el sitio del evento', value: 'Primario' },
+    { label: 'Secundario — entre prestadores', value: 'Secundario' },
+  ];
+
+  readonly ambulancias: { label: string; value: number }[];
+  readonly pacientes = signal<{ label: string; value: number }[]>([]);
+
+  f: Partial<TrasladoCreate> = { tipo_traslado: 'Primario' };
+
+  constructor(@Inject(MAT_DIALOG_DATA) datos: { ambulancias: { label: string; value: number }[] }) {
+    this.ambulancias = datos.ambulancias;
+    this.pacienteSvc.list(1, 500).subscribe({
+      next: r => this.pacientes.set(r.items.map(p => ({
+        label: `${p.nombre1} ${p.apellido1} — ${p.identificacion}`,
+        value: p.id,
+      }))),
+    });
+  }
+
+  completo(): boolean {
+    const f = this.f;
+    return !!(f.ambulancia_id && f.paciente_id && f.origen && f.destino && f.motivo);
+  }
+
+  resultado(): TrasladoCreate | null {
+    return this.completo() ? (this.f as TrasladoCreate) : null;
+  }
+}
 
 /**
  * Transporte asistencial.
@@ -35,18 +244,22 @@ type Tab = 'parque' | 'traslados';
   selector: 'app-ambulancias',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, ButtonModule, InputTextModule, TextareaModule,
-    TableModule, EtiquetaComponent, SelectModule, MatTooltipModule, DialogModule,
+    CommonModule, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule,
+    MatSelectModule, MatTableModule, MatTooltipModule, EtiquetaComponent,
   ],
   template: `
     <div class="page-card">
       <div class="list-header">
         <h2 class="page-title">Ambulancias y traslados</h2>
         <div style="display:flex;gap:0.5rem">
-          <p-button label="Despachar" icon="pi pi-send" severity="success"
-            [disabled]="disponibles().length === 0" (onClick)="abrirDespacho()" />
+          <button matButton="filled" class="exito" [disabled]="disponibles().length === 0"
+            (click)="abrirDespacho()">
+            <i class="pi pi-send"></i> Despachar
+          </button>
           @if (tab() === 'parque') {
-            <p-button label="Nueva ambulancia" icon="pi pi-plus" (onClick)="abrirCrear()" />
+            <button matButton="filled" (click)="abrirCrear()">
+              <i class="pi pi-plus"></i> Nueva ambulancia
+            </button>
           }
         </div>
       </div>
@@ -97,11 +310,19 @@ type Tab = 'parque' | 'traslados';
 
       @if (tab() === 'parque') {
         <div class="filter-bar">
-          <input pInputText [(ngModel)]="busq" placeholder="Placa o número interno..."
-            (input)="cargar()" class="search-input" />
-          <p-select [(ngModel)]="filtroEstado" [options]="opcionesEstado"
-            optionLabel="label" optionValue="value" [showClear]="true"
-            placeholder="Estado" style="width:180px" (onChange)="cargar()" />
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-input">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="busq" placeholder="Placa o número interno..." (input)="cargar()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:180px">
+            <mat-label>Estado</mat-label>
+            <mat-select [(ngModel)]="filtroEstado" (selectionChange)="cargar()">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (o of opcionesEstado; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         </div>
 
         @if (cargando()) {
@@ -112,63 +333,73 @@ type Tab = 'parque' | 'traslados';
             <p>No hay ambulancias registradas.</p>
           </div>
         } @else {
-          <p-table [value]="ambulancias()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Placa</th>
-                <th style="text-align:center">Tipo</th>
-                <th>Vehículo</th>
-                <th style="text-align:center">Estado</th>
-                <th>SOAT</th>
-                <th style="width:120px"></th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-a>
-              <tr [style.opacity]="a.activa ? 1 : 0.55">
-                <td>
-                  <strong>{{ a.placa }}</strong>
-                  @if (a.numero_interno) {
-                    <div style="font-size:0.75rem;color:#94a3b8">{{ a.numero_interno }}</div>
-                  }
-                </td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="a.tipo" [severity]="a.tipo === 'TAM' ? 'warn' : 'info'"
-                    [matTooltip]="a.tipo === 'TAM' ? 'Transporte asistencial medicalizado' : 'Transporte asistencial básico'" />
-                </td>
-                <td style="font-size:0.82rem;color:#94a3b8">
-                  {{ a.marca || '—' }} {{ a.modelo || '' }}
-                </td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="a.activa ? a.estado : 'Dada de baja'"
-                    [severity]="colorEstado(a)" />
-                  @if (a.traslado_en_curso) {
-                    <div style="font-size:0.7rem;color:#64748b">traslado #{{ a.traslado_en_curso }}</div>
-                  }
-                </td>
-                <td style="font-size:0.82rem">
-                  @if (a.soat_sin_registrar) {
-                    <span class="soat-desconocido">sin registrar</span>
-                  } @else if (a.soat_vencido) {
-                    <span class="soat-vencido">venció {{ a.vence_soat }}</span>
-                  } @else if (a.soat_por_vencer) {
-                    <span class="soat-pronto">vence {{ a.vence_soat }}</span>
-                  } @else {
-                    <span style="color:#94a3b8">{{ a.vence_soat }}</span>
-                  }
-                </td>
-                <td style="text-align:right">
-                  <p-button icon="pi pi-pencil" [text]="true" size="small"
-                    matTooltip="Editar" (onClick)="abrirEditar(a)" />
-                  @if (!a.traslado_en_curso) {
-                    <p-button [icon]="a.activa ? 'pi pi-ban' : 'pi pi-check'" [text]="true" size="small"
-                      [severity]="a.activa ? 'warn' : 'success'"
-                      [matTooltip]="a.activa ? 'Dar de baja' : 'Reactivar'"
-                      (onClick)="alternarBaja(a)" />
-                  }
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="ambulancias()" class="tabla">
+            <ng-container matColumnDef="placa">
+              <th mat-header-cell *matHeaderCellDef>Placa</th>
+              <td mat-cell *matCellDef="let a" [style.opacity]="a.activa ? 1 : 0.55">
+                <strong>{{ a.placa }}</strong>
+                @if (a.numero_interno) {
+                  <div style="font-size:0.75rem;color:#94a3b8">{{ a.numero_interno }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef class="centro">Tipo</th>
+              <td mat-cell *matCellDef="let a" class="centro" [style.opacity]="a.activa ? 1 : 0.55">
+                <x-etiqueta [value]="a.tipo" [severity]="a.tipo === 'TAM' ? 'warn' : 'info'"
+                  [matTooltip]="a.tipo === 'TAM' ? 'Transporte asistencial medicalizado' : 'Transporte asistencial básico'" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="vehiculo">
+              <th mat-header-cell *matHeaderCellDef>Vehículo</th>
+              <td mat-cell *matCellDef="let a" style="font-size:0.82rem;color:#94a3b8"
+                [style.opacity]="a.activa ? 1 : 0.55">
+                {{ a.marca || '—' }} {{ a.modelo || '' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let a" class="centro" [style.opacity]="a.activa ? 1 : 0.55">
+                <x-etiqueta [value]="a.activa ? a.estado : 'Dada de baja'" [severity]="colorEstado(a)" />
+                @if (a.traslado_en_curso) {
+                  <div style="font-size:0.7rem;color:#64748b">traslado #{{ a.traslado_en_curso }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="soat">
+              <th mat-header-cell *matHeaderCellDef>SOAT</th>
+              <td mat-cell *matCellDef="let a" style="font-size:0.82rem"
+                [style.opacity]="a.activa ? 1 : 0.55">
+                @if (a.soat_sin_registrar) {
+                  <span class="soat-desconocido">sin registrar</span>
+                } @else if (a.soat_vencido) {
+                  <span class="soat-vencido">venció {{ a.vence_soat }}</span>
+                } @else if (a.soat_por_vencer) {
+                  <span class="soat-pronto">vence {{ a.vence_soat }}</span>
+                } @else {
+                  <span style="color:#94a3b8">{{ a.vence_soat }}</span>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef style="width:120px"></th>
+              <td mat-cell *matCellDef="let a" style="text-align:right">
+                <button matIconButton matTooltip="Editar" (click)="abrirEditar(a)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                @if (!a.traslado_en_curso) {
+                  <button matIconButton [matTooltip]="a.activa ? 'Dar de baja' : 'Reactivar'"
+                    [class.peligro]="a.activa" [class.exito-texto]="!a.activa"
+                    (click)="alternarBaja(a)">
+                    <i [class]="a.activa ? 'pi pi-ban' : 'pi pi-check'"></i>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasParque"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasParque"></tr>
+          </table>
         }
       }
 
@@ -181,160 +412,71 @@ type Tab = 'parque' | 'traslados';
             <p>No hay traslados registrados.</p>
           </div>
         } @else {
-          <p-table [value]="traslados()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Ambulancia</th>
-                <th style="text-align:center">Tipo</th>
-                <th>Ruta</th>
-                <th style="text-align:center">Estado</th>
-                <th>Salida / Llegada</th>
-                <th style="width:120px"></th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-t>
-              <tr>
-                <td>
-                  <strong>{{ t.paciente_nombre || '—' }}</strong>
-                  <div style="font-size:0.75rem;color:#94a3b8">{{ t.paciente_identificacion }}</div>
-                </td>
-                <td style="font-size:0.82rem">
-                  {{ t.ambulancia_placa }}
-                  <div style="font-size:0.72rem;color:#64748b">{{ t.ambulancia_tipo }}</div>
-                </td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="t.tipo_traslado" severity="secondary" />
-                </td>
-                <td style="font-size:0.82rem">
-                  {{ t.origen }} <i class="pi pi-arrow-right" style="font-size:0.7rem;opacity:0.5"></i> {{ t.destino }}
-                  <div style="font-size:0.72rem;color:#64748b">{{ t.motivo }}</div>
-                </td>
-                <td style="text-align:center">
-                  <x-etiqueta [value]="t.estado" [severity]="colorTraslado(t.estado)" />
-                </td>
-                <td style="font-size:0.78rem">
-                  {{ t.fecha_salida | date:'dd/MM HH:mm' }}
-                  <div style="color:#64748b">
-                    <!-- Un cancelado no llegó a ninguna parte, y el guion lo dice
-                         en vez de dejar el hueco en blanco. -->
-                    {{ t.fecha_llegada ? (t.fecha_llegada | date:'dd/MM HH:mm') : '—' }}
-                  </div>
-                </td>
-                <td style="text-align:right">
-                  @if (t.estado === 'En Curso') {
-                    <p-button icon="pi pi-check" [text]="true" size="small" severity="success"
-                      matTooltip="Finalizar" (onClick)="finalizar(t)" />
-                    <p-button icon="pi pi-times" [text]="true" size="small" severity="danger"
-                      matTooltip="Cancelar" (onClick)="cancelar(t)" />
-                  }
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="traslados()" class="tabla">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let t">
+                <strong>{{ t.paciente_nombre || '—' }}</strong>
+                <div style="font-size:0.75rem;color:#94a3b8">{{ t.paciente_identificacion }}</div>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="ambulancia">
+              <th mat-header-cell *matHeaderCellDef>Ambulancia</th>
+              <td mat-cell *matCellDef="let t" style="font-size:0.82rem">
+                {{ t.ambulancia_placa }}
+                <div style="font-size:0.72rem;color:#64748b">{{ t.ambulancia_tipo }}</div>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef class="centro">Tipo</th>
+              <td mat-cell *matCellDef="let t" class="centro">
+                <x-etiqueta [value]="t.tipo_traslado" severity="secondary" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="ruta">
+              <th mat-header-cell *matHeaderCellDef>Ruta</th>
+              <td mat-cell *matCellDef="let t" style="font-size:0.82rem">
+                {{ t.origen }} <i class="pi pi-arrow-right" style="font-size:0.7rem;opacity:0.5"></i> {{ t.destino }}
+                <div style="font-size:0.72rem;color:#64748b">{{ t.motivo }}</div>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let t" class="centro">
+                <x-etiqueta [value]="t.estado" [severity]="colorTraslado(t.estado)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="tiempos">
+              <th mat-header-cell *matHeaderCellDef>Salida / Llegada</th>
+              <td mat-cell *matCellDef="let t" style="font-size:0.78rem">
+                {{ t.fecha_salida | date:'dd/MM HH:mm' }}
+                <div style="color:#64748b">
+                  <!-- Un cancelado no llegó a ninguna parte, y el guion lo dice
+                       en vez de dejar el hueco en blanco. -->
+                  {{ t.fecha_llegada ? (t.fecha_llegada | date:'dd/MM HH:mm') : '—' }}
+                </div>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef style="width:120px"></th>
+              <td mat-cell *matCellDef="let t" style="text-align:right">
+                @if (t.estado === 'En Curso') {
+                  <button matIconButton class="exito-texto" matTooltip="Finalizar" (click)="finalizar(t)">
+                    <i class="pi pi-check"></i>
+                  </button>
+                  <button matIconButton class="peligro" matTooltip="Cancelar" (click)="cancelar(t)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasTraslados"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasTraslados"></tr>
+          </table>
         }
       }
     </div>
-
-    <!-- ══ DIALOG AMBULANCIA ══ -->
-    <p-dialog [header]="editando ? 'Editar ambulancia' : 'Nueva ambulancia'"
-      [(visible)]="mostrarForm" [style]="{width:'620px'}" [modal]="true">
-      <div class="form-grid">
-        <div class="field">
-          <label class="field-label">Placa *</label>
-          <input pInputText [(ngModel)]="aForm.placa" class="w-full" placeholder="WXY123" />
-        </div>
-        <div class="field">
-          <label class="field-label">Tipo *</label>
-          <p-select [(ngModel)]="aForm.tipo" [options]="opcionesTipo"
-            optionLabel="label" optionValue="value" class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Número interno</label>
-          <input pInputText [(ngModel)]="aForm.numero_interno" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Marca</label>
-          <input pInputText [(ngModel)]="aForm.marca" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Modelo</label>
-          <input pInputText [(ngModel)]="aForm.modelo" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Vence SOAT</label>
-          <input type="date" [(ngModel)]="aForm.vence_soat" class="w-full date-input" />
-        </div>
-        <div class="field">
-          <label class="field-label">Vence tecnomecánica</label>
-          <input type="date" [(ngModel)]="aForm.vence_tecnomecanica" class="w-full date-input" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Observaciones</label>
-          <textarea pTextarea [(ngModel)]="aForm.observaciones" rows="2" class="w-full"></textarea>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarForm = false" />
-        <p-button [label]="editando ? 'Guardar' : 'Crear'" icon="pi pi-check"
-          [loading]="guardando()" [disabled]="!aForm.placa" (onClick)="guardar()" />
-      </div>
-    </p-dialog>
-
-    <!-- ══ DIALOG DESPACHO ══ -->
-    <p-dialog header="Despachar ambulancia" [(visible)]="mostrarDespacho"
-      [style]="{width:'620px'}" [modal]="true">
-      <div class="form-grid">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Ambulancia *</label>
-          <p-select [(ngModel)]="tForm.ambulancia_id" [options]="opcionesDespacho()"
-            optionLabel="label" optionValue="value" [filter]="true"
-            placeholder="Solo se ofrecen las que pueden salir ahora"
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Paciente *</label>
-          <p-select [(ngModel)]="tForm.paciente_id" [options]="opcionesPaciente()"
-            optionLabel="label" optionValue="value" [filter]="true"
-            placeholder="Buscar por nombre o documento..."
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Tipo de traslado *</label>
-          <p-select [(ngModel)]="tForm.tipo_traslado" [options]="opcionesTipoTraslado"
-            optionLabel="label" optionValue="value" class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Conductor</label>
-          <input pInputText [(ngModel)]="tForm.conductor" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Origen *</label>
-          <input pInputText [(ngModel)]="tForm.origen" class="w-full"
-            placeholder="Vía Las Palmas km 12" />
-        </div>
-        <div class="field">
-          <label class="field-label">Destino *</label>
-          <input pInputText [(ngModel)]="tForm.destino" class="w-full"
-            placeholder="Urgencias sede norte" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Motivo *</label>
-          <input pInputText [(ngModel)]="tForm.motivo" class="w-full"
-            placeholder="Accidente de tránsito" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Personal asistencial</label>
-          <input pInputText [(ngModel)]="tForm.personal_asistencial" class="w-full" />
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarDespacho = false" />
-        <p-button label="Despachar" icon="pi pi-send" severity="success"
-          [loading]="despachando()" [disabled]="!despachoCompleto()" (onClick)="despachar()" />
-      </div>
-    </p-dialog>
-
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -356,17 +498,17 @@ type Tab = 'parque' | 'traslados';
       display: flex; align-items: center; gap: 0.4rem; }
     .tab-btn.active { color: #93c5fd; border-bottom-color: #3b82f6; }
     .badge-count { background: #3b82f6; color: white; border-radius: 10px; padding: 0 0.4rem; font-size: 0.7rem; }
-    .filter-bar { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-bar { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: flex-start; }
     .search-input { width: 260px; }
     .cargando { padding: 3rem; text-align: center; color: #64748b; }
     .sin-resultados { text-align: center; padding: 3rem 1rem; color: #64748b;
       display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
-    .field-label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.25rem; }
-    .w-full { width: 100%; }
-    .date-input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
-      border-radius: 6px; padding: 0.5rem; }
-    .dialog-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .peligro { color: #dc2626; }
+    .exito-texto { color: #16a34a; }
+    .exito { background: #16a34a; color: #fff; }
     /* Los tres estados del SOAT se ven distintos a propósito: «sin registrar» no
        se pinta como «vigente» ni como «vencido», porque no es ninguno de los dos. */
     .soat-vencido { color: #f87171; font-weight: 600; }
@@ -376,8 +518,12 @@ type Tab = 'parque' | 'traslados';
 })
 export class AmbulanciasComponent implements OnInit {
   private svc = inject(AmbulanciasService);
-  private pacientes = inject(PacienteService);
+  private dialogo = inject(MatDialog);
   private toast = inject(Avisos);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnasParque = ['placa', 'tipo', 'vehiculo', 'estado', 'soat', 'acciones'];
+  readonly columnasTraslados = ['paciente', 'ambulancia', 'tipo', 'ruta', 'estado', 'tiempos', 'acciones'];
 
   tab = signal<Tab>('parque');
   ambulancias = signal<Ambulancia[]>([]);
@@ -387,24 +533,6 @@ export class AmbulanciasComponent implements OnInit {
   busq = '';
   filtroEstado: string | null = null;
 
-  mostrarForm = false;
-  editando: Ambulancia | null = null;
-  guardando = signal(false);
-  aForm: Partial<AmbulanciaCreate> = { tipo: 'TAB' };
-
-  mostrarDespacho = false;
-  despachando = signal(false);
-  tForm: Partial<TrasladoCreate> = { tipo_traslado: 'Primario' };
-  private listaPacientes = signal<{ label: string; value: number }[]>([]);
-
-  readonly opcionesTipo = [
-    { label: 'TAB — básico', value: 'TAB' },
-    { label: 'TAM — medicalizado', value: 'TAM' },
-  ];
-  readonly opcionesTipoTraslado = [
-    { label: 'Primario — desde el sitio del evento', value: 'Primario' },
-    { label: 'Secundario — entre prestadores', value: 'Secundario' },
-  ];
   readonly opcionesEstado = [
     { label: 'Disponible', value: 'Disponible' },
     { label: 'En Traslado', value: 'En Traslado' },
@@ -422,19 +550,6 @@ export class AmbulanciasComponent implements OnInit {
   conSoatVencido = computed(() => this.ambulancias().filter(a => a.activa && a.soat_vencido));
   sinSoatRegistrado = computed(() => this.ambulancias().filter(a => a.activa && a.soat_sin_registrar));
   enCurso = computed(() => this.traslados().filter(t => t.estado === 'En Curso'));
-
-  opcionesDespacho = computed(() =>
-    this.disponibles().map(a => ({
-      label: `${a.placa} — ${a.tipo}${a.soat_sin_registrar ? ' (SOAT sin registrar)' : ''}`,
-      value: a.id,
-    })),
-  );
-  opcionesPaciente = computed(() => this.listaPacientes());
-
-  despachoCompleto = computed(() =>
-    !!(this.tForm.ambulancia_id && this.tForm.paciente_id && this.tForm.origen
-       && this.tForm.destino && this.tForm.motivo),
-  );
 
   ngOnInit(): void {
     this.cargar();
@@ -477,37 +592,26 @@ export class AmbulanciasComponent implements OnInit {
     return 'secondary';
   }
 
-  abrirCrear(): void {
-    this.editando = null;
-    this.aForm = { tipo: 'TAB' };
-    this.mostrarForm = true;
+  abrirCrear(): void { this.abrirFormulario(null); }
+  abrirEditar(a: Ambulancia): void { this.abrirFormulario(a); }
+
+  private abrirFormulario(a: Ambulancia | null): void {
+    this.dialogo
+      .open(AmbulanciaFormComponent, { data: a, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((datos?: Partial<AmbulanciaCreate>) => { if (datos) this.guardar(a, datos); });
   }
 
-  abrirEditar(a: Ambulancia): void {
-    this.editando = a;
-    this.aForm = {
-      placa: a.placa, tipo: a.tipo, numero_interno: a.numero_interno,
-      marca: a.marca, modelo: a.modelo, vence_soat: a.vence_soat,
-      vence_tecnomecanica: a.vence_tecnomecanica, observaciones: a.observaciones,
-    };
-    this.mostrarForm = true;
-  }
-
-  guardar(): void {
-    if (!this.aForm.placa) return;
-    this.guardando.set(true);
-    const editando = this.editando;
+  private guardar(editando: Ambulancia | null, datos: Partial<AmbulanciaCreate>): void {
     const peticion = editando
-      ? this.svc.actualizar(editando.id, this.aForm)
-      : this.svc.crear(this.aForm as AmbulanciaCreate);
+      ? this.svc.actualizar(editando.id, datos)
+      : this.svc.crear(datos as AmbulanciaCreate);
     peticion.subscribe({
       next: () => {
-        this.guardando.set(false);
-        this.mostrarForm = false;
-        this.ok(editando ? 'Ambulancia actualizada' : 'Ambulancia registrada', this.aForm.placa!);
+        this.ok(editando ? 'Ambulancia actualizada' : 'Ambulancia registrada', datos.placa!);
         this.cargar();
       },
-      error: err => { this.guardando.set(false); this.err(err?.error?.detail ?? 'No se pudo guardar'); },
+      error: err => this.err(err?.error?.detail ?? 'No se pudo guardar'),
     });
   }
 
@@ -519,35 +623,24 @@ export class AmbulanciasComponent implements OnInit {
   }
 
   abrirDespacho(): void {
-    this.tForm = { tipo_traslado: 'Primario' };
-    if (this.listaPacientes().length === 0) {
-      this.pacientes.list(1, 500).subscribe({
-        next: r => this.listaPacientes.set(
-          r.items.map(p => ({
-            label: `${p.nombre1} ${p.apellido1} — ${p.identificacion}`,
-            value: p.id,
-          })),
-        ),
-      });
-    }
-    this.mostrarDespacho = true;
+    const ambulancias = this.disponibles().map(a => ({
+      label: `${a.placa} — ${a.tipo}${a.soat_sin_registrar ? ' (SOAT sin registrar)' : ''}`,
+      value: a.id,
+    }));
+    this.dialogo
+      .open(AmbulanciaDespachoComponent, { data: { ambulancias }, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((t?: TrasladoCreate) => { if (t) this.despachar(t); });
   }
 
-  despachar(): void {
-    if (!this.despachoCompleto()) return;
-    this.despachando.set(true);
-    this.svc.despachar(this.tForm as TrasladoCreate).subscribe({
+  private despachar(datos: TrasladoCreate): void {
+    this.svc.despachar(datos).subscribe({
       next: t => {
-        this.despachando.set(false);
-        this.mostrarDespacho = false;
         this.ok('Ambulancia despachada', `${t.ambulancia_placa} → ${t.destino}`);
         this.cargar();
         this.cargarTraslados();
       },
-      error: err => {
-        this.despachando.set(false);
-        this.err(err?.error?.detail ?? 'No se pudo despachar');
-      },
+      error: err => this.err(err?.error?.detail ?? 'No se pudo despachar'),
     });
   }
 
