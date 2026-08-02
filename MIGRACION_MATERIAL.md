@@ -45,6 +45,7 @@ Un cambio a la vez: si se hacen juntos y algo se rompe, no se sabe cuál fue.
 | tras el formulario de paciente | 122 | 19 |
 | tras imágenes diagnósticas | 116 | 18 |
 | tras estadísticas (y el gráfico propio) | 112 | 17 |
+| tras evoluciones | 107 | 16 |
 
 `ng build` y las pruebas del frontend en verde en **cada** paso — esa es la red,
 y por eso los lotes son pequeños.
@@ -273,8 +274,12 @@ de diferencia.
 
 ## Trampas ya pagadas
 
-1. **Backticks dentro del template literal. LA MÁS FÁCIL DE REPETIR — cayó TRES
-   veces en una tarde, estando escrita aquí.** Un comentario HTML que nombre
+1. **Backticks dentro del template literal. LA MÁS FÁCIL DE REPETIR — van ya
+   CINCO veces, estando escrita aquí desde la primera.** El conteo se deja a la
+   vista porque es un dato sobre el método, no sobre el código: leer la trampa
+   no la evita. Lo que la evita es una regla de escritura —**en un comentario
+   dentro de una plantilla, ningún nombre lleva comillas invertidas**— y
+   compilar el lote pequeño. Un comentario HTML que nombre
    `` `p-password` `` cierra la cadena del `template:`, y el compilador escupe
    diez errores sin relación (`shorthand property 'p'`, `Cannot find name
    'styles'`, `Incorrect number of arguments to @Component`). Si aparecen
@@ -286,6 +291,13 @@ de diferencia.
    > rompe la compilación, así que la prueba nunca llega a ejecutarse. No añadía
    > detección sobre el compilador; solo habría dado una falsa sensación de red.
    > La salvaguarda es el `ng build` de cada lote, que ya la caza siempre.
+   >
+   > Se volvió a evaluar en el quinto tropiezo, buscando un guardián que diera
+   > el diagnóstico en una línea en vez de diez errores absurdos. **No hay
+   > sitio donde ponerlo**: una prueba no llega a correr (el archivo roto lo
+   > importa el banco de humo, así que la suite entera deja de compilar) y un
+   > guion suelto que nadie invoca es característica falsa. Queda el compilador,
+   > que tarda doce segundos y acierta siempre.
 
 2. **`tooltipPosition="bottom"` no es `matTooltipPosition="bottom"`.** Material
    usa `above`/`below`/`before`/`after`. Traducirlo mal no falla: deja el

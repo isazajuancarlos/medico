@@ -1,13 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
-import { SelectModule } from 'primeng/select';
 import { Avisos } from '../../shared/ui/avisos.service';
 import { Confirmar } from '../../shared/ui/confirmar.service';
 import { EvolucionService, Evolucion, EvolucionCreate } from '../../services/evolucion.service';
@@ -19,9 +19,8 @@ type Vista = 'lista' | 'form';
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    MatTooltipModule, MatDividerModule,
-    SelectModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule,
+    MatTooltipModule, MatDividerModule, MatSelectModule,
   ],
   template: `
     <div class="page-card">
@@ -32,28 +31,37 @@ type Vista = 'lista' | 'form';
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Evoluciones Médicas</h2>
-          <p-button label="Nueva evolución" icon="pi pi-plus"
-            (onClick)="abrirNueva()" />
+          <button matButton="filled" (click)="abrirNueva()">
+            <i class="pi pi-plus"></i> Nueva evolución
+          </button>
         </div>
 
         <!-- Filtros -->
         <div class="filtros-bar">
-          <div style="display:flex;gap:0.5rem;align-items:flex-end;flex:1">
-            <div style="flex:1">
-              <input pInputText [(ngModel)]="filtroPaciente" class="w-full"
-                placeholder="Buscar paciente por nombre o ID..."
-                (keyup.enter)="cargar()" />
-            </div>
-            <p-button icon="pi pi-search" [outlined]="true"
-              [loading]="cargando()" (onClick)="cargar()" matTooltip="Buscar" />
-            <p-button icon="pi pi-refresh" [text]="true"
-              (onClick)="limpiarFiltros()" matTooltip="Limpiar filtros" />
+          <div style="display:flex;gap:0.5rem;align-items:flex-start;flex:1">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+              <mat-label>Paciente</mat-label>
+              <input matInput [(ngModel)]="filtroPaciente"
+                placeholder="Nombre o identificación…" (keyup.enter)="cargar()" />
+            </mat-form-field>
+            <button matButton="outlined" [disabled]="cargando()" (click)="cargar()"
+              matTooltip="Buscar" aria-label="Buscar">
+              <i [class]="cargando() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i>
+            </button>
+            <button matIconButton (click)="limpiarFiltros()"
+              matTooltip="Limpiar filtros" aria-label="Limpiar filtros">
+              <i class="pi pi-refresh"></i>
+            </button>
           </div>
           <div style="display:flex;gap:0.5rem">
-            <input pInputText [(ngModel)]="filtroDesde" type="date"
-              style="width:145px" (change)="cargar()" />
-            <input pInputText [(ngModel)]="filtroHasta" type="date"
-              style="width:145px" (change)="cargar()" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="fecha">
+              <mat-label>Desde</mat-label>
+              <input matInput [(ngModel)]="filtroDesde" type="date" (change)="cargar()" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="fecha">
+              <mat-label>Hasta</mat-label>
+              <input matInput [(ngModel)]="filtroHasta" type="date" (change)="cargar()" />
+            </mat-form-field>
           </div>
         </div>
 
@@ -65,48 +73,60 @@ type Vista = 'lista' | 'form';
             <p>No se encontraron evoluciones con los filtros aplicados.</p>
           </div>
         } @else {
-          <p-table [value]="evoluciones()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Médico</th>
-                <th>Fecha</th>
-                <th>Motivo (subjetivo)</th>
-                <th style="text-align:center">Signos vitales</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-e>
-              <tr>
-                <td>
-                  <strong>{{ e.paciente_nombre || '—' }}</strong>
-                  @if (e.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ e.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ e.medico_nombre || '—' }}</td>
-                <td style="font-size:0.85rem;white-space:nowrap">
-                  {{ e.fecha | date:'dd/MM/yyyy HH:mm' }}
-                </td>
-                <td>
-                  <span class="texto-recortado">{{ e.subjetivo }}</span>
-                </td>
-                <td style="text-align:center">
-                  @if (e.tension_arterial || e.frecuencia_cardiaca || e.temperatura || e.peso) {
-                    <i class="pi pi-heart" style="color:#f472b6" matTooltip="Signos vitales registrados"></i>
-                  } @else {
-                    <span style="color:#475569;font-size:0.8rem">—</span>
-                  }
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    matTooltip="Ver / editar" (onClick)="abrirEditar(e)" />
-                  <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    matTooltip="Eliminar" (onClick)="confirmarEliminar(e)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="evoluciones()">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let e">
+                <strong>{{ e.paciente_nombre || '—' }}</strong>
+                @if (e.paciente_identificacion) {
+                  <div class="sub">{{ e.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="medico">
+              <th mat-header-cell *matHeaderCellDef>Médico</th>
+              <td mat-cell *matCellDef="let e" class="menudo">{{ e.medico_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let e" class="menudo sin-cortar">
+                {{ e.fecha | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="motivo">
+              <th mat-header-cell *matHeaderCellDef>Motivo (subjetivo)</th>
+              <td mat-cell *matCellDef="let e">
+                <span class="texto-recortado">{{ e.subjetivo }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="vitales">
+              <th mat-header-cell *matHeaderCellDef class="centro">Signos vitales</th>
+              <td mat-cell *matCellDef="let e" class="centro">
+                @if (e.tension_arterial || e.frecuencia_cardiaca || e.temperatura || e.peso) {
+                  <i class="pi pi-heart" style="color:#f472b6"
+                    matTooltip="Signos vitales registrados"></i>
+                } @else {
+                  <span class="nada">—</span>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let e" class="centro sin-cortar">
+                <button matIconButton matTooltip="Ver / editar" (click)="abrirEditar(e)"
+                  aria-label="Ver o editar">
+                  <i class="pi pi-file-edit"></i>
+                </button>
+                <button matIconButton class="peligro" matTooltip="Eliminar"
+                  (click)="confirmarEliminar(e)" aria-label="Eliminar">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
         }
       }
 
@@ -115,7 +135,9 @@ type Vista = 'lista' | 'form';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'form') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" matTooltip="Volver" />
+          <button matIconButton (click)="volverLista()" matTooltip="Volver" aria-label="Volver">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">
             {{ editando() ? 'Editar evolución' : 'Nueva evolución médica' }}
           </h2>
@@ -127,24 +149,36 @@ type Vista = 'lista' | 'form';
           @if (!editando()) {
             <div class="form-section">
               <div class="section-label">Paciente</div>
-              <div style="display:flex;gap:0.5rem;align-items:flex-end">
-                <div class="field" style="flex:1">
-                  <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
-                    placeholder="Nombre o número de identificación..."
+              <div style="display:flex;gap:0.5rem;align-items:flex-start">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                  <mat-label>Nombre o número de identificación</mat-label>
+                  <input matInput [(ngModel)]="busquedaPaciente"
                     (keyup.enter)="buscarPaciente()" />
-                </div>
-                <p-button label="Buscar" icon="pi pi-search"
-                  [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+                </mat-form-field>
+                <button matButton="filled" [disabled]="buscandoPaciente()"
+                  (click)="buscarPaciente()">
+                  <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i>
+                  Buscar
+                </button>
               </div>
               @if (resultadosPaciente().length > 0) {
-                <div style="margin-top:0.75rem">
-                  <p-select [(ngModel)]="pacienteSeleccionado"
-                    [options]="resultadosPaciente()"
-                    optionLabel="nombre_completo"
-                    [filter]="true" filterBy="nombre_completo,identificacion"
-                    placeholder="Seleccione el paciente..."
-                    class="w-full" style="width:100%" />
-                </div>
+                <!-- mat-select no trae el buscador que p-select tenía dentro
+                     ([filter] sobre nombre e identificación). No hace falta:
+                     esta lista ES ya el resultado de una búsqueda explícita, y
+                     la identificación pasa a leerse en la propia opción, que
+                     es para lo que servía filtrar por ella — distinguir dos
+                     pacientes con el mismo nombre. -->
+                <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                  class="w-full separa">
+                  <mat-label>Seleccione el paciente</mat-label>
+                  <mat-select [(ngModel)]="pacienteSeleccionado">
+                    @for (p of resultadosPaciente(); track p.id) {
+                      <mat-option [value]="p">
+                        {{ p.nombre_completo }} — {{ p.identificacion }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
               }
               @if (pacienteSeleccionado) {
                 <div class="paciente-chip">
@@ -173,35 +207,35 @@ type Vista = 'lista' | 'form';
             <div class="soap-grid">
               <div class="soap-field">
                 <div class="soap-letter soap-s">S</div>
-                <div class="field">
-                  <label>Subjetivo <span class="req">*</span></label>
-                  <textarea pTextarea [(ngModel)]="form.subjetivo" rows="4" class="w-full"
-                    placeholder="Lo que refiere el paciente: síntomas, quejas, dolor (escala 1-10), evolución desde última consulta..."></textarea>
-                </div>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full">
+                  <mat-label>Subjetivo *</mat-label>
+                  <textarea matInput [(ngModel)]="form.subjetivo" rows="4"
+                    placeholder="Lo que refiere el paciente: síntomas, quejas, dolor (escala 1-10), evolución desde última consulta…"></textarea>
+                </mat-form-field>
               </div>
               <div class="soap-field">
                 <div class="soap-letter soap-o">O</div>
-                <div class="field">
-                  <label>Objetivo <span class="req">*</span></label>
-                  <textarea pTextarea [(ngModel)]="form.objetivo" rows="4" class="w-full"
-                    placeholder="Hallazgos del examen físico: aspecto general, signos, auscultación, palpación..."></textarea>
-                </div>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full">
+                  <mat-label>Objetivo *</mat-label>
+                  <textarea matInput [(ngModel)]="form.objetivo" rows="4"
+                    placeholder="Hallazgos del examen físico: aspecto general, signos, auscultación, palpación…"></textarea>
+                </mat-form-field>
               </div>
               <div class="soap-field">
                 <div class="soap-letter soap-a">A</div>
-                <div class="field">
-                  <label>Análisis / Evaluación <span class="req">*</span></label>
-                  <textarea pTextarea [(ngModel)]="form.analisis" rows="4" class="w-full"
-                    placeholder="Interpretación clínica, diagnósticos diferenciales, evolución de la condición..."></textarea>
-                </div>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full">
+                  <mat-label>Análisis / Evaluación *</mat-label>
+                  <textarea matInput [(ngModel)]="form.analisis" rows="4"
+                    placeholder="Interpretación clínica, diagnósticos diferenciales, evolución de la condición…"></textarea>
+                </mat-form-field>
               </div>
               <div class="soap-field">
                 <div class="soap-letter soap-p">P</div>
-                <div class="field">
-                  <label>Plan <span class="req">*</span></label>
-                  <textarea pTextarea [(ngModel)]="form.plan" rows="4" class="w-full"
-                    placeholder="Conducta: cambios en medicación, nuevas órdenes, interconsultas, próxima cita..."></textarea>
-                </div>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full">
+                  <mat-label>Plan *</mat-label>
+                  <textarea matInput [(ngModel)]="form.plan" rows="4"
+                    placeholder="Conducta: cambios en medicación, nuevas órdenes, interconsultas, próxima cita…"></textarea>
+                </mat-form-field>
               </div>
             </div>
           </div>
@@ -212,35 +246,37 @@ type Vista = 'lista' | 'form';
           <div class="form-section">
             <div class="section-label">Signos vitales de control <span style="color:#64748b;font-weight:400">(opcional)</span></div>
             <div class="vitales-grid">
-              <div class="field">
-                <label>Tensión arterial</label>
-                <input pInputText [(ngModel)]="form.tension_arterial" class="w-full"
-                  placeholder="120/80 mmHg" />
-              </div>
-              <div class="field">
-                <label>Frecuencia cardíaca</label>
-                <input pInputText [(ngModel)]="form.frecuencia_cardiaca" type="number"
-                  class="w-full" placeholder="lpm" />
-              </div>
-              <div class="field">
-                <label>Temperatura (°C)</label>
-                <input pInputText [(ngModel)]="form.temperatura" type="number"
-                  step="0.1" class="w-full" placeholder="36.5" />
-              </div>
-              <div class="field">
-                <label>Peso (kg)</label>
-                <input pInputText [(ngModel)]="form.peso" type="number"
-                  step="0.1" class="w-full" placeholder="70.0" />
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Tensión arterial</mat-label>
+                <input matInput [(ngModel)]="form.tension_arterial" placeholder="120/80 mmHg" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Frecuencia cardíaca</mat-label>
+                <input matInput [(ngModel)]="form.frecuencia_cardiaca" type="number" />
+                <span matTextSuffix>lpm</span>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Temperatura</mat-label>
+                <input matInput [(ngModel)]="form.temperatura" type="number"
+                  step="0.1" placeholder="36.5" />
+                <span matTextSuffix>°C</span>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Peso</mat-label>
+                <input matInput [(ngModel)]="form.peso" type="number"
+                  step="0.1" placeholder="70.0" />
+                <span matTextSuffix>kg</span>
+              </mat-form-field>
             </div>
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button [label]="editando() ? 'Guardar cambios' : 'Registrar evolución'"
-              icon="pi pi-check" [loading]="guardando()"
-              [disabled]="!form.subjetivo || !form.objetivo || !form.analisis || !form.plan || (!editando() && !pacienteSeleccionado)"
-              (onClick)="guardar()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="guardar()"
+              [disabled]="guardando() || !puedeGuardar()">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i>
+              {{ editando() ? 'Guardar cambios' : 'Registrar evolución' }}
+            </button>
           </div>
         </div>
       }
@@ -255,7 +291,16 @@ type Vista = 'lista' | 'form';
     .cargando { padding: 3rem; text-align: center; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
     .sin-resultados { text-align: center; padding: 3rem 1rem; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
 
-    .filtros-bar { display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filtros-bar { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; }
+    table { width: 100%; }
+    .centro { text-align: center; }
+    .menudo { font-size: 0.85rem; }
+    .sin-cortar { white-space: nowrap; }
+    .sub { font-size: 0.78rem; color: #94a3b8; }
+    .nada { color: #475569; font-size: 0.8rem; }
+    .fecha { width: 160px; }
+    .separa { margin-top: 0.75rem; }
+    .peligro:not(:disabled) { color: #dc2626; }
 
     .texto-recortado {
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -304,6 +349,8 @@ export class EvolucionesComponent implements OnInit {
   private svc = inject(EvolucionService);
   private messageService = inject(Avisos);
   private confirmationService = inject(Confirmar);
+
+  readonly columnas = ['paciente', 'medico', 'fecha', 'motivo', 'vitales', 'acciones'];
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
@@ -398,8 +445,22 @@ export class EvolucionesComponent implements OnInit {
     });
   }
 
+  /**
+   * Las cuatro letras del SOAP y, si es un alta, el paciente.
+   *
+   * Estaba escrito dos veces —una en el `[disabled]` del botón y otra al
+   * entrar en `guardar()`— y las dos versiones **no decían lo mismo**: la del
+   * botón exigía además el paciente y la del método no. Una nota sin paciente
+   * no la frenaba el código, solo el botón.
+   */
+  puedeGuardar(): boolean {
+    const f = this.form;
+    const soap = !!f.subjetivo && !!f.objetivo && !!f.analisis && !!f.plan;
+    return soap && (this.editando() || !!this.pacienteSeleccionado);
+  }
+
   guardar(): void {
-    if (!this.form.subjetivo || !this.form.objetivo || !this.form.analisis || !this.form.plan) return;
+    if (!this.puedeGuardar()) return;
     this.guardando.set(true);
 
     if (this.editando()) {
