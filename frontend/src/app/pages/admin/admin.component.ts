@@ -1,16 +1,16 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTableModule } from '@angular/material/table';
 import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
-import { SelectModule } from 'primeng/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DialogModule } from 'primeng/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Avisos } from '../../shared/ui/avisos.service';
 import {
   AdminService, Institucion, ConfiguracionInstitucion, PoliticaSeguridad,
@@ -71,14 +71,265 @@ const DIAS_SEMANA = [
   { key: 'D', label: 'Dom' },
 ];
 
+
+/** Alta y edición de un usuario. Devuelve el formulario, o nada. */
+@Component({
+  selector: 'app-admin-usuario',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre completo *</mat-label>
+          <input matInput [(ngModel)]="f.nombre_completo" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Username *</mat-label>
+          <input matInput [(ngModel)]="f.username" [disabled]="editando" />
+        </mat-form-field>
+        @if (!editando) {
+          <mat-form-field appearance="outline">
+            <mat-label>Contraseña *</mat-label>
+            <input matInput type="password" [(ngModel)]="f.password" />
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" [(ngModel)]="f.email" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Rol *</mat-label>
+          <mat-select [(ngModel)]="f.rol">
+            @for (r of roles; track r.value) { <mat-option [value]="r.value">{{ r.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Especialidad</mat-label>
+          <mat-select [(ngModel)]="f.especialidad_id">
+            <mat-option [value]="null">— Sin especialidad —</mat-option>
+            @for (e of especialidades; track e.id) { <mat-option [value]="e.id">{{ e.nombre }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Reg. Médico / Tarjeta Prof.</mat-label>
+          <input matInput [(ngModel)]="f.registro_medico" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Registro RETHUS</mat-label>
+          <input matInput [(ngModel)]="f.registro_rethus" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-save"></i> Guardar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(32rem, 85vw); }
+    mat-form-field { width:100%; }
+  `],
+})
+export class AdminUsuarioComponent {
+  readonly roles: { value: string; label: string }[];
+  readonly especialidades: { id: number; nombre: string }[];
+  readonly editando: boolean;
+  f: any;
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA)
+    datos: {
+      usuario: UsuarioAdmin | null;
+      roles: { value: string; label: string }[];
+      especialidades: { id: number; nombre: string }[];
+    },
+  ) {
+    this.roles = datos.roles;
+    this.especialidades = datos.especialidades;
+    this.editando = !!datos.usuario;
+    this.f = datos.usuario
+      ? { ...datos.usuario, password: '' }
+      : { username: '', password: '', nombre_completo: '', email: '', rol: 'medico',
+          especialidad_id: null, registro_medico: '', registro_rethus: '' };
+  }
+
+  completo(): boolean { return !!this.f.nombre_completo && !!this.f.rol; }
+
+  resultado(): any | null { return this.completo() ? this.f : null; }
+}
+
+/**
+ * Restablecer la contraseña de un usuario.
+ *
+ * El mínimo de seis caracteres se comprueba aquí y deja el botón inerte: antes
+ * se dejaba pulsar y el aviso llegaba después, que es enseñar la regla
+ * chocándose con ella.
+ */
+@Component({
+  selector: 'app-admin-reset-clave',
+  standalone: true,
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  template: `
+    <h2 mat-dialog-title>Restablecer contraseña</h2>
+    <mat-dialog-content>
+      <p class="quien">Usuario: <strong>{{ u.nombre_completo }}</strong></p>
+      <mat-form-field appearance="outline">
+        <mat-label>Nueva contraseña (mín. 6 caracteres)</mat-label>
+        <input matInput type="password" [(ngModel)]="clave" />
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="aviso" [disabled]="clave.length < 6"
+        [mat-dialog-close]="clave">
+        <i class="pi pi-key"></i> Restablecer
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { min-width:min(22rem, 85vw); }
+    .quien { color:#64748b; margin-bottom:1rem; }
+    mat-form-field { width:100%; }
+    .aviso { background:#f59e0b; color:#0f172a; }
+  `],
+})
+export class AdminResetClaveComponent {
+  clave = '';
+  constructor(@Inject(MAT_DIALOG_DATA) public u: UsuarioAdmin) {}
+}
+
+/** Un campo adicional de la historia clínica. */
+@Component({
+  selector: 'app-admin-campo',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar campo' : 'Nuevo campo' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Etiqueta *</mat-label>
+          <input matInput [(ngModel)]="f.etiqueta" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo *</mat-label>
+          <mat-select [(ngModel)]="f.tipo">
+            @for (t of tipos; track t.value) { <mat-option [value]="t.value">{{ t.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Orden</mat-label>
+          <input matInput type="number" [(ngModel)]="f.orden" />
+        </mat-form-field>
+        @if (f.tipo === 'Lista Opciones') {
+          <mat-form-field appearance="outline" class="ancho">
+            <mat-label>Opciones (separadas por coma)</mat-label>
+            <input matInput [(ngModel)]="f.opciones" placeholder="Opción 1, Opción 2, Opción 3" />
+          </mat-form-field>
+        }
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!f.etiqueta" [mat-dialog-close]="resultado()">
+        <i class="pi pi-save"></i> Guardar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(26rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class AdminCampoComponent {
+  readonly tipos: { value: string; label: string }[];
+  readonly editando: boolean;
+  f: any;
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA)
+    datos: { campo: ConfigCampo | null; tipos: { value: string; label: string }[] },
+  ) {
+    this.tipos = datos.tipos;
+    this.editando = !!datos.campo;
+    this.f = datos.campo ? { ...datos.campo } : { etiqueta: '', tipo: 'Texto', opciones: '', orden: 0 };
+  }
+
+  resultado(): any | null { return this.f.etiqueta ? this.f : null; }
+}
+
+/** Una entidad responsable de pago (EPS). */
+@Component({
+  selector: 'app-admin-entidad',
+  standalone: true,
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar entidad' : 'Nueva entidad' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Nombre *</mat-label>
+          <input matInput [(ngModel)]="f.nombre" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>NIT *</mat-label>
+          <input matInput [(ngModel)]="f.nit" [disabled]="editando" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Código EPS *</mat-label>
+          <input matInput [(ngModel)]="f.codigo_eps" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-save"></i> Guardar
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(26rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class AdminEntidadComponent {
+  readonly editando: boolean;
+  f: any;
+
+  constructor(@Inject(MAT_DIALOG_DATA) e: EntidadEPS | null) {
+    this.editando = !!e;
+    this.f = e ? { ...e } : { nit: '', nombre: '', codigo_eps: '' };
+  }
+
+  completo(): boolean { return !!this.f.nombre && !!this.f.nit && !!this.f.codigo_eps; }
+
+  resultado(): any | null { return this.completo() ? this.f : null; }
+}
+
 @Component({
   selector: 'app-admin',
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    EtiquetaComponent, SelectModule, MatTooltipModule, DialogModule,
-    MatDividerModule, ToggleSwitchModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatSlideToggleModule, MatTableModule,
+    EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -102,91 +353,91 @@ const DIAS_SEMANA = [
           <div class="form-section">
             <h3 class="section-title">Datos Institucionales</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Razón Social *</label>
-                <input pInputText [(ngModel)]="institucion()!.razon_social" />
-              </div>
-              <div class="field-group">
-                <label>Nombre Comercial *</label>
-                <input pInputText [(ngModel)]="institucion()!.nombre_comercial" />
-              </div>
-              <div class="field-group">
-                <label>NIT</label>
-                <input pInputText [ngModel]="institucion()!.nit" disabled />
-              </div>
-              <div class="field-group">
-                <label>Código Habilitación (REPS)</label>
-                <input pInputText [(ngModel)]="institucion()!.codigo_habilitacion" />
-              </div>
-              <div class="field-group">
-                <label>Código Prestador RIPS</label>
-                <input pInputText [(ngModel)]="institucion()!.codigo_prestador" />
-              </div>
-              <div class="field-group">
-                <label>Tipo Prestador</label>
-                <p-select [(ngModel)]="institucion()!.tipo_prestador"
-                  [options]="['IPS','CLINICA','HOSPITAL','CONSULTORIO','LABORATORIO']"
-                  placeholder="Seleccionar" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Razón Social *</mat-label>
+                <input matInput [(ngModel)]="institucion()!.razon_social" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre Comercial *</mat-label>
+                <input matInput [(ngModel)]="institucion()!.nombre_comercial" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>NIT</mat-label>
+                <input matInput [ngModel]="institucion()!.nit" disabled />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Código Habilitación (REPS)</mat-label>
+                <input matInput [(ngModel)]="institucion()!.codigo_habilitacion" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Código Prestador RIPS</mat-label>
+                <input matInput [(ngModel)]="institucion()!.codigo_prestador" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo Prestador</mat-label>
+                <mat-select [(ngModel)]="institucion()!.tipo_prestador">
+                  @for (t of tiposPrestador; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
             </div>
             <mat-divider />
             <h3 class="section-title">Ubicación y Contacto</h3>
             <div class="form-grid">
-              <div class="field-group" style="grid-column:span 2">
-                <label>Dirección</label>
-                <input pInputText [(ngModel)]="institucion()!.direccion" class="w-full" />
-              </div>
-              <div class="field-group">
-                <label>Ciudad</label>
-                <input pInputText [(ngModel)]="institucion()!.ciudad" />
-              </div>
-              <div class="field-group">
-                <label>Departamento</label>
-                <input pInputText [(ngModel)]="institucion()!.departamento" />
-              </div>
-              <div class="field-group">
-                <label>Teléfono</label>
-                <input pInputText [(ngModel)]="institucion()!.telefono" />
-              </div>
-              <div class="field-group">
-                <label>Email institucional</label>
-                <input pInputText type="email" [(ngModel)]="institucion()!.email" />
-              </div>
+              <mat-form-field appearance="outline" style="grid-column:span 2">
+                <mat-label>Dirección</mat-label>
+                <input matInput [(ngModel)]="institucion()!.direccion" class="w-full" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Ciudad</mat-label>
+                <input matInput [(ngModel)]="institucion()!.ciudad" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Departamento</mat-label>
+                <input matInput [(ngModel)]="institucion()!.departamento" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Teléfono</mat-label>
+                <input matInput [(ngModel)]="institucion()!.telefono" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Email institucional</mat-label>
+                <input matInput type="email" [(ngModel)]="institucion()!.email" />
+              </mat-form-field>
             </div>
             <mat-divider />
             <h3 class="section-title">Representante Legal</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Nombre</label>
-                <input pInputText [(ngModel)]="institucion()!.representante_legal" />
-              </div>
-              <div class="field-group">
-                <label>Identificación</label>
-                <input pInputText [(ngModel)]="institucion()!.identificacion_representante" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre</mat-label>
+                <input matInput [(ngModel)]="institucion()!.representante_legal" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Identificación</mat-label>
+                <input matInput [(ngModel)]="institucion()!.identificacion_representante" />
+              </mat-form-field>
             </div>
             <mat-divider />
             <h3 class="section-title">Branding</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Color Primario</label>
-                <div style="display:flex;gap:.5rem;align-items:center">
-                  <input type="color" [(ngModel)]="institucion()!.color_primario"
-                    style="height:38px;width:60px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer" />
-                  <input pInputText [(ngModel)]="institucion()!.color_primario" style="flex:1" />
-                </div>
+              <div class="color-fila">
+                <input type="color" [(ngModel)]="institucion()!.color_primario" class="muestra" />
+                <mat-form-field appearance="outline" style="flex:1">
+                  <mat-label>Color primario</mat-label>
+                  <input matInput [(ngModel)]="institucion()!.color_primario" />
+                </mat-form-field>
               </div>
-              <div class="field-group">
-                <label>Color Secundario</label>
-                <div style="display:flex;gap:.5rem;align-items:center">
-                  <input type="color" [(ngModel)]="institucion()!.color_secundario"
-                    style="height:38px;width:60px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer" />
-                  <input pInputText [(ngModel)]="institucion()!.color_secundario" style="flex:1" />
-                </div>
+              <div class="color-fila">
+                <input type="color" [(ngModel)]="institucion()!.color_secundario" class="muestra" />
+                <mat-form-field appearance="outline" style="flex:1">
+                  <mat-label>Color secundario</mat-label>
+                  <input matInput [(ngModel)]="institucion()!.color_secundario" />
+                </mat-form-field>
               </div>
             </div>
             <div class="form-actions">
-              <p-button label="Guardar cambios" icon="pi pi-save" (onClick)="guardarInstitucion()" [loading]="guardando()" />
+              <button matButton="filled" [disabled]="guardando()" (click)="guardarInstitucion()">
+                <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar cambios
+              </button>
             </div>
           </div>
         } @else {
@@ -200,22 +451,22 @@ const DIAS_SEMANA = [
           <div class="form-section">
             <h3 class="section-title">Horario de Atención</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Hora apertura</label>
-                <input pInputText type="time" [(ngModel)]="config()!.horario_apertura" />
-              </div>
-              <div class="field-group">
-                <label>Hora cierre</label>
-                <input pInputText type="time" [(ngModel)]="config()!.horario_cierre" />
-              </div>
-              <div class="field-group">
-                <label>Duración cita (min)</label>
-                <input pInputText type="number" [(ngModel)]="config()!.duracion_cita_default" min="5" max="120" />
-              </div>
-              <div class="field-group">
-                <label>Buffer entre citas (min)</label>
-                <input pInputText type="number" [(ngModel)]="config()!.tiempo_buffer" min="0" max="60" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Hora apertura</mat-label>
+                <input matInput type="time" [(ngModel)]="config()!.horario_apertura" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Hora cierre</mat-label>
+                <input matInput type="time" [(ngModel)]="config()!.horario_cierre" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Duración cita (min)</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.duracion_cita_default" min="5" max="120" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Buffer entre citas (min)</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.tiempo_buffer" min="0" max="60" />
+              </mat-form-field>
               <div class="field-group" style="grid-column:span 2">
                 <label>Días de atención</label>
                 <div class="days-row">
@@ -226,69 +477,71 @@ const DIAS_SEMANA = [
                   }
                 </div>
               </div>
-              <div class="field-group">
-                <label>Días máx. agendamiento</label>
-                <input pInputText type="number" [(ngModel)]="config()!.dias_maximos_agendamiento" min="1" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Días máx. agendamiento</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.dias_maximos_agendamiento" min="1" />
+              </mat-form-field>
             </div>
             <mat-divider />
             <h3 class="section-title">Facturación</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Prefijo factura</label>
-                <input pInputText [(ngModel)]="config()!.prefijo_factura" maxlength="10" />
-              </div>
-              <div class="field-group">
-                <label>Resolución DIAN</label>
-                <input pInputText [(ngModel)]="config()!.resolucion_facturacion" />
-              </div>
-              <div class="field-group">
-                <label>Rango desde</label>
-                <input pInputText type="number" [(ngModel)]="config()!.rango_desde" />
-              </div>
-              <div class="field-group">
-                <label>Rango hasta</label>
-                <input pInputText type="number" [(ngModel)]="config()!.rango_hasta" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Prefijo factura</mat-label>
+                <input matInput [(ngModel)]="config()!.prefijo_factura" maxlength="10" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Resolución DIAN</mat-label>
+                <input matInput [(ngModel)]="config()!.resolucion_facturacion" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Rango desde</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.rango_desde" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Rango hasta</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.rango_hasta" />
+              </mat-form-field>
             </div>
             <mat-divider />
             <h3 class="section-title">Opciones del Sistema</h3>
             <div class="toggle-grid">
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="config()!.permitir_citas_online" />
+                <mat-slide-toggle [(ngModel)]="config()!.permitir_citas_online" />
                 <span>Permitir citas en línea</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="config()!.requiere_autorizacion" />
+                <mat-slide-toggle [(ngModel)]="config()!.requiere_autorizacion" />
                 <span>Requerir autorización EPS</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="config()!.enviar_recordatorios" />
+                <mat-slide-toggle [(ngModel)]="config()!.enviar_recordatorios" />
                 <span>Enviar recordatorios de citas</span>
               </div>
             </div>
             @if (config()!.enviar_recordatorios) {
               <div class="form-grid" style="margin-top:1rem">
-                <div class="field-group">
-                  <label>Horas anticipación recordatorio</label>
-                  <input pInputText type="number" [(ngModel)]="config()!.horas_anticipacion" min="1" max="72" />
-                </div>
-                <div class="field-group">
-                  <label>SMTP Host</label>
-                  <input pInputText [(ngModel)]="config()!.smtp_host" />
-                </div>
-                <div class="field-group">
-                  <label>SMTP Puerto</label>
-                  <input pInputText type="number" [(ngModel)]="config()!.smtp_port" />
-                </div>
-                <div class="field-group">
-                  <label>SMTP Usuario</label>
-                  <input pInputText [(ngModel)]="config()!.smtp_usuario" />
-                </div>
+                <mat-form-field appearance="outline">
+                <mat-label>Horas anticipación recordatorio</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.horas_anticipacion" min="1" max="72" />
+              </mat-form-field>
+                <mat-form-field appearance="outline">
+                <mat-label>SMTP Host</mat-label>
+                <input matInput [(ngModel)]="config()!.smtp_host" />
+              </mat-form-field>
+                <mat-form-field appearance="outline">
+                <mat-label>SMTP Puerto</mat-label>
+                <input matInput type="number" [(ngModel)]="config()!.smtp_port" />
+              </mat-form-field>
+                <mat-form-field appearance="outline">
+                <mat-label>SMTP Usuario</mat-label>
+                <input matInput [(ngModel)]="config()!.smtp_usuario" />
+              </mat-form-field>
               </div>
             }
             <div class="form-actions">
-              <p-button label="Guardar configuración" icon="pi pi-save" (onClick)="guardarConfig()" [loading]="guardando()" />
+              <button matButton="filled" [disabled]="guardando()" (click)="guardarConfig()">
+                <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar configuración
+              </button>
             </div>
           </div>
         } @else {
@@ -300,62 +553,86 @@ const DIAS_SEMANA = [
       @if (tab() === 'usuarios') {
         <div class="list-header" style="margin-bottom:1rem">
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-            <span class="p-input-icon-left">
-              <i class="pi pi-search"></i>
-              <input pInputText [(ngModel)]="busqUsuario" placeholder="Buscar..." (input)="cargarUsuarios()"
-                style="padding-left:2rem" />
-            </span>
-            <p-select [(ngModel)]="filtroRolUsuario"
-              [options]="[{value:'',label:'Todos los roles'},...ROLES]"
-              optionLabel="label" optionValue="value"
-              (onChange)="cargarUsuarios()" style="width:180px" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Buscar</mat-label>
+              <input matInput [(ngModel)]="busqUsuario" placeholder="Buscar..." (input)="cargarUsuarios()" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:180px">
+              <mat-label>Rol</mat-label>
+              <mat-select [(ngModel)]="filtroRolUsuario" (selectionChange)="cargarUsuarios()">
+                <mat-option [value]="''">Todos los roles</mat-option>
+                @for (r of ROLES; track r.value) {
+                  <mat-option [value]="r.value">{{ r.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           </div>
-          <p-button label="Nuevo usuario" icon="pi pi-plus" (onClick)="abrirFormUsuario(null)" />
+          <button matButton="filled" (click)="abrirFormUsuario(null)">
+            <i class="pi pi-plus"></i> Nuevo usuario
+          </button>
         </div>
-        <p-table [value]="usuarios()" [loading]="cargando()">
-          <ng-template #header>
-            <tr>
-              <th>Nombre</th>
-              <th>Username</th>
-              <th>Rol</th>
-              <th>Especialidad</th>
-              <th style="text-align:center">Estado</th>
-              <th style="width:180px"></th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-u>
-            <tr [class.row-inactivo]="!u.activo">
-              <td>
-                {{ u.nombre_completo }}
+        <table mat-table [dataSource]="usuarios()" class="tabla">
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <td mat-cell *matCellDef="let u" [class.row-inactivo]="!u.activo">
+              {{ u.nombre_completo }}
+              @if (u.cuenta_bloqueada) {
+                <x-etiqueta value="Bloqueado" severity="danger" style="margin-left:.5rem" />
+              }
+              @if (u.requiere_cambio_password) {
+                <x-etiqueta value="Cambiar clave" severity="warn" style="margin-left:.25rem" />
+              }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="username">
+            <th mat-header-cell *matHeaderCellDef>Username</th>
+            <td mat-cell *matCellDef="let u"><code style="font-size:.82rem">{{ u.username }}</code></td>
+          </ng-container>
+          <ng-container matColumnDef="rol">
+            <th mat-header-cell *matHeaderCellDef>Rol</th>
+            <td mat-cell *matCellDef="let u" style="font-size:.85rem">{{ rolLabel(u.rol) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="especialidad">
+            <th mat-header-cell *matHeaderCellDef>Especialidad</th>
+            <td mat-cell *matCellDef="let u" style="font-size:.82rem;color:#64748b">
+              {{ u.especialidad_nombre || '—' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+            <td mat-cell *matCellDef="let u" class="centro">
+              <x-etiqueta [value]="u.activo ? 'Activo' : 'Inactivo'"
+                [severity]="u.activo ? 'success' : 'secondary'" />
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef style="width:180px"></th>
+            <td mat-cell *matCellDef="let u">
+              <div style="display:flex;gap:.25rem;justify-content:flex-end">
+                <button matIconButton matTooltip="Editar" (click)="abrirFormUsuario(u)">
+                  <i class="pi pi-pencil"></i>
+                </button>
                 @if (u.cuenta_bloqueada) {
-                  <x-etiqueta value="Bloqueado" severity="danger" style="margin-left:.5rem" />
+                  <button matIconButton class="aviso-color" matTooltip="Desbloquear" (click)="desbloquear(u)">
+                    <i class="pi pi-unlock"></i>
+                  </button>
                 }
-                @if (u.requiere_cambio_password) {
-                  <x-etiqueta value="Cambiar clave" severity="warn" style="margin-left:.25rem" />
-                }
-              </td>
-              <td><code style="font-size:.82rem">{{ u.username }}</code></td>
-              <td style="font-size:.85rem">{{ rolLabel(u.rol) }}</td>
-              <td style="font-size:.82rem;color:#64748b">{{ u.especialidad_nombre || '—' }}</td>
-              <td style="text-align:center">
-                <x-etiqueta [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'secondary'" />
-              </td>
-              <td>
-                <div style="display:flex;gap:.25rem;justify-content:flex-end">
-                  <p-button icon="pi pi-pencil" [text]="true" size="small" matTooltip="Editar" (onClick)="abrirFormUsuario(u)" />
-                  @if (u.cuenta_bloqueada) {
-                    <p-button icon="pi pi-unlock" [text]="true" size="small" severity="warn" matTooltip="Desbloquear" (onClick)="desbloquear(u)" />
-                  }
-                  <p-button icon="pi pi-key" [text]="true" size="small" matTooltip="Reset contraseña" (onClick)="abrirResetPassword(u)" />
-                  <p-button icon="pi pi-ban" [text]="true" size="small" severity="danger" matTooltip="Desactivar" (onClick)="desactivarUsuario(u)" />
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8">Sin usuarios</td></tr>
-          </ng-template>
-        </p-table>
+                <button matIconButton matTooltip="Reset contraseña" (click)="abrirResetPassword(u)">
+                  <i class="pi pi-key"></i>
+                </button>
+                <button matIconButton class="peligro" matTooltip="Desactivar" (click)="desactivarUsuario(u)">
+                  <i class="pi pi-ban"></i>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasUsuarios"></tr>
+          <tr mat-row *matRowDef="let fila; columns: columnasUsuarios"></tr>
+        </table>
+        @if (!cargando() && usuarios().length === 0) {
+          <p class="vacio">Sin usuarios</p>
+        }
       }
 
       <!-- ══════════════════ SEGURIDAD ══════════════════ -->
@@ -364,117 +641,121 @@ const DIAS_SEMANA = [
           <div class="form-section">
             <h3 class="section-title">Política de Contraseñas</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Longitud mínima</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.longitud_minima_password" min="6" max="32" />
-              </div>
-              <div class="field-group">
-                <label>Días expiración (0 = nunca)</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.dias_expiracion_password" min="0" />
-              </div>
-              <div class="field-group">
-                <label>Historial (no reutilizar últimas N)</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.historial_passwords" min="0" max="24" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Longitud mínima</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.longitud_minima_password" min="6" max="32" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Días expiración (0 = nunca)</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.dias_expiracion_password" min="0" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Historial (no reutilizar últimas N)</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.historial_passwords" min="0" max="24" />
+              </mat-form-field>
             </div>
             <div class="toggle-grid" style="margin-top:.75rem">
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.requiere_mayuscula" />
+                <mat-slide-toggle [(ngModel)]="politica()!.requiere_mayuscula" />
                 <span>Requiere mayúscula</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.requiere_minuscula" />
+                <mat-slide-toggle [(ngModel)]="politica()!.requiere_minuscula" />
                 <span>Requiere minúscula</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.requiere_numero" />
+                <mat-slide-toggle [(ngModel)]="politica()!.requiere_numero" />
                 <span>Requiere número</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.requiere_caracter_especial" />
+                <mat-slide-toggle [(ngModel)]="politica()!.requiere_caracter_especial" />
                 <span>Requiere carácter especial</span>
               </div>
             </div>
             <mat-divider />
             <h3 class="section-title">Sesiones</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Timeout sesión (min)</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.timeout_sesion_minutos" min="5" />
-              </div>
-              <div class="field-group">
-                <label>Sesiones simultáneas permitidas</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.sesiones_simultaneas_permitidas" min="1" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Timeout sesión (min)</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.timeout_sesion_minutos" min="5" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Sesiones simultáneas permitidas</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.sesiones_simultaneas_permitidas" min="1" />
+              </mat-form-field>
             </div>
             <div class="toggle-grid" style="margin-top:.75rem">
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.cerrar_otras_sesiones_al_login" />
+                <mat-slide-toggle [(ngModel)]="politica()!.cerrar_otras_sesiones_al_login" />
                 <span>Cerrar otras sesiones al iniciar</span>
               </div>
             </div>
             <mat-divider />
             <h3 class="section-title">Intentos de Login y Bloqueo</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Máximo intentos fallidos</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.max_intentos_login" min="3" max="20" />
-              </div>
-              <div class="field-group">
-                <label>Tiempo bloqueo (min)</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.tiempo_bloqueo_minutos" min="1" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Máximo intentos fallidos</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.max_intentos_login" min="3" max="20" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Tiempo bloqueo (min)</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.tiempo_bloqueo_minutos" min="1" />
+              </mat-form-field>
             </div>
             <mat-divider />
             <h3 class="section-title">Autenticación de Dos Factores (2FA)</h3>
             <div class="toggle-grid">
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.requiere_2fa" />
+                <mat-slide-toggle [(ngModel)]="politica()!.requiere_2fa" />
                 <span>Requerir 2FA para todos los usuarios</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.requiere_2fa_admin" />
+                <mat-slide-toggle [(ngModel)]="politica()!.requiere_2fa_admin" />
                 <span>Requerir 2FA para administradores</span>
               </div>
             </div>
             @if (politica()!.requiere_2fa || politica()!.requiere_2fa_admin) {
               <div class="form-grid" style="margin-top:1rem">
-                <div class="field-group">
-                  <label>Método 2FA</label>
-                  <p-select [(ngModel)]="politica()!.metodo_2fa"
-                    [options]="[{v:'EMAIL',l:'Correo electrónico'},{v:'SMS',l:'SMS'},{v:'TOTP',l:'App autenticadora (TOTP)'}]"
-                    optionLabel="l" optionValue="v" />
-                </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>Método 2FA</mat-label>
+                  <mat-select [(ngModel)]="politica()!.metodo_2fa">
+                    @for (m of metodos2fa; track m.value) {
+                      <mat-option [value]="m.value">{{ m.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
               </div>
             }
             <mat-divider />
             <h3 class="section-title">Auditoría y Notificaciones</h3>
             <div class="form-grid">
-              <div class="field-group">
-                <label>Retener logs (días)</label>
-                <input pInputText type="number" [(ngModel)]="politica()!.retener_logs_dias" min="30" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Retener logs (días)</mat-label>
+                <input matInput type="number" [(ngModel)]="politica()!.retener_logs_dias" min="30" />
+              </mat-form-field>
             </div>
             <div class="toggle-grid" style="margin-top:.75rem">
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.registrar_todos_los_accesos" />
+                <mat-slide-toggle [(ngModel)]="politica()!.registrar_todos_los_accesos" />
                 <span>Registrar todos los accesos</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.notificar_login_nuevo_dispositivo" />
+                <mat-slide-toggle [(ngModel)]="politica()!.notificar_login_nuevo_dispositivo" />
                 <span>Notificar login desde nuevo dispositivo</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.notificar_cambio_password" />
+                <mat-slide-toggle [(ngModel)]="politica()!.notificar_cambio_password" />
                 <span>Notificar cambio de contraseña</span>
               </div>
               <div class="toggle-item">
-                <p-toggleswitch [(ngModel)]="politica()!.notificar_intentos_fallidos" />
+                <mat-slide-toggle [(ngModel)]="politica()!.notificar_intentos_fallidos" />
                 <span>Notificar intentos fallidos</span>
               </div>
             </div>
             <div class="form-actions">
-              <p-button label="Guardar política" icon="pi pi-save" (onClick)="guardarPolitica()" [loading]="guardando()" />
+              <button matButton="filled" [disabled]="guardando()" (click)="guardarPolitica()">
+                <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar política
+              </button>
             </div>
           </div>
         } @else {
@@ -486,87 +767,128 @@ const DIAS_SEMANA = [
       @if (tab() === 'campos') {
         <div class="list-header" style="margin-bottom:1rem">
           <span style="color:#64748b;font-size:.9rem">Campos adicionales en la historia clínica</span>
-          <p-button label="Nuevo campo" icon="pi pi-plus" (onClick)="abrirFormCampo(null)" />
+          <button matButton="filled" (click)="abrirFormCampo(null)">
+            <i class="pi pi-plus"></i> Nuevo campo
+          </button>
         </div>
-        <p-table [value]="campos()" [loading]="cargando()">
-          <ng-template #header>
-            <tr>
-              <th style="width:60px">Orden</th>
-              <th>Etiqueta</th>
-              <th style="width:150px">Tipo</th>
-              <th>Opciones</th>
-              <th style="width:90px;text-align:center">Activo</th>
-              <th style="width:100px"></th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-c>
-            <tr [class.row-inactivo]="!c.activo">
-              <td style="text-align:center;color:#94a3b8">{{ c.orden }}</td>
-              <td><strong>{{ c.etiqueta }}</strong></td>
-              <td><x-etiqueta [value]="c.tipo" severity="info" /></td>
-              <td style="font-size:.82rem;color:#64748b">{{ c.opciones || '—' }}</td>
-              <td style="text-align:center">
-                <p-toggleswitch [ngModel]="c.activo" (ngModelChange)="toggleCampo(c, $event)" />
-              </td>
-              <td>
-                <div style="display:flex;gap:.25rem;justify-content:flex-end">
-                  <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="abrirFormCampo(c)" />
-                  <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" (onClick)="eliminarCampo(c)" />
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8">Sin campos configurados</td></tr>
-          </ng-template>
-        </p-table>
+        <table mat-table [dataSource]="campos()" class="tabla">
+          <ng-container matColumnDef="orden">
+            <th mat-header-cell *matHeaderCellDef style="width:60px">Orden</th>
+            <td mat-cell *matCellDef="let c" class="centro" style="color:#94a3b8">{{ c.orden }}</td>
+          </ng-container>
+          <ng-container matColumnDef="etiqueta">
+            <th mat-header-cell *matHeaderCellDef>Etiqueta</th>
+            <td mat-cell *matCellDef="let c"><strong>{{ c.etiqueta }}</strong></td>
+          </ng-container>
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef style="width:150px">Tipo</th>
+            <td mat-cell *matCellDef="let c"><x-etiqueta [value]="c.tipo" severity="info" /></td>
+          </ng-container>
+          <ng-container matColumnDef="opciones">
+            <th mat-header-cell *matHeaderCellDef>Opciones</th>
+            <td mat-cell *matCellDef="let c" style="font-size:.82rem;color:#64748b">{{ c.opciones || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="activo">
+            <th mat-header-cell *matHeaderCellDef class="centro" style="width:90px">Activo</th>
+            <td mat-cell *matCellDef="let c" class="centro">
+              <mat-slide-toggle [ngModel]="c.activo" (ngModelChange)="toggleCampo(c, $event)" />
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef style="width:100px"></th>
+            <td mat-cell *matCellDef="let c">
+              <div style="display:flex;gap:.25rem;justify-content:flex-end">
+                <button matIconButton matTooltip="Editar" (click)="abrirFormCampo(c)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button matIconButton class="peligro" matTooltip="Eliminar" (click)="eliminarCampo(c)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasCampos"></tr>
+          <tr mat-row *matRowDef="let fila; columns: columnasCampos"></tr>
+        </table>
+        @if (!cargando() && campos().length === 0) {
+          <p class="vacio">Sin campos configurados</p>
+        }
       }
 
       <!-- ══════════════════ AUDITORÍA ══════════════════ -->
       @if (tab() === 'auditoria') {
         <div class="list-header" style="margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-            <input type="date" [(ngModel)]="audFechaInicio" class="p-inputtext p-component" style="height:2.25rem" />
-            <input type="date" [(ngModel)]="audFechaFin" class="p-inputtext p-component" style="height:2.25rem" />
-            <input pInputText [(ngModel)]="audAccion" placeholder="Filtrar acción..." style="width:180px" />
-            <p-button label="Buscar" icon="pi pi-search" size="small" (onClick)="cargarAuditoria()" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Desde</mat-label>
+              <input matInput type="date" [(ngModel)]="audFechaInicio" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Hasta</mat-label>
+              <input matInput type="date" [(ngModel)]="audFechaFin" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:180px">
+              <mat-label>Acción</mat-label>
+              <input matInput [(ngModel)]="audAccion" placeholder="Filtrar acción..." />
+            </mat-form-field>
+            <button matButton="filled" (click)="cargarAuditoria()">
+              <i class="pi pi-search"></i> Buscar
+            </button>
           </div>
           <span style="font-size:.85rem;color:#64748b">{{ audTotal() }} registros</span>
         </div>
-        <p-table [value]="auditoria()" [loading]="cargando()">
-          <ng-template #header>
-            <tr>
-              <th style="width:155px">Fecha/Hora</th>
-              <th>Usuario</th>
-              <th>Acción</th>
-              <th>Tabla</th>
-              <th style="width:80px;text-align:center">Reg.</th>
-              <th style="width:120px">IP</th>
-              <th style="width:70px;text-align:center">OK</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-a>
-            <tr>
-              <td style="font-size:.8rem;color:#64748b">{{ a.fecha_hora | date:'dd/MM/yy HH:mm' }}</td>
-              <td style="font-size:.85rem">{{ a.usuario_nombre }}</td>
-              <td><code style="font-size:.78rem;background:#f1f5f9;padding:.1rem .3rem;border-radius:3px">{{ a.accion }}</code></td>
-              <td style="font-size:.82rem;color:#64748b">{{ a.tabla_afectada }}</td>
-              <td style="text-align:center;font-size:.82rem">{{ a.registro_id }}</td>
-              <td style="font-size:.78rem;color:#94a3b8">{{ a.ip_address || '—' }}</td>
-              <td style="text-align:center">
-                <x-etiqueta [value]="a.exitoso ? 'OK' : 'Err'" [severity]="a.exitoso ? 'success' : 'danger'" />
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr><td colspan="7" style="text-align:center;padding:2rem;color:#94a3b8">Sin registros</td></tr>
-          </ng-template>
-        </p-table>
+        <table mat-table [dataSource]="auditoria()" class="tabla">
+          <ng-container matColumnDef="fecha">
+            <th mat-header-cell *matHeaderCellDef style="width:155px">Fecha/Hora</th>
+            <td mat-cell *matCellDef="let a" style="font-size:.8rem;color:#64748b">
+              {{ a.fecha_hora | date:'dd/MM/yy HH:mm' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="usuario">
+            <th mat-header-cell *matHeaderCellDef>Usuario</th>
+            <td mat-cell *matCellDef="let a" style="font-size:.85rem">{{ a.usuario_nombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="accion">
+            <th mat-header-cell *matHeaderCellDef>Acción</th>
+            <td mat-cell *matCellDef="let a">
+              <code style="font-size:.78rem;background:#f1f5f9;padding:.1rem .3rem;border-radius:3px">{{ a.accion }}</code>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="tabla">
+            <th mat-header-cell *matHeaderCellDef>Tabla</th>
+            <td mat-cell *matCellDef="let a" style="font-size:.82rem;color:#64748b">{{ a.tabla_afectada }}</td>
+          </ng-container>
+          <ng-container matColumnDef="registro">
+            <th mat-header-cell *matHeaderCellDef class="centro" style="width:80px">Reg.</th>
+            <td mat-cell *matCellDef="let a" class="centro" style="font-size:.82rem">{{ a.registro_id }}</td>
+          </ng-container>
+          <ng-container matColumnDef="ip">
+            <th mat-header-cell *matHeaderCellDef style="width:120px">IP</th>
+            <td mat-cell *matCellDef="let a" style="font-size:.78rem;color:#94a3b8">{{ a.ip_address || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="ok">
+            <th mat-header-cell *matHeaderCellDef class="centro" style="width:70px">OK</th>
+            <td mat-cell *matCellDef="let a" class="centro">
+              <x-etiqueta [value]="a.exitoso ? 'OK' : 'Err'" [severity]="a.exitoso ? 'success' : 'danger'" />
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasAuditoria"></tr>
+          <tr mat-row *matRowDef="let fila; columns: columnasAuditoria"></tr>
+        </table>
+        @if (!cargando() && auditoria().length === 0) {
+          <p class="vacio">Sin registros</p>
+        }
         @if (audPages() > 1) {
           <div style="display:flex;justify-content:center;align-items:center;gap:.5rem;margin-top:1rem">
-            <p-button [disabled]="audPage() === 1" icon="pi pi-angle-left" [text]="true" (onClick)="audPrev()" />
+            <button matIconButton [disabled]="audPage() === 1" matTooltip="Anterior" (click)="audPrev()">
+              <i class="pi pi-angle-left"></i>
+            </button>
             <span style="font-size:.85rem">Pág {{ audPage() }} / {{ audPages() }}</span>
-            <p-button [disabled]="audPage() >= audPages()" icon="pi pi-angle-right" [text]="true" (onClick)="audNext()" />
+            <button matIconButton [disabled]="audPage() >= audPages()" matTooltip="Siguiente" (click)="audNext()">
+              <i class="pi pi-angle-right"></i>
+            </button>
           </div>
         }
       }
@@ -586,9 +908,13 @@ const DIAS_SEMANA = [
           <div class="list-header" style="margin-bottom:1rem">
             <span style="color:#64748b;font-size:.9rem">{{ especialidades().length }} especialidades registradas</span>
             <div style="display:flex;gap:.5rem">
-              <input pInputText [(ngModel)]="nuevaEspecialidad" placeholder="Nueva especialidad..."
-                style="width:220px" (keyup.enter)="crearEspecialidad()" />
-              <p-button label="Agregar" icon="pi pi-plus" size="small" (onClick)="crearEspecialidad()" />
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:220px">
+                <mat-label>Nueva especialidad</mat-label>
+                <input matInput [(ngModel)]="nuevaEspecialidad" (keyup.enter)="crearEspecialidad()" />
+              </mat-form-field>
+              <button matButton="filled" (click)="crearEspecialidad()">
+                <i class="pi pi-plus"></i> Agregar
+              </button>
             </div>
           </div>
           <div class="chips-grid">
@@ -606,39 +932,47 @@ const DIAS_SEMANA = [
 
         @if (catTab() === 'entidades') {
           <div class="list-header" style="margin-bottom:1rem">
-            <span class="p-input-icon-left">
-              <i class="pi pi-search"></i>
-              <input pInputText [(ngModel)]="busqEntidad" placeholder="Buscar EPS..."
-                (input)="cargarEntidades()" style="padding-left:2rem;width:260px" />
-            </span>
-            <p-button label="Nueva entidad" icon="pi pi-plus" (onClick)="abrirFormEntidad(null)" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:260px">
+              <mat-label>Buscar EPS</mat-label>
+              <input matInput [(ngModel)]="busqEntidad" (input)="cargarEntidades()" />
+            </mat-form-field>
+            <button matButton="filled" (click)="abrirFormEntidad(null)">
+              <i class="pi pi-plus"></i> Nueva entidad
+            </button>
           </div>
-          <p-table [value]="entidades()" [loading]="cargando()">
-            <ng-template #header>
-              <tr>
-                <th>Nombre</th>
-                <th style="width:140px">NIT</th>
-                <th style="width:120px">Código EPS</th>
-                <th style="width:90px"></th>
-              </tr>
-            </ng-template>
-            <ng-template #body let-e>
-              <tr>
-                <td>{{ e.nombre }}</td>
-                <td style="font-size:.85rem;color:#64748b">{{ e.nit }}</td>
-                <td><code style="font-size:.82rem">{{ e.codigo_eps }}</code></td>
-                <td>
-                  <div style="display:flex;gap:.25rem;justify-content:flex-end">
-                    <p-button icon="pi pi-pencil" [text]="true" size="small" (onClick)="abrirFormEntidad(e)" />
-                    <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" (onClick)="eliminarEntidad(e)" />
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template #emptymessage>
-              <tr><td colspan="4" style="text-align:center;padding:2rem;color:#94a3b8">Sin entidades</td></tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="entidades()" class="tabla">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <td mat-cell *matCellDef="let e">{{ e.nombre }}</td>
+            </ng-container>
+            <ng-container matColumnDef="nit">
+              <th mat-header-cell *matHeaderCellDef style="width:140px">NIT</th>
+              <td mat-cell *matCellDef="let e" style="font-size:.85rem;color:#64748b">{{ e.nit }}</td>
+            </ng-container>
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef style="width:120px">Código EPS</th>
+              <td mat-cell *matCellDef="let e"><code style="font-size:.82rem">{{ e.codigo_eps }}</code></td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef style="width:90px"></th>
+              <td mat-cell *matCellDef="let e">
+                <div style="display:flex;gap:.25rem;justify-content:flex-end">
+                  <button matIconButton matTooltip="Editar" (click)="abrirFormEntidad(e)">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button matIconButton class="peligro" matTooltip="Eliminar" (click)="eliminarEntidad(e)">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasEntidades"></tr>
+          <tr mat-row *matRowDef="let fila; columns: columnasEntidades"></tr>
+        </table>
+        @if (!cargando() && entidades().length === 0) {
+          <p class="vacio">Sin entidades</p>
+        }
         }
       }
 
@@ -700,16 +1034,16 @@ const DIAS_SEMANA = [
             </div>
 
             <div class="form-actions" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-              <p-button label="Guardar cambios" icon="pi pi-save"
-                [disabled]="pendientes().length === 0" [loading]="guardando()"
-                (onClick)="guardarCapacidades()" />
-              <p-button label="Descartar" [text]="true"
-                [disabled]="pendientes().length === 0 || guardando()"
-                (onClick)="cargarCapacidades()" />
+              <button matButton="filled" [disabled]="pendientes().length === 0 || guardando()"
+                (click)="guardarCapacidades()">
+                <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar cambios
+              </button>
+              <button matButton [disabled]="pendientes().length === 0 || guardando()"
+                (click)="cargarCapacidades()">Descartar</button>
               @if (seleccionApartada()) {
-                <p-button label="Devolver lo apartado a lo recomendado" [text]="true"
-                  icon="pi pi-undo" severity="secondary" [loading]="guardando()"
-                  (onClick)="devolverTodoAlDefecto()" />
+                <button matButton [disabled]="guardando()" (click)="devolverTodoAlDefecto()">
+                  <i class="pi pi-undo"></i> Devolver lo apartado a lo recomendado
+                </button>
               }
               @if (pendientes().length) {
                 <span class="pendientes">{{ pendientes().length }} sin guardar</span>
@@ -723,136 +1057,18 @@ const DIAS_SEMANA = [
 
     </div>
 
-    <!-- ══ DIALOG: Usuario ══ -->
-    <p-dialog [(visible)]="mostrarFormUsuario"
-      [header]="editUsuario ? 'Editar usuario' : 'Nuevo usuario'"
-      [modal]="true" [style]="{width:'540px'}" [draggable]="false">
-      @if (formUsuario) {
-        <div class="form-grid dialog-form">
-          <div class="field-group">
-            <label>Nombre completo *</label>
-            <input pInputText [(ngModel)]="formUsuario.nombre_completo" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Username *</label>
-            <input pInputText [(ngModel)]="formUsuario.username" [disabled]="!!editUsuario" class="w-full" />
-          </div>
-          @if (!editUsuario) {
-            <div class="field-group">
-              <label>Contraseña *</label>
-              <input pInputText type="password" [(ngModel)]="formUsuario.password" class="w-full" />
-            </div>
-          }
-          <div class="field-group">
-            <label>Email</label>
-            <input pInputText type="email" [(ngModel)]="formUsuario.email" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Rol *</label>
-            <p-select [(ngModel)]="formUsuario.rol" [options]="ROLES"
-              optionLabel="label" optionValue="value" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Especialidad</label>
-            <p-select [(ngModel)]="formUsuario.especialidad_id"
-              [options]="[{id:null,nombre:'— Sin especialidad —'},...especialidades()]"
-              optionLabel="nombre" optionValue="id" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Reg. Médico / Tarjeta Prof.</label>
-            <input pInputText [(ngModel)]="formUsuario.registro_medico" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Registro RETHUS</label>
-            <input pInputText [(ngModel)]="formUsuario.registro_rethus" class="w-full" />
-          </div>
-        </div>
-      }
-      <ng-template #footer>
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormUsuario = false" />
-        <p-button label="Guardar" icon="pi pi-save" (onClick)="guardarUsuario()" [loading]="guardando()" />
-      </ng-template>
-    </p-dialog>
-
-    <!-- ══ DIALOG: Reset Password ══ -->
-    <p-dialog [(visible)]="mostrarResetPass" header="Restablecer contraseña"
-      [modal]="true" [style]="{width:'380px'}" [draggable]="false">
-      <p style="color:#64748b;margin-bottom:1rem">
-        Usuario: <strong>{{ resetUsuario?.nombre_completo }}</strong>
-      </p>
-      <div class="field-group">
-        <label>Nueva contraseña (mín. 6 caracteres)</label>
-        <input pInputText type="password" [(ngModel)]="nuevaPassword" class="w-full" />
-      </div>
-      <ng-template #footer>
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarResetPass = false" />
-        <p-button label="Restablecer" icon="pi pi-key" severity="warn"
-          (onClick)="confirmarReset()" [loading]="guardando()" />
-      </ng-template>
-    </p-dialog>
-
-    <!-- ══ DIALOG: Campo HC ══ -->
-    <p-dialog [(visible)]="mostrarFormCampo"
-      [header]="editCampo ? 'Editar campo' : 'Nuevo campo'"
-      [modal]="true" [style]="{width:'420px'}" [draggable]="false">
-      @if (formCampo) {
-        <div class="form-grid dialog-form">
-          <div class="field-group" style="grid-column:span 2">
-            <label>Etiqueta *</label>
-            <input pInputText [(ngModel)]="formCampo.etiqueta" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Tipo *</label>
-            <p-select [(ngModel)]="formCampo.tipo" [options]="tiposCampo"
-              optionLabel="label" optionValue="value" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Orden</label>
-            <input pInputText type="number" [(ngModel)]="formCampo.orden" class="w-full" />
-          </div>
-          @if (formCampo.tipo === 'Lista Opciones') {
-            <div class="field-group" style="grid-column:span 2">
-              <label>Opciones (separadas por coma)</label>
-              <input pInputText [(ngModel)]="formCampo.opciones" class="w-full"
-                placeholder="Opción 1, Opción 2, Opción 3" />
-            </div>
-          }
-        </div>
-      }
-      <ng-template #footer>
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormCampo = false" />
-        <p-button label="Guardar" icon="pi pi-save" (onClick)="guardarCampo()" [loading]="guardando()" />
-      </ng-template>
-    </p-dialog>
-
-    <!-- ══ DIALOG: Entidad ══ -->
-    <p-dialog [(visible)]="mostrarFormEntidad"
-      [header]="editEntidad ? 'Editar entidad' : 'Nueva entidad'"
-      [modal]="true" [style]="{width:'420px'}" [draggable]="false">
-      @if (formEntidad) {
-        <div class="form-grid dialog-form">
-          <div class="field-group" style="grid-column:span 2">
-            <label>Nombre *</label>
-            <input pInputText [(ngModel)]="formEntidad.nombre" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>NIT *</label>
-            <input pInputText [(ngModel)]="formEntidad.nit" [disabled]="!!editEntidad" class="w-full" />
-          </div>
-          <div class="field-group">
-            <label>Código EPS *</label>
-            <input pInputText [(ngModel)]="formEntidad.codigo_eps" class="w-full" />
-          </div>
-        </div>
-      }
-      <ng-template #footer>
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormEntidad = false" />
-        <p-button label="Guardar" icon="pi pi-save" (onClick)="guardarEntidad()" [loading]="guardando()" />
-      </ng-template>
-    </p-dialog>
   `,
   styles: [`
     .list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:.5rem }
+    .tabla { width:100% }
+    .centro { text-align:center }
+    .vacio { text-align:center; padding:2rem; color:#94a3b8 }
+    mat-form-field { width:100% }
+    .color-fila { display:flex; gap:.5rem; align-items:center }
+    .muestra { height:38px; width:60px; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .peligro { color:#dc2626 }
+    .aviso-color { color:#f59e0b }
     .page-title { font-size:1.4rem; font-weight:700; color:#1e293b; margin:0 }
 
     .tab-bar { display:flex; gap:.25rem; border-bottom:2px solid #e2e8f0; margin-bottom:1.5rem; overflow-x:auto }
@@ -918,6 +1134,22 @@ const DIAS_SEMANA = [
 })
 export class AdminComponent implements OnInit {
   private svc = inject(AdminService);
+  private dialogo = inject(MatDialog);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnasUsuarios = ['nombre', 'username', 'rol', 'especialidad', 'estado', 'acciones'];
+  readonly columnasCampos = ['orden', 'etiqueta', 'tipo', 'opciones', 'activo', 'acciones'];
+  readonly columnasAuditoria = ['fecha', 'usuario', 'accion', 'tabla', 'registro', 'ip', 'ok'];
+  readonly columnasEntidades = ['nombre', 'nit', 'codigo', 'acciones'];
+
+  /** Los tipos de prestador con los que se habilita ante el REPS. */
+  readonly tiposPrestador = ['IPS', 'CLINICA', 'HOSPITAL', 'CONSULTORIO', 'LABORATORIO'];
+
+  readonly metodos2fa = [
+    { value: 'EMAIL', label: 'Correo electrónico' },
+    { value: 'SMS', label: 'SMS' },
+    { value: 'TOTP', label: 'App autenticadora (TOTP)' },
+  ];
   private msg = inject(Avisos);
 
   tab = signal<Tab>('institucion');
@@ -940,16 +1172,9 @@ export class AdminComponent implements OnInit {
 
   busqUsuario = '';
   filtroRolUsuario = '';
-  mostrarFormUsuario = false;
-  editUsuario: UsuarioAdmin | null = null;
-  formUsuario: any = null;
-  mostrarResetPass = false;
-  resetUsuario: UsuarioAdmin | null = null;
-  nuevaPassword = '';
 
-  mostrarFormCampo = false;
-  editCampo: ConfigCampo | null = null;
-  formCampo: any = null;
+
+
 
   audFechaInicio = '';
   audFechaFin = '';
@@ -957,9 +1182,7 @@ export class AdminComponent implements OnInit {
 
   nuevaEspecialidad = '';
   busqEntidad = '';
-  mostrarFormEntidad = false;
-  editEntidad: EntidadEPS | null = null;
-  formEntidad: any = null;
+
 
   readonly ROLES = ROLES;
   readonly diasSemana = DIAS_SEMANA;
@@ -1176,20 +1399,26 @@ export class AdminComponent implements OnInit {
     });
   }
   abrirFormUsuario(u: UsuarioAdmin | null) {
-    this.editUsuario = u;
-    this.formUsuario = u
-      ? { ...u, password: '' }
-      : { username: '', password: '', nombre_completo: '', email: '', rol: 'medico', especialidad_id: null, registro_medico: '', registro_rethus: '' };
-    this.mostrarFormUsuario = true;
+    this.dialogo
+      .open(AdminUsuarioComponent, {
+        data: { usuario: u, roles: this.ROLES, especialidades: this.especialidades() },
+        maxWidth: '95vw',
+      })
+      .afterClosed()
+      .subscribe((datos?: any) => { if (datos) this.guardarUsuario(u, datos); });
   }
-  guardarUsuario() {
-    if (!this.formUsuario?.nombre_completo || !this.formUsuario.rol) { this.err('Complete nombre y rol'); return; }
+
+  private guardarUsuario(editando: UsuarioAdmin | null, datos: any) {
     this.guardando.set(true);
-    const obs = this.editUsuario
-      ? this.svc.updateUsuario(this.editUsuario.id, this.formUsuario)
-      : this.svc.createUsuario(this.formUsuario);
+    const obs = editando
+      ? this.svc.updateUsuario(editando.id, datos)
+      : this.svc.createUsuario(datos);
     obs.subscribe({
-      next: () => { this.guardando.set(false); this.mostrarFormUsuario = false; this.ok(this.editUsuario ? 'Usuario actualizado' : 'Usuario creado'); this.cargarUsuarios(); },
+      next: () => {
+        this.guardando.set(false);
+        this.ok(editando ? 'Usuario actualizado' : 'Usuario creado');
+        this.cargarUsuarios();
+      },
       error: e => { this.guardando.set(false); this.err(e?.error?.detail ?? 'Error'); },
     });
   }
@@ -1207,13 +1436,16 @@ export class AdminComponent implements OnInit {
     });
   }
   abrirResetPassword(u: UsuarioAdmin) {
-    this.resetUsuario = u; this.nuevaPassword = ''; this.mostrarResetPass = true;
+    this.dialogo
+      .open(AdminResetClaveComponent, { data: u, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((clave?: string) => { if (clave) this.restablecerClave(u, clave); });
   }
-  confirmarReset() {
-    if (!this.nuevaPassword || this.nuevaPassword.length < 6) { this.err('Mínimo 6 caracteres'); return; }
+
+  private restablecerClave(u: UsuarioAdmin, clave: string) {
     this.guardando.set(true);
-    this.svc.resetPassword(this.resetUsuario!.id, this.nuevaPassword).subscribe({
-      next: (r: any) => { this.guardando.set(false); this.mostrarResetPass = false; this.ok(r.mensaje); },
+    this.svc.resetPassword(u.id, clave).subscribe({
+      next: (r: any) => { this.guardando.set(false); this.ok(r.mensaje); },
       error: e => { this.guardando.set(false); this.err(e?.error?.detail ?? 'Error'); },
     });
   }
@@ -1223,18 +1455,19 @@ export class AdminComponent implements OnInit {
     this.svc.listCampos().subscribe({ next: r => this.campos.set(r), error: () => {} });
   }
   abrirFormCampo(c: ConfigCampo | null) {
-    this.editCampo = c;
-    this.formCampo = c ? { ...c } : { etiqueta: '', tipo: 'Texto', opciones: '', orden: 0 };
-    this.mostrarFormCampo = true;
+    this.dialogo
+      .open(AdminCampoComponent, { data: { campo: c, tipos: this.tiposCampo }, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((datos?: any) => { if (datos) this.guardarCampo(c, datos); });
   }
-  guardarCampo() {
-    if (!this.formCampo?.etiqueta) { this.err('Ingrese la etiqueta'); return; }
+
+  private guardarCampo(editando: ConfigCampo | null, datos: any) {
     this.guardando.set(true);
-    const obs = this.editCampo
-      ? this.svc.updateCampo(this.editCampo.id, this.formCampo)
-      : this.svc.createCampo(this.formCampo);
+    const obs = editando
+      ? this.svc.updateCampo(editando.id, datos)
+      : this.svc.createCampo(datos);
     obs.subscribe({
-      next: () => { this.guardando.set(false); this.mostrarFormCampo = false; this.ok('Campo guardado'); this.cargarCampos(); },
+      next: () => { this.guardando.set(false); this.ok('Campo guardado'); this.cargarCampos(); },
       error: e => { this.guardando.set(false); this.err(e?.error?.detail ?? 'Error'); },
     });
   }
@@ -1293,20 +1526,19 @@ export class AdminComponent implements OnInit {
     });
   }
   abrirFormEntidad(e: EntidadEPS | null) {
-    this.editEntidad = e;
-    this.formEntidad = e ? { ...e } : { nit: '', nombre: '', codigo_eps: '' };
-    this.mostrarFormEntidad = true;
+    this.dialogo
+      .open(AdminEntidadComponent, { data: e, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((datos?: any) => { if (datos) this.guardarEntidad(e, datos); });
   }
-  guardarEntidad() {
-    if (!this.formEntidad?.nombre || !this.formEntidad.nit || !this.formEntidad.codigo_eps) {
-      this.err('Complete todos los campos'); return;
-    }
+
+  private guardarEntidad(editando: EntidadEPS | null, datos: any) {
     this.guardando.set(true);
-    const obs = this.editEntidad
-      ? this.svc.updateEntidad(this.editEntidad.id, this.formEntidad)
-      : this.svc.createEntidad(this.formEntidad);
+    const obs = editando
+      ? this.svc.updateEntidad(editando.id, datos)
+      : this.svc.createEntidad(datos);
     obs.subscribe({
-      next: () => { this.guardando.set(false); this.mostrarFormEntidad = false; this.ok('Guardado'); this.cargarEntidades(); },
+      next: () => { this.guardando.set(false); this.ok('Guardado'); this.cargarEntidades(); },
       error: e => { this.guardando.set(false); this.err(e?.error?.detail ?? 'Error'); },
     });
   }
