@@ -26,7 +26,15 @@ export interface ConfiguracionInstitucion {
   id: number;
   horario_apertura: string;
   horario_cierre: string;
-  dias_atencion: string[];
+  /**
+   * Puede llegar NULO. La columna del servidor es un JSON sin `NOT NULL`
+   * (`backend/models.py`: `sa_column=Column(JSON)`), así que una fila anterior
+   * a que el campo existiera lo trae vacío. El tipo lo dice para que el
+   * compilador exija las dos defensas que ya había escritas a mano —el `?.` de
+   * la plantilla y el `?? []` al alternar un día— en vez de que la 22 nos
+   * proponga silenciar el aviso que las señalaba como redundantes.
+   */
+  dias_atencion: string[] | null;
   duracion_cita_default: number;
   tiempo_buffer: number;
   enviar_recordatorios: boolean;
