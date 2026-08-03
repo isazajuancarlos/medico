@@ -54,7 +54,16 @@ ssh "$DESTINO" "set -e
     sudo -n mkdir -p $REMOTO /etc/medico-demo
     sudo -n chown medico:medico $REMOTO"
 scp -q "$BIN" "$DESTINO:/tmp/medico-api"
-ssh "$DESTINO" "sudo -n install -o medico -g medico -m 0755 /tmp/medico-api $REMOTO/medico-api && rm -f /tmp/medico-api"
+# `install` ABRE el destino con O_TRUNC, y sobre un binario que se está
+# ejecutando eso es ETXTBSY: el guion funcionaba porque hasta hoy solo se había
+# corrido contra un servidor donde no había nada corriendo. Se escribe al lado y
+# se renombra encima: `rename` sustituye la entrada del directorio, el proceso
+# vivo conserva su inodo hasta el `restart` de más abajo, y no hay un instante en
+# que la ruta no exista.
+ssh "$DESTINO" "set -e
+    sudo -n install -o medico -g medico -m 0755 /tmp/medico-api $REMOTO/medico-api.nuevo
+    sudo -n mv -f $REMOTO/medico-api.nuevo $REMOTO/medico-api
+    rm -f /tmp/medico-api"
 
 # md5 a los dos lados: `scp` puede truncar y salir 0 si el disco se llena.
 LOCAL="$(md5sum "$BIN" | cut -d' ' -f1)"
