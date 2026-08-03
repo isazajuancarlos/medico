@@ -272,6 +272,52 @@ Inter donde antes devolvía Roboto.
 en verde, el guardián de las directivas en verde — y el producto se veía mal. Lo
 que ninguna de las redes mira es cómo QUEDA la pantalla.
 
+## La demostración pública (medico.xiliux.com)
+
+Desplegada el 2026-08-02. Es una **demostración**, no la instalación de un
+cliente: sus credenciales están publicadas en la propia pantalla de acceso y
+cualquiera puede escribir en su base.
+
+```
+https://medico.xiliux.com        demo@xiliux.com / demo-medico-2026
+```
+
+| pieza | dónde |
+|---|---|
+| binario y base | `/opt/medico-demo/` (usuario `medico`) |
+| entorno | `/etc/medico-demo/medico.env` (root:medico 0640) |
+| servicio | `medico-demo.service`, escucha en `127.0.0.1:8010` |
+| sitio | `/etc/nginx/sites-available/medico.xiliux.com` |
+| guiones | `despliegue/desplegar-demo.sh` y `despliegue/publicar-demo.sh` |
+
+**El modo demostración se enciende con DOS variables y ninguna otra cosa**:
+`MEDICO_DEMO_CORREO` y `MEDICO_DEMO_CLAVE`. Hacen dos trabajos a la vez, y ese
+es el diseño: siembran el usuario (`medico-api sembrar-demo`) y son lo que
+`GET /api/demo` publica para que la pantalla lo enseñe. Así **no puede
+anunciarse una credencial distinta de la que existe**. Media configuración —una
+sola de las dos— **no arranca** (directiva 20): publicar credenciales es una
+decisión, y a medias no se sabe cuál se tomó.
+
+Sin esas variables, `/api/demo` responde **204** y la pantalla no pinta nada. Es
+lo que le pasa a la instalación de un cliente, y por eso **no hay nada que
+acordarse de apagar**. El arranque además grita en el log cuando el modo está
+encendido.
+
+La licencia de la demo se fija con **todo el catálogo** (`modulo::CATALOGO`, 46
+módulos), no con una lista escrita a mano que se desincronizaría al primer
+módulo nuevo: cada uno aparece como `habilitado` o `pendiente` según lo que el
+binario sirva de verdad, que es justo lo que la demostración debe enseñar.
+
+**Dos cosas medidas al desplegar, para que no sorprendan:**
+
+- `/api/acceso` responde **503 si se llama directo al puerto 8010**, y es
+  correcto: el entorno declara `MEDICO_TRAS_PROXY=true` y ahí no llega
+  `X-Real-IP`. El freno al ensayo de contraseñas prefiere negarse antes que
+  meter a todos en el mismo cubo. Por nginx llega y responde 200.
+- El **panel de inicio sale vacío**: pide `/api/estadisticas/kpis`, que es uno
+  de los cinco prefijos que el port a Rust todavía no cubre (404). No es un
+  fallo de la demo; es el hueco conocido, y se ve más aquí que en ningún sitio.
+
 ## El workspace Rust
 
 Tres crates —`medico-dominio`, `medico-datos`, `medico-api`— con axum y SQLx sobre

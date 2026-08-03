@@ -48,6 +48,18 @@ async fn main() -> ExitCode {
         };
     }
 
+    // `sembrar-demo`: crea la institución y el usuario de la DEMOSTRACIÓN
+    // pública, con las credenciales que el propio despliegue publica. Es
+    // idempotente: se puede correr en cada arranque o cada noche.
+    //
+    // Vive en el binario, y no en un SQL suelto, por lo mismo que `hashear`: el
+    // hash tiene que salir de los MISMOS parámetros de Argon2 que verifica el
+    // acceso. Un hash de otra herramienta deja al usuario fuera y el fallo
+    // aparece lejos de su causa.
+    if std::env::args().nth(1).as_deref() == Some("sembrar-demo") {
+        return sembrar_demo().await;
+    }
+
     // `generar-maestro-cum <cum.csv> <salida.json>`: convierte el export del
     // INVIMA al JSON que se EMPOTRA en el binario.
     //
@@ -150,8 +162,18 @@ async fn main() -> ExitCode {
         clave_verificacion: cfg.clave_verificacion,
         clave_reposo: cfg.clave_reposo,
         tras_proxy: cfg.tras_proxy,
+        demo: cfg.demo.clone(),
         capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
     };
+    if let Some(d) = &cfg.demo {
+        // A gritos y en el log, no de tapadillo: quien arranque esto por error
+        // en la máquina de un cliente tiene que enterarse en el primer arranque.
+        println!(
+            "MODO DEMOSTRACIÓN: /api/demo publica las credenciales «{}» a quien pregunte, \
+             sin sesión. Esto NO es una instalación de cliente.",
+            d.correo
+        );
+    }
     let app = rutas::router(estado);
 
     let dir = format!("{}:{}", cfg.escucha, cfg.puerto);
@@ -175,5 +197,88 @@ async fn main() -> ExitCode {
         eprintln!("el servidor terminó con error: {e}");
         return ExitCode::FAILURE;
     }
+    ExitCode::SUCCESS
+}
+
+/// Siembra la institución y el usuario de la demostración pública.
+///
+/// Se apoya en las MISMAS variables que hacen que `/api/demo` publique las
+/// credenciales, así que no puede sembrarse un usuario distinto del que la
+/// pantalla anuncia: si `MEDICO_DEMO_CORREO` y `MEDICO_DEMO_CLAVE` no están, no
+/// hay nada que sembrar y se dice, en vez de inventar un usuario «demo» que
+/// nadie pidió (directiva 20).
+///
+/// La licencia se fija con **todo el catálogo**, no con una lista escrita a
+/// mano: así el menú de la demostración enseña el producto completo, y cada
+/// módulo aparece como `habilitado` o `pendiente` según lo que el binario sirva
+/// de verdad. Una lista aparte se desincronizaría al primer módulo nuevo.
+async fn sembrar_demo() -> ExitCode {
+    let cfg = match config::Config::desde_entorno() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("configuración inválida: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let Some(demo) = cfg.demo else {
+        eprintln!(
+            "no hay nada que sembrar: falta MEDICO_DEMO_CORREO y MEDICO_DEMO_CLAVE. \
+             Son las mismas que publica /api/demo, para que la pantalla no anuncie \
+             unas credenciales distintas de las que existen."
+        );
+        return ExitCode::FAILURE;
+    };
+    let pool = match medico_datos::abrir(&cfg.url_bd).await {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("no se pudo abrir la base ({}): {e}", cfg.url_bd);
+            return ExitCode::FAILURE;
+        }
+    };
+    let Some(hash) = claves::hashear(&demo.clave) else {
+        eprintln!("no se pudo generar el hash de la clave de demostración");
+        return ExitCode::FAILURE;
+    };
+
+    let modulos: Vec<String> = medico_dominio::modulo::CATALOGO
+        .iter()
+        .map(|m| m.nombre.to_string())
+        .collect();
+    let json = serde_json::to_string(&modulos).expect("una lista de cadenas siempre serializa");
+
+    let r = sqlx::query(
+        "INSERT INTO institucion (id, nombre, nit, activa, modulos_habilitados)
+         VALUES (1, 'IPS de demostración — Xiliux', '900000000-0', 1, ?)
+         ON CONFLICT(id) DO UPDATE SET modulos_habilitados = excluded.modulos_habilitados",
+    )
+    .bind(&json)
+    .execute(&pool)
+    .await;
+    if let Err(e) = r {
+        eprintln!("no se pudo crear la institución de demostración: {e}");
+        return ExitCode::FAILURE;
+    }
+
+    // `ON CONFLICT(email)`: al resembrar se repone la clave publicada, que es
+    // justo lo que hace falta si alguien la cambió durante la demostración.
+    let r = sqlx::query(
+        "INSERT INTO usuario (nombre, email, password_hash, rol, institucion_id, activo)
+         VALUES ('Doctora de demostración', ?, ?, 'admin', 1, 1)
+         ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash, activo = 1",
+    )
+    .bind(&demo.correo)
+    .bind(&hash)
+    .execute(&pool)
+    .await;
+    if let Err(e) = r {
+        eprintln!("no se pudo crear el usuario de demostración: {e}");
+        return ExitCode::FAILURE;
+    }
+
+    println!(
+        "demostración sembrada: institución 1 con {} módulos licenciados y el usuario «{}».",
+        modulos.len(),
+        demo.correo
+    );
     ExitCode::SUCCESS
 }

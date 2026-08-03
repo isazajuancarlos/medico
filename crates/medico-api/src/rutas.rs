@@ -118,6 +118,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/salir", post(salir))
         .route("/api/salir-todo", post(salir_todo))
         .route("/api/yo", get(yo))
+        .route("/api/demo", get(demo))
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
         .route("/api/pacientes/{id}", get(obtener_paciente).put(actualizar_paciente))
         .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
@@ -566,6 +567,34 @@ async fn yo(Autenticado(u): Autenticado) -> Json<Yo> {
         rol,
         institucion_id: u.institucion_id,
     })
+}
+
+#[derive(Serialize)]
+struct CredencialesDemo {
+    correo: String,
+    clave: String,
+}
+
+/// Las credenciales de la DEMOSTRACIÓN, para que la pantalla de acceso las
+/// muestre. **Sin sesión**, porque quien la necesita todavía no la tiene.
+///
+/// Responde `204 No Content` cuando el despliegue no pidió ser una demostración,
+/// que es el defecto y lo que le pasa a la instalación de un cliente: no hay
+/// nada que enseñar y no hay que acordarse de apagar nada. Publicar unas
+/// credenciales exige poner DOS variables de entorno a propósito
+/// (`MEDICO_DEMO_CORREO` y `MEDICO_DEMO_CLAVE`); media configuración no arranca.
+///
+/// No se registra en la bitácora de accesos: no hay titular ni dato de paciente
+/// detrás, solo la nota de un cartel que el propio despliegue mandó colgar.
+async fn demo(State(e): State<Estado>) -> Response {
+    match &e.demo {
+        Some(d) => Json(CredencialesDemo {
+            correo: d.correo.clone(),
+            clave: d.clave.clone(),
+        })
+        .into_response(),
+        None => StatusCode::NO_CONTENT.into_response(),
+    }
 }
 
 /// Pacientes, acotados al ámbito del usuario. El `ambito()` sale del rol y la
@@ -3489,6 +3518,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy,
+            demo: None,
             capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }
@@ -3497,6 +3527,54 @@ mod pruebas {
     ///
     /// `rol.rs` ya prueba que un laboratorista no puede firmar. Eso no dice nada
     /// sobre si la ruta se lo impide: el fallo que esto cierra era justamente que
+    /// `/api/demo` publica credenciales, así que lo que hay que probar es que
+    /// NO las publica cuando nadie las pidió — y que el que las pide, las
+    /// recibe sin sesión, porque quien va a entrar todavía no tiene ninguna.
+    mod demostracion {
+        use super::*;
+
+        async fn pedir_demo(e: &Estado) -> (StatusCode, String) {
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/api/demo")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let estado = r.status();
+            let cuerpo = axum::body::to_bytes(r.into_body(), 64 * 1024).await.unwrap();
+            (estado, String::from_utf8_lossy(&cuerpo).into_owned())
+        }
+
+        /// El defecto, o sea lo que le pasa a la instalación de un cliente:
+        /// nadie tiene que acordarse de apagar nada.
+        #[tokio::test]
+        async fn sin_modo_demo_no_publica_nada() {
+            let e = estado_de_prueba(false).await;
+            let (estado, cuerpo) = pedir_demo(&e).await;
+            assert_eq!(estado, StatusCode::NO_CONTENT);
+            assert!(cuerpo.is_empty(), "no debería haber cuerpo: {cuerpo}");
+        }
+
+        /// Y con el modo pedido a propósito, se publican SIN sesión: la pantalla
+        /// de acceso las necesita antes de que exista ninguna.
+        #[tokio::test]
+        async fn con_modo_demo_las_publica_sin_sesion() {
+            let mut e = estado_de_prueba(false).await;
+            e.demo = Some(crate::config::Demo {
+                correo: "demo@ips.test".into(),
+                clave: "demo-1234".into(),
+            });
+            let (estado, cuerpo) = pedir_demo(&e).await;
+            assert_eq!(estado, StatusCode::OK);
+            assert!(cuerpo.contains("demo@ips.test"), "{cuerpo}");
+            assert!(cuerpo.contains("demo-1234"), "{cuerpo}");
+        }
+    }
+
     /// la regla no estaba cableada en ninguna parte. Aquí se pide con una cookie
     /// de verdad, por la ruta de verdad.
     mod capacidades {
