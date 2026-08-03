@@ -10,8 +10,10 @@ publish.workspace = true
 
 [dependencies]
 serde = { workspace = true }
-
-[dev-dependencies]
-# Solo para comprobar que los valores serializados de RolUsuario no cambian:
-# están escritos en la base y en los tokens ya emitidos.
+# Para leer el mapeo CIE-10/CIE-11 empotrado (`cie11.rs`). Sigue sin tocar la
+# base ni la red: `include_str!` es del compilador, y parsear una cadena es
+# cómputo puro como el resto de este crate.
 serde_json = { workspace = true }
+# Fechas del RIPS. Las dos formas —con hora sin segundos y sin hora— son reglas
+# del documento, así que se formatean aquí y no en la capa que habla con la base.
+chrono = { workspace = true }

@@ -1,18 +1,17 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
-import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
-import { CheckboxModule } from 'primeng/checkbox';
-import { MessageService } from 'primeng/api';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   QuirofanoService, Sala, Programacion, ProgramacionCreate,
   ChecklistUpdate, CompletarCirugia, MedicoBasic,
@@ -21,15 +20,265 @@ import {
 type Vista = 'lista' | 'programar';
 type Tab = 'agenda' | 'salas';
 
+/** El vocabulario del estado, en un solo sitio: lo leen la pantalla y el
+ *  diálogo de detalle. */
+const ESTADO_LABEL: Record<string, string> = {
+  PROGRAMADA: 'Programada', EN_CURSO: 'En curso', COMPLETADA: 'Completada',
+  CANCELADA: 'Cancelada', SUSPENDIDA: 'Suspendida',
+};
+
+function estadoSeveridad(estado: string): 'info' | 'success' | 'warn' | 'danger' | 'secondary' {
+  if (estado === 'PROGRAMADA') return 'info';
+  if (estado === 'EN_CURSO') return 'warn';
+  if (estado === 'COMPLETADA') return 'success';
+  if (estado === 'CANCELADA' || estado === 'SUSPENDIDA') return 'danger';
+  return 'secondary';
+}
+
+/** Lo que el diálogo de detalle pide hacer al cerrarse. */
+type AccionDetalle = 'iniciar' | 'cancelar';
+
+/**
+ * Detalle de una cirugía, con su checklist prequirúrgico.
+ *
+ * El checklist se guarda AQUÍ, marca a marca, y no al cerrar: cada casilla es
+ * una afirmación sobre el paciente —ayuno verificado, sangre reservada— y
+ * perderlas porque alguien cerró con Escape sería peor que no ofrecerlas. Lo
+ * que sí sale por afterClosed() es la acción sobre la cirugía, que es la que
+ * cambia su estado.
+ */
+@Component({
+  selector: 'app-quirofano-detalle',
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule, MatDialogModule, MatButtonModule,
+    MatCheckboxModule, MatDividerModule, EtiquetaComponent,
+  ],
+  template: `
+    <h2 mat-dialog-title>Detalle de cirugía</h2>
+    <mat-dialog-content>
+      <div class="detalle-header">
+        <div>
+          <div class="det-label">Paciente</div>
+          <div class="det-valor">{{ p().paciente_nombre || '—' }}</div>
+          <div class="det-sub">{{ p().paciente_identificacion }}</div>
+        </div>
+        <x-etiqueta [value]="estadoLabel(p().estado)" [severity]="estadoSeverity(p().estado)" />
+      </div>
+
+      <mat-divider />
+
+      <div class="det-grid">
+        <div>
+          <div class="det-label">Procedimiento</div>
+          <div class="det-valor">{{ p().procedimiento }}</div>
+        </div>
+        <div>
+          <div class="det-label">Sala</div>
+          <div class="det-valor">{{ p().quirofano_nombre || '—' }}</div>
+        </div>
+        <div>
+          <div class="det-label">Cirujano</div>
+          <div class="det-valor">{{ p().cirujano_nombre || '—' }}</div>
+        </div>
+        <div>
+          <div class="det-label">Anestesiólogo</div>
+          <div class="det-valor">{{ p().anestesiologo_nombre || 'No asignado' }}</div>
+        </div>
+        <div>
+          <div class="det-label">Fecha programada</div>
+          <div class="det-valor">{{ p().fecha_programada | date:'dd/MM/yyyy HH:mm' }}</div>
+        </div>
+        <div>
+          <div class="det-label">Duración estimada</div>
+          <div class="det-valor">{{ p().duracion_estimada_min }} min</div>
+        </div>
+        @if (p().tipo_anestesia) {
+          <div>
+            <div class="det-label">Anestesia</div>
+            <div class="det-valor">{{ p().tipo_anestesia }}</div>
+          </div>
+        }
+        @if (p().hora_inicio_real) {
+          <div>
+            <div class="det-label">Hora inicio real</div>
+            <div class="det-valor">{{ p().hora_inicio_real | date:'HH:mm' }}</div>
+          </div>
+        }
+        @if (p().hora_fin_real) {
+          <div>
+            <div class="det-label">Hora fin real</div>
+            <div class="det-valor">{{ p().hora_fin_real | date:'HH:mm' }}</div>
+          </div>
+        }
+      </div>
+
+      @if (p().estado === 'PROGRAMADA') {
+        <mat-divider />
+        <div class="section-title">Checklist prequirúrgico</div>
+        <div class="checklist-grid">
+          <mat-checkbox [(ngModel)]="checklist.ayuno_verificado"
+            (change)="guardar('ayuno_verificado', $event.checked)">Ayuno verificado</mat-checkbox>
+          <mat-checkbox [(ngModel)]="checklist.labs_prequirurgicos"
+            (change)="guardar('labs_prequirurgicos', $event.checked)">Laboratorios prequirúrgicos</mat-checkbox>
+          <mat-checkbox [(ngModel)]="checklist.valoracion_preanestesica"
+            (change)="guardar('valoracion_preanestesica', $event.checked)">Valoración preanestésica</mat-checkbox>
+          <mat-checkbox [(ngModel)]="checklist.reserva_sangre"
+            (change)="guardar('reserva_sangre', $event.checked)">Reserva de sangre</mat-checkbox>
+        </div>
+      }
+
+      @if (p().nota_quirurgica) {
+        <mat-divider />
+        <div class="det-label">Nota quirúrgica</div>
+        <div class="nota-box">{{ p().nota_quirurgica }}</div>
+      }
+      @if (p().hallazgos_quirurgicos) {
+        <div class="det-label" style="margin-top:0.75rem">Hallazgos</div>
+        <div class="nota-box">{{ p().hallazgos_quirurgicos }}</div>
+      }
+      @if (p().complicaciones) {
+        <div class="det-label" style="margin-top:0.75rem">Complicaciones / Notas</div>
+        <div class="nota-box warn">{{ p().complicaciones }}</div>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions class="acciones">
+      <div>
+        @if (p().estado === 'PROGRAMADA') {
+          <button matButton class="peligro" [mat-dialog-close]="'cancelar'">
+            <i class="pi pi-times"></i> Cancelar cirugía
+          </button>
+        }
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button matButton mat-dialog-close>Cerrar</button>
+        @if (p().estado === 'PROGRAMADA') {
+          <button matButton="filled" class="exito" [mat-dialog-close]="'iniciar'">
+            <i class="pi pi-play"></i> Iniciar cirugía
+          </button>
+        }
+      </div>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { min-width: min(36rem, 88vw); }
+    .detalle-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+    .det-label { font-size:0.7rem; font-weight:600; text-transform:uppercase; color:#94a3b8; letter-spacing:0.05em; }
+    .det-valor { font-weight:600; color:#f1f5f9; }
+    .det-sub { font-size:0.82rem; color:#94a3b8; }
+    .det-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.9rem; margin:1rem 0; }
+    .section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em;
+      color:#818cf8; margin:1rem 0 0.75rem; }
+    .checklist-grid { display:flex; flex-direction:column; gap:0.5rem; }
+    .nota-box { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+      border-radius:6px; padding:0.75rem; font-size:0.875rem; color:#cbd5e1; white-space:pre-wrap; }
+    .nota-box.warn { border-color:rgba(251,191,36,0.3); background:rgba(251,191,36,0.06); }
+    .acciones { display:flex; justify-content:space-between; }
+    .peligro { color:#dc2626; }
+    .exito { background:#16a34a; color:#fff; }
+  `],
+})
+export class QuirofanoDetalleComponent {
+  private svc = inject(QuirofanoService);
+  private avisos = inject(Avisos);
+
+  readonly p = signal<Programacion>(null as unknown as Programacion);
+  checklist: ChecklistUpdate;
+
+  constructor(@Inject(MAT_DIALOG_DATA) prog: Programacion) {
+    this.p.set(prog);
+    this.checklist = {
+      ayuno_verificado: prog.ayuno_verificado,
+      labs_prequirurgicos: prog.labs_prequirurgicos,
+      valoracion_preanestesica: prog.valoracion_preanestesica,
+      reserva_sangre: prog.reserva_sangre,
+    };
+  }
+
+  guardar(campo: keyof ChecklistUpdate, valor: boolean): void {
+    this.svc.updateChecklist(this.p().id, { [campo]: valor }).subscribe({
+      next: (actualizada) => this.p.set(actualizada),
+      error: () => this.avisos.add({
+        severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el checklist',
+      }),
+    });
+  }
+
+  estadoLabel(estado: string): string { return ESTADO_LABEL[estado] ?? estado; }
+  estadoSeverity(estado: string): 'info' | 'success' | 'warn' | 'danger' | 'secondary' {
+    return estadoSeveridad(estado);
+  }
+}
+
+/** Cierre de una cirugía. Devuelve lo que se registra, o nada. */
+@Component({
+  selector: 'app-quirofano-completar',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Completar cirugía</h2>
+    <mat-dialog-content>
+      <div class="ficha">
+        <div style="font-weight:600;color:#f1f5f9">{{ p.paciente_nombre }}</div>
+        <div style="font-size:0.82rem;color:#94a3b8">{{ p.procedimiento }}</div>
+      </div>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Nota quirúrgica / descripción del procedimiento</mat-label>
+          <textarea matInput [(ngModel)]="f.nota_quirurgica" rows="4"
+            placeholder="Descripción de la técnica quirúrgica..."></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Hallazgos quirúrgicos</mat-label>
+          <textarea matInput [(ngModel)]="f.hallazgos_quirurgicos" rows="3"
+            placeholder="Hallazgos intraoperatorios..."></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Sangrado estimado (mL)</mat-label>
+          <input matInput type="number" [(ngModel)]="f.sangrado_estimado_ml" placeholder="0" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Especímenes para patología</mat-label>
+          <input matInput [(ngModel)]="f.especimenes_patologia" placeholder="Vesícula biliar, apéndice..." />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Complicaciones intraoperatorias</mat-label>
+          <textarea matInput [(ngModel)]="f.complicaciones" rows="2"
+            placeholder="Ninguna / descripción..."></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [mat-dialog-close]="f">
+        <i class="pi pi-check"></i> Registrar cierre
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .ficha { margin-bottom:1rem; padding:0.75rem; background:rgba(99,102,241,0.1);
+      border-radius:6px; border:1px solid rgba(99,102,241,0.2); }
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+      min-width:min(32rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class QuirofanoCompletarComponent {
+  f: CompletarCirugia = {};
+  constructor(@Inject(MAT_DIALOG_DATA) public p: Programacion) {}
+}
+
+
 @Component({
   selector: 'app-quirofano',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule, CheckboxModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -39,12 +288,17 @@ type Tab = 'agenda' | 'salas';
         <div class="list-header">
           <h2 class="page-title">Quirófano</h2>
           <div style="display:flex;gap:0.5rem;align-items:center">
-            <p-select [(ngModel)]="filtroEstado" [options]="opcionesEstado"
-              optionLabel="label" optionValue="value"
-              (onChange)="cargarProgramaciones()"
-              placeholder="Todos los estados" style="width:200px" />
-            <p-button label="Nueva programación" icon="pi pi-plus"
-              (onClick)="vista.set('programar')" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:200px">
+              <mat-label>Estado</mat-label>
+              <mat-select [(ngModel)]="filtroEstado" (selectionChange)="cargarProgramaciones()">
+                @for (o of opcionesEstado; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button matButton="filled" (click)="vista.set('programar')">
+              <i class="pi pi-plus"></i> Nueva programación
+            </button>
           </div>
         </div>
 
@@ -90,71 +344,85 @@ type Tab = 'agenda' | 'salas';
               <p>No hay cirugías con el filtro seleccionado.</p>
             </div>
           } @else {
-            <p-table [value]="programaciones()" [rowHover]="true" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Paciente</th>
-                  <th>Procedimiento</th>
-                  <th>Sala</th>
-                  <th>Cirujano</th>
-                  <th>Fecha / Hora</th>
-                  <th style="text-align:center">Duración</th>
-                  <th style="text-align:center">Checklist</th>
-                  <th style="text-align:center">Estado</th>
-                  <th style="text-align:center">Acciones</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-p>
-                <tr>
-                  <td>
-                    <strong>{{ p.paciente_nombre || '—' }}</strong>
-                    @if (p.paciente_identificacion) {
-                      <div style="font-size:0.78rem;color:#94a3b8">{{ p.paciente_identificacion }}</div>
-                    }
-                  </td>
-                  <td>
-                    <span style="font-size:0.88rem">{{ p.procedimiento }}</span>
-                    @if (p.codigo_cups) {
-                      <div style="font-size:0.75rem;color:#94a3b8">CUPS: {{ p.codigo_cups }}</div>
-                    }
-                  </td>
-                  <td>
-                    <span class="sala-badge">{{ p.quirofano_nombre || '—' }}</span>
-                  </td>
-                  <td style="font-size:0.85rem">{{ p.cirujano_nombre || '—' }}</td>
-                  <td style="font-size:0.85rem">
-                    {{ p.fecha_programada | date:'dd/MM/yyyy' }}
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ p.fecha_programada | date:'HH:mm' }}</div>
-                  </td>
-                  <td style="text-align:center">
-                    <span class="dur-badge">{{ p.duracion_estimada_min }} min</span>
-                  </td>
-                  <td style="text-align:center">
-                    <span [class]="checklistCompleto(p) ? 'check-ok' : 'check-pendiente'">
-                      <i [class]="checklistCompleto(p) ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
-                      {{ checklistItems(p) }}/4
-                    </span>
-                  </td>
-                  <td style="text-align:center">
-                    <p-tag [value]="estadoLabel(p.estado)" [severity]="estadoSeverity(p.estado)" />
-                  </td>
-                  <td style="text-align:center">
-                    <p-button icon="pi pi-eye" [text]="true" size="small"
-                      pTooltip="Ver detalle" (onClick)="abrirDetalle(p)" />
-                    @if (p.estado === 'PROGRAMADA') {
-                      <p-button icon="pi pi-play" [text]="true" size="small"
-                        severity="success" pTooltip="Iniciar cirugía"
-                        (onClick)="iniciarCirugia(p)" />
-                    }
-                    @if (p.estado === 'EN_CURSO') {
-                      <p-button icon="pi pi-stop-circle" [text]="true" size="small"
-                        severity="warn" pTooltip="Completar cirugía"
-                        (onClick)="abrirCompletar(p)" />
-                    }
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="programaciones()" class="tabla">
+              <ng-container matColumnDef="paciente">
+                <th mat-header-cell *matHeaderCellDef>Paciente</th>
+                <td mat-cell *matCellDef="let p">
+                  <strong>{{ p.paciente_nombre || '—' }}</strong>
+                  @if (p.paciente_identificacion) {
+                    <div style="font-size:0.78rem;color:#94a3b8">{{ p.paciente_identificacion }}</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="procedimiento">
+                <th mat-header-cell *matHeaderCellDef>Procedimiento</th>
+                <td mat-cell *matCellDef="let p">
+                  <span style="font-size:0.88rem">{{ p.procedimiento }}</span>
+                  @if (p.codigo_cups) {
+                    <div style="font-size:0.75rem;color:#94a3b8">CUPS: {{ p.codigo_cups }}</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="sala">
+                <th mat-header-cell *matHeaderCellDef>Sala</th>
+                <td mat-cell *matCellDef="let p"><span class="sala-badge">{{ p.quirofano_nombre || '—' }}</span></td>
+              </ng-container>
+              <ng-container matColumnDef="cirujano">
+                <th mat-header-cell *matHeaderCellDef>Cirujano</th>
+                <td mat-cell *matCellDef="let p" style="font-size:0.85rem">{{ p.cirujano_nombre || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="fecha">
+                <th mat-header-cell *matHeaderCellDef>Fecha / Hora</th>
+                <td mat-cell *matCellDef="let p" style="font-size:0.85rem">
+                  {{ p.fecha_programada | date:'dd/MM/yyyy' }}
+                  <div style="font-size:0.78rem;color:#94a3b8">{{ p.fecha_programada | date:'HH:mm' }}</div>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="duracion">
+                <th mat-header-cell *matHeaderCellDef class="centro">Duración</th>
+                <td mat-cell *matCellDef="let p" class="centro">
+                  <span class="dur-badge">{{ p.duracion_estimada_min }} min</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="checklist">
+                <th mat-header-cell *matHeaderCellDef class="centro">Checklist</th>
+                <td mat-cell *matCellDef="let p" class="centro">
+                  <span [class]="checklistCompleto(p) ? 'check-ok' : 'check-pendiente'">
+                    <i [class]="checklistCompleto(p) ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
+                    {{ checklistItems(p) }}/4
+                  </span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                <td mat-cell *matCellDef="let p" class="centro">
+                  <x-etiqueta [value]="estadoLabel(p.estado)" [severity]="estadoSeverity(p.estado)" />
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+                <td mat-cell *matCellDef="let p" class="centro">
+                  <button matIconButton matTooltip="Ver detalle" (click)="abrirDetalle(p)">
+                    <i class="pi pi-eye"></i>
+                  </button>
+                  @if (p.estado === 'PROGRAMADA') {
+                    <button matIconButton class="exito-texto" matTooltip="Iniciar cirugía"
+                      (click)="iniciarCirugia(p)">
+                      <i class="pi pi-play"></i>
+                    </button>
+                  }
+                  @if (p.estado === 'EN_CURSO') {
+                    <button matIconButton class="aviso-color" matTooltip="Completar cirugía"
+                      (click)="abrirCompletar(p)">
+                      <i class="pi pi-stop-circle"></i>
+                    </button>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+            </table>
           }
         }
 
@@ -185,7 +453,9 @@ type Tab = 'agenda' | 'salas';
       <!-- ═══════════════════════════ VISTA PROGRAMAR ═══════════════════════ -->
       @if (vista() === 'programar') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver" />
+          <button matIconButton matTooltip="Volver" (click)="volverLista()">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">Nueva Programación Quirúrgica</h2>
         </div>
 
@@ -194,295 +464,130 @@ type Tab = 'agenda' | 'salas';
           <!-- Paciente -->
           <div class="form-section">
             <div class="section-title">Paciente</div>
-            <div style="display:flex;gap:0.5rem;align-items:flex-end">
-              <div class="field" style="flex:1">
-                <label>Buscar por nombre o identificación</label>
-                <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
+            <div style="display:flex;gap:0.5rem;align-items:flex-start">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                <mat-label>Buscar por nombre o identificación</mat-label>
+                <input matInput [ngModel]="busquedaPaciente()" (ngModelChange)="busquedaPaciente.set($event)"
                   placeholder="Ingrese nombre o número de identificación..."
                   (keyup.enter)="buscarPaciente()" />
-              </div>
-              <p-button label="Buscar" icon="pi pi-search"
-                [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+              </mat-form-field>
+              <button matButton="filled" [disabled]="buscandoPaciente()" (click)="buscarPaciente()">
+                <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i> Buscar
+              </button>
             </div>
             @if (pacientesResultados().length > 0) {
-              <div style="margin-top:0.75rem">
-                <p-select [(ngModel)]="pacienteSeleccionado"
-                  [options]="pacientesResultados()"
-                  optionLabel="nombre_completo"
-                  [filter]="true" filterBy="nombre_completo,identificacion"
-                  placeholder="Seleccione el paciente..."
-                  class="w-full" style="width:100%" />
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
+                <mat-label>Seleccione el paciente…</mat-label>
+                <mat-select [ngModel]="pacienteSeleccionado()" (ngModelChange)="pacienteSeleccionado.set($event)">
+                  @for (p of pacientesResultados(); track p.id) {
+                    <mat-option [value]="p">{{ p.nombre_completo }} — {{ p.identificacion }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             }
-            @if (pacienteSeleccionado) {
+            @if (pacienteSeleccionado(); as sel) {
               <div class="paciente-card">
                 <i class="pi pi-user" style="color:#818cf8"></i>
                 <div>
-                  <div style="font-weight:600;color:#f1f5f9">{{ pacienteSeleccionado.nombre_completo }}</div>
-                  <div style="font-size:0.82rem;color:#94a3b8">{{ pacienteSeleccionado.identificacion }}</div>
+                  <div style="font-weight:600;color:#f1f5f9">{{ sel.nombre_completo }}</div>
+                  <div style="font-size:0.82rem;color:#94a3b8">{{ sel.identificacion }}</div>
                 </div>
-                <p-button icon="pi pi-times" [text]="true" size="small"
-                  severity="secondary" (onClick)="pacienteSeleccionado = null" />
+                <button matIconButton matTooltip="Quitar" (click)="pacienteSeleccionado.set(null)">
+                  <i class="pi pi-times"></i>
+                </button>
               </div>
             }
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Procedimiento -->
           <div class="form-section">
             <div class="section-title">Procedimiento quirúrgico</div>
             <div class="form-grid">
-              <div class="field" style="grid-column:1/-1">
-                <label>Descripción del procedimiento *</label>
-                <input pInputText [(ngModel)]="nForm.procedimiento"
-                  class="w-full" placeholder="Ej: Colecistectomía laparoscópica, Apendicectomía..." />
-              </div>
-              <div class="field">
-                <label>Código CUPS</label>
-                <input pInputText [(ngModel)]="nForm.codigo_cups"
-                  class="w-full" placeholder="Ej: 472200" />
-              </div>
-              <div class="field">
-                <label>Tipo de anestesia</label>
-                <p-select [(ngModel)]="nForm.tipo_anestesia"
-                  [options]="opcionesAnestesia"
-                  optionLabel="label" optionValue="value"
-                  placeholder="Seleccionar..."
-                  class="w-full" style="width:100%" />
-              </div>
+              <mat-form-field appearance="outline" style="grid-column:1/-1">
+                <mat-label>Descripción del procedimiento *</mat-label>
+                <input matInput [(ngModel)]="nForm().procedimiento"
+                  placeholder="Ej: Colecistectomía laparoscópica, Apendicectomía..." />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Código CUPS</mat-label>
+                <input matInput [(ngModel)]="nForm().codigo_cups" placeholder="Ej: 472200" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo de anestesia</mat-label>
+                <mat-select [(ngModel)]="nForm().tipo_anestesia">
+                  @for (o of opcionesAnestesia; track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Sala, cirujano, fecha -->
           <div class="form-section">
             <div class="section-title">Asignación</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Sala de quirófano *</label>
-                <p-select [(ngModel)]="nForm.quirofano_id"
-                  [options]="salasDisp()"
-                  optionLabel="label" optionValue="value"
-                  [filter]="true"
-                  placeholder="Seleccione sala..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Cirujano *</label>
-                <p-select [(ngModel)]="nForm.cirujano_id"
-                  [options]="medicos()"
-                  optionLabel="nombre_completo" optionValue="id"
-                  [filter]="true"
-                  placeholder="Seleccione cirujano..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Anestesiólogo</label>
-                <p-select [(ngModel)]="nForm.anestesiologo_id"
-                  [options]="anestesiologos()"
-                  optionLabel="nombre_completo" optionValue="id"
-                  [filter]="true" [showClear]="true"
-                  placeholder="Seleccione anestesiólogo..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Duración estimada (min)</label>
-                <input pInputText type="number" [(ngModel)]="nForm.duracion_estimada_min"
-                  class="w-full" placeholder="60" />
-              </div>
-              <div class="field" style="grid-column:1/-1">
-                <label>Fecha y hora programada *</label>
-                <input type="datetime-local" [(ngModel)]="nForm.fecha_programada"
-                  class="w-full datetime-input" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Sala de quirófano *</mat-label>
+                <mat-select [(ngModel)]="nForm().quirofano_id">
+                  @for (s of salasDisp(); track s.value) {
+                    <mat-option [value]="s.value">{{ s.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Cirujano *</mat-label>
+                <mat-select [(ngModel)]="nForm().cirujano_id">
+                  @for (m of medicos(); track m.id) {
+                    <mat-option [value]="m.id">{{ m.nombre_completo }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Anestesiólogo</mat-label>
+                <mat-select [(ngModel)]="nForm().anestesiologo_id">
+                  <mat-option [value]="null">Sin asignar</mat-option>
+                  @for (m of anestesiologos(); track m.id) {
+                    <mat-option [value]="m.id">{{ m.nombre_completo }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Duración estimada (min)</mat-label>
+                <input matInput type="number" [(ngModel)]="nForm().duracion_estimada_min" placeholder="60" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="grid-column:1/-1">
+                <mat-label>Fecha y hora programada *</mat-label>
+                <input matInput type="datetime-local" [(ngModel)]="nForm().fecha_programada" />
+              </mat-form-field>
             </div>
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button label="Programar cirugía" icon="pi pi-check"
-              [loading]="guardando()"
-              [disabled]="!pacienteSeleccionado || !nForm.quirofano_id || !nForm.cirujano_id || !nForm.procedimiento || !nForm.fecha_programada"
-              (onClick)="guardar()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="guardar()"
+              [disabled]="guardando() || !pacienteSeleccionado() || !nForm().quirofano_id || !nForm().cirujano_id || !nForm().procedimiento || !nForm().fecha_programada">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Programar cirugía
+            </button>
           </div>
         </div>
       }
     </div>
 
-    <!-- ══ DIALOG DETALLE ══ -->
-    <p-dialog header="Detalle de Cirugía" [(visible)]="mostrarDetalle"
-      [style]="{width:'600px'}" [modal]="true" [closable]="true">
-      @if (progDetalle()) {
-        <div class="detalle-header">
-          <div>
-            <div class="det-label">Paciente</div>
-            <div class="det-valor">{{ progDetalle()!.paciente_nombre || '—' }}</div>
-            <div class="det-sub">{{ progDetalle()!.paciente_identificacion }}</div>
-          </div>
-          <p-tag [value]="estadoLabel(progDetalle()!.estado)"
-            [severity]="estadoSeverity(progDetalle()!.estado)" />
-        </div>
-
-        <p-divider />
-
-        <div class="det-grid">
-          <div>
-            <div class="det-label">Procedimiento</div>
-            <div class="det-valor">{{ progDetalle()!.procedimiento }}</div>
-          </div>
-          <div>
-            <div class="det-label">Sala</div>
-            <div class="det-valor">{{ progDetalle()!.quirofano_nombre || '—' }}</div>
-          </div>
-          <div>
-            <div class="det-label">Cirujano</div>
-            <div class="det-valor">{{ progDetalle()!.cirujano_nombre || '—' }}</div>
-          </div>
-          <div>
-            <div class="det-label">Anestesiólogo</div>
-            <div class="det-valor">{{ progDetalle()!.anestesiologo_nombre || 'No asignado' }}</div>
-          </div>
-          <div>
-            <div class="det-label">Fecha programada</div>
-            <div class="det-valor">{{ progDetalle()!.fecha_programada | date:'dd/MM/yyyy HH:mm' }}</div>
-          </div>
-          <div>
-            <div class="det-label">Duración estimada</div>
-            <div class="det-valor">{{ progDetalle()!.duracion_estimada_min }} min</div>
-          </div>
-          @if (progDetalle()!.tipo_anestesia) {
-            <div>
-              <div class="det-label">Anestesia</div>
-              <div class="det-valor">{{ progDetalle()!.tipo_anestesia }}</div>
-            </div>
-          }
-          @if (progDetalle()!.hora_inicio_real) {
-            <div>
-              <div class="det-label">Hora inicio real</div>
-              <div class="det-valor">{{ progDetalle()!.hora_inicio_real | date:'HH:mm' }}</div>
-            </div>
-          }
-          @if (progDetalle()!.hora_fin_real) {
-            <div>
-              <div class="det-label">Hora fin real</div>
-              <div class="det-valor">{{ progDetalle()!.hora_fin_real | date:'HH:mm' }}</div>
-            </div>
-          }
-        </div>
-
-        <!-- Checklist -->
-        @if (progDetalle()!.estado === 'PROGRAMADA') {
-          <p-divider />
-          <div class="section-title" style="margin-bottom:0.75rem">Checklist prequirúrgico</div>
-          <div class="checklist-grid">
-            <div class="checklist-item">
-              <p-checkbox [(ngModel)]="detChecklist.ayuno_verificado" [binary]="true"
-                (onChange)="guardarChecklist('ayuno_verificado', $event.checked)" />
-              <span [class.check-text-ok]="detChecklist.ayuno_verificado">Ayuno verificado</span>
-            </div>
-            <div class="checklist-item">
-              <p-checkbox [(ngModel)]="detChecklist.labs_prequirurgicos" [binary]="true"
-                (onChange)="guardarChecklist('labs_prequirurgicos', $event.checked)" />
-              <span [class.check-text-ok]="detChecklist.labs_prequirurgicos">Laboratorios prequirúrgicos</span>
-            </div>
-            <div class="checklist-item">
-              <p-checkbox [(ngModel)]="detChecklist.valoracion_preanestesica" [binary]="true"
-                (onChange)="guardarChecklist('valoracion_preanestesica', $event.checked)" />
-              <span [class.check-text-ok]="detChecklist.valoracion_preanestesica">Valoración preanestésica</span>
-            </div>
-            <div class="checklist-item">
-              <p-checkbox [(ngModel)]="detChecklist.reserva_sangre" [binary]="true"
-                (onChange)="guardarChecklist('reserva_sangre', $event.checked)" />
-              <span [class.check-text-ok]="detChecklist.reserva_sangre">Reserva de sangre</span>
-            </div>
-          </div>
-        }
-
-        <!-- Nota quirúrgica (completada) -->
-        @if (progDetalle()!.nota_quirurgica) {
-          <p-divider />
-          <div class="det-label">Nota quirúrgica</div>
-          <div class="nota-box">{{ progDetalle()!.nota_quirurgica }}</div>
-        }
-        @if (progDetalle()!.hallazgos_quirurgicos) {
-          <div class="det-label" style="margin-top:0.75rem">Hallazgos</div>
-          <div class="nota-box">{{ progDetalle()!.hallazgos_quirurgicos }}</div>
-        }
-        @if (progDetalle()!.complicaciones) {
-          <div class="det-label" style="margin-top:0.75rem">Complicaciones / Notas</div>
-          <div class="nota-box warn">{{ progDetalle()!.complicaciones }}</div>
-        }
-
-        <!-- Acciones -->
-        <div style="display:flex;justify-content:space-between;gap:0.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);margin-top:1rem">
-          <div>
-            @if (progDetalle()!.estado === 'PROGRAMADA') {
-              <p-button label="Cancelar cirugía" icon="pi pi-times" [text]="true"
-                severity="danger" (onClick)="cancelarCirugia()" [loading]="accionando()" />
-            }
-          </div>
-          <div style="display:flex;gap:0.5rem">
-            <p-button label="Cerrar" [text]="true" (onClick)="mostrarDetalle = false" />
-            @if (progDetalle()!.estado === 'PROGRAMADA') {
-              <p-button label="Iniciar cirugía" icon="pi pi-play"
-                severity="success" (onClick)="iniciarDesdeDetalle()" [loading]="accionando()" />
-            }
-          </div>
-        </div>
-      }
-    </p-dialog>
-
-    <!-- ══ DIALOG COMPLETAR ══ -->
-    <p-dialog header="Completar Cirugía" [(visible)]="mostrarCompletar"
-      [style]="{width:'560px'}" [modal]="true" [closable]="true">
-      @if (progCompletar()) {
-        <div style="margin-bottom:1rem;padding:0.75rem;background:rgba(99,102,241,0.1);border-radius:6px;border:1px solid rgba(99,102,241,0.2)">
-          <div style="font-weight:600;color:#f1f5f9">{{ progCompletar()!.paciente_nombre }}</div>
-          <div style="font-size:0.82rem;color:#94a3b8">{{ progCompletar()!.procedimiento }}</div>
-        </div>
-        <div class="form-grid">
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Nota quirúrgica / descripción del procedimiento</label>
-            <textarea pTextarea [(ngModel)]="cForm.nota_quirurgica" rows="4" class="w-full"
-              placeholder="Descripción de la técnica quirúrgica..."></textarea>
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Hallazgos quirúrgicos</label>
-            <textarea pTextarea [(ngModel)]="cForm.hallazgos_quirurgicos" rows="3" class="w-full"
-              placeholder="Hallazgos intraoperatorios..."></textarea>
-          </div>
-          <div class="field">
-            <label class="field-label">Sangrado estimado (mL)</label>
-            <input pInputText type="number" [(ngModel)]="cForm.sangrado_estimado_ml"
-              class="w-full" placeholder="0" />
-          </div>
-          <div class="field">
-            <label class="field-label">Especímenes para patología</label>
-            <input pInputText [(ngModel)]="cForm.especimenes_patologia"
-              class="w-full" placeholder="Vesícula biliar, apéndice..." />
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Complicaciones intraoperatorias</label>
-            <textarea pTextarea [(ngModel)]="cForm.complicaciones" rows="2" class="w-full"
-              placeholder="Ninguna / descripción..."></textarea>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.1)">
-          <p-button label="Cancelar" [text]="true" (onClick)="mostrarCompletar = false" />
-          <p-button label="Registrar cierre" icon="pi pi-check"
-            severity="warn" [loading]="accionando()"
-            (onClick)="confirmarCompletar()" />
-        </div>
-      }
-    </p-dialog>
-
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    mat-form-field { width: 100%; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .exito-texto { color: #16a34a; }
+    .aviso-color { color: #f59e0b; }
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
     .list-header .page-title { margin-bottom: 0; }
     .cargando { padding: 3rem; text-align: center; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
@@ -582,7 +687,8 @@ type Tab = 'agenda' | 'salas';
 })
 export class QuirofanoComponent implements OnInit {
   private svc = inject(QuirofanoService);
-  private messageService = inject(MessageService);
+  private dialogo = inject(MatDialog);
+  private messageService = inject(Avisos);
 
   vista = signal<Vista>('lista');
   tab = signal<Tab>('agenda');
@@ -601,6 +707,10 @@ export class QuirofanoComponent implements OnInit {
   anestesiologos = () => this.medicos().filter(m => m.rol === 'anestesiologo');
   countEstado = (e: string) => this.programaciones().filter(p => p.estado === e).length;
 
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['paciente', 'procedimiento', 'sala', 'cirujano', 'fecha',
+                       'duracion', 'checklist', 'estado', 'acciones'];
+
   readonly opcionesEstado = [
     { label: 'Todos', value: '' },
     { label: 'Programadas', value: 'PROGRAMADA' },
@@ -618,23 +728,16 @@ export class QuirofanoComponent implements OnInit {
   ];
 
   // Formulario nueva programación
-  busquedaPaciente = '';
+  readonly busquedaPaciente = signal('');
   buscandoPaciente = signal(false);
   pacientesResultados = signal<any[]>([]);
-  pacienteSeleccionado: any = null;
+  readonly pacienteSeleccionado = signal<any>(null);
   guardando = signal(false);
-  nForm: Partial<ProgramacionCreate> = { duracion_estimada_min: 60 };
+  /** Señales: `volverLista()` las reinicia y lo llaman los `subscribe` del
+   *  guardado, o sea después de que la detección haya pasado. */
+  readonly nForm = signal<Partial<ProgramacionCreate>>({ duracion_estimada_min: 60 });
 
-  // Detalle dialog
-  mostrarDetalle = false;
-  progDetalle = signal<Programacion | null>(null);
-  detChecklist: ChecklistUpdate = {};
   accionando = signal(false);
-
-  // Completar dialog
-  mostrarCompletar = false;
-  progCompletar = signal<Programacion | null>(null);
-  cForm: CompletarCirugia = {};
 
   ngOnInit(): void {
     this.cargarProgramaciones();
@@ -660,18 +763,18 @@ export class QuirofanoComponent implements OnInit {
 
   volverLista(): void {
     this.vista.set('lista');
-    this.busquedaPaciente = '';
+    this.busquedaPaciente.set('');
     this.pacientesResultados.set([]);
-    this.pacienteSeleccionado = null;
-    this.nForm = { duracion_estimada_min: 60 };
+    this.pacienteSeleccionado.set(null);
+    this.nForm.set({ duracion_estimada_min: 60 });
     this.cargarProgramaciones();
     this.cargarSalas();
   }
 
   buscarPaciente(): void {
-    if (!this.busquedaPaciente.trim()) return;
+    if (!this.busquedaPaciente().trim()) return;
     this.buscandoPaciente.set(true);
-    this.svc.searchPacientes(this.busquedaPaciente).subscribe({
+    this.svc.searchPacientes(this.busquedaPaciente()).subscribe({
       next: ps => {
         this.pacientesResultados.set(ps);
         this.buscandoPaciente.set(false);
@@ -682,17 +785,17 @@ export class QuirofanoComponent implements OnInit {
   }
 
   guardar(): void {
-    if (!this.pacienteSeleccionado || !this.nForm.quirofano_id || !this.nForm.cirujano_id || !this.nForm.procedimiento || !this.nForm.fecha_programada) return;
+    if (!this.pacienteSeleccionado() || !this.nForm().quirofano_id || !this.nForm().cirujano_id || !this.nForm().procedimiento || !this.nForm().fecha_programada) return;
     const payload: ProgramacionCreate = {
-      quirofano_id: this.nForm.quirofano_id!,
-      paciente_id: this.pacienteSeleccionado.id,
-      cirujano_id: this.nForm.cirujano_id!,
-      anestesiologo_id: this.nForm.anestesiologo_id,
-      fecha_programada: new Date(this.nForm.fecha_programada!).toISOString(),
-      duracion_estimada_min: Number(this.nForm.duracion_estimada_min) || 60,
-      procedimiento: this.nForm.procedimiento!,
-      codigo_cups: this.nForm.codigo_cups,
-      tipo_anestesia: this.nForm.tipo_anestesia,
+      quirofano_id: this.nForm().quirofano_id!,
+      paciente_id: this.pacienteSeleccionado().id,
+      cirujano_id: this.nForm().cirujano_id!,
+      anestesiologo_id: this.nForm().anestesiologo_id,
+      fecha_programada: new Date(this.nForm().fecha_programada!).toISOString(),
+      duracion_estimada_min: Number(this.nForm().duracion_estimada_min) || 60,
+      procedimiento: this.nForm().procedimiento!,
+      codigo_cups: this.nForm().codigo_cups,
+      tipo_anestesia: this.nForm().tipo_anestesia,
     };
     this.guardando.set(true);
     this.svc.crear(payload).subscribe({
@@ -709,31 +812,16 @@ export class QuirofanoComponent implements OnInit {
   }
 
   abrirDetalle(p: Programacion): void {
-    this.progDetalle.set(p);
-    this.detChecklist = {
-      ayuno_verificado: p.ayuno_verificado,
-      labs_prequirurgicos: p.labs_prequirurgicos,
-      valoracion_preanestesica: p.valoracion_preanestesica,
-      reserva_sangre: p.reserva_sangre,
-    };
-    this.mostrarDetalle = true;
-  }
-
-  guardarChecklist(campo: keyof ChecklistUpdate, valor: boolean): void {
-    const p = this.progDetalle();
-    if (!p) return;
-    this.svc.updateChecklist(p.id, { [campo]: valor }).subscribe({
-      next: updated => {
-        this.progDetalle.set(updated);
-        const idx = this.programaciones().findIndex(x => x.id === updated.id);
-        if (idx >= 0) {
-          const arr = [...this.programaciones()];
-          arr[idx] = updated;
-          this.programaciones.set(arr);
-        }
-      },
-      error: () => this.err('Error al actualizar checklist'),
-    });
+    this.dialogo
+      .open(QuirofanoDetalleComponent, { data: p, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((accion?: AccionDetalle) => {
+        // El checklist se guardó dentro del diálogo, marca a marca, así que la
+        // lista se recarga pase lo que pase: el conteo de la columna cambió.
+        this.cargarProgramaciones();
+        if (accion === 'iniciar') this.iniciarCirugia(p);
+        if (accion === 'cancelar') this.cancelarCirugia(p);
+      });
   }
 
   iniciarCirugia(p: Programacion): void {
@@ -749,30 +837,11 @@ export class QuirofanoComponent implements OnInit {
     });
   }
 
-  iniciarDesdeDetalle(): void {
-    const p = this.progDetalle();
-    if (!p) return;
-    this.accionando.set(true);
-    this.svc.iniciar(p.id).subscribe({
-      next: updated => {
-        this.accionando.set(false);
-        this.mostrarDetalle = false;
-        this.ok('Cirugía iniciada', `${updated.paciente_nombre} — ${updated.quirofano_nombre}`);
-        this.cargarProgramaciones();
-        this.cargarSalas();
-      },
-      error: err => { this.accionando.set(false); this.err(err?.error?.detail ?? 'Error al iniciar'); },
-    });
-  }
-
-  cancelarCirugia(): void {
-    const p = this.progDetalle();
-    if (!p) return;
+  cancelarCirugia(p: Programacion): void {
     this.accionando.set(true);
     this.svc.cancelar(p.id, 'Cancelada desde detalle').subscribe({
       next: () => {
         this.accionando.set(false);
-        this.mostrarDetalle = false;
         this.ok('Cirugía cancelada');
         this.cargarProgramaciones();
         this.cargarSalas();
@@ -782,19 +851,17 @@ export class QuirofanoComponent implements OnInit {
   }
 
   abrirCompletar(p: Programacion): void {
-    this.progCompletar.set(p);
-    this.cForm = {};
-    this.mostrarCompletar = true;
+    this.dialogo
+      .open(QuirofanoCompletarComponent, { data: p, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((cierre?: CompletarCirugia) => { if (cierre) this.completar(p, cierre); });
   }
 
-  confirmarCompletar(): void {
-    const p = this.progCompletar();
-    if (!p) return;
+  private completar(p: Programacion, cierre: CompletarCirugia): void {
     this.accionando.set(true);
-    this.svc.completar(p.id, this.cForm).subscribe({
+    this.svc.completar(p.id, cierre).subscribe({
       next: updated => {
         this.accionando.set(false);
-        this.mostrarCompletar = false;
         this.ok('Cirugía completada', updated.paciente_nombre ?? '');
         this.cargarProgramaciones();
         this.cargarSalas();
@@ -811,20 +878,10 @@ export class QuirofanoComponent implements OnInit {
     return this.checklistItems(p) === 4;
   }
 
-  estadoLabel(estado: string): string {
-    const map: Record<string, string> = {
-      PROGRAMADA: 'Programada', EN_CURSO: 'En curso', COMPLETADA: 'Completada',
-      CANCELADA: 'Cancelada', SUSPENDIDA: 'Suspendida',
-    };
-    return map[estado] ?? estado;
-  }
+  estadoLabel(estado: string): string { return ESTADO_LABEL[estado] ?? estado; }
 
   estadoSeverity(estado: string): 'info' | 'success' | 'warn' | 'danger' | 'secondary' {
-    if (estado === 'PROGRAMADA') return 'info';
-    if (estado === 'EN_CURSO') return 'warn';
-    if (estado === 'COMPLETADA') return 'success';
-    if (estado === 'CANCELADA' || estado === 'SUSPENDIDA') return 'danger';
-    return 'secondary';
+    return estadoSeveridad(estado);
   }
 
   private ok(summary: string, detail?: string): void {

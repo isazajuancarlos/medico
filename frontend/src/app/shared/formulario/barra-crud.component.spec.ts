@@ -27,8 +27,14 @@ describe('barra CRUD', () => {
     barra.modoCambia.subscribe((m) => modos.push(m));
   });
 
+  /**
+   * Con `setInput`, no asignando la propiedad: es lo que hace un padre al
+   * enlazar `[modo]`, y es lo único que marca sucio un componente OnPush —el
+   * defecto desde Angular 22—. Asignando a pelo, `detectChanges()` no repinta
+   * y la prueba compara contra lo que había antes.
+   */
   function enModo(modo: ModoFormulario) {
-    barra.modo = modo;
+    fixture.componentRef.setInput('modo', modo);
     fixture.detectChanges();
   }
 

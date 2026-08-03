@@ -1,17 +1,17 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
-import { SelectModule } from 'primeng/select';
-import { DividerModule } from 'primeng/divider';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import { NotaOperatoriaService, NotaOperatoria, NotaOperatoriaCreate } from '../../services/nota-operatoria.service';
 import { ESTADOS_SALIDA, duracion, estadoValido, formatoDuracion, revisar } from './nota-operatoria.dominio';
 
@@ -28,85 +28,100 @@ type Vista = 'lista' | 'form' | 'detalle';
 @Component({
   selector: 'app-nota-operatoria',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, SelectModule,
-    DividerModule, ConfirmDialogModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, MatPaginatorModule,
+    EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
-    <p-toast />
-    <p-confirmDialog />
     <div class="page-card">
 
       <!-- ═══════════════ LISTA ═══════════════ -->
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Notas operatorias</h2>
-          <p-button label="Nueva nota" icon="pi pi-plus" (onClick)="abrirNueva()" />
+          <button matButton="filled" (click)="abrirNueva()">
+            <i class="pi pi-plus"></i> Nueva nota
+          </button>
         </div>
 
         @if (cargando()) {
           <div class="cargando"><i class="pi pi-spin pi-spinner"></i> Cargando...</div>
-        } @else if (lista().length === 0) {
+        } @else if (datos.data.length === 0) {
           <div class="sin-resultados">
             <i class="pi pi-file" style="font-size:2rem;opacity:0.4"></i>
             <p>No hay notas operatorias.</p>
           </div>
         } @else {
-          <p-table [value]="lista()" [rowHover]="true" [paginator]="true" [rows]="20"
-            styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Fecha</th><th>Paciente</th><th>Procedimiento</th>
-                <th style="text-align:center">Duración</th>
-                <th style="text-align:center">Salida</th>
-                <th>Cirujano</th>
-                <th style="text-align:center">Revisar</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-n>
-              <tr>
-                <td style="font-size:0.85rem">{{ n.fecha | date:'dd/MM/yyyy' }}</td>
-                <td>
-                  <strong>{{ n.paciente_nombre || '—' }}</strong>
-                  @if (n.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ n.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ n.procedimiento_realizado }}</td>
-                <td style="text-align:center;font-size:0.85rem">{{ duracionTexto(n) }}</td>
-                <td style="text-align:center">
-                  <p-tag [value]="n.estado_paciente_salida || '—'"
-                    [severity]="estadoSeverity(n.estado_paciente_salida)" />
-                </td>
-                <td style="font-size:0.85rem">{{ n.cirujano_nombre || '—' }}</td>
-                <td style="text-align:center">
-                  @if (avisosDe(n).length) {
-                    <i class="pi pi-exclamation-triangle" style="color:#fbbf24"
-                      [pTooltip]="avisosDe(n).join(' · ')"></i>
-                  } @else { <span style="color:#475569">—</span> }
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-eye" [text]="true" size="small"
-                    pTooltip="Ver detalle" (onClick)="abrirDetalle(n)" />
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(n)" />
-                  <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                    pTooltip="Eliminar" (onClick)="confirmarEliminar(n)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="datos" class="tabla">
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let n" style="font-size:0.85rem">{{ n.fecha | date:'dd/MM/yyyy' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let n">
+                <strong>{{ n.paciente_nombre || '—' }}</strong>
+                @if (n.paciente_identificacion) {
+                  <div style="font-size:0.78rem;color:#94a3b8">{{ n.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="procedimiento">
+              <th mat-header-cell *matHeaderCellDef>Procedimiento</th>
+              <td mat-cell *matCellDef="let n" style="font-size:0.85rem">{{ n.procedimiento_realizado }}</td>
+            </ng-container>
+            <ng-container matColumnDef="duracion">
+              <th mat-header-cell *matHeaderCellDef class="centro">Duración</th>
+              <td mat-cell *matCellDef="let n" class="centro" style="font-size:0.85rem">{{ duracionTexto(n) }}</td>
+            </ng-container>
+            <ng-container matColumnDef="salida">
+              <th mat-header-cell *matHeaderCellDef class="centro">Salida</th>
+              <td mat-cell *matCellDef="let n" class="centro">
+                <x-etiqueta [value]="n.estado_paciente_salida || '—'"
+                  [severity]="estadoSeverity(n.estado_paciente_salida)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="cirujano">
+              <th mat-header-cell *matHeaderCellDef>Cirujano</th>
+              <td mat-cell *matCellDef="let n" style="font-size:0.85rem">{{ n.cirujano_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="revisar">
+              <th mat-header-cell *matHeaderCellDef class="centro">Revisar</th>
+              <td mat-cell *matCellDef="let n" class="centro">
+                @if (avisosDe(n).length) {
+                  <i class="pi pi-exclamation-triangle" style="color:#fbbf24"
+                    [matTooltip]="avisosDe(n).join(' · ')"></i>
+                } @else { <span style="color:#475569">—</span> }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let n" class="centro">
+                <button matIconButton matTooltip="Ver detalle" (click)="abrirDetalle(n)">
+                  <i class="pi pi-eye"></i>
+                </button>
+                <button matIconButton matTooltip="Editar" (click)="abrirEditar(n)">
+                  <i class="pi pi-file-edit"></i>
+                </button>
+                <button matIconButton class="peligro" matTooltip="Eliminar" (click)="confirmarEliminar(n)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
+          <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
         }
       }
 
       <!-- ═══════════════ FORMULARIO ═══════════════ -->
       @if (vista() === 'form') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">
             {{ editando() ? 'Editar nota operatoria' : 'Nueva nota operatoria' }}
           </h2>
@@ -117,20 +132,25 @@ type Vista = 'lista' | 'form' | 'detalle';
           @if (!editando()) {
             <div class="form-section">
               <div class="section-label">Paciente</div>
-              <div style="display:flex;gap:0.5rem;align-items:flex-end">
-                <div class="field" style="flex:1">
-                  <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
+              <div style="display:flex;gap:0.5rem;align-items:flex-start">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                  <mat-label>Paciente</mat-label>
+                  <input matInput [(ngModel)]="busquedaPaciente"
                     placeholder="Nombre o identificación..." (keyup.enter)="buscarPaciente()" />
-                </div>
-                <p-button label="Buscar" icon="pi pi-search"
-                  [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+                </mat-form-field>
+                <button matButton="filled" [disabled]="buscandoPaciente()" (click)="buscarPaciente()">
+                  <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i> Buscar
+                </button>
               </div>
               @if (resultadosPaciente().length > 0) {
-                <div style="margin-top:0.75rem">
-                  <p-select [(ngModel)]="pacienteSeleccionado" [options]="resultadosPaciente()"
-                    optionLabel="nombre_completo" [filter]="true"
-                    placeholder="Seleccione paciente..." class="w-full" style="width:100%" />
-                </div>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
+                  <mat-label>Seleccione paciente…</mat-label>
+                  <mat-select [(ngModel)]="pacienteSeleccionado">
+                    @for (p of resultadosPaciente(); track p.id) {
+                      <mat-option [value]="p">{{ p.nombre_completo }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
               }
               @if (pacienteSeleccionado) {
                 <div class="paciente-chip">
@@ -140,7 +160,7 @@ type Vista = 'lista' | 'form' | 'detalle';
                 </div>
               }
             </div>
-            <p-divider />
+            <mat-divider />
           } @else {
             <div class="paciente-chip" style="margin-bottom:1rem">
               <i class="pi pi-user" style="color:#818cf8"></i>
@@ -153,14 +173,14 @@ type Vista = 'lista' | 'form' | 'detalle';
           <div class="form-section">
             <div class="section-label">Tiempo quirúrgico</div>
             <div class="grid-3">
-              <div class="field">
-                <label>Hora de inicio *</label>
-                <input pInputText [(ngModel)]="f.hora_inicio" type="datetime-local" class="w-full" />
-              </div>
-              <div class="field">
-                <label>Hora de fin *</label>
-                <input pInputText [(ngModel)]="f.hora_fin" type="datetime-local" class="w-full" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Hora de inicio *</mat-label>
+                <input matInput [(ngModel)]="f.hora_inicio" type="datetime-local" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Hora de fin *</mat-label>
+                <input matInput [(ngModel)]="f.hora_fin" type="datetime-local" />
+              </mat-form-field>
               <div class="field">
                 <label>Duración (calculada)</label>
                 <div class="calculado" [class.malo]="horasInvalidas()">
@@ -170,57 +190,58 @@ type Vista = 'lista' | 'form' | 'detalle';
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Procedimiento y diagnósticos -->
           <div class="form-section">
             <div class="section-label">Procedimiento</div>
             <div class="form-grid">
-              <div class="field" style="grid-column:1/-1">
-                <label>Procedimiento realizado *</label>
-                <input pInputText [(ngModel)]="f.procedimiento_realizado" class="w-full"
+              <mat-form-field appearance="outline" style="grid-column:1/-1">
+                <mat-label>Procedimiento realizado *</mat-label>
+                <input matInput [(ngModel)]="f.procedimiento_realizado"
                   placeholder="Ej: Apendicectomía laparoscópica" />
-              </div>
-              <div class="field">
-                <label>Diagnóstico preoperatorio</label>
-                <input pInputText [(ngModel)]="f.diagnostico_preoperatorio" class="w-full"
-                  placeholder="Ej: K35.8" />
-              </div>
-              <div class="field">
-                <label>Diagnóstico postoperatorio *</label>
-                <input pInputText [(ngModel)]="f.diagnostico_postoperatorio" class="w-full"
-                  placeholder="Ej: K35.3" />
-              </div>
-              <div class="field" style="grid-column:1/-1">
-                <label>Hallazgos</label>
-                <textarea pTextarea [(ngModel)]="f.hallazgos" rows="3" class="w-full"
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Diagnóstico preoperatorio</mat-label>
+                <input matInput [(ngModel)]="f.diagnostico_preoperatorio" placeholder="Ej: K35.8" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Diagnóstico postoperatorio *</mat-label>
+                <input matInput [(ngModel)]="f.diagnostico_postoperatorio" placeholder="Ej: K35.3" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="grid-column:1/-1">
+                <mat-label>Hallazgos</mat-label>
+                <textarea matInput [(ngModel)]="f.hallazgos" rows="3"
                   placeholder="Hallazgos intraoperatorios..."></textarea>
-              </div>
+              </mat-form-field>
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Salida -->
           <div class="form-section">
             <div class="section-label">Salida de quirófano</div>
             <div class="grid-3">
-              <div class="field">
-                <label>Estado del paciente a la salida *</label>
-                <p-select [(ngModel)]="f.estado_paciente_salida" [options]="opcionesEstado"
-                  optionLabel="label" optionValue="value" placeholder="Sin defecto — elíjalo"
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Sangrado estimado (ml)</label>
-                <input pInputText [(ngModel)]="f.sangrado_estimado_ml" type="number" min="0"
-                  class="w-full" placeholder="—" />
-              </div>
-              <div class="field">
-                <label>Complicaciones</label>
-                <input pInputText [(ngModel)]="f.complicaciones" class="w-full"
-                  placeholder="Ninguna / descripción..." />
-              </div>
+              <!-- Sin opción por defecto y a propósito: el estado a la salida
+                   es uno de los campos que el sistema rellenaba en nombre del
+                   médico. Elegirlo es la afirmación. -->
+              <mat-form-field appearance="outline">
+                <mat-label>Estado del paciente a la salida *</mat-label>
+                <mat-select [(ngModel)]="f.estado_paciente_salida">
+                  @for (o of opcionesEstado; track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Sangrado estimado (ml)</mat-label>
+                <input matInput [(ngModel)]="f.sangrado_estimado_ml" type="number" min="0" placeholder="—" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Complicaciones</mat-label>
+                <input matInput [(ngModel)]="f.complicaciones" placeholder="Ninguna / descripción..." />
+              </mat-form-field>
             </div>
           </div>
 
@@ -233,10 +254,11 @@ type Vista = 'lista' | 'form' | 'detalle';
           }
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button [label]="editando() ? 'Guardar cambios' : 'Registrar nota'"
-              icon="pi pi-check" [loading]="guardando()"
-              [disabled]="camposRequeridos()" (onClick)="guardar()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" [disabled]="camposRequeridos() || guardando()" (click)="guardar()">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i>
+              {{ editando() ? 'Guardar cambios' : 'Registrar nota' }}
+            </button>
           </div>
         </div>
       }
@@ -244,14 +266,14 @@ type Vista = 'lista' | 'form' | 'detalle';
       <!-- ═══════════════ DETALLE ═══════════════ -->
       @if (vista() === 'detalle' && actual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">Nota operatoria</h2>
           <div style="margin-left:auto;display:flex;gap:0.5rem">
             @if (!actual()!.firmada) {
-              <p-button icon="pi pi-verified" [text]="true" label="Firmar" (onClick)="firmar(actual()!)" />
-              <p-button icon="pi pi-file-edit" [text]="true" label="Editar" (onClick)="abrirEditar(actual()!)" />
+              <button matButton (click)="firmar(actual()!)"><i class="pi pi-verified"></i> Firmar</button>
+              <button matButton (click)="abrirEditar(actual()!)"><i class="pi pi-file-edit"></i> Editar</button>
             } @else {
-              <p-tag value="Firmada" severity="success" icon="pi pi-lock" />
+              <x-etiqueta value="Firmada" severity="success" icon="pi pi-lock" />
             }
           </div>
         </div>
@@ -344,16 +366,33 @@ Post: {{ actual()!.diagnostico_postoperatorio || '—' }}</div>
 
     .step-actions { display: flex; gap: 0.5rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1.25rem; padding-top: 1rem; }
     ::ng-deep textarea { resize: vertical; }
+
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    mat-form-field { width: 100%; }
+    /* El input color de un botón no pinta nada en M3: lo destructivo va por
+       CSS. Ver MIGRACION_MATERIAL.md. */
+    .peligro { color: #dc2626; }
   `],
 })
 export class NotaOperatoriaComponent implements OnInit {
   private svc = inject(NotaOperatoriaService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   cargando = signal(false);
-  lista = signal<NotaOperatoria[]>([]);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['fecha', 'paciente', 'procedimiento', 'duracion', 'salida',
+                       'cirujano', 'revisar', 'acciones'];
+  readonly datos = new MatTableDataSource<NotaOperatoria>([]);
+
+  /** Por setter: la tabla vive dentro de un @if, así que el paginador aparece
+   *  y desaparece. Ver MIGRACION_MATERIAL.md. */
+  @ViewChild(MatPaginator)
+  set paginador(p: MatPaginator | undefined) { if (p) this.datos.paginator = p; }
+
   actual = signal<NotaOperatoria | null>(null);
   editando = signal(false);
   guardando = signal(false);
@@ -407,7 +446,7 @@ export class NotaOperatoriaComponent implements OnInit {
   cargar(): void {
     this.cargando.set(true);
     this.svc.list().subscribe({
-      next: ns => { this.lista.set(ns); this.cargando.set(false); },
+      next: ns => { this.datos.data = ns; this.cargando.set(false); },
       error: () => { this.cargando.set(false); this.err('Error al cargar las notas operatorias'); },
     });
   }
@@ -497,10 +536,13 @@ export class NotaOperatoriaComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.svc.delete(n.id).subscribe({
-          next: () => { this.lista.update(ns => ns.filter(x => x.id !== n.id)); this.ok('Eliminada'); },
+          next: () => {
+            this.datos.data = this.datos.data.filter(x => x.id !== n.id);
+            this.ok('Eliminada');
+          },
           error: () => this.err('Error al eliminar'),
         });
       },

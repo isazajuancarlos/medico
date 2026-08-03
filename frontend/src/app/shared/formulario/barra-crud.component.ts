@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, EventEmitter, Input, Output, signal } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   AccionCrud,
   EstadoBarra,
@@ -25,47 +25,60 @@ import {
 @Component({
   selector: 'app-barra-crud',
   standalone: true,
-  imports: [CommonModule, ButtonModule, TooltipModule],
+  imports: [CommonModule, MatButtonModule, MatTooltipModule],
   template: `
     <div class="barra-crud">
-      <p-button
-        icon="pi pi-plus" severity="secondary" size="small"
-        [disabled]="!barra().nuevo" (onClick)="ejecutar('nuevo')"
-        pTooltip="Nuevo" tooltipPosition="bottom" />
-      <p-button
-        icon="pi pi-pencil" severity="secondary" size="small"
-        [disabled]="!barra().editar" (onClick)="ejecutar('editar')"
-        pTooltip="Editar" tooltipPosition="bottom" />
-      <p-button
-        icon="pi pi-trash" severity="danger" size="small"
-        [disabled]="!barra().eliminar" (onClick)="ejecutar('eliminar')"
-        pTooltip="Eliminar" tooltipPosition="bottom" />
+      <button matIconButton
+        [disabled]="!barra().nuevo" (click)="ejecutar('nuevo')"
+        matTooltip="Nuevo" matTooltipPosition="below" aria-label="Nuevo">
+        <i class="pi pi-plus"></i>
+      </button>
+      <button matIconButton
+        [disabled]="!barra().editar" (click)="ejecutar('editar')"
+        matTooltip="Editar" matTooltipPosition="below" aria-label="Editar">
+        <i class="pi pi-pencil"></i>
+      </button>
+      <button matIconButton class="peligro"
+        [disabled]="!barra().eliminar" (click)="ejecutar('eliminar')"
+        matTooltip="Eliminar" matTooltipPosition="below" aria-label="Eliminar">
+        <i class="pi pi-trash"></i>
+      </button>
 
       <span class="separador"></span>
 
-      <p-button
-        icon="pi pi-check" severity="success" size="small"
-        [disabled]="!barra().guardar" (onClick)="ejecutar('guardar')"
-        pTooltip="Guardar (Ctrl+Enter)" tooltipPosition="bottom" />
-      <p-button
-        icon="pi pi-undo" severity="secondary" size="small"
-        [disabled]="!barra().deshacer" (onClick)="ejecutar('deshacer')"
-        pTooltip="Deshacer (Esc)" tooltipPosition="bottom" />
+      <button matIconButton class="exito"
+        [disabled]="!barra().guardar" (click)="ejecutar('guardar')"
+        matTooltip="Guardar (Ctrl+Enter)" matTooltipPosition="below" aria-label="Guardar">
+        <i class="pi pi-check"></i>
+      </button>
+      <button matIconButton
+        [disabled]="!barra().deshacer" (click)="ejecutar('deshacer')"
+        matTooltip="Deshacer (Esc)" matTooltipPosition="below" aria-label="Deshacer">
+        <i class="pi pi-undo"></i>
+      </button>
 
       @if (mostrarNavegacion) {
         <span class="separador"></span>
-        <p-button icon="pi pi-angle-double-left" severity="secondary" size="small"
-          [disabled]="!barra().navegar" (onClick)="navegar.emit('primero')"
-          pTooltip="Primero" tooltipPosition="bottom" />
-        <p-button icon="pi pi-angle-left" severity="secondary" size="small"
-          [disabled]="!barra().navegar" (onClick)="navegar.emit('anterior')"
-          pTooltip="Anterior" tooltipPosition="bottom" />
-        <p-button icon="pi pi-angle-right" severity="secondary" size="small"
-          [disabled]="!barra().navegar" (onClick)="navegar.emit('siguiente')"
-          pTooltip="Siguiente" tooltipPosition="bottom" />
-        <p-button icon="pi pi-angle-double-right" severity="secondary" size="small"
-          [disabled]="!barra().navegar" (onClick)="navegar.emit('ultimo')"
-          pTooltip="Último" tooltipPosition="bottom" />
+        <button matIconButton
+          [disabled]="!barra().navegar" (click)="navegar.emit('primero')"
+          matTooltip="Primero" matTooltipPosition="below" aria-label="Primero">
+          <i class="pi pi-angle-double-left"></i>
+        </button>
+        <button matIconButton
+          [disabled]="!barra().navegar" (click)="navegar.emit('anterior')"
+          matTooltip="Anterior" matTooltipPosition="below" aria-label="Anterior">
+          <i class="pi pi-angle-left"></i>
+        </button>
+        <button matIconButton
+          [disabled]="!barra().navegar" (click)="navegar.emit('siguiente')"
+          matTooltip="Siguiente" matTooltipPosition="below" aria-label="Siguiente">
+          <i class="pi pi-angle-right"></i>
+        </button>
+        <button matIconButton
+          [disabled]="!barra().navegar" (click)="navegar.emit('ultimo')"
+          matTooltip="Último" matTooltipPosition="below" aria-label="Último">
+          <i class="pi pi-angle-double-right"></i>
+        </button>
       }
 
       @if (modo !== 'consulta') {
@@ -79,6 +92,13 @@ import {
     .barra-crud { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
     .separador { width: 1px; height: 1.5rem; background: var(--surface-300); margin: 0 .4rem; }
     .aviso-edicion { margin-left: auto; font-size: .8rem; color: var(--primary-color); font-weight: 600; }
+
+    /* El color va aquí y no en un input del botón: el tema de Material es M3, y
+       ahí el input color de MatButton NO tiene efecto —lo dice su propia
+       documentación—. Escribirlo compilaría y pintaría el botón de gris, que es
+       justo el fallo que no se ve: el de eliminar dejaría de avisar. */
+    .peligro:not(:disabled) { color: #dc2626; }
+    .exito:not(:disabled) { color: #16a34a; }
   `],
 })
 export class BarraCrudComponent {

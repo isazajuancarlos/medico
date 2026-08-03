@@ -1,0 +1,41 @@
+; La demostración pública de medico en medico.xiliux.com.
+;
+; NO es una instalación de cliente y no debe confundirse con una: sus
+; credenciales están PUBLICADAS en la propia pantalla de acceso
+; (MEDICO_DEMO_CORREO / MEDICO_DEMO_CLAVE) y cualquiera puede escribir en su
+; base. Una instalación de verdad no define esas dos variables, y entonces
+; /api/demo responde 204 y no hay nada que apagar.
+[Unit]
+Description=medico — demostración pública (medico.xiliux.com)
+After=network.target
+
+[Service]
+Type=simple
+User=medico
+Group=medico
+WorkingDirectory=/opt/medico-demo
+; El binario abre `medico.db` RELATIVO a su directorio de trabajo. Arrancarlo
+; desde otro sitio crea una base vacía sin usuarios, y el acceso responde
+; «credenciales incorrectas» —correcto para no filtrar si el correo existe, e
+; indistinguible de «esta base no tiene a nadie»—. Ya costó una tarde.
+EnvironmentFile=/etc/medico-demo/medico.env
+ExecStart=/opt/medico-demo/medico-api
+Restart=on-failure
+RestartSec=3
+
+; Endurecimiento: la demo es pública y sus credenciales también.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/medico-demo
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

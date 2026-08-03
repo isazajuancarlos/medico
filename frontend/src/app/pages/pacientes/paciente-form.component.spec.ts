@@ -6,15 +6,17 @@
  * paciente solo entraba por el script de semillas.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import {
   PacienteFormComponent,
   faltantes,
   hoyISO,
   pacienteVacio,
 } from './paciente-form.component';
-import { PatientCreate } from '../../models/patient.models';
+import { Patient, PatientCreate } from '../../models/patient.models';
 
 function completo(): PatientCreate {
   return {
@@ -103,20 +105,35 @@ describe('valores por defecto del paciente nuevo', () => {
 describe('el formulario', () => {
   let fixture: ComponentFixture<PacienteFormComponent>;
   let form: PacienteFormComponent;
+  /** Con qué se cerró el diálogo. `undefined` = no se cerró. */
+  let cerradoCon: Patient | null | undefined;
 
-  beforeEach(() => {
+  /**
+   * El formulario es contenido de un `MatDialog`, así que el paciente a editar
+   * entra por `MAT_DIALOG_DATA` y el resultado sale por `MatDialogRef.close()`.
+   * Aquí los dos van dobles: montar el diálogo de verdad probaría el overlay
+   * del CDK, no las reglas de captura, que es lo que estas pruebas miran.
+   */
+  function montar(paciente: Patient | null): void {
+    cerradoCon = undefined;
+    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [PacienteFormComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(withXhr()),
+        provideHttpClientTesting(),
+        provideNoopAnimations(),
+        { provide: MAT_DIALOG_DATA, useValue: paciente },
+        { provide: MatDialogRef, useValue: { close: (p?: Patient) => (cerradoCon = p ?? null) } },
+      ],
     });
     fixture = TestBed.createComponent(PacienteFormComponent);
     form = fixture.componentInstance;
-  });
+    form.ngOnInit();
+  }
 
   it('en alta arranca en blanco y en modo nuevo', () => {
-    form.abierto = true;
-    form.paciente = null;
-    form.ngOnChanges();
+    montar(null);
 
     expect(form.modo).toBe('nuevo');
     expect(form.datos.identificacion).toBe('');
@@ -124,28 +141,24 @@ describe('el formulario', () => {
   });
 
   it('al editar carga el paciente y entra en modo edición', () => {
-    form.abierto = true;
-    form.paciente = { id: 7, ...completo() } as never;
-    form.ngOnChanges();
+    montar({ id: 7, ...completo() } as never);
 
     expect(form.modo).toBe('edicion');
     expect(form.datos.identificacion).toBe('1017234567');
   });
 
   it('no guarda con campos faltantes, y dice cuáles', () => {
-    form.abierto = true;
-    form.paciente = null;
-    form.ngOnChanges();
-
-    let guardados = 0;
-    form.guardado.subscribe(() => guardados++);
+    montar(null);
     form.guardar();
 
-    expect(guardados).toBe(0);
+    // No se cerró: un formulario incompleto no devuelve paciente, y sin
+    // paciente la pantalla no recarga ni afirma un alta que no ocurrió.
+    expect(cerradoCon).toBeUndefined();
     expect(form.error()).toContain('documento');
   });
 
   it('la edad se calcula para cazar una fecha mal escrita', () => {
+    montar(null);
     form.datos = { ...completo(), fecha_nacimiento: '2000-01-01' };
     const esperada = new Date().getFullYear() - 2000;
     // Puede ser uno menos si aún no ha llegado el cumpleaños de este año.
@@ -153,6 +166,7 @@ describe('el formulario', () => {
   });
 
   it('sin fecha no inventa una edad', () => {
+    montar(null);
     form.datos = { ...completo(), fecha_nacimiento: '' };
     expect(form.edad()).toBeNull();
   });

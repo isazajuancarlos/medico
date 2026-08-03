@@ -25,6 +25,7 @@ pub mod paciente;
 pub mod proveedor;
 pub mod referencia;
 pub mod rehabilitacion;
+pub mod rips;
 pub mod urgencias;
 pub mod usuario;
 

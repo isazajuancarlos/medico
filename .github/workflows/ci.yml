@@ -92,9 +92,9 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Instalar (los peers de PrimeNG obligan a --legacy-peer-deps)
+      - name: Instalar
         working-directory: frontend
-        run: npm ci --legacy-peer-deps
+        run: npm ci
       - name: Construir la interfaz
         working-directory: frontend
         run: npx ng build

@@ -13,31 +13,44 @@ class TipoUsuario(str, Enum):
     PARTICULAR = "04"
     OTRO = "05"
 
-class FinalidadConsulta(str, Enum):
-    NO_APLICA = "10"
-    ATENCION_PARTO = "06"
-    ATENCION_REC_NACIDO = "07"
-    PLANIFICACION_FAMILIAR = "08"
-    DETECCION_ALT_CRECIMIENTO = "09"
-    DETECCION_ALT_JOVEN = "02"
-    DETECCION_ALT_ADULTO = "03"
-    DETECCION_ALT_AGUDEZA_VISUAL = "04"
-    ENFERMEDAD_PROFESIONAL = "05"
+# === FINALIDAD Y CAUSA: SALEN DEL MAESTRO DEL VALIDADOR, NO DE AQUÍ ===
+#
+# Hasta el 2026-08-02 estas dos enumeraciones estaban escritas a mano con la
+# tabla ANTERIOR a la Resolución 948, y **ninguno de sus valores existía** en la
+# que el MUV usa para juzgar:
+#
+#   FinalidadConsulta  tenía 02..10   ·  la tabla de la 948 va del 11 al 44
+#   CausaExterna       tenía 01..15   ·  la de causa/motivo, del 21 al 49
+#
+# O sea que `finalidadTecnologiaSalud` y `causaMotivoAtencion` salían con un
+# código rechazable en TODA atención, eligiera el médico lo que eligiera. Y no
+# se notaba por dos motivos que se tapaban entre sí: los campos tenían defecto
+# (`NO_APLICA` y `ENFERMEDAD_GENERAL`), así que nunca venían vacíos y el
+# recolector de faltantes no los veía; y ninguna pantalla los ofrece, así que
+# nadie los eligió nunca.
+#
+# Ahora se derivan del maestro extraído del contenedor del propio validador, que
+# es la fuente contra la que juzga. Se generan en vez de escribirse porque la
+# regla del repositorio es que ningún código de catálogo se escribe a mano — y
+# porque una lista de 34 copiada a mano se desincroniza en la primera
+# actualización de la norma sin que nada falle.
+#
+# Los nombres de los miembros los pone `maestros_muv._nombre_de_miembro` desde el
+# texto del catálogo. Nadie debe referirse a ellos por nombre en código nuevo: el
+# valor es el código, y es lo que viaja al RIPS.
+FinalidadConsulta = Enum(
+    "FinalidadConsulta",
+    {maestros_muv._nombre_de_miembro(f["Nombre"]): f["Codigo"]
+     for f in maestros_muv.finalidades()},
+    type=str,
+)
 
-class CausaExterna(str, Enum):
-    ENFERMEDAD_GENERAL = "13"
-    ACCIDENTE_TRABAJO = "01"
-    ACCIDENTE_TRANSITO = "02"
-    ACCIDENTE_RABICO = "03"
-    ACCIDENTE_OFIDICO = "04"
-    OTRO_ACCIDENTE = "05"
-    EVENTO_CATASTROFICO = "06"
-    LESION_AGRESION = "07"
-    AUTOINFLIGIDA = "08"
-    SOSPECHA_MALTRATO = "09"
-    SOSPECHA_ABUSO = "10"
-    SOSPECHA_VIOLENCIA_SEXUAL = "11"
-    OTRA = "15"
+CausaExterna = Enum(
+    "CausaExterna",
+    {maestros_muv._nombre_de_miembro(c["Nombre"]): c["Codigo"]
+     for c in maestros_muv.causas_motivo()},
+    type=str,
+)
 
 class TipoDiagnostico(str, Enum):
     IMPRESION_DIAGNOSTICA = "01"
@@ -491,9 +504,14 @@ class Historia(CamposRips, table=True):
     ef_cardiopulmonar: Optional[str] = None
     
     # RIPS
-    finalidad: FinalidadConsulta = Field(default=FinalidadConsulta.NO_APLICA)
-    causa_externa: CausaExterna = Field(default=CausaExterna.ENFERMEDAD_GENERAL)
-    tipo_diagnostico: TipoDiagnostico = Field(default=TipoDiagnostico.IMPRESION_DIAGNOSTICA)
+    # SIN DEFECTO, y esa es la corrección. Los tres campos van al RIPS como una
+    # afirmación del profesional —para qué se atendió, por qué, y qué clase de
+    # diagnóstico es—, y ninguna pantalla los ofrece todavía: el defecto no era
+    # una comodidad, era el sistema respondiendo en nombre del médico. Ausente
+    # es `None`, el generador lo pide, y quien cierra el mes lo completa.
+    finalidad: Optional[FinalidadConsulta] = None
+    causa_externa: Optional[CausaExterna] = None
+    tipo_diagnostico: Optional[TipoDiagnostico] = None
     # SIN defecto. Tenía "890201", así que TODA consulta se reportaba con el
     # mismo procedimiento, se hubiera hecho el que se hubiera hecho.
     cod_consulta_cups: Optional[str] = Field(default=None)

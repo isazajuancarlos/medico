@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, inject, Input, OnChanges, Output, signal } from '@angular/core';
+import { Component, Inject, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { ButtonModule } from 'primeng/button';
-import { DatePickerModule } from 'primeng/datepicker';
-import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
-import { SelectModule } from 'primeng/select';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MensajeComponent } from '../../shared/ui/mensaje.component';
 import { BarraCrudComponent } from '../../shared/formulario/barra-crud.component';
 import { AccionCrud, ModoFormulario, camposEditables } from '../../shared/formulario/estado-formulario';
 import { TeclasDirective } from '../../shared/formulario/teclas.directive';
@@ -26,6 +29,11 @@ import { Patient, PatientCreate } from '../../models/patient.models';
  * Usa el marco compartido de formularios en vez de repetirlo: la barra CRUD
  * gobierna qué se puede hacer, Enter avanza al siguiente campo como en el
  * FoxPro, y el clic derecho amplía cualquier campo.
+ *
+ * Se abre con `MatDialog`, no con un `[abierto]` que gobernaba el padre: el
+ * paciente a editar entra por `MAT_DIALOG_DATA` —`null` para dar de alta— y el
+ * guardado sale por `afterClosed()`. `disableClose` está puesto a propósito,
+ * porque cerrar con cambios pendientes tiene que preguntar.
  */
 
 /** Tipos de documento de la Resolución 2275/2023, en el orden de uso real. */
@@ -104,18 +112,15 @@ export function hoyISO(): string {
   selector: 'app-paciente-form',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, DialogModule, InputTextModule, SelectModule,
-    DatePickerModule, ButtonModule, MessageModule, BarraCrudComponent,
+    CommonModule, FormsModule, MatDialogModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule, MensajeComponent, BarraCrudComponent,
     TeclasDirective, ZoomDirective,
   ],
   template: `
-    <p-dialog
-      [visible]="abierto"
-      (visibleChange)="alCerrarDialogo($event)"
-      [modal]="true"
-      [style]="{ width: '52rem', maxWidth: '95vw' }"
-      [header]="modo === 'nuevo' ? 'Nuevo paciente' : 'Paciente ' + (datos.identificacion || '')"
-    >
+    <h2 mat-dialog-title>
+      {{ modo === 'nuevo' ? 'Nuevo paciente' : 'Paciente ' + (datos.identificacion || '') }}
+    </h2>
+    <mat-dialog-content>
       <form appTeclas (confirmar)="guardar()" (cancelar)="pedirCierre()">
         <app-barra-crud
           [modo]="modo"
@@ -124,136 +129,140 @@ export function hoyISO(): string {
         />
 
         @if (error()) {
-          <p-message severity="error" styleClass="w-full" [text]="error()!" />
+          <x-mensaje severity="error" [text]="error()!" />
         }
 
         <div class="rejilla">
-          <div class="campo">
-            <label for="tipo_id">Tipo de documento</label>
-            <p-select
-              inputId="tipo_id" [options]="tiposDocumento" optionLabel="etiqueta"
-              optionValue="valor" [(ngModel)]="datos.tipo_id" name="tipo_id"
-              [disabled]="!editable" appendTo="body" />
-          </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Tipo de documento</mat-label>
+            <mat-select [(ngModel)]="datos.tipo_id" name="tipo_id" [disabled]="!editable">
+              @for (t of tiposDocumento; track t.valor) {
+                <mat-option [value]="t.valor">{{ t.etiqueta }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="identificacion">Número de documento</label>
-            <input pInputText id="identificacion" name="identificacion" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Número de documento</mat-label>
+            <input matInput name="identificacion" appZoom
               [(ngModel)]="datos.identificacion" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="nombre1">Primer nombre</label>
-            <input pInputText id="nombre1" name="nombre1" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Primer nombre</mat-label>
+            <input matInput name="nombre1" appZoom
               [(ngModel)]="datos.nombre1" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="nombre2">Segundo nombre</label>
-            <input pInputText id="nombre2" name="nombre2" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Segundo nombre</mat-label>
+            <input matInput name="nombre2" appZoom
               [(ngModel)]="datos.nombre2" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="apellido1">Primer apellido</label>
-            <input pInputText id="apellido1" name="apellido1" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Primer apellido</mat-label>
+            <input matInput name="apellido1" appZoom
               [(ngModel)]="datos.apellido1" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="apellido2">Segundo apellido</label>
-            <input pInputText id="apellido2" name="apellido2" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Segundo apellido</mat-label>
+            <input matInput name="apellido2" appZoom
               [(ngModel)]="datos.apellido2" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="fecha_nacimiento">Fecha de nacimiento</label>
-            <input pInputText type="date" id="fecha_nacimiento" name="fecha_nacimiento"
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Fecha de nacimiento</mat-label>
+            <input matInput type="date" name="fecha_nacimiento"
               [max]="hoy" [(ngModel)]="datos.fecha_nacimiento" [disabled]="!editable" />
             @if (edad(); as e) {
-              <small class="edad">{{ e }}</small>
+              <mat-hint class="edad">{{ e }}</mat-hint>
             }
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="sexo">Sexo</label>
-            <p-select
-              inputId="sexo" [options]="sexos" optionLabel="etiqueta" optionValue="valor"
-              [(ngModel)]="datos.sexo" name="sexo" [disabled]="!editable" appendTo="body" />
-          </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Sexo</mat-label>
+            <mat-select [(ngModel)]="datos.sexo" name="sexo" [disabled]="!editable">
+              @for (s of sexos; track s.valor) {
+                <mat-option [value]="s.valor">{{ s.etiqueta }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="celular">Celular</label>
-            <input pInputText id="celular" name="celular" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Celular</mat-label>
+            <input matInput name="celular" appZoom
               [(ngModel)]="datos.celular" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="email">Correo</label>
-            <input pInputText id="email" name="email" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Correo</mat-label>
+            <input matInput name="email" appZoom
               [(ngModel)]="datos.email" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo ancho">
-            <label for="direccion">Dirección</label>
-            <input pInputText id="direccion" name="direccion" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ancho">
+            <mat-label>Dirección</mat-label>
+            <input matInput name="direccion" appZoom
               [(ngModel)]="datos.direccion" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="cod_municipio">Municipio (DIVIPOLA)</label>
-            <input pInputText id="cod_municipio" name="cod_municipio" appZoom
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Municipio (DIVIPOLA)</mat-label>
+            <input matInput name="cod_municipio" appZoom
               placeholder="05001" [(ngModel)]="datos.cod_municipio" [disabled]="!editable" />
-          </div>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="zona">Zona</label>
-            <p-select
-              inputId="zona" [options]="zonas" optionLabel="etiqueta" optionValue="valor"
-              [(ngModel)]="datos.zona" name="zona" [disabled]="!editable" appendTo="body" />
-          </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Zona</mat-label>
+            <mat-select [(ngModel)]="datos.zona" name="zona" [disabled]="!editable">
+              @for (z of zonas; track z.valor) {
+                <mat-option [value]="z.valor">{{ z.etiqueta }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="tipo_usuario">Tipo de usuario</label>
-            <p-select
-              inputId="tipo_usuario" [options]="tiposUsuario" optionLabel="etiqueta"
-              optionValue="valor" [(ngModel)]="datos.tipo_usuario" name="tipo_usuario"
-              [disabled]="!editable" appendTo="body" />
-          </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Tipo de usuario</mat-label>
+            <mat-select [(ngModel)]="datos.tipo_usuario" name="tipo_usuario"
+              [disabled]="!editable">
+              @for (t of tiposUsuario; track t.valor) {
+                <mat-option [value]="t.valor">{{ t.etiqueta }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-          <div class="campo">
-            <label for="entidad_id">Entidad responsable</label>
-            <p-select
-              inputId="entidad_id" [options]="entidades()" optionLabel="nombre"
-              optionValue="id" [(ngModel)]="datos.entidad_id" name="entidad_id"
-              [showClear]="true" placeholder="Ninguna"
-              [disabled]="!editable" appendTo="body" />
-          </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Entidad responsable</mat-label>
+            <mat-select [(ngModel)]="datos.entidad_id" name="entidad_id"
+              [disabled]="!editable">
+              <!-- La opción vacía hace de [showClear] de PrimeNG: un particular
+                   no tiene entidad, y sin ella no habría forma de quitarla. -->
+              <mat-option [value]="null">Ninguna</mat-option>
+              @for (e of entidades(); track e.id) {
+                <mat-option [value]="e.id">{{ e.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         </div>
       </form>
-    </p-dialog>
+    </mat-dialog-content>
   `,
   styles: [`
     .rejilla {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
       gap: .85rem; margin-top: 1rem;
     }
-    .campo { display: flex; flex-direction: column; gap: .3rem; }
-    .campo.ancho { grid-column: 1 / -1; }
-    label { font-size: .8rem; font-weight: 600; color: var(--text-color-secondary); }
-    .edad { color: var(--primary-color); font-size: .75rem; }
+    .ancho { grid-column: 1 / -1; }
+    x-mensaje { display: block; margin-top: 1rem; }
+    .edad { color: var(--primary-color); }
   `],
 })
-export class PacienteFormComponent implements OnChanges {
+export class PacienteFormComponent implements OnInit {
   private svc = inject(PacienteService);
   private http = inject(HttpClient);
-
-  @Input() abierto = false;
-  /** Paciente a editar, o `null` para dar de alta uno nuevo. */
-  @Input() paciente: Patient | null = null;
-
-  @Output() abiertoChange = new EventEmitter<boolean>();
-  @Output() guardado = new EventEmitter<Patient>();
+  private ref = inject<MatDialogRef<PacienteFormComponent, Patient>>(MatDialogRef);
 
   readonly tiposDocumento = TIPOS_DOCUMENTO;
   readonly tiposUsuario = TIPOS_USUARIO;
@@ -272,26 +281,24 @@ export class PacienteFormComponent implements OnChanges {
   error = signal<string | null>(null);
   entidades = signal<Entidad[]>([]);
 
+  /** El paciente a editar, o `null` para dar de alta uno nuevo. */
+  constructor(@Inject(MAT_DIALOG_DATA) public paciente: Patient | null) {}
+
   get editable(): boolean {
     return camposEditables(this.modo);
   }
 
-  ngOnChanges(): void {
-    if (!this.abierto) {
-      return;
-    }
+  ngOnInit(): void {
     this.error.set(null);
     this.modo = this.paciente ? 'edicion' : 'nuevo';
     this.datos = this.paciente
       ? { ...pacienteVacio(), ...this.paciente }
       : pacienteVacio();
-    if (this.entidades().length === 0) {
-      this.http.get<Entidad[]>('/api/admin/entidades').subscribe({
-        next: (e) => this.entidades.set(e),
-        // Sin entidades el formulario sigue sirviendo: un particular no tiene.
-        error: () => this.entidades.set([]),
-      });
-    }
+    this.http.get<Entidad[]>('/api/admin/entidades').subscribe({
+      next: (e) => this.entidades.set(e),
+      // Sin entidades el formulario sigue sirviendo: un particular no tiene.
+      error: () => this.entidades.set([]),
+    });
   }
 
   /** Edad en años, para cazar de inmediato una fecha mal digitada. */
@@ -326,10 +333,9 @@ export class PacienteFormComponent implements OnChanges {
     this.error.set(null);
 
     const alTerminar = {
-      next: (p: Patient) => {
-        this.guardado.emit(p);
-        this.cerrar();
-      },
+      // El paciente guardado ES el valor de retorno del diálogo: la pantalla
+      // recarga cuando le llega uno, y no cuando el diálogo se cierra.
+      next: (p: Patient) => this.ref.close(p),
       error: (e: { error?: { detail?: string } }) =>
         this.error.set(e?.error?.detail ?? 'No se pudo guardar el paciente.'),
     };
@@ -351,17 +357,8 @@ export class PacienteFormComponent implements OnChanges {
     if (this.modo !== 'consulta' && !confirm('¿Cerrar sin guardar los cambios?')) {
       return;
     }
-    this.cerrar();
-  }
-
-  alCerrarDialogo(visible: boolean): void {
-    if (!visible) {
-      this.pedirCierre();
-    }
-  }
-
-  private cerrar(): void {
-    this.abierto = false;
-    this.abiertoChange.emit(false);
+    // Sin argumento: cerrar sin guardar no devuelve paciente, y la pantalla no
+    // recarga. Devolver algo aquí sería afirmar un alta que no ocurrió.
+    this.ref.close();
   }
 }

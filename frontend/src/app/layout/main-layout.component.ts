@@ -2,12 +2,14 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from './sidebar.component';
 import { HeaderComponent } from './header.component';
-import { ToastModule } from 'primeng/toast';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, HeaderComponent, ToastModule],
+  // Ya no hay `<p-toast />`: `MatSnackBar` no necesita un elemento en la
+  // plantilla —se monta en un overlay del CDK—, así que el contenedor de avisos
+  // desaparece del layout en vez de mudarse.
+  imports: [RouterOutlet, SidebarComponent, HeaderComponent],
   template: `
     <div class="layout-wrapper">
       <aside class="layout-sidebar">
@@ -22,7 +24,6 @@ import { ToastModule } from 'primeng/toast';
         </main>
       </div>
     </div>
-    <p-toast />
   `
 })
 export class MainLayoutComponent {}

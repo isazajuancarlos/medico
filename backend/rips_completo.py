@@ -505,7 +505,13 @@ def generar_archivo_ac(
                     "finalidad", "finalidad de la consulta", "11"),
                 "causaMotivoAtencion": exigir(
                     _valor_enum(getattr(h, 'causa_externa', None)),
-                    "causa_externa", "causa o motivo de la atención", "13"),
+                    # «38» y no «13»: el 13 era enfermedad general en la tabla
+                    # ANTERIOR a la 948, y no existe en la que el MUV usa (21 a
+                    # 49), donde ese mismo concepto es el 38. Un supuesto
+                    # inválido no es una salida de emergencia: produce un
+                    # archivo que el validador rechaza, o sea que no salva a
+                    # nadie de nada.
+                    "causa_externa", "causa o motivo de la atención", "38"),
                 "codDiagnosticoPrincipal": exigir(
                     h.diagnostico_principal, "diagnostico_principal",
                     "diagnóstico principal"),
@@ -911,9 +917,14 @@ def generar_archivo_au(
                 # Iba quemada en "17". Un accidente de trabajo, uno de tránsito
                 # y una lesión por agresión llegan todos por urgencias y son
                 # causas DISTINTAS, con responsables de pago distintos.
+                # El supuesto pasa de «17» a «38»: el 17 tampoco está en la
+                # tabla de la 948 (21 a 49). Y aquí el supuesto es el más flojo
+                # de todos —«enfermedad general» para un ingreso por urgencias
+                # borra justo la distinción que el comentario de arriba explica—,
+                # así que sale con su etiqueta en el resumen y quien firma lo ve.
                 "causaMotivoAtencion": exigir(getattr(au, 'causa_motivo', None),
                                              "causa_motivo", "causa o motivo de la atención",
-                                      "17"),
+                                      "38"),
                 # `"R69"` es «causas de morbilidad desconocidas»: un diagnóstico
                 # de verdad, inventado para un paciente real.
                 "codDiagnosticoPrincipal": exigir(
@@ -1070,9 +1081,11 @@ def generar_archivo_ah(
                 "numAutorizacion": "",
                 # Iba quemada en "13", enfermedad general. Con eso, ninguna
                 # hospitalización por accidente de tránsito se cobraba al SOAT.
+                # Y el supuesto pasa de «13» a «38» por lo mismo que en el AC:
+                # el 13 es de la tabla anterior a la 948 y el MUV no lo conoce.
                 "causaMotivoAtencion": exigir(getattr(h, 'causa_motivo', None),
                                              "causa_motivo",
-                                             "causa o motivo de la atención", "13"),
+                                             "causa o motivo de la atención", "38"),
                 # `"Z00"` es «examen general»; además no es un código válido del
                 # RIPS, que exige cuatro caracteres. Un ingreso hospitalario por
                 # examen general no existe.

@@ -1,18 +1,17 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
-import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
-import { CheckboxModule } from 'primeng/checkbox';
-import { MessageService } from 'primeng/api';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   FarmaciaService, ItemInventario, ItemInventarioCreate,
   EntradaStock, FormulaPendiente, DispensarCreate,
@@ -22,25 +21,463 @@ import {
 
 type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'proveedores';
 
+/** Opción de un selector: lo que se lee y lo que se guarda. */
+interface Opcion { label: string; value: string | number }
+
+const TIPOS: Opcion[] = [
+  { label: 'Medicamento', value: 'MEDICAMENTO' },
+  { label: 'Insumo', value: 'INSUMO' },
+  { label: 'Dispositivo', value: 'DISPOSITIVO' },
+  { label: 'Reactivo', value: 'REACTIVO' },
+];
+
+const UNIDADES: Opcion[] = [
+  { label: 'Unidad', value: 'UNIDAD' },
+  { label: 'Caja', value: 'CAJA' },
+  { label: 'mL', value: 'ML' },
+  { label: 'mg', value: 'MG' },
+  { label: 'g', value: 'G' },
+  { label: 'Frasco', value: 'FRASCO' },
+  { label: 'Ampolla', value: 'AMPOLLA' },
+];
+
+const UBICACIONES: Opcion[] = [
+  { label: 'Farmacia', value: 'FARMACIA' },
+  { label: 'UCI', value: 'UCI' },
+  { label: 'Urgencias', value: 'URGENCIAS' },
+  { label: 'Quirófano', value: 'QUIROFANO' },
+  { label: 'Hospitalización', value: 'HOSPITALIZACION' },
+];
+
+/** Alta y edición de un proveedor. Devuelve los campos, o nada. */
+@Component({
+  selector: 'app-farmacia-proveedor',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar proveedor' : 'Nuevo proveedor' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Razón social *</mat-label>
+          <input matInput [(ngModel)]="f.razon_social" placeholder="Ej: Distribuidora Andina S.A.S." />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>NIT</mat-label>
+          <input matInput [(ngModel)]="f.nit" placeholder="Opcional: no todo proveedor tiene NIT" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Suministra</mat-label>
+          <input matInput [(ngModel)]="f.suministra" placeholder="Medicamentos, insumos, reactivos..." />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Contacto</mat-label>
+          <input matInput [(ngModel)]="f.contacto" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Teléfono</mat-label>
+          <input matInput [(ngModel)]="f.telefono" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Correo</mat-label>
+          <input matInput [(ngModel)]="f.email" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Ciudad</mat-label>
+          <input matInput [(ngModel)]="f.ciudad" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Dirección</mat-label>
+          <input matInput [(ngModel)]="f.direccion" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput [(ngModel)]="f.observaciones" rows="2"></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!f.razon_social" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> {{ editando ? 'Guardar' : 'Crear proveedor' }}
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(34rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class FarmaciaProveedorComponent {
+  readonly editando: boolean;
+  f: Partial<ProveedorCreate>;
+
+  constructor(@Inject(MAT_DIALOG_DATA) p: Proveedor | null) {
+    this.editando = !!p;
+    this.f = p
+      ? {
+          razon_social: p.razon_social, nit: p.nit, contacto: p.contacto,
+          telefono: p.telefono, email: p.email, direccion: p.direccion,
+          ciudad: p.ciudad, suministra: p.suministra, observaciones: p.observaciones,
+        }
+      : { razon_social: '' };
+  }
+
+  resultado(): Partial<ProveedorCreate> | null {
+    return this.f.razon_social ? this.f : null;
+  }
+}
+
+/** Alta y edición de un item de inventario. Devuelve los campos, o nada. */
+@Component({
+  selector: 'app-farmacia-item',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ editando ? 'Editar item' : 'Nuevo item de inventario' }}</h2>
+    <mat-dialog-content>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Nombre *</mat-label>
+          <input matInput [(ngModel)]="f.nombre" placeholder="Ej: Amoxicilina 500mg" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo *</mat-label>
+          <mat-select [(ngModel)]="f.tipo">
+            @for (o of tipos; track o.value) { <mat-option [value]="o.value">{{ o.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Categoría</mat-label>
+          <input matInput [(ngModel)]="f.categoria" placeholder="Analgésico, Antibiótico..." />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Presentación</mat-label>
+          <input matInput [(ngModel)]="f.presentacion" placeholder="Tableta, Cápsula, Jarabe..." />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Lote</mat-label>
+          <input matInput [(ngModel)]="f.lote" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha vencimiento</mat-label>
+          <input matInput type="date" [(ngModel)]="f.fecha_vencimiento" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Registro INVIMA</mat-label>
+          <input matInput [(ngModel)]="f.registro_invima" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Unidad de medida</mat-label>
+          <mat-select [(ngModel)]="f.unidad_medida">
+            @for (o of unidades; track o.value) { <mat-option [value]="o.value">{{ o.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Ubicación</mat-label>
+          <mat-select [(ngModel)]="f.ubicacion">
+            @for (o of ubicaciones; track o.value) { <mat-option [value]="o.value">{{ o.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Costo unitario (COP)</mat-label>
+          <input matInput type="number" [(ngModel)]="f.costo_unitario" placeholder="0" />
+        </mat-form-field>
+        @if (!editando) {
+          <mat-form-field appearance="outline">
+            <mat-label>Stock inicial</mat-label>
+            <input matInput type="number" [(ngModel)]="f.cantidad_actual" placeholder="0" />
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline">
+          <mat-label>Stock mínimo (alerta)</mat-label>
+          <input matInput type="number" [(ngModel)]="f.cantidad_minima" placeholder="10" />
+        </mat-form-field>
+        <div class="marcas ancho">
+          <mat-checkbox [(ngModel)]="f.requiere_refrigeracion">Requiere refrigeración</mat-checkbox>
+          <mat-checkbox [(ngModel)]="f.controlado">Medicamento controlado</mat-checkbox>
+        </div>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!f.nombre" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> {{ editando ? 'Guardar cambios' : 'Crear item' }}
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
+      min-width:min(36rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    .marcas { display:flex; gap:2rem; flex-wrap:wrap; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class FarmaciaItemComponent {
+  readonly tipos = TIPOS;
+  readonly unidades = UNIDADES;
+  readonly ubicaciones = UBICACIONES;
+
+  readonly editando: boolean;
+  f: Partial<ItemInventarioCreate>;
+
+  constructor(@Inject(MAT_DIALOG_DATA) item: ItemInventario | null) {
+    this.editando = !!item;
+    this.f = item
+      ? {
+          nombre: item.nombre, tipo: item.tipo, categoria: item.categoria,
+          presentacion: item.presentacion, lote: item.lote,
+          fecha_vencimiento: item.fecha_vencimiento, registro_invima: item.registro_invima,
+          cantidad_actual: item.cantidad_actual, cantidad_minima: item.cantidad_minima,
+          unidad_medida: item.unidad_medida, ubicacion: item.ubicacion,
+          costo_unitario: item.costo_unitario,
+          requiere_refrigeracion: item.requiere_refrigeracion, controlado: item.controlado,
+        }
+      : {
+          tipo: 'MEDICAMENTO', unidad_medida: 'UNIDAD', ubicacion: 'FARMACIA',
+          cantidad_actual: 0, cantidad_minima: 10, costo_unitario: 0,
+          requiere_refrigeracion: false, controlado: false, lote: '',
+        };
+  }
+
+  resultado(): Partial<ItemInventarioCreate> | null {
+    return this.f.nombre ? this.f : null;
+  }
+}
+
+/** Entrada de existencias. Devuelve lo que se registra, o nada. */
+@Component({
+  selector: 'app-farmacia-entrada',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Registrar entrada de stock</h2>
+    <mat-dialog-content>
+      <div class="ficha">
+        <i class="pi pi-box" style="color:#818cf8;font-size:1.2rem"></i>
+        <div>
+          <div style="font-weight:600;color:#f1f5f9">{{ item.nombre }}</div>
+          <div style="font-size:0.82rem;color:#94a3b8">
+            Stock actual: {{ item.cantidad_actual }} {{ item.unidad_medida }}
+          </div>
+        </div>
+      </div>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Cantidad a ingresar *</mat-label>
+          <input matInput type="number" [(ngModel)]="f.cantidad" placeholder="0" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Motivo</mat-label>
+          <input matInput [(ngModel)]="f.motivo" placeholder="Compra, Donación, Devolución..." />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nuevo lote (opcional)</mat-label>
+          <input matInput [(ngModel)]="f.lote" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nueva fecha vencimiento</mat-label>
+          <input matInput type="date" [(ngModel)]="f.fecha_vencimiento" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Nuevo costo unitario (opcional)</mat-label>
+          <input matInput type="number" [(ngModel)]="f.costo_unitario"
+            placeholder="Dejar vacío para mantener actual" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Proveedor</mat-label>
+          <mat-select [(ngModel)]="f.proveedor_id">
+            <!-- «Sin proveedor» es una opción de verdad —donación, traslado—, no
+                 el hueco de no haber elegido. -->
+            <mat-option [value]="null">Sin proveedor (donación, traslado…)</mat-option>
+            @for (o of proveedores; track o.value) {
+              <mat-option [value]="o.value">{{ o.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Factura / remisión</mat-label>
+          <input matInput [(ngModel)]="f.documento_soporte" placeholder="Ej: FV-1024" />
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="exito" [disabled]="!completo()"
+        [mat-dialog-close]="resultado()">
+        <i class="pi pi-arrow-down"></i> Registrar entrada
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .ficha { display:flex; gap:.75rem; align-items:center; margin-bottom:1rem;
+      padding:.75rem; background:rgba(99,102,241,0.1); border-radius:6px;
+      border:1px solid rgba(99,102,241,0.2); }
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem;
+      min-width:min(30rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+    .exito { background:#16a34a; color:#fff; }
+  `],
+})
+export class FarmaciaEntradaComponent {
+  readonly item: ItemInventario;
+  readonly proveedores: Opcion[];
+  f: Partial<EntradaStock> = { motivo: 'Compra', cantidad: 0 };
+
+  constructor(@Inject(MAT_DIALOG_DATA) datos: { item: ItemInventario; proveedores: Opcion[] }) {
+    this.item = datos.item;
+    this.proveedores = datos.proveedores;
+  }
+
+  completo(): boolean { return !!this.f.cantidad && Number(this.f.cantidad) > 0; }
+
+  resultado(): EntradaStock | null {
+    if (!this.completo()) return null;
+    return {
+      cantidad: Number(this.f.cantidad),
+      motivo: this.f.motivo || 'Compra',
+      lote: this.f.lote,
+      fecha_vencimiento: this.f.fecha_vencimiento,
+      costo_unitario: this.f.costo_unitario ? Number(this.f.costo_unitario) : undefined,
+      proveedor_id: this.f.proveedor_id ?? undefined,
+      documento_soporte: this.f.documento_soporte || undefined,
+    };
+  }
+}
+
+/** Dispensación contra una fórmula. Devuelve lo dispensado, o nada. */
+@Component({
+  selector: 'app-farmacia-dispensar',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Dispensar medicamento</h2>
+    <mat-dialog-content>
+      <div class="ficha">
+        <i class="pi pi-user" style="color:#818cf8;font-size:1.2rem"></i>
+        <div>
+          <div style="font-weight:600;color:#f1f5f9">{{ formula.paciente_nombre }}</div>
+          <div style="font-size:0.85rem;color:#e2e8f0;margin-top:0.2rem">
+            <strong>{{ formula.medicamento }}</strong> — {{ formula.dosis }}
+          </div>
+          <div style="font-size:0.78rem;color:#94a3b8">
+            Cantidad prescrita: {{ formula.cantidad }} {{ formula.unidad || 'und' }}
+          </div>
+        </div>
+      </div>
+      <div class="rejilla">
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Item del inventario *</mat-label>
+          <mat-select [(ngModel)]="f.item_inventario_id">
+            @for (o of items; track o.value) {
+              <mat-option [value]="o.value">{{ o.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Cantidad a dispensar *</mat-label>
+          <input matInput type="number" [(ngModel)]="f.cantidad_dispensada" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Lote dispensado</mat-label>
+          <input matInput [(ngModel)]="f.lote_dispensado" placeholder="Se toma del item seleccionado" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ancho">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput [(ngModel)]="f.observaciones" rows="2"
+            placeholder="Instrucciones adicionales..."></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" class="exito" [disabled]="!completo()"
+        [mat-dialog-close]="resultado()">
+        <i class="pi pi-send"></i> Confirmar dispensación
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .ficha { display:flex; gap:.75rem; align-items:flex-start; margin-bottom:1rem;
+      padding:.75rem; background:rgba(99,102,241,0.1); border-radius:6px;
+      border:1px solid rgba(99,102,241,0.2); }
+    .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem;
+      min-width:min(30rem, 85vw); }
+    .ancho { grid-column:1/-1; }
+    mat-form-field { width:100%; }
+    .exito { background:#16a34a; color:#fff; }
+  `],
+})
+export class FarmaciaDispensarComponent {
+  readonly formula: FormulaPendiente;
+  readonly items: Opcion[];
+  /** El lote sale del item elegido si nadie escribe otro: quien dispensa suele
+   *  entregar el que está en el estante, y obligarlo a copiarlo a mano es
+   *  fricción que se rodea escribiendo cualquier cosa. */
+  private readonly loteDe: Map<number, string>;
+  f: Partial<DispensarCreate>;
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA)
+    datos: { formula: FormulaPendiente; items: Opcion[]; lotes: Map<number, string> },
+  ) {
+    this.formula = datos.formula;
+    this.items = datos.items;
+    this.loteDe = datos.lotes;
+    this.f = { formula_id: datos.formula.id, cantidad_dispensada: datos.formula.cantidad };
+  }
+
+  completo(): boolean {
+    return !!this.f.item_inventario_id && !!this.f.cantidad_dispensada;
+  }
+
+  resultado(): DispensarCreate | null {
+    if (!this.completo()) return null;
+    const id = this.f.item_inventario_id!;
+    return {
+      formula_id: this.f.formula_id!,
+      item_inventario_id: id,
+      cantidad_dispensada: Number(this.f.cantidad_dispensada),
+      lote_dispensado: this.f.lote_dispensado || this.loteDe.get(id) || '',
+      observaciones: this.f.observaciones,
+    };
+  }
+}
+
 @Component({
   selector: 'app-farmacia',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule, CheckboxModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
       <div class="list-header">
         <h2 class="page-title">Farmacia e Inventario</h2>
         @if (tab() === 'inventario') {
-          <p-button label="Nuevo item" icon="pi pi-plus" (onClick)="abrirCrear()" />
+          <button matButton="filled" (click)="abrirCrear()"><i class="pi pi-plus"></i> Nuevo item</button>
         }
         @if (tab() === 'proveedores') {
-          <p-button label="Nuevo proveedor" icon="pi pi-plus" (onClick)="abrirCrearProveedor()" />
+          <button matButton="filled" (click)="abrirCrearProveedor()">
+            <i class="pi pi-plus"></i> Nuevo proveedor
+          </button>
         }
       </div>
 
@@ -93,24 +530,32 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
       <!-- ═══════════════════ TAB INVENTARIO ═══════════════════ -->
       @if (tab() === 'inventario') {
         <div class="filter-bar">
-          <span class="p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input pInputText [(ngModel)]="busqInventario" placeholder="Buscar medicamento..."
-              (input)="cargarInventario()" class="search-input" />
-          </span>
-          <p-select [(ngModel)]="filtroTipo" [options]="opcionesTipo"
-            optionLabel="label" optionValue="value" [showClear]="true"
-            placeholder="Tipo" style="width:150px"
-            (onChange)="cargarInventario()" />
-          <p-select [(ngModel)]="filtroUbicacion" [options]="opcionesUbicacion"
-            optionLabel="label" optionValue="value" [showClear]="true"
-            placeholder="Ubicación" style="width:150px"
-            (onChange)="cargarInventario()" />
-          <p-button [label]="soloAlertas ? 'Ver todo' : 'Solo alertas'"
-            [severity]="soloAlertas ? 'warn' : 'secondary'"
-            [outlined]="true" size="small"
-            icon="pi pi-bell"
-            (onClick)="toggleAlertas()" />
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-input">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="busqInventario" placeholder="Buscar medicamento..."
+              (input)="cargarInventario()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:150px">
+            <mat-label>Tipo</mat-label>
+            <mat-select [(ngModel)]="filtroTipo" (selectionChange)="cargarInventario()">
+              <mat-option [value]="''">Todos</mat-option>
+              @for (o of opcionesTipo; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:150px">
+            <mat-label>Ubicación</mat-label>
+            <mat-select [(ngModel)]="filtroUbicacion" (selectionChange)="cargarInventario()">
+              <mat-option [value]="''">Todas</mat-option>
+              @for (o of opcionesUbicacion; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <button matButton="outlined" [class.aviso-color]="soloAlertas" (click)="toggleAlertas()">
+            <i class="pi pi-bell"></i> {{ soloAlertas ? 'Ver todo' : 'Solo alertas' }}
+          </button>
         </div>
 
         @if (cargandoInv()) {
@@ -121,78 +566,91 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
             <p>No hay items en el inventario.</p>
           </div>
         } @else {
-          <p-table [value]="inventario()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Medicamento / Item</th>
-                <th>Tipo</th>
-                <th style="text-align:center">Stock</th>
-                <th style="text-align:center">Mínimo</th>
-                <th>Lote</th>
-                <th>Vencimiento</th>
-                <th>Ubicación</th>
-                <th style="text-align:right">Costo unit.</th>
-                <th style="text-align:center">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-item>
-              <tr [class.row-alerta]="item.alerta_stock || item.alerta_vencimiento">
-                <td>
-                  <strong>{{ item.nombre }}</strong>
-                  @if (item.presentacion) {
-                    <div style="font-size:0.75rem;color:#94a3b8">{{ item.presentacion }}</div>
-                  }
-                  @if (item.controlado) {
-                    <span class="tag-controlado">Controlado</span>
-                  }
-                </td>
-                <td><p-tag [value]="item.tipo" severity="secondary" /></td>
-                <td style="text-align:center">
-                  <span [class]="item.alerta_stock ? 'stock-bajo' : 'stock-ok'">
-                    {{ item.cantidad_actual }} {{ item.unidad_medida }}
+          <table mat-table [dataSource]="inventario()" class="tabla">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Medicamento / Item</th>
+              <td mat-cell *matCellDef="let item" [class.row-alerta]="item.alerta_stock || item.alerta_vencimiento">
+                <strong>{{ item.nombre }}</strong>
+                @if (item.presentacion) {
+                  <div style="font-size:0.75rem;color:#94a3b8">{{ item.presentacion }}</div>
+                }
+                @if (item.controlado) { <span class="tag-controlado">Controlado</span> }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
+              <td mat-cell *matCellDef="let item"><x-etiqueta [value]="item.tipo" severity="secondary" /></td>
+            </ng-container>
+            <ng-container matColumnDef="stock">
+              <th mat-header-cell *matHeaderCellDef class="centro">Stock</th>
+              <td mat-cell *matCellDef="let item" class="centro">
+                <span [class]="item.alerta_stock ? 'stock-bajo' : 'stock-ok'">
+                  {{ item.cantidad_actual }} {{ item.unidad_medida }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="minimo">
+              <th mat-header-cell *matHeaderCellDef class="centro">Mínimo</th>
+              <td mat-cell *matCellDef="let item" class="centro" style="font-size:0.82rem;color:#94a3b8">
+                {{ item.cantidad_minima }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="lote">
+              <th mat-header-cell *matHeaderCellDef>Lote</th>
+              <td mat-cell *matCellDef="let item" style="font-size:0.82rem">{{ item.lote || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="vencimiento">
+              <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+              <td mat-cell *matCellDef="let item">
+                @if (item.fecha_vencimiento) {
+                  <span [class]="item.alerta_vencimiento ? 'venc-alerta' : 'venc-ok'">
+                    {{ item.fecha_vencimiento | date:'dd/MM/yyyy' }}
                   </span>
-                </td>
-                <td style="text-align:center;font-size:0.82rem;color:#94a3b8">
-                  {{ item.cantidad_minima }}
-                </td>
-                <td style="font-size:0.82rem">{{ item.lote || '—' }}</td>
-                <td>
-                  @if (item.fecha_vencimiento) {
-                    <span [class]="item.alerta_vencimiento ? 'venc-alerta' : 'venc-ok'">
-                      {{ item.fecha_vencimiento | date:'dd/MM/yyyy' }}
-                    </span>
-                  } @else {
-                    <span style="color:#64748b">—</span>
-                  }
-                </td>
-                <td style="font-size:0.82rem">{{ item.ubicacion }}</td>
-                <td style="text-align:right;font-size:0.82rem">
-                  {{ item.costo_unitario | currency:'COP':'symbol-narrow':'1.0-0' }}
-                </td>
-                <td style="text-align:center;white-space:nowrap">
-                  <p-button icon="pi pi-arrow-down" [text]="true" size="small"
-                    severity="success" pTooltip="Entrada de stock"
-                    (onClick)="abrirEntrada(item)" />
-                  <p-button icon="pi pi-pencil" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditar(item)" />
-                  <p-button icon="pi pi-trash" [text]="true" size="small"
-                    severity="danger" pTooltip="Eliminar"
-                    (onClick)="eliminarItem(item)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+                } @else {
+                  <span style="color:#64748b">—</span>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="ubicacion">
+              <th mat-header-cell *matHeaderCellDef>Ubicación</th>
+              <td mat-cell *matCellDef="let item" style="font-size:0.82rem">{{ item.ubicacion }}</td>
+            </ng-container>
+            <ng-container matColumnDef="costo">
+              <th mat-header-cell *matHeaderCellDef class="derecha">Costo unit.</th>
+              <td mat-cell *matCellDef="let item" class="derecha" style="font-size:0.82rem">
+                {{ item.costo_unitario | currency:'COP':'symbol-narrow':'1.0-0' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acciones</th>
+              <td mat-cell *matCellDef="let item" class="centro" style="white-space:nowrap">
+                <button matIconButton class="exito-texto" matTooltip="Entrada de stock"
+                  (click)="abrirEntrada(item)">
+                  <i class="pi pi-arrow-down"></i>
+                </button>
+                <button matIconButton matTooltip="Editar" (click)="abrirEditar(item)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button matIconButton class="peligro" matTooltip="Eliminar" (click)="eliminarItem(item)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasInventario"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasInventario"></tr>
+          </table>
         }
       }
 
       <!-- ═══════════════════ TAB FÓRMULAS ═══════════════════ -->
       @if (tab() === 'formulas') {
         <div class="filter-bar">
-          <span class="p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input pInputText [(ngModel)]="busqFormulas" placeholder="Buscar paciente o medicamento..."
-              (input)="cargarFormulas()" class="search-input" />
-          </span>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-input">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="busqFormulas" placeholder="Buscar paciente o medicamento..."
+              (input)="cargarFormulas()" />
+          </mat-form-field>
         </div>
 
         @if (cargandoForm()) {
@@ -203,42 +661,54 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
             <p>No hay fórmulas pendientes de dispensación.</p>
           </div>
         } @else {
-          <p-table [value]="formulas()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Medicamento</th>
-                <th>Dosis</th>
-                <th style="text-align:center">Cantidad</th>
-                <th>Médico</th>
-                <th>Fecha fórmula</th>
-                <th style="text-align:center">Dispensar</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-f>
-              <tr>
-                <td>
-                  <strong>{{ f.paciente_nombre || '—' }}</strong>
-                </td>
-                <td>
-                  <span>{{ f.medicamento }}</span>
-                  @if (f.codigo_cum) {
-                    <div style="font-size:0.75rem;color:#94a3b8">CUM: {{ f.codigo_cum }}</div>
-                  }
-                </td>
-                <td style="font-size:0.85rem">{{ f.dosis }}</td>
-                <td style="text-align:center">
-                  <span class="dur-badge">{{ f.cantidad }} {{ f.unidad || 'und' }}</span>
-                </td>
-                <td style="font-size:0.82rem;color:#94a3b8">{{ f.medico_nombre || '—' }}</td>
-                <td style="font-size:0.82rem">{{ f.fecha_formula | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-send" label="Dispensar" size="small"
-                    severity="success" (onClick)="abrirDispensar(f)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="formulas()" class="tabla">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let f"><strong>{{ f.paciente_nombre || '—' }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="medicamento">
+              <th mat-header-cell *matHeaderCellDef>Medicamento</th>
+              <td mat-cell *matCellDef="let f">
+                <span>{{ f.medicamento }}</span>
+                @if (f.codigo_cum) {
+                  <div style="font-size:0.75rem;color:#94a3b8">CUM: {{ f.codigo_cum }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="dosis">
+              <th mat-header-cell *matHeaderCellDef>Dosis</th>
+              <td mat-cell *matCellDef="let f" style="font-size:0.85rem">{{ f.dosis }}</td>
+            </ng-container>
+            <ng-container matColumnDef="cantidad">
+              <th mat-header-cell *matHeaderCellDef class="centro">Cantidad</th>
+              <td mat-cell *matCellDef="let f" class="centro">
+                <span class="dur-badge">{{ f.cantidad }} {{ f.unidad || 'und' }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="medico">
+              <th mat-header-cell *matHeaderCellDef>Médico</th>
+              <td mat-cell *matCellDef="let f" style="font-size:0.82rem;color:#94a3b8">
+                {{ f.medico_nombre || '—' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha fórmula</th>
+              <td mat-cell *matCellDef="let f" style="font-size:0.82rem">
+                {{ f.fecha_formula | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="dispensar">
+              <th mat-header-cell *matHeaderCellDef class="centro">Dispensar</th>
+              <td mat-cell *matCellDef="let f" class="centro">
+                <button matButton="filled" class="exito" (click)="abrirDispensar(f)">
+                  <i class="pi pi-send"></i> Dispensar
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasFormulas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasFormulas"></tr>
+          </table>
         }
       }
 
@@ -252,42 +722,62 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
             <p>No hay dispensaciones registradas.</p>
           </div>
         } @else {
-          <p-table [value]="dispensaciones()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Medicamento</th>
-                <th>Item dispensado</th>
-                <th style="text-align:center">Cantidad</th>
-                <th>Lote</th>
-                <th>Regente</th>
-                <th>Fecha</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-d>
-              <tr>
-                <td><strong>{{ d.paciente_nombre || '—' }}</strong></td>
-                <td style="font-size:0.85rem">{{ d.medicamento_nombre || '—' }}</td>
-                <td style="font-size:0.85rem">{{ d.item_nombre || '—' }}</td>
-                <td style="text-align:center">
-                  <span class="dur-badge">{{ d.cantidad_dispensada }}</span>
-                </td>
-                <td style="font-size:0.82rem;color:#94a3b8">{{ d.lote_dispensado || '—' }}</td>
-                <td style="font-size:0.82rem;color:#94a3b8">{{ d.regente_nombre || '—' }}</td>
-                <td style="font-size:0.82rem">{{ d.fecha_dispensacion | date:'dd/MM/yyyy HH:mm' }}</td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="dispensaciones()" class="tabla">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let d"><strong>{{ d.paciente_nombre || '—' }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="medicamento">
+              <th mat-header-cell *matHeaderCellDef>Medicamento</th>
+              <td mat-cell *matCellDef="let d" style="font-size:0.85rem">{{ d.medicamento_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="item">
+              <th mat-header-cell *matHeaderCellDef>Item dispensado</th>
+              <td mat-cell *matCellDef="let d" style="font-size:0.85rem">{{ d.item_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="cantidad">
+              <th mat-header-cell *matHeaderCellDef class="centro">Cantidad</th>
+              <td mat-cell *matCellDef="let d" class="centro">
+                <span class="dur-badge">{{ d.cantidad_dispensada }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="lote">
+              <th mat-header-cell *matHeaderCellDef>Lote</th>
+              <td mat-cell *matCellDef="let d" style="font-size:0.82rem;color:#94a3b8">
+                {{ d.lote_dispensado || '—' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="regente">
+              <th mat-header-cell *matHeaderCellDef>Regente</th>
+              <td mat-cell *matCellDef="let d" style="font-size:0.82rem;color:#94a3b8">
+                {{ d.regente_nombre || '—' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let d" style="font-size:0.82rem">
+                {{ d.fecha_dispensacion | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasDispensaciones"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasDispensaciones"></tr>
+          </table>
         }
       }
 
       <!-- ═══════════════════ TAB MOVIMIENTOS ═══════════════════ -->
       @if (tab() === 'movimientos') {
         <div class="filter-bar">
-          <p-select [(ngModel)]="filtroMovTipo" [options]="opcionesMovTipo"
-            optionLabel="label" optionValue="value" [showClear]="true"
-            placeholder="Tipo movimiento" style="width:180px"
-            (onChange)="cargarMovimientos()" />
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:180px">
+            <mat-label>Tipo de movimiento</mat-label>
+            <mat-select [(ngModel)]="filtroMovTipo" (selectionChange)="cargarMovimientos()">
+              <mat-option [value]="''">Todos</mat-option>
+              @for (o of opcionesMovTipo; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         </div>
 
         @if (cargandoMov()) {
@@ -298,54 +788,67 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
             <p>No hay movimientos registrados.</p>
           </div>
         } @else {
-          <p-table [value]="movimientos()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Item</th>
-                <th style="text-align:center">Tipo</th>
-                <th style="text-align:center">Cantidad</th>
-                <th>Motivo</th>
-                <th>Proveedor / Soporte</th>
-                <th>Usuario</th>
-                <th>Fecha</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-m>
-              <tr>
-                <td><strong>{{ m.item_nombre || '—' }}</strong></td>
-                <td style="text-align:center">
-                  <p-tag [value]="m.tipo_movimiento" [severity]="movSeverity(m.tipo_movimiento)" />
-                </td>
-                <td style="text-align:center">
-                  <span [class]="m.tipo_movimiento === 'ENTRADA' ? 'cant-entrada' : 'cant-salida'">
-                    {{ m.tipo_movimiento === 'ENTRADA' ? '+' : '-' }}{{ m.cantidad }}
-                  </span>
-                </td>
-                <td style="font-size:0.82rem">{{ m.motivo }}</td>
-                <td style="font-size:0.82rem;color:#94a3b8">
-                  <!-- Un guion, no un espacio en blanco: «no vino de una compra»
-                       y «se me olvidó registrarlo» se ven igual si no se dice. -->
-                  {{ m.proveedor_nombre || '—' }}
-                  @if (m.documento_soporte) {
-                    <div style="font-size:0.72rem;color:#64748b">{{ m.documento_soporte }}</div>
-                  }
-                </td>
-                <td style="font-size:0.82rem;color:#94a3b8">{{ m.usuario_nombre || '—' }}</td>
-                <td style="font-size:0.82rem">{{ m.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="movimientos()" class="tabla">
+            <ng-container matColumnDef="item">
+              <th mat-header-cell *matHeaderCellDef>Item</th>
+              <td mat-cell *matCellDef="let m"><strong>{{ m.item_nombre || '—' }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef class="centro">Tipo</th>
+              <td mat-cell *matCellDef="let m" class="centro">
+                <x-etiqueta [value]="m.tipo_movimiento" [severity]="movSeverity(m.tipo_movimiento)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="cantidad">
+              <th mat-header-cell *matHeaderCellDef class="centro">Cantidad</th>
+              <td mat-cell *matCellDef="let m" class="centro">
+                <span [class]="m.tipo_movimiento === 'ENTRADA' ? 'cant-entrada' : 'cant-salida'">
+                  {{ m.tipo_movimiento === 'ENTRADA' ? '+' : '-' }}{{ m.cantidad }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="motivo">
+              <th mat-header-cell *matHeaderCellDef>Motivo</th>
+              <td mat-cell *matCellDef="let m" style="font-size:0.82rem">{{ m.motivo }}</td>
+            </ng-container>
+            <ng-container matColumnDef="procedencia">
+              <th mat-header-cell *matHeaderCellDef>Proveedor / Soporte</th>
+              <td mat-cell *matCellDef="let m" style="font-size:0.82rem;color:#94a3b8">
+                <!-- Un guion, no un espacio en blanco: «no vino de una compra»
+                     y «se me olvidó registrarlo» se ven igual si no se dice. -->
+                {{ m.proveedor_nombre || '—' }}
+                @if (m.documento_soporte) {
+                  <div style="font-size:0.72rem;color:#64748b">{{ m.documento_soporte }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="usuario">
+              <th mat-header-cell *matHeaderCellDef>Usuario</th>
+              <td mat-cell *matCellDef="let m" style="font-size:0.82rem;color:#94a3b8">
+                {{ m.usuario_nombre || '—' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let m" style="font-size:0.82rem">
+                {{ m.fecha | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasMovimientos"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasMovimientos"></tr>
+          </table>
         }
       }
 
       <!-- ═══════════════════ TAB PROVEEDORES ═══════════════════ -->
       @if (tab() === 'proveedores') {
         <div class="filter-bar">
-          <span class="p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input pInputText [(ngModel)]="busqProveedores" placeholder="Razón social, NIT o contacto..."
-              (input)="cargarProveedores()" class="search-input" />
-          </span>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-input">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="busqProveedores" placeholder="Razón social, NIT o contacto..."
+              (input)="cargarProveedores()" />
+          </mat-form-field>
         </div>
 
         @if (cargandoProv()) {
@@ -359,311 +862,85 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
             </small>
           </div>
         } @else {
-          <p-table [value]="proveedores()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Razón social</th>
-                <th>NIT</th>
-                <th>Contacto</th>
-                <th>Suministra</th>
-                <th style="text-align:center">Remesas</th>
-                <th style="text-align:center">Estado</th>
-                <th style="width:110px"></th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-p>
-              <tr [style.opacity]="p.activo ? 1 : 0.55">
-                <td>
-                  <strong>{{ p.razon_social }}</strong>
-                  @if (p.ciudad) {
-                    <div style="font-size:0.75rem;color:#94a3b8">{{ p.ciudad }}</div>
-                  }
-                </td>
-                <td style="font-size:0.82rem;color:#94a3b8">{{ p.nit || '—' }}</td>
-                <td style="font-size:0.82rem">
-                  {{ p.contacto || '—' }}
-                  @if (p.telefono) {
-                    <div style="font-size:0.72rem;color:#64748b">{{ p.telefono }}</div>
-                  }
-                </td>
-                <td style="font-size:0.82rem;color:#94a3b8">{{ p.suministra || '—' }}</td>
-                <td style="text-align:center"><span class="dur-badge">{{ p.entradas }}</span></td>
-                <td style="text-align:center">
-                  <p-tag [value]="p.activo ? 'Activo' : 'Inactivo'"
-                    [severity]="p.activo ? 'success' : 'secondary'" />
-                </td>
-                <td style="text-align:right">
-                  <p-button icon="pi pi-pencil" [text]="true" size="small"
-                    pTooltip="Editar" (onClick)="abrirEditarProveedor(p)" />
-                  <!-- Con remesas registradas no se ofrece borrar: se desactiva.
-                       Ofrecer el botón para que el servidor conteste 409 es hacer
-                       que el usuario descubra la regla chocándose con ella. -->
-                  @if (p.entradas === 0) {
-                    <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
-                      pTooltip="Eliminar" (onClick)="eliminarProveedor(p)" />
-                  } @else {
-                    <p-button [icon]="p.activo ? 'pi pi-ban' : 'pi pi-check'" [text]="true" size="small"
-                      [severity]="p.activo ? 'warn' : 'success'"
-                      [pTooltip]="p.activo ? 'Desactivar' : 'Reactivar'"
-                      (onClick)="alternarProveedor(p)" />
-                  }
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="proveedores()" class="tabla">
+            <ng-container matColumnDef="razon">
+              <th mat-header-cell *matHeaderCellDef>Razón social</th>
+              <td mat-cell *matCellDef="let p" [style.opacity]="p.activo ? 1 : 0.55">
+                <strong>{{ p.razon_social }}</strong>
+                @if (p.ciudad) { <div style="font-size:0.75rem;color:#94a3b8">{{ p.ciudad }}</div> }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="nit">
+              <th mat-header-cell *matHeaderCellDef>NIT</th>
+              <td mat-cell *matCellDef="let p" style="font-size:0.82rem;color:#94a3b8"
+                [style.opacity]="p.activo ? 1 : 0.55">{{ p.nit || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="contacto">
+              <th mat-header-cell *matHeaderCellDef>Contacto</th>
+              <td mat-cell *matCellDef="let p" style="font-size:0.82rem"
+                [style.opacity]="p.activo ? 1 : 0.55">
+                {{ p.contacto || '—' }}
+                @if (p.telefono) { <div style="font-size:0.72rem;color:#64748b">{{ p.telefono }}</div> }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="suministra">
+              <th mat-header-cell *matHeaderCellDef>Suministra</th>
+              <td mat-cell *matCellDef="let p" style="font-size:0.82rem;color:#94a3b8"
+                [style.opacity]="p.activo ? 1 : 0.55">{{ p.suministra || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="remesas">
+              <th mat-header-cell *matHeaderCellDef class="centro">Remesas</th>
+              <td mat-cell *matCellDef="let p" class="centro"><span class="dur-badge">{{ p.entradas }}</span></td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let p" class="centro">
+                <x-etiqueta [value]="p.activo ? 'Activo' : 'Inactivo'"
+                  [severity]="p.activo ? 'success' : 'secondary'" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef style="width:110px"></th>
+              <td mat-cell *matCellDef="let p" style="text-align:right">
+                <button matIconButton matTooltip="Editar" (click)="abrirEditarProveedor(p)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <!-- Con remesas registradas no se ofrece borrar: se desactiva.
+                     Ofrecer el botón para que el servidor conteste 409 es hacer
+                     que el usuario descubra la regla chocándose con ella. -->
+                @if (p.entradas === 0) {
+                  <button matIconButton class="peligro" matTooltip="Eliminar" (click)="eliminarProveedor(p)">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                } @else {
+                  <button matIconButton [class.aviso-color]="p.activo" [class.exito-texto]="!p.activo"
+                    [matTooltip]="p.activo ? 'Desactivar' : 'Reactivar'" (click)="alternarProveedor(p)">
+                    <i [class]="p.activo ? 'pi pi-ban' : 'pi pi-check'"></i>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasProveedores"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnasProveedores"></tr>
+          </table>
         }
       }
     </div>
 
-    <!-- ══ DIALOG CREAR / EDITAR PROVEEDOR ══ -->
-    <p-dialog [header]="editandoProveedor ? 'Editar proveedor' : 'Nuevo proveedor'"
-      [(visible)]="mostrarFormProveedor" [style]="{width:'620px'}" [modal]="true">
-      <div class="form-grid" style="gap:0.875rem">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Razón social *</label>
-          <input pInputText [(ngModel)]="pForm.razon_social" class="w-full"
-            placeholder="Ej: Distribuidora Andina S.A.S." />
-        </div>
-        <div class="field">
-          <label class="field-label">NIT</label>
-          <input pInputText [(ngModel)]="pForm.nit" class="w-full"
-            placeholder="Opcional: no todo proveedor tiene NIT" />
-        </div>
-        <div class="field">
-          <label class="field-label">Suministra</label>
-          <input pInputText [(ngModel)]="pForm.suministra" class="w-full"
-            placeholder="Medicamentos, insumos, reactivos..." />
-        </div>
-        <div class="field">
-          <label class="field-label">Contacto</label>
-          <input pInputText [(ngModel)]="pForm.contacto" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Teléfono</label>
-          <input pInputText [(ngModel)]="pForm.telefono" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Correo</label>
-          <input pInputText [(ngModel)]="pForm.email" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Ciudad</label>
-          <input pInputText [(ngModel)]="pForm.ciudad" class="w-full" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Dirección</label>
-          <input pInputText [(ngModel)]="pForm.direccion" class="w-full" />
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Observaciones</label>
-          <textarea pTextarea [(ngModel)]="pForm.observaciones" rows="2" class="w-full"></textarea>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormProveedor = false" />
-        <p-button [label]="editandoProveedor ? 'Guardar' : 'Crear proveedor'" icon="pi pi-check"
-          [loading]="guardandoProv()" [disabled]="!pForm.razon_social"
-          (onClick)="guardarProveedor()" /></div>
-    </p-dialog>
-
-    <!-- ══ DIALOG CREAR / EDITAR ITEM ══ -->
-    <p-dialog [header]="editandoItem ? 'Editar Item' : 'Nuevo Item de Inventario'"
-      [(visible)]="mostrarFormItem" [style]="{width:'640px'}" [modal]="true">
-      <div class="form-grid" style="gap:0.875rem">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">Nombre *</label>
-          <input pInputText [(ngModel)]="iForm.nombre" class="w-full"
-            placeholder="Ej: Amoxicilina 500mg" />
-        </div>
-        <div class="field">
-          <label class="field-label">Tipo *</label>
-          <p-select [(ngModel)]="iForm.tipo" [options]="opcionesTipo"
-            optionLabel="label" optionValue="value"
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Categoría</label>
-          <input pInputText [(ngModel)]="iForm.categoria" class="w-full"
-            placeholder="Analgésico, Antibiótico..." />
-        </div>
-        <div class="field">
-          <label class="field-label">Presentación</label>
-          <input pInputText [(ngModel)]="iForm.presentacion" class="w-full"
-            placeholder="Tableta, Cápsula, Jarabe..." />
-        </div>
-        <div class="field">
-          <label class="field-label">Lote</label>
-          <input pInputText [(ngModel)]="iForm.lote" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Fecha vencimiento</label>
-          <input type="date" [(ngModel)]="iForm.fecha_vencimiento" class="w-full date-input" />
-        </div>
-        <div class="field">
-          <label class="field-label">Registro INVIMA</label>
-          <input pInputText [(ngModel)]="iForm.registro_invima" class="w-full" />
-        </div>
-        <div class="field">
-          <label class="field-label">Unidad de medida</label>
-          <p-select [(ngModel)]="iForm.unidad_medida" [options]="opcionesUnidad"
-            optionLabel="label" optionValue="value"
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Ubicación</label>
-          <p-select [(ngModel)]="iForm.ubicacion" [options]="opcionesUbicacion"
-            optionLabel="label" optionValue="value"
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field">
-          <label class="field-label">Costo unitario (COP)</label>
-          <input pInputText type="number" [(ngModel)]="iForm.costo_unitario" class="w-full" placeholder="0" />
-        </div>
-        @if (!editandoItem) {
-          <div class="field">
-            <label class="field-label">Stock inicial</label>
-            <input pInputText type="number" [(ngModel)]="iForm.cantidad_actual" class="w-full" placeholder="0" />
-          </div>
-        }
-        <div class="field">
-          <label class="field-label">Stock mínimo (alerta)</label>
-          <input pInputText type="number" [(ngModel)]="iForm.cantidad_minima" class="w-full" placeholder="10" />
-        </div>
-        <div class="field" style="grid-column:1/-1;display:flex;gap:2rem">
-          <div style="display:flex;align-items:center;gap:0.5rem">
-            <p-checkbox [(ngModel)]="iForm.requiere_refrigeracion" [binary]="true" />
-            <label>Requiere refrigeración</label>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.5rem">
-            <p-checkbox [(ngModel)]="iForm.controlado" [binary]="true" />
-            <label>Medicamento controlado</label>
-          </div>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarFormItem = false" />
-        <p-button [label]="editandoItem ? 'Guardar cambios' : 'Crear item'"
-          icon="pi pi-check" [loading]="guardandoItem()"
-          [disabled]="!iForm.nombre"
-          (onClick)="guardarItem()" />
-      </div>
-    </p-dialog>
-
-    <!-- ══ DIALOG ENTRADA STOCK ══ -->
-    <p-dialog header="Registrar Entrada de Stock" [(visible)]="mostrarEntrada"
-      [style]="{width:'440px'}" [modal]="true">
-      @if (itemEntrada()) {
-        <div class="item-info-card">
-          <i class="pi pi-box" style="color:#818cf8;font-size:1.2rem"></i>
-          <div>
-            <div style="font-weight:600;color:#f1f5f9">{{ itemEntrada()!.nombre }}</div>
-            <div style="font-size:0.82rem;color:#94a3b8">Stock actual: {{ itemEntrada()!.cantidad_actual }} {{ itemEntrada()!.unidad_medida }}</div>
-          </div>
-        </div>
-        <div class="form-grid" style="gap:0.875rem;margin-top:1rem">
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Cantidad a ingresar *</label>
-            <input pInputText type="number" [(ngModel)]="eForm.cantidad"
-              class="w-full" placeholder="0" />
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Motivo</label>
-            <input pInputText [(ngModel)]="eForm.motivo" class="w-full"
-              placeholder="Compra, Donación, Devolución..." />
-          </div>
-          <div class="field">
-            <label class="field-label">Nuevo lote (opcional)</label>
-            <input pInputText [(ngModel)]="eForm.lote" class="w-full" />
-          </div>
-          <div class="field">
-            <label class="field-label">Nueva fecha vencimiento</label>
-            <input type="date" [(ngModel)]="eForm.fecha_vencimiento" class="w-full date-input" />
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Nuevo costo unitario (opcional)</label>
-            <input pInputText type="number" [(ngModel)]="eForm.costo_unitario"
-              class="w-full" placeholder="Dejar vacío para mantener actual" />
-          </div>
-          <div class="field">
-            <label class="field-label">Proveedor</label>
-            <p-select [(ngModel)]="eForm.proveedor_id" [options]="proveedoresActivos()"
-              optionLabel="label" optionValue="value" [filter]="true" [showClear]="true"
-              placeholder="Sin proveedor (donación, traslado…)"
-              class="w-full" style="width:100%" />
-          </div>
-          <div class="field">
-            <label class="field-label">Factura / remisión</label>
-            <input pInputText [(ngModel)]="eForm.documento_soporte" class="w-full"
-              placeholder="Ej: FV-1024" />
-          </div>
-        </div>
-      }
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarEntrada = false" />
-        <p-button label="Registrar entrada" icon="pi pi-arrow-down"
-          severity="success" [loading]="guardandoEntrada()"
-          [disabled]="!eForm.cantidad || eForm.cantidad <= 0"
-          (onClick)="confirmarEntrada()" />
-      </div>
-    </p-dialog>
-
-    <!-- ══ DIALOG DISPENSAR ══ -->
-    <p-dialog header="Dispensar Medicamento" [(visible)]="mostrarDispensar"
-      [style]="{width:'520px'}" [modal]="true">
-      @if (formulaDispensar()) {
-        <div class="item-info-card" style="margin-bottom:1rem">
-          <i class="pi pi-user" style="color:#818cf8;font-size:1.2rem"></i>
-          <div>
-            <div style="font-weight:600;color:#f1f5f9">{{ formulaDispensar()!.paciente_nombre }}</div>
-            <div style="font-size:0.85rem;color:#e2e8f0;margin-top:0.2rem">
-              <strong>{{ formulaDispensar()!.medicamento }}</strong> — {{ formulaDispensar()!.dosis }}
-            </div>
-            <div style="font-size:0.78rem;color:#94a3b8">
-              Cantidad prescrita: {{ formulaDispensar()!.cantidad }} {{ formulaDispensar()!.unidad || 'und' }}
-            </div>
-          </div>
-        </div>
-
-        <div class="form-grid" style="gap:0.875rem">
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Seleccionar item del inventario *</label>
-            <p-select [(ngModel)]="dForm.item_inventario_id"
-              [options]="inventarioParaDispensa()"
-              optionLabel="label" optionValue="value"
-              [filter]="true" placeholder="Buscar en inventario..."
-              class="w-full" style="width:100%" />
-          </div>
-          <div class="field">
-            <label class="field-label">Cantidad a dispensar *</label>
-            <input pInputText type="number" [(ngModel)]="dForm.cantidad_dispensada"
-              class="w-full" [placeholder]="String(formulaDispensar()!.cantidad)" />
-          </div>
-          <div class="field">
-            <label class="field-label">Lote dispensado</label>
-            <input pInputText [(ngModel)]="dForm.lote_dispensado" class="w-full"
-              placeholder="Se toma del item seleccionado" />
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label class="field-label">Observaciones</label>
-            <textarea pTextarea [(ngModel)]="dForm.observaciones" rows="2" class="w-full"
-              placeholder="Instrucciones adicionales..."></textarea>
-          </div>
-        </div>
-      }
-      <div class="dialog-footer">
-        <p-button label="Cancelar" [text]="true" (onClick)="mostrarDispensar = false" />
-        <p-button label="Confirmar dispensación" icon="pi pi-send"
-          severity="success" [loading]="dispensando()"
-          [disabled]="!dForm.item_inventario_id || !dForm.cantidad_dispensada"
-          (onClick)="confirmarDispensa()" />
-      </div>
-    </p-dialog>
-
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0; }
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    .derecha { text-align: right; }
+    mat-form-field { width: 100%; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .peligro { color: #dc2626; }
+    .exito-texto { color: #16a34a; }
+    .exito { background: #16a34a; color: #fff; }
+    .aviso-color { color: #f59e0b; }
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
     .cargando { padding: 3rem; text-align: center; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
     .sin-resultados { text-align: center; padding: 3rem 1rem; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
@@ -739,7 +1016,8 @@ type Tab = 'inventario' | 'formulas' | 'dispensaciones' | 'movimientos' | 'prove
 })
 export class FarmaciaComponent implements OnInit {
   private svc = inject(FarmaciaService);
-  private messageService = inject(MessageService);
+  private dialogo = inject(MatDialog);
+  private messageService = inject(Avisos);
 
   readonly String = String;
 
@@ -770,26 +1048,10 @@ export class FarmaciaComponent implements OnInit {
   movimientos = signal<Movimiento[]>([]);
   filtroMovTipo = '';
 
-  // Dialog item
-  mostrarFormItem = false;
-  editandoItem: ItemInventario | null = null;
-  guardandoItem = signal(false);
-  iForm: Partial<ItemInventarioCreate> = this._defaultIForm();
-
-  // Dialog entrada
-  mostrarEntrada = false;
-  itemEntrada = signal<ItemInventario | null>(null);
-  guardandoEntrada = signal(false);
-  eForm: Partial<EntradaStock> = { motivo: 'Compra', cantidad: 0 };
-
   // Proveedores
   proveedores = signal<Proveedor[]>([]);
   cargandoProv = signal(false);
   busqProveedores = '';
-  mostrarFormProveedor = false;
-  editandoProveedor: Proveedor | null = null;
-  guardandoProv = signal(false);
-  pForm: Partial<ProveedorCreate> = { razon_social: '' };
   private _provTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Solo los activos van al selector de la entrada: a un proveedor con el que
@@ -800,12 +1062,6 @@ export class FarmaciaComponent implements OnInit {
       .map(p => ({ label: p.nit ? `${p.razon_social} — ${p.nit}` : p.razon_social, value: p.id }))
   );
 
-  // Dialog dispensar
-  mostrarDispensar = false;
-  formulaDispensar = signal<FormulaPendiente | null>(null);
-  dispensando = signal(false);
-  dForm: Partial<DispensarCreate> = {};
-
   inventarioParaDispensa = computed(() =>
     this.inventario().map(i => ({
       label: `${i.nombre} — Stock: ${i.cantidad_actual} ${i.unidad_medida}`,
@@ -813,30 +1069,20 @@ export class FarmaciaComponent implements OnInit {
     }))
   );
 
-  readonly opcionesTipo = [
-    { label: 'Medicamento', value: 'MEDICAMENTO' },
-    { label: 'Insumo', value: 'INSUMO' },
-    { label: 'Dispositivo', value: 'DISPOSITIVO' },
-    { label: 'Reactivo', value: 'REACTIVO' },
-  ];
+  readonly opcionesTipo = TIPOS;
+  readonly opcionesUbicacion = UBICACIONES;
 
-  readonly opcionesUnidad = [
-    { label: 'Unidad', value: 'UNIDAD' },
-    { label: 'Caja', value: 'CAJA' },
-    { label: 'mL', value: 'ML' },
-    { label: 'mg', value: 'MG' },
-    { label: 'g', value: 'G' },
-    { label: 'Frasco', value: 'FRASCO' },
-    { label: 'Ampolla', value: 'AMPOLLA' },
-  ];
-
-  readonly opcionesUbicacion = [
-    { label: 'Farmacia', value: 'FARMACIA' },
-    { label: 'UCI', value: 'UCI' },
-    { label: 'Urgencias', value: 'URGENCIAS' },
-    { label: 'Quirófano', value: 'QUIROFANO' },
-    { label: 'Hospitalización', value: 'HOSPITALIZACION' },
-  ];
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnasInventario = ['nombre', 'tipo', 'stock', 'minimo', 'lote',
+                                 'vencimiento', 'ubicacion', 'costo', 'acciones'];
+  readonly columnasFormulas = ['paciente', 'medicamento', 'dosis', 'cantidad',
+                               'medico', 'fecha', 'dispensar'];
+  readonly columnasDispensaciones = ['paciente', 'medicamento', 'item', 'cantidad',
+                                     'lote', 'regente', 'fecha'];
+  readonly columnasMovimientos = ['item', 'tipo', 'cantidad', 'motivo', 'procedencia',
+                                  'usuario', 'fecha'];
+  readonly columnasProveedores = ['razon', 'nit', 'contacto', 'suministra', 'remesas',
+                                  'estado', 'acciones'];
 
   readonly opcionesMovTipo = [
     { label: 'Entradas', value: 'ENTRADA' },
@@ -872,40 +1118,26 @@ export class FarmaciaComponent implements OnInit {
     }, 300);
   }
 
-  abrirCrearProveedor(): void {
-    this.editandoProveedor = null;
-    this.pForm = { razon_social: '' };
-    this.mostrarFormProveedor = true;
+  abrirCrearProveedor(): void { this.abrirProveedor(null); }
+  abrirEditarProveedor(p: Proveedor): void { this.abrirProveedor(p); }
+
+  private abrirProveedor(p: Proveedor | null): void {
+    this.dialogo
+      .open(FarmaciaProveedorComponent, { data: p, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((datos?: Partial<ProveedorCreate>) => { if (datos) this.guardarProveedor(p, datos); });
   }
 
-  abrirEditarProveedor(p: Proveedor): void {
-    this.editandoProveedor = p;
-    this.pForm = {
-      razon_social: p.razon_social, nit: p.nit, contacto: p.contacto,
-      telefono: p.telefono, email: p.email, direccion: p.direccion,
-      ciudad: p.ciudad, suministra: p.suministra, observaciones: p.observaciones,
-    };
-    this.mostrarFormProveedor = true;
-  }
-
-  guardarProveedor(): void {
-    if (!this.pForm.razon_social) return;
-    this.guardandoProv.set(true);
-    const editando = this.editandoProveedor;
+  private guardarProveedor(editando: Proveedor | null, datos: Partial<ProveedorCreate>): void {
     const peticion = editando
-      ? this.svc.actualizarProveedor(editando.id, this.pForm)
-      : this.svc.crearProveedor(this.pForm as ProveedorCreate);
+      ? this.svc.actualizarProveedor(editando.id, datos)
+      : this.svc.crearProveedor(datos as ProveedorCreate);
     peticion.subscribe({
       next: () => {
-        this.guardandoProv.set(false);
-        this.mostrarFormProveedor = false;
-        this.ok(editando ? 'Proveedor actualizado' : 'Proveedor creado', this.pForm.razon_social!);
+        this.ok(editando ? 'Proveedor actualizado' : 'Proveedor creado', datos.razon_social!);
         this.cargarProveedores();
       },
-      error: err => {
-        this.guardandoProv.set(false);
-        this.err(err?.error?.detail ?? 'No se pudo guardar el proveedor');
-      },
+      error: err => this.err(err?.error?.detail ?? 'No se pudo guardar el proveedor'),
     });
   }
 
@@ -981,52 +1213,27 @@ export class FarmaciaComponent implements OnInit {
 
   // ── CRUD Inventario ──────────────────────────────
 
-  abrirCrear(): void {
-    this.editandoItem = null;
-    this.iForm = this._defaultIForm();
-    this.mostrarFormItem = true;
+  abrirCrear(): void { this.abrirItem(null); }
+  abrirEditar(item: ItemInventario): void { this.abrirItem(item); }
+
+  private abrirItem(item: ItemInventario | null): void {
+    this.dialogo
+      .open(FarmaciaItemComponent, { data: item, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((datos?: Partial<ItemInventarioCreate>) => { if (datos) this.guardarItem(item, datos); });
   }
 
-  abrirEditar(item: ItemInventario): void {
-    this.editandoItem = item;
-    this.iForm = {
-      nombre: item.nombre,
-      tipo: item.tipo,
-      categoria: item.categoria,
-      presentacion: item.presentacion,
-      lote: item.lote,
-      fecha_vencimiento: item.fecha_vencimiento,
-      registro_invima: item.registro_invima,
-      cantidad_actual: item.cantidad_actual,
-      cantidad_minima: item.cantidad_minima,
-      unidad_medida: item.unidad_medida,
-      ubicacion: item.ubicacion,
-      costo_unitario: item.costo_unitario,
-      requiere_refrigeracion: item.requiere_refrigeracion,
-      controlado: item.controlado,
-    };
-    this.mostrarFormItem = true;
-  }
-
-  guardarItem(): void {
-    if (!this.iForm.nombre) return;
-    this.guardandoItem.set(true);
-    const data = { ...this.iForm } as ItemInventarioCreate;
-    const obs = this.editandoItem
-      ? this.svc.actualizarItem(this.editandoItem.id, data)
-      : this.svc.crearItem(data);
+  private guardarItem(editando: ItemInventario | null, datos: Partial<ItemInventarioCreate>): void {
+    const obs = editando
+      ? this.svc.actualizarItem(editando.id, datos as ItemInventarioCreate)
+      : this.svc.crearItem(datos as ItemInventarioCreate);
     obs.subscribe({
       next: () => {
-        this.guardandoItem.set(false);
-        this.mostrarFormItem = false;
-        this.ok(this.editandoItem ? 'Item actualizado' : 'Item creado');
+        this.ok(editando ? 'Item actualizado' : 'Item creado');
         this.cargarInventario();
         this.cargarStats();
       },
-      error: err => {
-        this.guardandoItem.set(false);
-        this.err(err?.error?.detail ?? 'Error al guardar');
-      },
+      error: err => this.err(err?.error?.detail ?? 'Error al guardar'),
     });
   }
 
@@ -1043,77 +1250,78 @@ export class FarmaciaComponent implements OnInit {
 
   // ── Entrada stock ────────────────────────────────
 
+  /**
+   * El selector de proveedor tiene que llegar poblado al diálogo: si llega
+   * vacío, quien registra concluye «no hay proveedores» y guarda la entrada sin
+   * procedencia. Por eso se piden ANTES de abrirlo si aún no están.
+   */
   abrirEntrada(item: ItemInventario): void {
-    this.itemEntrada.set(item);
-    this.eForm = { motivo: 'Compra', cantidad: 0 };
-    // El selector de proveedor tiene que estar poblado antes de que se abra el
-    // diálogo: si llega vacío, el usuario concluye «no hay proveedores» y guarda
-    // la entrada sin procedencia.
-    if (this.proveedores().length === 0) this.cargarProveedores();
-    this.mostrarEntrada = true;
+    if (this.proveedores().length === 0) {
+      this.svc.listProveedores().subscribe({
+        next: ps => { this.proveedores.set(ps); this.abrirDialogoEntrada(item); },
+        error: () => this.abrirDialogoEntrada(item),
+      });
+      return;
+    }
+    this.abrirDialogoEntrada(item);
   }
 
-  confirmarEntrada(): void {
-    const item = this.itemEntrada();
-    if (!item || !this.eForm.cantidad || this.eForm.cantidad <= 0) return;
-    this.guardandoEntrada.set(true);
-    const payload: EntradaStock = {
-      cantidad: Number(this.eForm.cantidad),
-      motivo: this.eForm.motivo || 'Compra',
-      lote: this.eForm.lote,
-      fecha_vencimiento: this.eForm.fecha_vencimiento,
-      costo_unitario: this.eForm.costo_unitario ? Number(this.eForm.costo_unitario) : undefined,
-      proveedor_id: this.eForm.proveedor_id ?? undefined,
-      documento_soporte: this.eForm.documento_soporte || undefined,
-    };
-    this.svc.entradaStock(item.id, payload).subscribe({
+  private abrirDialogoEntrada(item: ItemInventario): void {
+    this.dialogo
+      .open(FarmaciaEntradaComponent, {
+        data: { item, proveedores: this.proveedoresActivos() },
+        maxWidth: '95vw',
+      })
+      .afterClosed()
+      .subscribe((entrada?: EntradaStock) => { if (entrada) this.registrarEntrada(item, entrada); });
+  }
+
+  private registrarEntrada(item: ItemInventario, entrada: EntradaStock): void {
+    this.svc.entradaStock(item.id, entrada).subscribe({
       next: updated => {
-        this.guardandoEntrada.set(false);
-        this.mostrarEntrada = false;
         this.ok('Entrada registrada', `Stock actualizado: ${updated.cantidad_actual} ${updated.unidad_medida}`);
         this.cargarInventario();
         this.cargarStats();
       },
-      error: err => {
-        this.guardandoEntrada.set(false);
-        this.err(err?.error?.detail ?? 'Error al registrar entrada');
-      },
+      error: err => this.err(err?.error?.detail ?? 'Error al registrar entrada'),
     });
   }
 
   // ── Dispensación ─────────────────────────────────
 
+  /** Mismo motivo que la entrada: sin inventario cargado el selector saldría
+   *  vacío y no habría nada que dispensar. */
   abrirDispensar(f: FormulaPendiente): void {
-    this.formulaDispensar.set(f);
-    this.dForm = { formula_id: f.id, cantidad_dispensada: f.cantidad };
-    if (this.inventario().length === 0) this.cargarInventario();
-    this.mostrarDispensar = true;
+    if (this.inventario().length === 0) {
+      this.svc.listInventario({}).subscribe({
+        next: items => { this.inventario.set(items); this.abrirDialogoDispensar(f); },
+        error: () => this.abrirDialogoDispensar(f),
+      });
+      return;
+    }
+    this.abrirDialogoDispensar(f);
   }
 
-  confirmarDispensa(): void {
-    if (!this.dForm.item_inventario_id || !this.dForm.cantidad_dispensada) return;
-    const itemSel = this.inventario().find(i => i.id === this.dForm.item_inventario_id);
-    const payload: DispensarCreate = {
-      formula_id: this.dForm.formula_id!,
-      item_inventario_id: this.dForm.item_inventario_id!,
-      cantidad_dispensada: Number(this.dForm.cantidad_dispensada),
-      lote_dispensado: this.dForm.lote_dispensado || itemSel?.lote || '',
-      observaciones: this.dForm.observaciones,
-    };
-    this.dispensando.set(true);
-    this.svc.dispensar(payload).subscribe({
+  private abrirDialogoDispensar(f: FormulaPendiente): void {
+    const lotes = new Map(this.inventario().map(i => [i.id, i.lote ?? '']));
+    this.dialogo
+      .open(FarmaciaDispensarComponent, {
+        data: { formula: f, items: this.inventarioParaDispensa(), lotes },
+        maxWidth: '95vw',
+      })
+      .afterClosed()
+      .subscribe((d?: DispensarCreate) => { if (d) this.dispensar(d); });
+  }
+
+  private dispensar(datos: DispensarCreate): void {
+    this.svc.dispensar(datos).subscribe({
       next: () => {
-        this.dispensando.set(false);
-        this.mostrarDispensar = false;
-        this.ok('Dispensación registrada', `Medicamento entregado al paciente`);
+        this.ok('Dispensación registrada', 'Medicamento entregado al paciente');
         this.cargarFormulas();
         this.cargarInventario();
         this.cargarStats();
       },
-      error: err => {
-        this.dispensando.set(false);
-        this.err(err?.error?.detail ?? 'Error al dispensar');
-      },
+      error: err => this.err(err?.error?.detail ?? 'Error al dispensar'),
     });
   }
 
@@ -1122,14 +1330,6 @@ export class FarmaciaComponent implements OnInit {
     if (tipo === 'SALIDA') return 'danger';
     if (tipo === 'AJUSTE') return 'warn';
     return 'secondary';
-  }
-
-  private _defaultIForm(): Partial<ItemInventarioCreate> {
-    return {
-      tipo: 'MEDICAMENTO', unidad_medida: 'UNIDAD', ubicacion: 'FARMACIA',
-      cantidad_actual: 0, cantidad_minima: 10, costo_unitario: 0,
-      requiere_refrigeracion: false, controlado: false, lote: '',
-    };
   }
 
   private ok(summary: string, detail?: string): void {

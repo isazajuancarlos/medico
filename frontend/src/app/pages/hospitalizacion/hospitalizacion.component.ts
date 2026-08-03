@@ -1,17 +1,16 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { SelectModule } from 'primeng/select';
-import { TooltipModule } from 'primeng/tooltip';
-import { DialogModule } from 'primeng/dialog';
-import { DividerModule } from 'primeng/divider';
-import { MessageService } from 'primeng/api';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
 import {
   HospitalizacionService, Hospitalizacion, Cama,
   MedicoBasic, IngresoCreate, EgresoUpdate,
@@ -20,15 +19,90 @@ import {
 type Vista = 'lista' | 'ingresar';
 type Tab = 'pacientes' | 'camas';
 
+const TIPOS_DE_EGRESO = [
+  { label: 'Alta médica', value: 'ALTA_MEDICA' },
+  { label: 'Alta voluntaria', value: 'ALTA_VOLUNTARIA' },
+  { label: 'Remisión', value: 'REMISION' },
+  { label: 'Defunción', value: 'DEFUNCION' },
+];
+
+/**
+ * Egreso de un paciente hospitalizado. Devuelve el egreso, o nada.
+ *
+ * El tipo de egreso viene con «Alta médica» puesto porque es el único de los
+ * cuatro que NO cambia la conducta si se elige mal por descuido: los otros tres
+ * —voluntaria, remisión y defunción— tienen efecto jurídico. Aun así la cama se
+ * libera con cualquiera de ellos, así que el campo se ofrece siempre abierto.
+ */
+@Component({
+  selector: 'app-hospitalizacion-egreso',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Registrar egreso</h2>
+    <mat-dialog-content>
+      <div class="cabecera">
+        <div class="rotulo">Paciente</div>
+        <div class="nombre">{{ h.paciente_nombre }}</div>
+        <div class="detalle">Cama {{ h.cama_numero }} · {{ h.cama_servicio }}</div>
+      </div>
+      <div class="campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de egreso *</mat-label>
+          <mat-select [(ngModel)]="f.tipo_egreso">
+            @for (o of tipos; track o.value) {
+              <mat-option [value]="o.value">{{ o.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Diagnóstico de egreso (CIE-10)</mat-label>
+          <input matInput [(ngModel)]="f.diagnostico_egreso" placeholder="Código CIE-10..." />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Resumen clínico del egreso</mat-label>
+          <textarea matInput [(ngModel)]="f.resumen_clinico" rows="4"
+            placeholder="Evolución durante la hospitalización, condición al alta..."></textarea>
+        </mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!f.tipo_egreso" [mat-dialog-close]="resultado()">
+        <i class="pi pi-sign-out"></i> Registrar egreso
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .cabecera { margin-bottom:1rem; min-width:min(28rem, 80vw); }
+    .rotulo { color:#94a3b8; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
+    .nombre { font-weight:600; color:#f1f5f9; margin-top:.2rem; }
+    .detalle { font-size:.82rem; color:#94a3b8; }
+    .campos { display:flex; flex-direction:column; gap:.5rem; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class HospitalizacionEgresoComponent {
+  readonly tipos = TIPOS_DE_EGRESO;
+  f: EgresoUpdate = { tipo_egreso: 'ALTA_MEDICA' };
+
+  constructor(@Inject(MAT_DIALOG_DATA) public h: Hospitalizacion) {}
+
+  resultado(): EgresoUpdate | null {
+    return this.f.tipo_egreso ? this.f : null;
+  }
+}
+
 @Component({
   selector: 'app-hospitalizacion',
   standalone: true,
-  providers: [MessageService],
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, SelectModule, TooltipModule,
-    DialogModule, DividerModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -40,12 +114,17 @@ type Tab = 'pacientes' | 'camas';
         <div class="list-header">
           <h2 class="page-title">Hospitalización</h2>
           <div style="display:flex;gap:0.5rem;align-items:center">
-            <p-select [(ngModel)]="filtroEstado" [options]="opcionesEstado"
-              optionLabel="label" optionValue="value"
-              (onChange)="cargarHospitalizaciones()"
-              placeholder="Estado" style="width:170px" />
-            <p-button label="Nuevo ingreso" icon="pi pi-plus"
-              (onClick)="vista.set('ingresar')" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:170px">
+              <mat-label>Estado</mat-label>
+              <mat-select [(ngModel)]="filtroEstado" (selectionChange)="cargarHospitalizaciones()">
+                @for (o of opcionesEstado; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button matButton="filled" (click)="vista.set('ingresar')">
+              <i class="pi pi-plus"></i> Nuevo ingreso
+            </button>
           </div>
         </div>
 
@@ -91,54 +170,66 @@ type Tab = 'pacientes' | 'camas';
               <p>No hay pacientes hospitalizados con el filtro seleccionado.</p>
             </div>
           } @else {
-            <p-table [value]="hospitalizaciones()" [rowHover]="true" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Paciente</th>
-                  <th>Cama / Piso</th>
-                  <th>Servicio</th>
-                  <th>Médico tratante</th>
-                  <th>Ingreso</th>
-                  <th style="text-align:center">Días</th>
-                  <th style="text-align:center">Estado</th>
-                  <th style="text-align:center">Egreso</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-h>
-                <tr>
-                  <td>
-                    <strong>{{ h.paciente_nombre || '—' }}</strong>
-                    @if (h.paciente_identificacion) {
-                      <div style="font-size:0.78rem;color:#94a3b8">{{ h.paciente_identificacion }}</div>
-                    }
-                  </td>
-                  <td>
-                    <span class="cama-badge">{{ h.cama_numero || '—' }}</span>
-                    @if (h.cama_piso) {
-                      <div style="font-size:0.78rem;color:#94a3b8">Piso {{ h.cama_piso }}</div>
-                    }
-                  </td>
-                  <td style="font-size:0.85rem">{{ h.cama_servicio || '—' }}</td>
-                  <td style="font-size:0.85rem">{{ h.medico_nombre || '—' }}</td>
-                  <td style="font-size:0.85rem">{{ h.fecha_ingreso | date:'dd/MM/yyyy' }}</td>
-                  <td style="text-align:center">
-                    <span class="dias-badge">{{ diasEstancia(h.fecha_ingreso) }}</span>
-                  </td>
-                  <td style="text-align:center">
-                    <p-tag [value]="h.estado" [severity]="estadoSeverity(h.estado)" />
-                  </td>
-                  <td style="text-align:center">
-                    @if (h.estado === 'ACTIVA') {
-                      <p-button icon="pi pi-sign-out" [text]="true" size="small"
-                        severity="warn" pTooltip="Registrar egreso"
-                        (onClick)="abrirEgreso(h)" />
-                    } @else {
-                      <span style="font-size:0.78rem;color:#64748b">{{ h.fecha_egreso | date:'dd/MM/yy' }}</span>
-                    }
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="hospitalizaciones()" class="tabla">
+              <ng-container matColumnDef="paciente">
+                <th mat-header-cell *matHeaderCellDef>Paciente</th>
+                <td mat-cell *matCellDef="let h">
+                  <strong>{{ h.paciente_nombre || '—' }}</strong>
+                  @if (h.paciente_identificacion) {
+                    <div style="font-size:0.78rem;color:#94a3b8">{{ h.paciente_identificacion }}</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="cama">
+                <th mat-header-cell *matHeaderCellDef>Cama / Piso</th>
+                <td mat-cell *matCellDef="let h">
+                  <span class="cama-badge">{{ h.cama_numero || '—' }}</span>
+                  @if (h.cama_piso) {
+                    <div style="font-size:0.78rem;color:#94a3b8">Piso {{ h.cama_piso }}</div>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="servicio">
+                <th mat-header-cell *matHeaderCellDef>Servicio</th>
+                <td mat-cell *matCellDef="let h" style="font-size:0.85rem">{{ h.cama_servicio || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="medico">
+                <th mat-header-cell *matHeaderCellDef>Médico tratante</th>
+                <td mat-cell *matCellDef="let h" style="font-size:0.85rem">{{ h.medico_nombre || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="ingreso">
+                <th mat-header-cell *matHeaderCellDef>Ingreso</th>
+                <td mat-cell *matCellDef="let h" style="font-size:0.85rem">{{ h.fecha_ingreso | date:'dd/MM/yyyy' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="dias">
+                <th mat-header-cell *matHeaderCellDef class="centro">Días</th>
+                <td mat-cell *matCellDef="let h" class="centro">
+                  <span class="dias-badge">{{ diasEstancia(h.fecha_ingreso) }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+                <td mat-cell *matCellDef="let h" class="centro">
+                  <x-etiqueta [value]="h.estado" [severity]="estadoSeverity(h.estado)" />
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="egreso">
+                <th mat-header-cell *matHeaderCellDef class="centro">Egreso</th>
+                <td mat-cell *matCellDef="let h" class="centro">
+                  @if (h.estado === 'ACTIVA') {
+                    <button matIconButton class="aviso-color" matTooltip="Registrar egreso"
+                      (click)="abrirEgreso(h)">
+                      <i class="pi pi-sign-out"></i>
+                    </button>
+                  } @else {
+                    <span style="font-size:0.78rem;color:#64748b">{{ h.fecha_egreso | date:'dd/MM/yy' }}</span>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+              <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+            </table>
           }
         }
 
@@ -160,13 +251,13 @@ type Tab = 'pacientes' | 'camas';
                   <div class="cama-estado">{{ cama.estado }}</div>
                   <div class="cama-icons">
                     @if (cama.tiene_oxigeno) {
-                      <i class="pi pi-circle-fill" pTooltip="Oxígeno" style="color:#38bdf8;font-size:0.6rem"></i>
+                      <i class="pi pi-circle-fill" matTooltip="Oxígeno" style="color:#38bdf8;font-size:0.6rem"></i>
                     }
                     @if (cama.tiene_monitor) {
-                      <i class="pi pi-heart-fill" pTooltip="Monitor" style="color:#f472b6;font-size:0.6rem"></i>
+                      <i class="pi pi-heart-fill" matTooltip="Monitor" style="color:#f472b6;font-size:0.6rem"></i>
                     }
                     @if (cama.es_aislamiento) {
-                      <i class="pi pi-lock" pTooltip="Aislamiento" style="color:#fb923c;font-size:0.6rem"></i>
+                      <i class="pi pi-lock" matTooltip="Aislamiento" style="color:#fb923c;font-size:0.6rem"></i>
                     }
                   </div>
                 </div>
@@ -181,7 +272,9 @@ type Tab = 'pacientes' | 'camas';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'ingresar') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" pTooltip="Volver" />
+          <button matIconButton matTooltip="Volver" (click)="volverLista()">
+            <i class="pi pi-arrow-left"></i>
+          </button>
           <h2 class="page-title" style="margin:0">Nuevo Ingreso Hospitalario</h2>
         </div>
 
@@ -190,147 +283,109 @@ type Tab = 'pacientes' | 'camas';
           <!-- Búsqueda paciente -->
           <div class="form-section">
             <div class="section-title">Paciente</div>
-            <div style="display:flex;gap:0.5rem;align-items:flex-end">
-              <div class="field" style="flex:1">
-                <label>Buscar por nombre o identificación</label>
-                <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
+            <div style="display:flex;gap:0.5rem;align-items:flex-start">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                <mat-label>Buscar por nombre o identificación</mat-label>
+                <input matInput [ngModel]="busquedaPaciente()" (ngModelChange)="busquedaPaciente.set($event)"
                   placeholder="Ingrese nombre o número de identificación..."
                   (keyup.enter)="buscarPaciente()" />
-              </div>
-              <p-button label="Buscar" icon="pi pi-search"
-                [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+              </mat-form-field>
+              <button matButton="filled" [disabled]="buscandoPaciente()" (click)="buscarPaciente()">
+                <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i> Buscar
+              </button>
             </div>
             @if (pacientesResultados().length > 0) {
-              <div style="margin-top:0.75rem">
-                <label class="field-label">Seleccionar paciente</label>
-                <p-select [(ngModel)]="pacienteSeleccionado"
-                  [options]="pacientesResultados()"
-                  optionLabel="nombre_completo"
-                  [filter]="true" filterBy="nombre_completo,identificacion"
-                  placeholder="Seleccione el paciente..."
-                  class="w-full" style="width:100%" />
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
+                <mat-label>Seleccionar paciente</mat-label>
+                <mat-select [ngModel]="pacienteSeleccionado()" (ngModelChange)="pacienteSeleccionado.set($event)">
+                  @for (p of pacientesResultados(); track p.id) {
+                    <mat-option [value]="p">{{ p.nombre_completo }} — {{ p.identificacion }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             }
-            @if (pacienteSeleccionado) {
+            @if (pacienteSeleccionado(); as sel) {
               <div class="paciente-card">
                 <i class="pi pi-user" style="color:#818cf8"></i>
                 <div>
-                  <div style="font-weight:600;color:#f1f5f9">{{ pacienteSeleccionado.nombre_completo }}</div>
-                  <div style="font-size:0.82rem;color:#94a3b8">{{ pacienteSeleccionado.identificacion }}</div>
+                  <div style="font-weight:600;color:#f1f5f9">{{ sel.nombre_completo }}</div>
+                  <div style="font-size:0.82rem;color:#94a3b8">{{ sel.identificacion }}</div>
                 </div>
-                <p-button icon="pi pi-times" [text]="true" size="small" severity="secondary"
-                  (onClick)="pacienteSeleccionado = null" />
+                <button matIconButton matTooltip="Quitar" (click)="pacienteSeleccionado.set(null)">
+                  <i class="pi pi-times"></i>
+                </button>
               </div>
             }
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Cama y médico -->
           <div class="form-section">
             <div class="section-title">Asignación</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Cama disponible *</label>
-                <p-select [(ngModel)]="iForm.cama_id"
-                  [options]="camasDisp()"
-                  optionLabel="label" optionValue="value"
-                  [filter]="true"
-                  placeholder="Seleccione cama..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Médico tratante *</label>
-                <p-select [(ngModel)]="iForm.medico_id"
-                  [options]="medicos()"
-                  optionLabel="nombre_completo" optionValue="id"
-                  [filter]="true"
-                  placeholder="Seleccione médico..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Vía de ingreso</label>
-                <p-select [(ngModel)]="iForm.via_ingreso"
-                  [options]="opcionesVia"
-                  optionLabel="label" optionValue="value"
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Diagnóstico de ingreso (CIE-10)</label>
-                <input pInputText [(ngModel)]="iForm.diagnostico_ingreso"
-                  class="w-full" placeholder="Ej: J18.9, Z00.0..." />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Cama disponible *</mat-label>
+                <mat-select [(ngModel)]="iForm().cama_id">
+                  @for (c of camasDisp(); track c.value) {
+                    <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Médico tratante *</mat-label>
+                <mat-select [(ngModel)]="iForm().medico_id">
+                  @for (m of medicos(); track m.id) {
+                    <mat-option [value]="m.id">{{ m.nombre_completo }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Vía de ingreso</mat-label>
+                <mat-select [(ngModel)]="iForm().via_ingreso">
+                  @for (o of opcionesVia; track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Diagnóstico de ingreso (CIE-10)</mat-label>
+                <input matInput [(ngModel)]="iForm().diagnostico_ingreso" placeholder="Ej: J18.9, Z00.0..." />
+              </mat-form-field>
             </div>
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Notas clínicas -->
           <div class="form-section">
             <div class="section-title">Notas clínicas</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Motivo de ingreso</label>
-                <textarea pTextarea [(ngModel)]="iForm.motivo_ingreso"
-                  rows="3" class="w-full"
+              <mat-form-field appearance="outline">
+                <mat-label>Motivo de ingreso</mat-label>
+                <textarea matInput [(ngModel)]="iForm().motivo_ingreso" rows="3"
                   placeholder="Descripción del motivo de hospitalización..."></textarea>
-              </div>
-              <div class="field">
-                <label>Observaciones de ingreso</label>
-                <textarea pTextarea [(ngModel)]="iForm.observaciones_ingreso"
-                  rows="3" class="w-full"
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Observaciones de ingreso</mat-label>
+                <textarea matInput [(ngModel)]="iForm().observaciones_ingreso" rows="3"
                   placeholder="Observaciones adicionales al momento del ingreso..."></textarea>
-              </div>
+              </mat-form-field>
             </div>
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button label="Registrar ingreso" icon="pi pi-check"
-              [loading]="ingresando()"
-              [disabled]="!pacienteSeleccionado || !iForm.cama_id || !iForm.medico_id"
-              (onClick)="registrarIngreso()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="registrarIngreso()"
+              [disabled]="ingresando() || !pacienteSeleccionado() || !iForm().cama_id || !iForm().medico_id">
+              <i [class]="ingresando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Registrar ingreso
+            </button>
           </div>
         </div>
       }
 
     </div>
 
-    <!-- ══ DIALOG EGRESO ══ -->
-    <p-dialog header="Registrar Egreso" [(visible)]="mostrarEgreso"
-      [style]="{width:'520px'}" [modal]="true" [closable]="true">
-      @if (hospEgreso()) {
-        <div style="margin-bottom:1rem">
-          <div style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Paciente</div>
-          <div style="font-weight:600;color:#f1f5f9;margin-top:0.2rem">{{ hospEgreso()!.paciente_nombre }}</div>
-          <div style="font-size:0.82rem;color:#94a3b8">Cama {{ hospEgreso()!.cama_numero }} · {{ hospEgreso()!.cama_servicio }}</div>
-        </div>
-        <div class="field" style="margin-bottom:1rem">
-          <label class="field-label">Tipo de egreso *</label>
-          <p-select [(ngModel)]="eForm.tipo_egreso" [options]="opcionesEgreso"
-            optionLabel="label" optionValue="value"
-            class="w-full" style="width:100%" />
-        </div>
-        <div class="field" style="margin-bottom:1rem">
-          <label class="field-label">Diagnóstico de egreso (CIE-10)</label>
-          <input pInputText [(ngModel)]="eForm.diagnostico_egreso" class="w-full"
-            placeholder="Código CIE-10..." />
-        </div>
-        <div class="field" style="margin-bottom:1rem">
-          <label class="field-label">Resumen clínico del egreso</label>
-          <textarea pTextarea [(ngModel)]="eForm.resumen_clinico" rows="4" class="w-full"
-            placeholder="Evolución durante la hospitalización, condición al alta..."></textarea>
-        </div>
-        <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.1)">
-          <p-button label="Cancelar" [text]="true" (onClick)="mostrarEgreso = false" />
-          <p-button label="Registrar egreso" icon="pi pi-sign-out"
-            severity="warn" [loading]="registrandoEgreso()"
-            (onClick)="registrarEgreso()" />
-        </div>
-      }
-    </p-dialog>
-
-    <p-toast />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -414,11 +469,22 @@ type Tab = 'pacientes' | 'camas';
     .step-actions { display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
 
     ::ng-deep textarea { resize: vertical; }
+
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    mat-form-field { width: 100%; }
+    /* En M3 el input color de un botón no pinta nada: el color va por CSS. */
+    .aviso-color { color: #f59e0b; }
   `]
 })
 export class HospitalizacionComponent implements OnInit {
   private svc = inject(HospitalizacionService);
-  private messageService = inject(MessageService);
+  private dialogo = inject(MatDialog);
+  private messageService = inject(Avisos);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['paciente', 'cama', 'servicio', 'medico', 'ingreso',
+                       'dias', 'estado', 'egreso'];
 
   vista = signal<Vista>('lista');
   tab = signal<Tab>('pacientes');
@@ -449,26 +515,17 @@ export class HospitalizacionComponent implements OnInit {
     { label: 'Remisión', value: 'REMISION' },
   ];
 
-  readonly opcionesEgreso = [
-    { label: 'Alta médica', value: 'ALTA_MEDICA' },
-    { label: 'Alta voluntaria', value: 'ALTA_VOLUNTARIA' },
-    { label: 'Remisión', value: 'REMISION' },
-    { label: 'Defunción', value: 'DEFUNCION' },
-  ];
-
   // Ingreso
-  busquedaPaciente = '';
+  readonly busquedaPaciente = signal('');
   buscandoPaciente = signal(false);
   pacientesResultados = signal<any[]>([]);
-  pacienteSeleccionado: any = null;
+  readonly pacienteSeleccionado = signal<any>(null);
   ingresando = signal(false);
-  iForm: Partial<IngresoCreate> = { diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' };
-
-  // Egreso
-  mostrarEgreso = false;
-  hospEgreso = signal<Hospitalizacion | null>(null);
-  registrandoEgreso = signal(false);
-  eForm: EgresoUpdate = { tipo_egreso: 'ALTA_MEDICA' };
+  /** Señales: `volverLista()` las reinicia y lo llaman los `subscribe` del
+   *  ingreso y del egreso, o sea después de que la detección haya pasado. Con
+   *  un campo llano el formulario se quedaba con el paciente anterior. */
+  readonly iForm = signal<Partial<IngresoCreate>>(
+    { diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' });
 
   ngOnInit(): void {
     this.cargarHospitalizaciones();
@@ -494,18 +551,18 @@ export class HospitalizacionComponent implements OnInit {
 
   volverLista(): void {
     this.vista.set('lista');
-    this.busquedaPaciente = '';
+    this.busquedaPaciente.set('');
     this.pacientesResultados.set([]);
-    this.pacienteSeleccionado = null;
-    this.iForm = { diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' };
+    this.pacienteSeleccionado.set(null);
+    this.iForm.set({ diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' });
     this.cargarHospitalizaciones();
     this.cargarCamas();
   }
 
   buscarPaciente(): void {
-    if (!this.busquedaPaciente.trim()) return;
+    if (!this.busquedaPaciente().trim()) return;
     this.buscandoPaciente.set(true);
-    this.svc.searchPacientes(this.busquedaPaciente).subscribe({
+    this.svc.searchPacientes(this.busquedaPaciente()).subscribe({
       next: ps => {
         this.pacientesResultados.set(ps);
         this.buscandoPaciente.set(false);
@@ -516,15 +573,15 @@ export class HospitalizacionComponent implements OnInit {
   }
 
   registrarIngreso(): void {
-    if (!this.pacienteSeleccionado || !this.iForm.cama_id || !this.iForm.medico_id) return;
+    if (!this.pacienteSeleccionado() || !this.iForm().cama_id || !this.iForm().medico_id) return;
     const payload: IngresoCreate = {
-      paciente_id: this.pacienteSeleccionado.id,
-      cama_id: this.iForm.cama_id!,
-      medico_id: this.iForm.medico_id!,
-      diagnostico_ingreso: this.iForm.diagnostico_ingreso || 'Z00.0',
-      via_ingreso: this.iForm.via_ingreso || 'PROGRAMADA',
-      motivo_ingreso: this.iForm.motivo_ingreso,
-      observaciones_ingreso: this.iForm.observaciones_ingreso,
+      paciente_id: this.pacienteSeleccionado().id,
+      cama_id: this.iForm().cama_id!,
+      medico_id: this.iForm().medico_id!,
+      diagnostico_ingreso: this.iForm().diagnostico_ingreso || 'Z00.0',
+      via_ingreso: this.iForm().via_ingreso || 'PROGRAMADA',
+      motivo_ingreso: this.iForm().motivo_ingreso,
+      observaciones_ingreso: this.iForm().observaciones_ingreso,
     };
     this.ingresando.set(true);
     this.svc.ingresar(payload).subscribe({
@@ -541,27 +598,20 @@ export class HospitalizacionComponent implements OnInit {
   }
 
   abrirEgreso(h: Hospitalizacion): void {
-    this.hospEgreso.set(h);
-    this.eForm = { tipo_egreso: 'ALTA_MEDICA' };
-    this.mostrarEgreso = true;
+    this.dialogo
+      .open(HospitalizacionEgresoComponent, { data: h, maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((egreso?: EgresoUpdate) => { if (egreso) this.registrarEgreso(h, egreso); });
   }
 
-  registrarEgreso(): void {
-    const h = this.hospEgreso();
-    if (!h) return;
-    this.registrandoEgreso.set(true);
-    this.svc.egreso(h.id, this.eForm).subscribe({
+  private registrarEgreso(h: Hospitalizacion, egreso: EgresoUpdate): void {
+    this.svc.egreso(h.id, egreso).subscribe({
       next: () => {
-        this.registrandoEgreso.set(false);
-        this.mostrarEgreso = false;
         this.ok('Egreso registrado', `Cama ${h.cama_numero} liberada`);
         this.cargarHospitalizaciones();
         this.cargarCamas();
       },
-      error: err => {
-        this.registrandoEgreso.set(false);
-        this.err(err?.error?.detail ?? 'Error al registrar el egreso');
-      },
+      error: err => this.err(err?.error?.detail ?? 'Error al registrar el egreso'),
     });
   }
 

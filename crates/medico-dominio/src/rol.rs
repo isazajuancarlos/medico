@@ -194,6 +194,18 @@ pub enum Capacidad {
     /// el módulo de citas inservible justo en el mostrador. Se cierra escribir,
     /// no mirar.
     GestionarAgenda,
+    /// Generar el RIPS de un periodo: el archivo con el que se factura.
+    ///
+    /// Son los dos roles que el Python ya exigía (`require_role(ADMIN,
+    /// SUPERADMIN)` en `routers/rips.py`), y no se amplía el defecto al portar:
+    /// el archivo lleva las atenciones de TODOS los pacientes de la institución
+    /// y de él depende el pago.
+    ///
+    /// El prestador que es una sola persona —un «profesional independiente», que
+    /// es el tipo de cuenta más común ante el MUV— se lo concede a `Medico` en
+    /// su matriz. Por eso el defecto puede ser estrecho sin dejar a nadie fuera:
+    /// hay camino, y lo abre quien conoce su planta.
+    GenerarRips,
     /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
@@ -220,6 +232,7 @@ impl Capacidad {
         Capacidad::GestionarFarmacia,
         Capacidad::GestionarAmbulancias,
         Capacidad::GestionarAgenda,
+        Capacidad::GenerarRips,
         Capacidad::GestionarUsuarios,
         Capacidad::GestionarInstituciones,
     ];
@@ -255,6 +268,7 @@ impl Capacidad {
             Capacidad::GestionarFarmacia => "gestionar_farmacia",
             Capacidad::GestionarAmbulancias => "gestionar_ambulancias",
             Capacidad::GestionarAgenda => "gestionar_agenda",
+            Capacidad::GenerarRips => "generar_rips",
             Capacidad::GestionarUsuarios => "gestionar_usuarios",
             Capacidad::GestionarInstituciones => "gestionar_instituciones",
         }
@@ -365,6 +379,7 @@ impl RolUsuario {
             // auxiliar arme las agendas se lo concede en su matriz.
             GestionarAgenda => matches!(self, Superadmin | Admin | Medico),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
+            GenerarRips => matches!(self, Superadmin | Admin),
             GestionarUsuarios => matches!(self, Superadmin | Admin),
             GestionarInstituciones => matches!(self, Superadmin),
         }
@@ -466,11 +481,12 @@ mod pruebas {
                 | Capacidad::GestionarFarmacia
                 | Capacidad::GestionarAmbulancias
                 | Capacidad::GestionarAgenda
+                | Capacidad::GenerarRips
                 | Capacidad::GestionarUsuarios
                 | Capacidad::GestionarInstituciones => (),
             };
         }
-        assert_eq!(Capacidad::TODAS.len(), 15, "¿se añadió una capacidad?");
+        assert_eq!(Capacidad::TODAS.len(), 16, "¿se añadió una capacidad?");
         let unicas: std::collections::HashSet<_> = Capacidad::TODAS.iter().collect();
         assert_eq!(unicas.len(), Capacidad::TODAS.len(), "hay una repetida");
     }

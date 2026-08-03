@@ -120,6 +120,48 @@ impl Dato {
     }
 }
 
+/// Lo mismo que [`Dato`] para los campos que el RIPS emite como NÚMERO:
+/// `vrServicio`, `codServicio`, `cantidadMedicamento`.
+///
+/// No es un adorno del tipo: el MUV rechaza `"7.0"` y `"0"` donde espera `7` y
+/// `0` —«Existen errores en el formato JSON»—, así que la diferencia entre
+/// número y cadena tiene que sobrevivir hasta el serializador. Pasarlos por
+/// [`Dato`] obligaría a convertir a texto y volver, y el viaje de vuelta es
+/// donde un `7` se convierte en `7.0`.
+///
+/// Y aquí la regla de «vacío» es distinta a propósito: **solo `None` es
+/// ausente**. Un servicio puede valer cero de verdad, y confundir «no se
+/// registró» con «vale cero» es exactamente lo que este módulo existe para no
+/// hacer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatoNumero {
+    Hay(i64),
+    Falta,
+}
+
+impl DatoNumero {
+    pub fn o_nada(self) -> Option<i64> {
+        match self {
+            DatoNumero::Hay(v) => Some(v),
+            DatoNumero::Falta => None,
+        }
+    }
+
+    /// El valor, o el supuesto declarado en el [`Donde`]. El supuesto se declara
+    /// como texto —es el mismo campo para todos los tipos— y se convierte aquí;
+    /// si no fuera un número, el campo queda vacío en vez de llevar basura.
+    pub fn o_el_supuesto(self, supuesto: Option<&str>) -> Option<i64> {
+        match self {
+            DatoNumero::Hay(v) => Some(v),
+            DatoNumero::Falta => supuesto.and_then(|s| s.parse().ok()),
+        }
+    }
+
+    pub fn hay(&self) -> bool {
+        matches!(self, DatoNumero::Hay(_))
+    }
+}
+
 /// Dónde buscar un dato que falte: el archivo, el registro, el campo, cómo se
 /// llama para un humano, y qué se habría supuesto.
 ///
@@ -152,6 +194,13 @@ impl Donde {
     }
     pub fn ah(registro_id: i64, campo: &'static str, etiqueta: &'static str) -> Self {
         Self::en("AH", registro_id, campo, etiqueta)
+    }
+
+    /// El bloque de identificación del usuario, que no pertenece a ningún
+    /// archivo: es el mismo en los cinco y se escribe una vez por paciente. Sin
+    /// esto, la falta de un municipio aparecería como si fuera de la consulta.
+    pub fn usuarios(registro_id: i64, campo: &'static str, etiqueta: &'static str) -> Self {
+        Self::en("usuarios", registro_id, campo, etiqueta)
     }
 
     fn en(
@@ -254,6 +303,22 @@ impl Recolector {
         }
         self.faltantes.push(donde.falta(None));
         Dato::Falta
+    }
+
+    /// Pide un dato obligatorio que se emite como número. Ver [`DatoNumero`].
+    ///
+    /// Comparte el registro de faltas con [`Recolector::dato`] —una sola lista,
+    /// un solo informe de cierre— y se separa solo en lo que de verdad difiere:
+    /// aquí `0` es un valor y allá `"0"` también lo sería, pero allá la cadena
+    /// en blanco es una ausencia y aquí no hay cadena en blanco que valga.
+    pub fn numero(&mut self, valor: Option<i64>, donde: &Donde) -> DatoNumero {
+        match valor {
+            Some(v) => DatoNumero::Hay(v),
+            None => {
+                self.faltantes.push(donde.falta(None));
+                DatoNumero::Falta
+            }
+        }
     }
 
     /// Como [`Recolector::dato`], pero además comprueba el valor contra un

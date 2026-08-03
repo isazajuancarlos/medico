@@ -1,17 +1,16 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
-import { SelectModule } from 'primeng/select';
-import { DividerModule } from 'primeng/divider';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { Confirmar } from '../../shared/ui/confirmar.service';
 import {
   InterconsultaService, Interconsulta, InterconsultaCreate, InterconsultaResponder,
 } from '../../services/interconsulta.service';
@@ -21,12 +20,10 @@ type Vista = 'lista' | 'nueva' | 'detalle';
 @Component({
   selector: 'app-interconsultas',
   standalone: true,
-  providers: [MessageService, ConfirmationService],
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, TextareaModule, TableModule,
-    TagModule, ToastModule, TooltipModule, SelectModule,
-    DividerModule, ConfirmDialogModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatTableModule, EtiquetaComponent, MatTooltipModule, MatDividerModule,
   ],
   template: `
     <div class="page-card">
@@ -37,8 +34,9 @@ type Vista = 'lista' | 'nueva' | 'detalle';
       @if (vista() === 'lista') {
         <div class="list-header">
           <h2 class="page-title">Interconsultas</h2>
-          <p-button label="Nueva interconsulta" icon="pi pi-plus"
-            (onClick)="abrirNueva()" />
+          <button matButton="filled" (click)="abrirNueva()">
+            <i class="pi pi-plus"></i> Nueva interconsulta
+          </button>
         </div>
 
         <!-- Filtros -->
@@ -52,12 +50,22 @@ type Vista = 'lista' | 'nueva' | 'detalle';
               (click)="cambiarTab('para_mi')">Para mí</button>
           </div>
           <div style="display:flex;gap:0.5rem;margin-left:auto">
-            <p-select [(ngModel)]="filtroEstado" [options]="opcionesEstado"
-              optionLabel="label" optionValue="value"
-              (onChange)="cargar()" placeholder="Estado" style="width:155px" />
-            <p-select [(ngModel)]="filtroPrioridad" [options]="opcionesPrioridad"
-              optionLabel="label" optionValue="value"
-              (onChange)="cargar()" placeholder="Prioridad" style="width:140px" />
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:155px">
+              <mat-label>Estado</mat-label>
+              <mat-select [(ngModel)]="filtroEstado" (selectionChange)="cargar()">
+                @for (o of opcionesEstado; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:140px">
+              <mat-label>Prioridad</mat-label>
+              <mat-select [(ngModel)]="filtroPrioridad" (selectionChange)="cargar()">
+                @for (o of opcionesPrioridad; track o.value) {
+                  <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           </div>
         </div>
 
@@ -69,42 +77,54 @@ type Vista = 'lista' | 'nueva' | 'detalle';
             <p>No hay interconsultas con los filtros seleccionados.</p>
           </div>
         } @else {
-          <p-table [value]="interconsultas()" [rowHover]="true" styleClass="p-datatable-sm">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Paciente</th>
-                <th>Especialidad solicitada</th>
-                <th>Solicita</th>
-                <th>Fecha</th>
-                <th style="text-align:center">Prioridad</th>
-                <th style="text-align:center">Estado</th>
-                <th style="text-align:center">Acción</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-ic>
-              <tr>
-                <td>
-                  <strong>{{ ic.paciente_nombre || '—' }}</strong>
-                  @if (ic.paciente_identificacion) {
-                    <div style="font-size:0.78rem;color:#94a3b8">{{ ic.paciente_identificacion }}</div>
-                  }
-                </td>
-                <td style="font-weight:500">{{ ic.especialidad_nombre || '—' }}</td>
-                <td style="font-size:0.85rem">{{ ic.medico_solicita_nombre || '—' }}</td>
-                <td style="font-size:0.85rem;white-space:nowrap">{{ ic.fecha_solicitud | date:'dd/MM/yyyy' }}</td>
-                <td style="text-align:center">
-                  <p-tag [value]="ic.prioridad" [severity]="prioridadSeverity(ic.prioridad)" />
-                </td>
-                <td style="text-align:center">
-                  <p-tag [value]="estadoLabel(ic.estado)" [severity]="estadoSeverity(ic.estado)" />
-                </td>
-                <td style="text-align:center">
-                  <p-button icon="pi pi-file-edit" [text]="true" size="small"
-                    pTooltip="Ver detalle" (onClick)="abrirDetalle(ic)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+          <table mat-table [dataSource]="interconsultas()" class="tabla">
+            <ng-container matColumnDef="paciente">
+              <th mat-header-cell *matHeaderCellDef>Paciente</th>
+              <td mat-cell *matCellDef="let ic">
+                <strong>{{ ic.paciente_nombre || '—' }}</strong>
+                @if (ic.paciente_identificacion) {
+                  <div style="font-size:0.78rem;color:#94a3b8">{{ ic.paciente_identificacion }}</div>
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="especialidad">
+              <th mat-header-cell *matHeaderCellDef>Especialidad solicitada</th>
+              <td mat-cell *matCellDef="let ic" style="font-weight:500">{{ ic.especialidad_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="solicita">
+              <th mat-header-cell *matHeaderCellDef>Solicita</th>
+              <td mat-cell *matCellDef="let ic" style="font-size:0.85rem">{{ ic.medico_solicita_nombre || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let ic" style="font-size:0.85rem;white-space:nowrap">
+                {{ ic.fecha_solicitud | date:'dd/MM/yyyy' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="prioridad">
+              <th mat-header-cell *matHeaderCellDef class="centro">Prioridad</th>
+              <td mat-cell *matCellDef="let ic" class="centro">
+                <x-etiqueta [value]="ic.prioridad" [severity]="prioridadSeverity(ic.prioridad)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef class="centro">Estado</th>
+              <td mat-cell *matCellDef="let ic" class="centro">
+                <x-etiqueta [value]="estadoLabel(ic.estado)" [severity]="estadoSeverity(ic.estado)" />
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="accion">
+              <th mat-header-cell *matHeaderCellDef class="centro">Acción</th>
+              <td mat-cell *matCellDef="let ic" class="centro">
+                <button matIconButton matTooltip="Ver detalle" (click)="abrirDetalle(ic)">
+                  <i class="pi pi-file-edit"></i>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+            <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+          </table>
         }
       }
 
@@ -113,7 +133,7 @@ type Vista = 'lista' | 'nueva' | 'detalle';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'nueva') {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">Nueva Interconsulta</h2>
         </div>
 
@@ -121,23 +141,26 @@ type Vista = 'lista' | 'nueva' | 'detalle';
           <!-- Paciente -->
           <div class="form-section">
             <div class="section-label">Paciente</div>
-            <div style="display:flex;gap:0.5rem;align-items:flex-end">
-              <div class="field" style="flex:1">
-                <input pInputText [(ngModel)]="busquedaPaciente" class="w-full"
+            <div style="display:flex;gap:0.5rem;align-items:flex-start">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
+                <mat-label>Paciente</mat-label>
+                <input matInput [(ngModel)]="busquedaPaciente"
                   placeholder="Nombre o identificación del paciente..."
                   (keyup.enter)="buscarPaciente()" />
-              </div>
-              <p-button label="Buscar" icon="pi pi-search"
-                [loading]="buscandoPaciente()" (onClick)="buscarPaciente()" />
+              </mat-form-field>
+              <button matButton="filled" [disabled]="buscandoPaciente()" (click)="buscarPaciente()">
+                <i [class]="buscandoPaciente() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i> Buscar
+              </button>
             </div>
             @if (resultadosPaciente().length > 0) {
-              <div style="margin-top:0.75rem">
-                <p-select [(ngModel)]="pacienteSeleccionado"
-                  [options]="resultadosPaciente()"
-                  optionLabel="nombre_completo" [filter]="true"
-                  placeholder="Seleccione paciente..."
-                  class="w-full" style="width:100%" />
-              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
+                <mat-label>Seleccione paciente…</mat-label>
+                <mat-select [(ngModel)]="pacienteSeleccionado">
+                  @for (p of resultadosPaciente(); track p.id) {
+                    <mat-option [value]="p">{{ p.nombre_completo }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             }
             @if (pacienteSeleccionado) {
               <div class="paciente-chip">
@@ -148,49 +171,49 @@ type Vista = 'lista' | 'nueva' | 'detalle';
             }
           </div>
 
-          <p-divider />
+          <mat-divider />
 
           <!-- Especialidad, prioridad -->
           <div class="form-section">
             <div class="section-label">Solicitud</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Especialidad solicitada *</label>
-                <p-select [(ngModel)]="nForm.especialidad_solicitada_id"
-                  [options]="especialidades()"
-                  optionLabel="nombre" optionValue="id"
-                  [filter]="true" filterBy="nombre"
-                  placeholder="Seleccione especialidad..."
-                  class="w-full" style="width:100%" />
-              </div>
-              <div class="field">
-                <label>Prioridad</label>
-                <p-select [(ngModel)]="nForm.prioridad"
-                  [options]="opcionesPrioridad.slice(1)"
-                  optionLabel="label" optionValue="value"
-                  class="w-full" style="width:100%" />
-              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Especialidad solicitada *</mat-label>
+                <mat-select [(ngModel)]="nForm.especialidad_solicitada_id">
+                  @for (e of especialidades(); track e.id) {
+                    <mat-option [value]="e.id">{{ e.nombre }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Prioridad</mat-label>
+                <mat-select [(ngModel)]="nForm.prioridad">
+                  @for (o of prioridadesElegibles; track o.value) {
+                    <mat-option [value]="o.value">{{ o.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             </div>
 
-            <div class="field" style="margin-top:1rem">
-              <label>Motivo de la interconsulta *</label>
-              <textarea pTextarea [(ngModel)]="nForm.motivo" rows="3" class="w-full"
+            <mat-form-field appearance="outline" style="margin-top:1rem">
+              <mat-label>Motivo de la interconsulta *</mat-label>
+              <textarea matInput [(ngModel)]="nForm.motivo" rows="3"
                 placeholder="Pregunta clínica, motivo de consulta al especialista..."></textarea>
-            </div>
+            </mat-form-field>
 
-            <div class="field" style="margin-top:1rem">
-              <label>Resumen de historia clínica</label>
-              <textarea pTextarea [(ngModel)]="nForm.historia_clinica_resumen" rows="5" class="w-full"
+            <mat-form-field appearance="outline">
+              <mat-label>Resumen de historia clínica</mat-label>
+              <textarea matInput [(ngModel)]="nForm.historia_clinica_resumen" rows="5"
                 placeholder="Antecedentes relevantes, diagnósticos actuales, medicamentos, exámenes recientes..."></textarea>
-            </div>
+            </mat-form-field>
           </div>
 
           <div class="step-actions">
-            <p-button label="Cancelar" [text]="true" (onClick)="volverLista()" />
-            <p-button label="Enviar interconsulta" icon="pi pi-send"
-              [loading]="guardando()"
-              [disabled]="!pacienteSeleccionado || !nForm.especialidad_solicitada_id || !nForm.motivo"
-              (onClick)="crear()" />
+            <button matButton (click)="volverLista()">Cancelar</button>
+            <button matButton="filled" (click)="crear()"
+              [disabled]="guardando() || !pacienteSeleccionado || !nForm.especialidad_solicitada_id || !nForm.motivo">
+              <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-send'"></i> Enviar interconsulta
+            </button>
           </div>
         </div>
       }
@@ -200,14 +223,16 @@ type Vista = 'lista' | 'nueva' | 'detalle';
       <!-- ═══════════════════════════════════════════ -->
       @if (vista() === 'detalle' && icActual()) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-          <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="volverLista()" />
+          <button matIconButton (click)="volverLista()"><i class="pi pi-arrow-left"></i></button>
           <h2 class="page-title" style="margin:0">Detalle de Interconsulta</h2>
           <div style="margin-left:auto;display:flex;gap:0.5rem">
             @if (icActual()!.estado === 'SOLICITADA') {
-              <p-button label="Aceptar" icon="pi pi-check" severity="info"
-                [loading]="accionando()" (onClick)="aceptar()" />
-              <p-button label="Cancelar solicitud" icon="pi pi-times" severity="danger"
-                [text]="true" [loading]="accionando()" (onClick)="cancelar()" />
+              <button matButton="filled" [disabled]="accionando()" (click)="aceptar()">
+                <i [class]="accionando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Aceptar
+              </button>
+              <button matButton class="peligro" [disabled]="accionando()" (click)="cancelar()">
+                <i class="pi pi-times"></i> Cancelar solicitud
+              </button>
             }
           </div>
         </div>
@@ -231,10 +256,10 @@ type Vista = 'lista' | 'nueva' | 'detalle';
           <div class="info-block sep" style="flex:0 0 auto">
             <div class="info-label">Prioridad</div>
             <div style="margin-top:0.25rem">
-              <p-tag [value]="icActual()!.prioridad" [severity]="prioridadSeverity(icActual()!.prioridad)" />
+              <x-etiqueta [value]="icActual()!.prioridad" [severity]="prioridadSeverity(icActual()!.prioridad)" />
             </div>
             <div style="margin-top:0.4rem">
-              <p-tag [value]="estadoLabel(icActual()!.estado)" [severity]="estadoSeverity(icActual()!.estado)" />
+              <x-etiqueta [value]="estadoLabel(icActual()!.estado)" [severity]="estadoSeverity(icActual()!.estado)" />
             </div>
           </div>
         </div>
@@ -252,7 +277,7 @@ type Vista = 'lista' | 'nueva' | 'detalle';
           </div>
         }
 
-        <p-divider />
+        <mat-divider />
 
         <!-- Respuesta -->
         @if (icActual()!.estado === 'RESPONDIDA') {
@@ -283,31 +308,29 @@ type Vista = 'lista' | 'nueva' | 'detalle';
               @if (icActual()!.estado === 'ACEPTADA') { Responder interconsulta }
               @else { Responder (aceptar primero para habilitar) }
             </div>
-            <div class="field" style="margin-bottom:1rem">
-              <label>Respuesta del especialista *</label>
-              <textarea pTextarea [(ngModel)]="rForm.respuesta" rows="5" class="w-full"
+            <mat-form-field appearance="outline">
+              <mat-label>Respuesta del especialista *</mat-label>
+              <textarea matInput [(ngModel)]="rForm.respuesta" rows="5"
                 placeholder="Evaluación clínica, hallazgos, impresión diagnóstica..."
                 [disabled]="icActual()!.estado !== 'ACEPTADA'"></textarea>
-            </div>
-            <div class="field" style="margin-bottom:1rem">
-              <label>Recomendaciones</label>
-              <textarea pTextarea [(ngModel)]="rForm.recomendaciones" rows="3" class="w-full"
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Recomendaciones</mat-label>
+              <textarea matInput [(ngModel)]="rForm.recomendaciones" rows="3"
                 placeholder="Plan sugerido, medicamentos, seguimiento, próxima cita..."
                 [disabled]="icActual()!.estado !== 'ACEPTADA'"></textarea>
-            </div>
+            </mat-form-field>
             <div class="step-actions" style="padding-top:0.75rem">
-              <p-button label="Guardar respuesta" icon="pi pi-check-circle"
-                severity="success" [loading]="respondiendo()"
-                [disabled]="!rForm.respuesta || icActual()!.estado !== 'ACEPTADA'"
-                (onClick)="responder()" />
+              <button matButton="filled" class="exito" (click)="responder()"
+                [disabled]="respondiendo() || !rForm.respuesta || icActual()!.estado !== 'ACEPTADA'">
+                <i [class]="respondiendo() ? 'pi pi-spin pi-spinner' : 'pi pi-check-circle'"></i> Guardar respuesta
+              </button>
             </div>
           </div>
         }
       }
 
     </div>
-    <p-toast />
-    <p-confirmDialog />
   `,
   styles: [`
     .page-card { padding: 1.5rem; }
@@ -367,12 +390,20 @@ type Vista = 'lista' | 'nueva' | 'detalle';
     .step-actions { display: flex; gap: 0.5rem; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; padding-top: 1rem; }
 
     ::ng-deep textarea { resize: vertical; }
+
+    .tabla { width: 100%; }
+    .centro { text-align: center; }
+    mat-form-field { width: 100%; }
+    /* El input color de un botón no pinta nada en M3: lo destructivo y lo
+       afirmativo van por CSS. Ver MIGRACION_MATERIAL.md. */
+    .peligro { color: #dc2626; }
+    .exito { background: #16a34a; color: #fff; }
   `]
 })
 export class InterconsultasComponent implements OnInit {
   private svc = inject(InterconsultaService);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(Avisos);
+  private confirmationService = inject(Confirmar);
 
   vista = signal<Vista>('lista');
   tabActivo = signal<'todas' | 'mias' | 'para_mi'>('todas');
@@ -396,6 +427,14 @@ export class InterconsultasComponent implements OnInit {
     { label: 'Normal', value: 'NORMAL' },
     { label: 'Diferible', value: 'DIFERIBLE' },
   ];
+
+  /** Las mismas sin «Todas»: eso es un filtro, no una prioridad que se pueda
+   *  pedir. */
+  readonly prioridadesElegibles = this.opcionesPrioridad.slice(1);
+
+  /** El orden de las columnas lo fija esta lista, no la plantilla. */
+  readonly columnas = ['paciente', 'especialidad', 'solicita', 'fecha',
+                       'prioridad', 'estado', 'accion'];
 
   // Nueva
   busquedaPaciente = '';
@@ -519,7 +558,7 @@ export class InterconsultasComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Cancelar solicitud',
       rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-danger',
+      peligroso: true,
       accept: () => {
         this.accionando.set(true);
         this.svc.cancelar(ic.id).subscribe({

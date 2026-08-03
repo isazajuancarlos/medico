@@ -27,6 +27,12 @@ pub enum ErrorConfig {
     SecretoInseguro(String),
     #[error("{0} no es un número válido: {1}")]
     NoEsNumero(&'static str, String),
+    #[error(
+        "el modo demostración necesita MEDICO_DEMO_CORREO y MEDICO_DEMO_CLAVE, y solo llegó \
+         {0}. Media configuración no se completa con un defecto: publicar unas credenciales \
+         es una decisión, y a medias no se sabe cuál se tomó."
+    )]
+    DemoIncompleta(&'static str),
 }
 
 /// Mínimo del secreto. 32 bytes es la salida de SHA-256: por debajo, la firma es
@@ -47,6 +53,19 @@ const INSEGUROS: &[&str] = &[
     // ejemplo a su `.env` tiene que enterarse en el siguiente arranque.
     "CAMBIE_ESTO_por_un_valor_aleatorio_de_32_o_mas_caracteres",
 ];
+
+/// Las credenciales que una instalación de DEMOSTRACIÓN publica en su pantalla
+/// de acceso.
+///
+/// Existe porque una demo sin credenciales a la vista no se puede probar, y
+/// escribirlas en la plantilla las llevaría también a la instalación de un
+/// cliente. Aquí se piden por entorno, así que el defecto —no ponerlas— es que
+/// NO se publica nada: una instalación de verdad no las tiene y no las enseña.
+#[derive(Debug, Clone)]
+pub struct Demo {
+    pub correo: String,
+    pub clave: String,
+}
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -69,6 +88,9 @@ pub struct Config {
     pub tras_proxy: bool,
     /// En qué dirección escucha el servidor. Ver [`direccion_de_escucha`].
     pub escucha: std::net::IpAddr,
+    /// `Some` solo si el despliegue PIDIÓ ser una demostración pública. Ver
+    /// [`Demo`].
+    pub demo: Option<Demo>,
 }
 
 fn opcional(clave: &str) -> Option<String> {
@@ -169,13 +191,58 @@ impl Config {
             // llama.
             tras_proxy,
             escucha: direccion_de_escucha(opcional("MEDICO_ESCUCHA").as_deref(), tras_proxy)?,
+            demo: demo(opcional("MEDICO_DEMO_CORREO"), opcional("MEDICO_DEMO_CLAVE"))?,
         })
+    }
+}
+
+/// Las dos variables del modo demostración, o ninguna.
+///
+/// **Media configuración es un error, no un defecto** (directiva 20). Poner solo
+/// el correo y que el sistema «complete» la clave con algo, o que se calle y no
+/// publique nada, deja al que despliega creyendo una cosa distinta de la que
+/// pasa. Con las dos ausentes no hay demo, que es lo que debe ocurrirle a la
+/// instalación de un cliente sin que nadie tenga que acordarse de apagarla.
+fn demo(correo: Option<String>, clave: Option<String>) -> Result<Option<Demo>, ErrorConfig> {
+    match (correo, clave) {
+        (Some(correo), Some(clave)) => Ok(Some(Demo { correo, clave })),
+        (None, None) => Ok(None),
+        (Some(_), None) => Err(ErrorConfig::DemoIncompleta("MEDICO_DEMO_CORREO")),
+        (None, Some(_)) => Err(ErrorConfig::DemoIncompleta("MEDICO_DEMO_CLAVE")),
     }
 }
 
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    #[test]
+    fn sin_las_dos_variables_no_hay_demo() {
+        assert!(demo(None, None).unwrap().is_none());
+    }
+
+    #[test]
+    fn con_las_dos_hay_demo() {
+        let d = demo(Some("demo@ips.test".into()), Some("clave".into()))
+            .unwrap()
+            .expect("con las dos variables tiene que haber demo");
+        assert_eq!(d.correo, "demo@ips.test");
+        assert_eq!(d.clave, "clave");
+    }
+
+    /// Media configuración NO se completa con un defecto: publicar credenciales
+    /// es una decisión, y a medias no se sabe cuál se tomó (directiva 20).
+    #[test]
+    fn media_configuracion_de_demo_es_un_error() {
+        assert!(matches!(
+            demo(Some("demo@ips.test".into()), None),
+            Err(ErrorConfig::DemoIncompleta("MEDICO_DEMO_CORREO"))
+        ));
+        assert!(matches!(
+            demo(None, Some("clave".into())),
+            Err(ErrorConfig::DemoIncompleta("MEDICO_DEMO_CLAVE"))
+        ));
+    }
 
     #[test]
     fn el_secreto_corto_no_pasa() {

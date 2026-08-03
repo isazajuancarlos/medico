@@ -1,4 +1,41 @@
+@use '@angular/material' as mat;
 @import 'primeicons/primeicons.css';
+
+/**
+ * El tema de Material se GENERA aquí en vez de usar el CSS precompilado
+ * `prebuilt-themes/azure-blue.css`, y la razón es la tipografía.
+ *
+ * Ese archivo trae 30 tokens `--mat-sys-*` con **Roboto** dentro, y Roboto no
+ * viaja en el binario: la fuente que empaquetamos es Inter (`@fontsource`).
+ * En un equipo con internet no se nota —el sistema tiene alguna Roboto o algo
+ * parecido—; en el portátil offline de un consultorio, los campos, los botones
+ * y los diálogos de Material salían en la fuente con serifas que el navegador
+ * usa por defecto, mientras el resto de la aplicación iba en Inter. Se vio
+ * abriendo la aplicación de verdad; ninguna prueba lo miraba.
+ *
+ * La paleta es la misma que traía el prebuilt (azure), así que los colores no
+ * cambian: lo único que cambia es de dónde sale la familia.
+ */
+:root {
+  /**
+   * `mat.theme` emite los colores con `light-dark()`, así que seguirían el modo
+   * del SISTEMA; el CSS precompilado que había antes era solo claro. La
+   * aplicación es clara —el fondo es #f8fafc—, y un equipo con el sistema en
+   * oscuro habría pintado la página clara con los controles de Material
+   * oscuros. Se fija el esquema para conservar exactamente lo de antes: el modo
+   * oscuro, si algún día se hace, se decide, no se hereda.
+   */
+  color-scheme: light;
+
+  @include mat.theme((
+    color: mat.$azure-palette,
+    typography: (
+      plain-family: (Inter, system-ui, -apple-system, sans-serif),
+      brand-family: (Inter, system-ui, -apple-system, sans-serif),
+    ),
+    density: 0,
+  ));
+}
 
 * {
   box-sizing: border-box;

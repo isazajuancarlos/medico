@@ -118,6 +118,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/salir", post(salir))
         .route("/api/salir-todo", post(salir_todo))
         .route("/api/yo", get(yo))
+        .route("/api/demo", get(demo))
         .route("/api/pacientes", get(listar_pacientes).post(crear_paciente))
         .route("/api/pacientes/{id}", get(obtener_paciente).put(actualizar_paciente))
         .route("/api/pacientes/{id}/antecedentes", put(actualizar_antecedentes_paciente))
@@ -234,6 +235,9 @@ pub fn router(estado: Estado) -> Router {
         // El menú que ve cada institución (#65). Leerlo basta con estar
         // autenticado; cambiar la licencia es del vendedor, no del cliente.
         .route("/api/modulos", get(crate::modulos::listar))
+        // El RIPS del periodo (#250). Solo emite el AC todavía, y se niega a
+        // hacerlo sin que se lo pidan: ver la cabecera de `crate::rips`.
+        .route("/api/rips", get(crate::rips::generar))
         .route(
             "/api/instituciones/{id}/modulos",
             put(crate::modulos::fijar),
@@ -315,6 +319,11 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/especialidades", get(listar_especialidades))
         .route("/api/medicamentos/buscar", get(buscar_medicamentos))
         .route("/api/unidades-dispensacion", get(listar_unidades_dispensacion))
+        // Las dos tablas de la 948 que la historia tiene que ofrecer para que
+        // el médico ELIJA. Hasta el 2026-08-02 no se ofrecían y el sistema las
+        // rellenaba solo, con códigos que además eran de la tabla anterior.
+        .route("/api/finalidades", get(listar_finalidades))
+        .route("/api/causas-motivo", get(listar_causas_motivo))
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
         // los archivos del build y, para las rutas del SPA, el index.html.
         .fallback(crate::estaticos::servir)
@@ -560,6 +569,34 @@ async fn yo(Autenticado(u): Autenticado) -> Json<Yo> {
     })
 }
 
+#[derive(Serialize)]
+struct CredencialesDemo {
+    correo: String,
+    clave: String,
+}
+
+/// Las credenciales de la DEMOSTRACIÓN, para que la pantalla de acceso las
+/// muestre. **Sin sesión**, porque quien la necesita todavía no la tiene.
+///
+/// Responde `204 No Content` cuando el despliegue no pidió ser una demostración,
+/// que es el defecto y lo que le pasa a la instalación de un cliente: no hay
+/// nada que enseñar y no hay que acordarse de apagar nada. Publicar unas
+/// credenciales exige poner DOS variables de entorno a propósito
+/// (`MEDICO_DEMO_CORREO` y `MEDICO_DEMO_CLAVE`); media configuración no arranca.
+///
+/// No se registra en la bitácora de accesos: no hay titular ni dato de paciente
+/// detrás, solo la nota de un cartel que el propio despliegue mandó colgar.
+async fn demo(State(e): State<Estado>) -> Response {
+    match &e.demo {
+        Some(d) => Json(CredencialesDemo {
+            correo: d.correo.clone(),
+            clave: d.clave.clone(),
+        })
+        .into_response(),
+        None => StatusCode::NO_CONTENT.into_response(),
+    }
+}
+
 /// Pacientes, acotados al ámbito del usuario. El `ambito()` sale del rol y la
 /// institución del usuario autenticado: nunca es un parámetro que el cliente
 /// pueda mandar.
@@ -567,10 +604,16 @@ async fn listar_pacientes(
     State(e): State<Estado>,
     Autenticado(u): Autenticado,
 ) -> Result<Json<Vec<Paciente>>, StatusCode> {
-    paciente::listar(&e.pool, u.ambito())
+    let lista = paciente::listar(&e.pool, u.ambito())
         .await
-        .map(Json)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // El directorio de pacientes es dato personal: quién lo consultó y cuántos
+    // vio va a la bitácora. Sin los ids —eso es lo que separa un listado de una
+    // exportación—, y también cuando devuelve cero: «no hay pacientes» también
+    // se consultó, y un rastro que solo anota lo que dio resultado deja fuera
+    // justo el barrido de quien va probando.
+    registrar_coleccion(&e, &u, "listar", "pacientes", None, lista.len(), vec![]).await;
+    Ok(Json(lista))
 }
 
 #[derive(Serialize)]
@@ -586,7 +629,13 @@ async fn obtener_paciente(
     Path(id): Path<i64>,
 ) -> Result<Json<Paciente>, StatusCode> {
     match paciente::obtener(&e.pool, u.ambito(), id).await {
-        Ok(Some(p)) => Ok(Json(p)),
+        Ok(Some(p)) => {
+            // La ficha del paciente ES el dato personal, y hasta el 2026-08-02
+            // abrirla no dejaba rastro: se anotaba su historia y su documento,
+            // pero no él. Un recurso único, que es lo que es.
+            registrar_acceso(&e, &u, "ver", "paciente", id, id).await;
+            Ok(Json(p))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -604,10 +653,10 @@ async fn accesos_paciente(
         Ok(None) => return Err(StatusCode::NOT_FOUND),
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+    // Los eventos vienen ya proyectados por la capa de datos: de una exportación
+    // sale cuántos pacientes cubrió, nunca quiénes eran los otros.
     match acceso::por_paciente(&e.pool, u.ambito(), id).await {
-        Ok(eventos) => Ok(Json(
-            eventos.iter().filter_map(|s| serde_json::from_str(s).ok()).collect(),
-        )),
+        Ok(eventos) => Ok(Json(eventos)),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -771,14 +820,139 @@ async fn registrar_acceso(
         institucion_id: u.institucion_id,
         accion: accion.to_string(),
         recurso: recurso.to_string(),
-        recurso_id: Some(recurso_id),
-        paciente_id: Some(paciente_id),
-        alcance: None,
+        objeto: acceso::Objeto::Recurso {
+            paciente_id,
+            recurso_id,
+        },
         ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     };
     if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {
         eprintln!("⚠️  bitácora de acceso: no se registró {recurso} {recurso_id} (paciente {paciente_id}): {err}");
     }
+}
+
+/// El registro de un acceso a un CONJUNTO, best-effort como [`registrar_acceso`].
+/// No se llama directamente: entra por [`registrar_coleccion`] o por
+/// [`registrar_coleccion_de_un_titular`], que son las que eligen la forma.
+async fn registrar_conjunto(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    objeto: acceso::Objeto,
+) {
+    let evento = acceso::Evento {
+        usuario_id: u.id,
+        rol: u.rol.clone(),
+        institucion_id: u.institucion_id,
+        accion: accion.to_string(),
+        recurso: recurso.to_string(),
+        objeto,
+        ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    };
+    if let Err(err) = acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref()).await {
+        eprintln!("⚠️  bitácora de acceso: no se registró {accion} de {recurso}: {err}");
+    }
+}
+
+/// El alcance de un conjunto visto por `u`. El ámbito sale del usuario, nunca de
+/// un parámetro: es la misma regla que el RIPS aprendió a la mala.
+fn alcance_visto_por(
+    u: &medico_datos::usuario::Usuario,
+    filtro: Option<String>,
+    n: usize,
+    pacientes: Vec<i64>,
+) -> acceso::Alcance {
+    acceso::Alcance {
+        ambito: acceso::describir_ambito(u.ambito()),
+        filtro,
+        n: n as i64,
+        pacientes,
+    }
+}
+
+/// Un conjunto que **atraviesa titulares**: el directorio de pacientes, una
+/// exportación de RIPS.
+///
+/// La diferencia con un recurso único no es cosmética (ver `acceso::Alcance`):
+/// un **listado** anota a qué ámbito se consultó, con qué filtro y cuántos
+/// salieron, y **no guarda ids** —ver un nombre en una lista no es abrir el
+/// expediente, y un eslabón por fila ahogaría la cadena—; una **exportación**
+/// sí guarda los pacientes que sacó, porque el dato salió del sistema y el
+/// titular tiene derecho a saber que el suyo iba dentro (Ley 1581).
+pub(crate) async fn registrar_coleccion(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    filtro: Option<String>,
+    n: usize,
+    pacientes: Vec<i64>,
+) {
+    let alcance = alcance_visto_por(u, filtro, n, pacientes);
+    registrar_conjunto(e, u, accion, recurso, acceso::Objeto::Coleccion { alcance }).await;
+}
+
+/// Un conjunto de registros de **UN titular**: sus historias, sus documentos,
+/// sus resultados de laboratorio.
+///
+/// No lleva `pacientes` y no es negociable: esa lista significa «el dato salió
+/// del sistema», y aquí no salió — el titular ya va nombrado aparte, que es lo
+/// que hace que el acceso aparezca en SU rastro. En el rastro se lee
+/// `pacientes_n: 0`, y esa es justo la diferencia que él necesita ver entre
+/// alguien que consultó su expediente y alguien que se lo llevó.
+pub(crate) async fn registrar_coleccion_de_un_titular(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    paciente_id: i64,
+    filtro: Option<String>,
+    n: usize,
+) {
+    // EL TITULAR TIENE QUE SER DEL ÁMBITO DE QUIEN PREGUNTA, y se comprueba aquí
+    // y no en cada ruta por lo mismo que `obtener()` existe en vez de arreglar
+    // cada `db.get`: un control que hay que acordarse de poner en cuatro sitios
+    // se olvida en el quinto.
+    //
+    // Sin esto, el `paciente_id` entraba tal cual de la petición. Las consultas
+    // SÍ están aisladas —devuelven la lista vacía para un paciente ajeno, así que
+    // no sale ni un dato—, pero el evento se sellaba igual: bastaba recorrer
+    // identificadores contra `/api/pacientes/{id}/historias` para meter eslabones
+    // firmados en el rastro de los pacientes de OTRA institución, donde su
+    // titular los lee como accesos que nunca ocurrieron. Y no se pueden quitar:
+    // la cadena está encadenada por hash, así que borrar el eslabón falso deja la
+    // bitácora entera en `Rota`.
+    //
+    // Es la misma regla que ya seguían `obtener_paciente` y `contexto_paciente`,
+    // que registran dentro del `Ok(Some(...))` — y que una ficha ajena no deje
+    // rastro es justo lo que aquellas prueban.
+    match acceso::paciente_es_del_ambito(&e.pool, u.ambito(), paciente_id).await {
+        Ok(true) => {}
+        // No es suyo: no hubo acceso a ese titular, así que no hay nada que anotar.
+        Ok(false) => return,
+        // Si no se puede saber, no se sella. Un eslabón que quizá sea falso vale
+        // menos que ninguno: el rastro se lee para responder «¿quién miró mi
+        // historia?», y ahí una duda sellada es una respuesta equivocada.
+        Err(err) => {
+            eprintln!(
+                "⚠️  bitácora de acceso: no se registró {accion} de {recurso} (paciente {paciente_id}): no se pudo comprobar el ámbito: {err}"
+            );
+            return;
+        }
+    }
+    let alcance = alcance_visto_por(u, filtro, n, vec![]);
+    registrar_conjunto(
+        e,
+        u,
+        accion,
+        recurso,
+        acceso::Objeto::DeUnTitular {
+            paciente_id,
+            alcance,
+        },
+    )
+    .await;
 }
 
 async fn obtener_historia(
@@ -902,7 +1076,9 @@ async fn contexto_paciente(
     Path(paciente_id): Path<i64>,
 ) -> Result<Json<Contexto>, StatusCode> {
     match paciente::info(&e.pool, u.ambito(), paciente_id).await {
-        Ok(Some(paciente)) => Ok(Json(Contexto {
+        Ok(Some(paciente)) => {
+            registrar_acceso(&e, &u, "ver", "paciente", paciente_id, paciente_id).await;
+            Ok(Json(Contexto {
             paciente,
             medico: InfoMedico {
                 id: u.id,
@@ -913,7 +1089,8 @@ async fn contexto_paciente(
                 especialidad: None,
                 registro_medico: None,
             },
-        })),
+            }))
+        }
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -938,10 +1115,12 @@ async fn listar_historias_paciente(
     Autenticado(u): Autenticado,
     Path(paciente_id): Path<i64>,
 ) -> Result<Json<Vec<Historia>>, StatusCode> {
-    historia::listar_por_paciente(&e.pool, u.ambito(), paciente_id)
+    let hs = historia::listar_por_paciente(&e.pool, u.ambito(), paciente_id)
         .await
-        .map(Json)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    registrar_coleccion_de_un_titular(&e, &u, "listar", "historias", paciente_id, None, hs.len())
+        .await;
+    Ok(Json(hs))
 }
 
 // --- Documentos clínicos (evolución, epicrisis, interconsulta, …) ------------
@@ -961,10 +1140,21 @@ async fn listar_documentos(
     Autenticado(u): Autenticado,
     Query(f): Query<FiltroDocumentos>,
 ) -> Result<Json<Vec<DocumentoVista>>, StatusCode> {
-    documento::listar_ambito(&e.pool, u.ambito(), f.paciente_id, f.tipo.as_deref())
+    let ds = documento::listar_ambito(&e.pool, u.ambito(), f.paciente_id, f.tipo.as_deref())
         .await
-        .map(Json)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // El mismo endpoint cae en DOS formas según lo que se pida, y es la regla la
+    // que decide, no el caso: con `paciente_id` es el expediente de un titular y
+    // entra en SU rastro; sin él atraviesa titulares y es una colección.
+    let filtro = f.tipo.as_ref().map(|t| format!("tipo={t}"));
+    match f.paciente_id {
+        Some(p) => {
+            registrar_coleccion_de_un_titular(&e, &u, "listar", "documentos", p, filtro, ds.len())
+                .await
+        }
+        None => registrar_coleccion(&e, &u, "listar", "documentos", filtro, ds.len(), vec![]).await,
+    }
+    Ok(Json(ds))
 }
 
 /// Crea un documento. El autor es el usuario autenticado —no un campo del
@@ -1978,6 +2168,10 @@ struct CrearUsuario {
     clave: String,
     rol: String,
     institucion_id: Option<i64>,
+    /// P11/P12: el documento de quien atiende, que el RIPS exige en los cinco
+    /// archivos. Opcionales los dos, y **o los dos o ninguno** — ver abajo.
+    tipo_documento: Option<String>,
+    numero_documento: Option<String>,
 }
 
 async fn crear_usuario(
@@ -2009,6 +2203,46 @@ async fn crear_usuario(
             Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
+    // EL DOCUMENTO DEL PROFESIONAL (P11/P12), que hasta hoy no tenía por dónde
+    // entrar: las columnas existen desde `0037` y ninguna ruta las escribía, así
+    // que el RIPS las anotaba como ausentes en TODA atención y nadie podía
+    // arreglarlo. Es el mismo patrón que `finalidad` y `causa_externa` —campo
+    // obligatorio que ninguna pantalla ofrecía—, con la diferencia de que aquí
+    // no había un defecto tapando el hueco.
+    //
+    // Van los dos o ninguno. Medio documento no identifica a nadie, y aceptar
+    // solo el número dejaría una fila que PARECE tener el dato (directiva 20).
+    let documento = match (&req.tipo_documento, &req.numero_documento) {
+        (None, None) => None,
+        (Some(t), Some(n)) if !t.trim().is_empty() && !n.trim().is_empty() => {
+            // Los ocho que la 948 admite para QUIEN REALIZA la atención, y la
+            // lista sale del maestro del validador, no de aquí: `RC` y `TI`
+            // están en el catálogo —un paciente puede tenerlos— pero un menor
+            // de edad no firma un acto médico. Es el campo que ya se equivocó
+            // una vez, mandando el documento del PACIENTE: el MUV lo destapó
+            // rechazando a los menores, y las atenciones de adultos pasaban.
+            if !medico_dominio::muv::admite_como_profesional(t.trim()) {
+                return detalle(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    format!(
+                        "«{}» no es un tipo de documento válido para quien realiza la atención. \
+                         La Resolución 948 admite: {}.",
+                        t.trim(),
+                        medico_dominio::muv::tipos_documento_profesional_listados()
+                    ),
+                );
+            }
+            Some((t.trim().to_string(), n.trim().to_string()))
+        }
+        _ => {
+            return detalle(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "el documento del profesional va completo —tipo y número— o no va: medio \
+                 documento no identifica a nadie."
+                    .to_string(),
+            );
+        }
+    };
     let Some(hash) = claves::hashear(&req.clave) else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
@@ -2018,6 +2252,7 @@ async fn crear_usuario(
         password_hash: hash,
         rol: req.rol,
         institucion_id: req.institucion_id,
+        documento,
     };
     match usuario::crear(&e.pool, u.ambito(), &nuevo).await {
         Ok(usuario::ResultadoCrear::Creado(id)) => {
@@ -2025,6 +2260,10 @@ async fn crear_usuario(
         }
         Ok(usuario::ResultadoCrear::SinPermiso) => StatusCode::FORBIDDEN.into_response(),
         Ok(usuario::ResultadoCrear::EmailEnUso) => StatusCode::CONFLICT.into_response(),
+        Ok(usuario::ResultadoCrear::DocumentoEnUso) => detalle(
+            StatusCode::CONFLICT,
+            "ese documento ya es de otro profesional.".to_string(),
+        ),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -2411,6 +2650,25 @@ async fn listar_unidades_dispensacion(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
+/// `GET /api/finalidades` — las 34 finalidades de la Resolución 948.
+///
+/// Van empotradas en el binario (`medico_dominio::muv`), no en la base: son la
+/// tabla del validador y no cambian por institución. Y se sirven completas, con
+/// `aplica_ac` y `aplica_ap`, para que la pantalla ofrezca las que valen en cada
+/// documento en vez de las 34 siempre — unas cuantas solo aplican a
+/// procedimientos.
+///
+/// Basta con estar autenticado: es un catálogo público de MinSalud y no dice
+/// nada de ningún paciente.
+async fn listar_finalidades(_: Autenticado) -> Json<&'static [medico_dominio::muv::Finalidad]> {
+    Json(medico_dominio::muv::finalidades())
+}
+
+/// `GET /api/causas-motivo` — las 29 causas o motivos de atención de la 948.
+async fn listar_causas_motivo(_: Autenticado) -> Json<&'static [medico_dominio::muv::CausaMotivo]> {
+    Json(medico_dominio::muv::causas_motivo())
+}
+
 // --- Laboratorio e imágenes diagnósticas -------------------------------------
 //
 // Las dos bandejas comparten forma: listar órdenes del servicio, abrir una,
@@ -2538,7 +2796,19 @@ async fn lab_validar(
 
 async fn lab_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
     match diagnostico::resultados_de_paciente(&e.pool, u.ambito(), id).await {
-        Ok(rs) => Json(rs).into_response(),
+        Ok(rs) => {
+            registrar_coleccion_de_un_titular(
+                &e,
+                &u,
+                "listar",
+                "resultados_laboratorio",
+                id,
+                None,
+                rs.len(),
+            )
+            .await;
+            Json(rs).into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -2679,7 +2949,19 @@ async fn img_firmar(
 
 async fn img_historial(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
     match diagnostico::informes_de_paciente(&e.pool, u.ambito(), id).await {
-        Ok(is) => Json(is).into_response(),
+        Ok(is) => {
+            registrar_coleccion_de_un_titular(
+                &e,
+                &u,
+                "listar",
+                "informes_imagenologia",
+                id,
+                None,
+                is.len(),
+            )
+            .await;
+            Json(is).into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -3316,6 +3598,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy,
+            demo: None,
             capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }
@@ -3324,6 +3607,54 @@ mod pruebas {
     ///
     /// `rol.rs` ya prueba que un laboratorista no puede firmar. Eso no dice nada
     /// sobre si la ruta se lo impide: el fallo que esto cierra era justamente que
+    /// `/api/demo` publica credenciales, así que lo que hay que probar es que
+    /// NO las publica cuando nadie las pidió — y que el que las pide, las
+    /// recibe sin sesión, porque quien va a entrar todavía no tiene ninguna.
+    mod demostracion {
+        use super::*;
+
+        async fn pedir_demo(e: &Estado) -> (StatusCode, String) {
+            let r = router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/api/demo")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let estado = r.status();
+            let cuerpo = axum::body::to_bytes(r.into_body(), 64 * 1024).await.unwrap();
+            (estado, String::from_utf8_lossy(&cuerpo).into_owned())
+        }
+
+        /// El defecto, o sea lo que le pasa a la instalación de un cliente:
+        /// nadie tiene que acordarse de apagar nada.
+        #[tokio::test]
+        async fn sin_modo_demo_no_publica_nada() {
+            let e = estado_de_prueba(false).await;
+            let (estado, cuerpo) = pedir_demo(&e).await;
+            assert_eq!(estado, StatusCode::NO_CONTENT);
+            assert!(cuerpo.is_empty(), "no debería haber cuerpo: {cuerpo}");
+        }
+
+        /// Y con el modo pedido a propósito, se publican SIN sesión: la pantalla
+        /// de acceso las necesita antes de que exista ninguna.
+        #[tokio::test]
+        async fn con_modo_demo_las_publica_sin_sesion() {
+            let mut e = estado_de_prueba(false).await;
+            e.demo = Some(crate::config::Demo {
+                correo: "demo@ips.test".into(),
+                clave: "demo-1234".into(),
+            });
+            let (estado, cuerpo) = pedir_demo(&e).await;
+            assert_eq!(estado, StatusCode::OK);
+            assert!(cuerpo.contains("demo@ips.test"), "{cuerpo}");
+            assert!(cuerpo.contains("demo-1234"), "{cuerpo}");
+        }
+    }
+
     /// la regla no estaba cableada en ninguna parte. Aquí se pide con una cookie
     /// de verdad, por la ruta de verdad.
     mod capacidades {
@@ -5219,6 +5550,781 @@ mod pruebas {
             .await
             .unwrap();
             assert_eq!(n.0, 0);
+        }
+    }
+
+    /// El alta de usuario con el documento del profesional (P11/P12).
+    ///
+    /// Las columnas existen desde `0037` y hasta hoy **ninguna ruta las
+    /// escribía**: el RIPS las anotaba como ausentes en toda atención y no
+    /// había forma de arreglarlo desde el producto. Es el mismo patrón que
+    /// `finalidad` y `causa_externa`, con la diferencia de que allí un defecto
+    /// tapaba el hueco y aquí simplemente no había puerta.
+    ///
+    /// Las tres puertas que se prueban: que el dato ENTRA, que un tipo que la
+    /// 948 no admite para quien atiende se rechaza, y que medio documento no
+    /// pasa por entero.
+    mod documento_del_profesional {
+        use super::*;
+
+        const ADMIN: i64 = 30;
+
+        async fn con_admin() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) \
+                 VALUES (?,'Admin','adm-doc@x.co',?,'admin',1,1)",
+            )
+            .bind(ADMIN)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            // Sin licencia vigente la puerta comercial responde 402 y no se
+            // llegaría a mirar el documento: se siembra perpetua para que lo
+            // que falle sea lo que se está probando y no otra cosa.
+            sqlx::query("INSERT INTO licencia (institucion_id, max_usuarios, vence) VALUES (1, 50, NULL)")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            e
+        }
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn alta(e: &Estado, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/usuarios")
+                        .header(header::COOKIE, cookie_de(ADMIN))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        #[tokio::test]
+        async fn el_documento_entra_y_queda_guardado() {
+            let e = con_admin().await;
+            let r = alta(
+                &e,
+                r#"{"nombre":"Dra Ruiz","email":"ruiz-doc@x.co","clave":"clave123456",
+                    "rol":"medico","tipo_documento":"CC","numero_documento":"71234567"}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::CREATED);
+            let g: (Option<String>, Option<String>) = sqlx::query_as(
+                "SELECT tipo_documento, numero_documento FROM usuario WHERE email='ruiz-doc@x.co'",
+            )
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(g, (Some("CC".into()), Some("71234567".into())));
+        }
+
+        #[tokio::test]
+        async fn sin_documento_se_sigue_pudiendo_crear() {
+            // La regla es «o los dos o ninguno», no «obligatorio»: los usuarios
+            // que ya existen no lo traen y el alta no puede exigir un dato que
+            // el alta de ayer no pedía. Sin él, el recolector anota la falta.
+            let e = con_admin().await;
+            let r = alta(
+                &e,
+                r#"{"nombre":"Enfermería","email":"enf-doc@x.co","clave":"clave123456","rol":"enfermeria"}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::CREATED);
+        }
+
+        #[tokio::test]
+        async fn el_tipo_que_la_948_no_admite_para_quien_atiende_se_rechaza() {
+            // RC (registro civil) y TI (tarjeta de identidad) SÍ están en el
+            // maestro —un paciente puede tenerlos— pero un menor de edad no
+            // firma un acto médico. Es exactamente el caso con el que el MUV
+            // destapó que se estaba mandando el documento del PACIENTE.
+            let e = con_admin().await;
+            for tipo in ["RC", "TI", "XX"] {
+                let r = alta(
+                    &e,
+                    &format!(
+                        r#"{{"nombre":"Quien Sea","email":"{tipo}@x.co","clave":"clave123456",
+                            "rol":"medico","tipo_documento":"{tipo}","numero_documento":"1"}}"#
+                    ),
+                )
+                .await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "«{tipo}» no puede identificar a quien realiza la atención"
+                );
+            }
+            let n: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM usuario WHERE email IN ('RC@x.co','TI@x.co','XX@x.co')",
+            )
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(n.0, 0, "y no se creó ninguno a medias");
+        }
+
+        #[tokio::test]
+        async fn medio_documento_no_pasa() {
+            let e = con_admin().await;
+            for cuerpo in [
+                r#"{"nombre":"A","email":"a-doc@x.co","clave":"clave123456","rol":"medico","tipo_documento":"CC"}"#,
+                r#"{"nombre":"B","email":"b-doc@x.co","clave":"clave123456","rol":"medico","numero_documento":"9"}"#,
+                r#"{"nombre":"C","email":"c-doc@x.co","clave":"clave123456","rol":"medico","tipo_documento":"CC","numero_documento":"  "}"#,
+            ] {
+                assert_eq!(
+                    alta(&e, cuerpo).await.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "medio documento no identifica a nadie: {cuerpo}"
+                );
+            }
+        }
+
+        #[tokio::test]
+        async fn dos_profesionales_no_comparten_documento() {
+            let e = con_admin().await;
+            let cuerpo = |correo: &str| {
+                format!(
+                    r#"{{"nombre":"Quien","email":"{correo}","clave":"clave123456",
+                        "rol":"medico","tipo_documento":"CC","numero_documento":"71234567"}}"#
+                )
+            };
+            assert_eq!(alta(&e, &cuerpo("uno@x.co")).await.status(), StatusCode::CREATED);
+            assert_eq!(
+                alta(&e, &cuerpo("dos@x.co")).await.status(),
+                StatusCode::CONFLICT,
+                "lo para `ux_usuario_documento`, no una consulta previa"
+            );
+        }
+    }
+
+    /// `GET /api/rips` por la ruta de verdad (#250).
+    ///
+    /// Lo que aquí importa no es que el JSON salga —eso lo prueba
+    /// `medico_dominio::rips::ac`— sino las tres puertas del endpoint: quién
+    /// puede pedirlo, que NO emita un archivo a medias sin que se lo pidan, y
+    /// que un dato que falta salga como 422 con la lista y no como un 500.
+    mod generacion_del_rips {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        const ADMIN: i64 = 40;
+        const MEDICO: i64 = 2;
+
+        async fn con_admin_y_una_consulta() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo,\
+                 tipo_documento,numero_documento) \
+                 VALUES (40,'Admin','adm-rips@x.co',?,'admin',1,1,'CC','71234567')",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query("UPDATE institucion SET codigo_habilitacion='050010123401' WHERE id=1")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            sqlx::query(
+                "UPDATE usuario SET tipo_documento='CC', numero_documento='80000000' WHERE id=2",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                 fecha_nacimiento,sexo,institucion_id,tipo_usuario,cod_pais,cod_municipio,zona,\
+                 cod_pais_origen) \
+                 VALUES (10,'CC','111','Ana','Ruiz','1990-01-01','F',1,'01','170','05001','01','170')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            // `finalidad='11'` y `causa_externa='38'` son de la tabla de la
+            // Resolución 948. Antes iban «11» y «13»; el 13 era «enfermedad
+            // general» en la tabla ANTERIOR y no existe en la nueva, donde ese
+            // concepto es el 38 — sembrarlo hacía fallar la prueba con una falta
+            // de más, que es exactamente lo que el generador tiene que hacer.
+            sqlx::query(
+                "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,creado_por,\
+                 motivo_consulta,enfermedad_actual,plan_tratamiento,diagnostico_principal,\
+                 cod_consulta_cups,modalidad_grupo_servicio,grupo_servicios,cod_servicio,\
+                 valor_servicio,concepto_recaudo,finalidad,tipo_diagnostico,causa_externa) \
+                 VALUES (1,'2026-03-15 14:30:00','H1',10,2,2,'dolor','desde ayer','reposo','A000',\
+                 '890201','01','01',328,45000,'05','11','01','38')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        async fn enviar(e: &Estado, uri: &str, quien: i64) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn cuerpo(r: Response) -> serde_json::Value {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 22).await.unwrap();
+            serde_json::from_slice(&b).unwrap()
+        }
+
+        #[tokio::test]
+        async fn sin_pedir_parcial_se_niega_y_dice_que_falta() {
+            // La puerta que impide entregar un archivo que PARECE un RIPS
+            // completo. Sin ella, quien lo descargue no tiene forma de saber que
+            // le faltan los procedimientos y los medicamentos.
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::CONFLICT);
+            let v = cuerpo(r).await;
+            assert_eq!(v["sin_portar"], serde_json::json!(["AP", "AM", "AU", "AH"]));
+            assert!(v["mensaje"].as_str().unwrap().contains("no se cobran"));
+        }
+
+        #[tokio::test]
+        async fn el_medico_no_genera_el_rips_por_defecto() {
+            // El archivo lleva las atenciones de TODOS los pacientes y de él
+            // depende el pago: el defecto son los dos roles que ya exigía el
+            // Python. Un prestador de una sola persona se lo concede en su
+            // matriz de capacidades.
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true", MEDICO)
+                .await;
+            assert_eq!(r.status(), StatusCode::FORBIDDEN);
+        }
+
+        #[tokio::test]
+        async fn con_parcial_sale_el_ac_con_la_consulta_dentro() {
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            assert_eq!(v["archivos"]["AC"]["numDocumentoIdObligado"], "900");
+            let u = &v["archivos"]["AC"]["usuarios"][0];
+            assert_eq!(u["numDocumentoIdentificacion"], "111");
+            let c = &u["servicios"]["consultas"][0];
+            assert_eq!(c["codPrestador"], "050010123401");
+            assert_eq!(c["fechaInicioAtencion"], "2026-03-15 09:30");
+            // El documento del MÉDICO, no el del paciente. Es el fallo que el
+            // MUV destapó en el Python y la razón de que el SELECT aliase las
+            // columnas homónimas.
+            assert_eq!(c["numDocumentoIdentificacion"], "80000000");
+            assert_eq!(c["codDiagnosticoPrincipalCIE11"], "1A00&XN8P1&XN8P1");
+            // Y la respuesta declara SIEMPRE lo que no lleva.
+            assert_eq!(v["sin_portar"], serde_json::json!(["AP", "AM", "AU", "AH"]));
+        }
+
+        #[tokio::test]
+        async fn lo_que_falta_sale_como_422_con_la_lista_y_no_como_500() {
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query("UPDATE historia SET valor_servicio = NULL, concepto_recaudo = NULL")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let v = cuerpo(r).await;
+            let faltantes = v["faltantes"].as_array().unwrap();
+            assert_eq!(faltantes.len(), 2);
+            let campos: Vec<&str> = faltantes
+                .iter()
+                .map(|f| f["campo"].as_str().unwrap())
+                .collect();
+            assert!(campos.contains(&"valor_servicio"), "{campos:?}");
+            assert!(faltantes[0]["registro"].as_i64().is_some(), "dice CUÁL historia");
+        }
+
+        #[tokio::test]
+        async fn con_supuestos_permitidos_sale_y_la_respuesta_los_lleva() {
+            // Lo supuesto viaja EN el archivo, no en un log aparte: quien lo
+            // firma tiene que verlo antes de firmarlo.
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query("UPDATE historia SET valor_servicio = NULL")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true&permitir_supuestos=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            assert_eq!(v["supuestos"]["valor del servicio"], 1);
+            assert_eq!(
+                v["archivos"]["AC"]["usuarios"][0]["servicios"]["consultas"][0]["vrServicio"],
+                0
+            );
+        }
+
+        #[tokio::test]
+        async fn un_periodo_al_reves_se_rechaza() {
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-31&fin=2026-03-01&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+        }
+
+        #[tokio::test]
+        async fn los_catalogos_de_la_948_se_sirven_para_que_la_pantalla_los_ofrezca() {
+            // Existen porque hasta el 2026-08-02 la pantalla NO podía ofrecer
+            // estos dos campos, así que el sistema los rellenaba solo — y con
+            // códigos de la tabla anterior, que el validador rechaza.
+            let e = con_admin_y_una_consulta().await;
+
+            let r = enviar(&e, "/api/finalidades", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            let fs = v.as_array().unwrap();
+            assert_eq!(fs.len(), 34);
+            assert_eq!(fs[0]["codigo"], "11", "la tabla de la 948 empieza en 11");
+            assert!(fs.iter().all(|f| f["codigo"] != "10"), "el «10» ya no está");
+            // Con `aplica_ac`, para que la consulta no ofrezca las de solo AP.
+            assert!(fs.iter().any(|f| f["aplica_ac"] == false));
+
+            let r = enviar(&e, "/api/causas-motivo", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            let cs = v.as_array().unwrap();
+            assert_eq!(cs.len(), 29);
+            assert!(cs.iter().all(|c| c["codigo"] != "13"), "el «13» ya no está");
+            let g = cs.iter().find(|c| c["codigo"] == "38").unwrap();
+            assert_eq!(g["nombre"], "ENFERMEDAD GENERAL");
+        }
+
+        #[tokio::test]
+        async fn fuera_del_periodo_no_sale_la_consulta() {
+            let e = con_admin_y_una_consulta().await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-04-01&fin=2026-04-30&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = cuerpo(r).await;
+            assert_eq!(v["archivos"]["AC"]["usuarios"].as_array().unwrap().len(), 0);
+        }
+
+        /// #186 — los hooks de **listado** y **exportación** de la bitácora, por la
+        /// ruta de verdad. Hasta hoy la bitácora solo anotaba el acceso a UN
+        /// recurso: quien listaba el directorio entero de pacientes o se llevaba
+        /// el RIPS del mes no dejaba rastro, que es justo el acceso masivo que la
+        /// Ley 1581 obliga a poder reconstruir.
+        mod bitacora_de_colecciones {
+            use super::*;
+
+            /// Los eslabones que hay en la base para un recurso, ya parseados.
+            async fn eslabones_de(e: &Estado, recurso: &str) -> Vec<serde_json::Value> {
+                let filas: Vec<(String,)> =
+                    sqlx::query_as("SELECT contenido FROM acceso ORDER BY secuencia ASC")
+                        .fetch_all(&e.pool)
+                        .await
+                        .unwrap();
+                filas
+                    .into_iter()
+                    .map(|(c,)| serde_json::from_str::<serde_json::Value>(&c).unwrap())
+                    .filter(|v| v["recurso"] == recurso)
+                    .collect()
+            }
+
+            /// Un segundo paciente de la MISMA institución, con su consulta en el
+            /// periodo: sin él la exportación cubre a uno solo y no se puede
+            /// distinguir «trae los ids» de «trae el id».
+            async fn segundo_paciente(e: &Estado) {
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                     fecha_nacimiento,sexo,institucion_id,tipo_usuario,cod_pais,cod_municipio,zona,\
+                     cod_pais_origen) \
+                     VALUES (11,'CC','222','Beto','Páez','1985-05-05','M',1,'01','170','05001','01','170')",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+                sqlx::query(
+                    "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,creado_por,\
+                     motivo_consulta,enfermedad_actual,plan_tratamiento,diagnostico_principal,\
+                     cod_consulta_cups,modalidad_grupo_servicio,grupo_servicios,cod_servicio,\
+                     valor_servicio,concepto_recaudo,finalidad,tipo_diagnostico,causa_externa) \
+                     VALUES (2,'2026-03-20 10:00:00','H2',11,2,2,'tos','tres días','reposo','A000',\
+                     '890201','01','01',328,45000,'05','11','01','38')",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            }
+
+            /// Una exportación anota QUÉ pacientes salieron —el dato dejó el
+            /// sistema— y con qué puertas permisivas se pidió.
+            #[tokio::test]
+            async fn una_exportacion_deja_su_eslabon_con_los_pacientes() {
+                let e = con_admin_y_una_consulta().await;
+                segundo_paciente(&e).await;
+                let r = enviar(
+                    &e,
+                    "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                    ADMIN,
+                )
+                .await;
+                assert_eq!(r.status(), StatusCode::OK);
+
+                let evs = eslabones_de(&e, "rips").await;
+                assert_eq!(evs.len(), 1, "un eslabón por exportación");
+                let v = &evs[0];
+                assert_eq!(v["accion"], "exportar");
+                assert_eq!(v["usuario_id"], ADMIN);
+                // Recurso único y colección no se mezclan (directiva #20).
+                assert_eq!(v["paciente_id"], serde_json::Value::Null);
+                assert_eq!(v["recurso_id"], serde_json::Value::Null);
+                assert_eq!(v["alcance"]["pacientes"], serde_json::json!([10, 11]));
+                assert_eq!(v["alcance"]["n"], 2, "dos consultas");
+                assert_eq!(v["alcance"]["ambito"], "institucion:1");
+                let filtro = v["alcance"]["filtro"].as_str().unwrap();
+                assert!(filtro.contains("2026-03-01..2026-03-31"), "{filtro}");
+                assert!(filtro.contains("parcial"), "el archivo iba incompleto: {filtro}");
+
+                // Y la cadena sigue verificando con el eslabón nuevo dentro.
+                assert_eq!(
+                    medico_datos::acceso::verificar(&e.pool, None).await.unwrap(),
+                    guaca::auditoria::Auditoria::Intacta
+                );
+            }
+
+            /// El `permitir_supuestos` queda escrito: dentro de un año, «quién
+            /// exportó qué» no se responde sin saber si aquel archivo llevaba
+            /// valores que nadie afirmó.
+            #[tokio::test]
+            async fn el_eslabon_dice_si_el_archivo_iba_con_supuestos() {
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("UPDATE historia SET valor_servicio = NULL")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                enviar(
+                    &e,
+                    "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true&permitir_supuestos=true",
+                    ADMIN,
+                )
+                .await;
+                let evs = eslabones_de(&e, "rips").await;
+                assert_eq!(evs.len(), 1);
+                assert!(
+                    evs[0]["alcance"]["filtro"]
+                        .as_str()
+                        .unwrap()
+                        .contains("con supuestos"),
+                    "{}",
+                    evs[0]["alcance"]["filtro"]
+                );
+            }
+
+            /// Lo que NO ocurrió no se anota. Prueba que discrimina: si el hook se
+            /// moviera al principio del handler, los tres casos dejarían rastro de
+            /// una exportación que nunca salió.
+            #[tokio::test]
+            async fn un_rips_que_no_llego_a_salir_no_deja_rastro() {
+                // (a) 409: se negó por no pedir `parcial`.
+                let e = con_admin_y_una_consulta().await;
+                let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
+                assert_eq!(r.status(), StatusCode::CONFLICT);
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 409 no exportó nada");
+
+                // (b) 422: faltaban datos obligatorios.
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("UPDATE historia SET valor_servicio = NULL, concepto_recaudo = NULL")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                let r = enviar(
+                    &e,
+                    "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                    ADMIN,
+                )
+                .await;
+                assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 422 no exportó nada");
+
+                // (c) 403: el rol no podía generarlo.
+                let e = con_admin_y_una_consulta().await;
+                let r = enviar(
+                    &e,
+                    "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                    MEDICO,
+                )
+                .await;
+                assert_eq!(r.status(), StatusCode::FORBIDDEN);
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 403 no exportó nada");
+            }
+
+            /// Un listado anota ámbito y cuántos, **nunca los ids**: ver un nombre
+            /// en una lista no es abrir el expediente, y un eslabón por fila
+            /// ahogaría la cadena.
+            #[tokio::test]
+            async fn el_listado_de_pacientes_deja_su_eslabon_sin_ids() {
+                let e = con_admin_y_una_consulta().await;
+                segundo_paciente(&e).await;
+                let r = enviar(&e, "/api/pacientes", ADMIN).await;
+                assert_eq!(r.status(), StatusCode::OK);
+
+                let evs = eslabones_de(&e, "pacientes").await;
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["accion"], "listar");
+                assert_eq!(evs[0]["alcance"]["n"], 2);
+                assert_eq!(
+                    evs[0]["alcance"]["pacientes"],
+                    serde_json::json!([]),
+                    "un listado no guarda ids"
+                );
+            }
+
+            /// Y un listado que no devolvió a nadie se anota igual: el barrido de
+            /// quien va probando ámbitos es exactamente lo que no puede quedar
+            /// fuera del rastro.
+            #[tokio::test]
+            async fn un_listado_vacio_tambien_se_anota() {
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("DELETE FROM historia").execute(&e.pool).await.unwrap();
+                sqlx::query("DELETE FROM paciente").execute(&e.pool).await.unwrap();
+                enviar(&e, "/api/pacientes", ADMIN).await;
+                let evs = eslabones_de(&e, "pacientes").await;
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["alcance"]["n"], 0);
+            }
+
+            /// El otro lado del mismo hook: el titular ve en SU rastro que el dato
+            /// salió, y no se lleva de paso los ids de los demás que iban en el
+            /// mismo archivo (el hueco de lectura que la ficha #186 dejó anotado).
+            #[tokio::test]
+            async fn el_titular_ve_la_exportacion_sin_los_ids_de_los_demas() {
+                let e = con_admin_y_una_consulta().await;
+                segundo_paciente(&e).await;
+                enviar(
+                    &e,
+                    "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                    ADMIN,
+                )
+                .await;
+
+                let r = enviar(&e, "/api/pacientes/10/accesos", ADMIN).await;
+                assert_eq!(r.status(), StatusCode::OK);
+                let v = cuerpo(r).await;
+                let evs = v.as_array().unwrap();
+                assert_eq!(evs.len(), 1, "la exportación aparece en el rastro del titular");
+                let alcance = &evs[0]["alcance"];
+                assert!(
+                    alcance.get("pacientes").is_none(),
+                    "la lista de exportados no puede salir por aquí: {alcance}"
+                );
+                assert_eq!(alcance["pacientes_n"], 2, "cuántos, sin decir quiénes");
+                // Y por ninguna otra clave del alcance. (Se mira el alcance y no
+                // el evento entero porque el `ts` real puede traer un «11» en la
+                // hora, y eso haría intermitente una prueba de fuga.)
+                let crudo = serde_json::to_string(alcance).unwrap();
+                assert!(!crudo.contains("11"), "el id del otro paciente se coló: {crudo}");
+            }
+
+            // === LA TERCERA FORMA (#186.b) ============================
+
+            /// Listar el expediente de un paciente entra en SU rastro. Antes no
+            /// entraba en el de nadie: como colección no guarda ids, así que
+            /// quien abría las historias de alguien por esta vía no dejaba
+            /// huella — el agujero que abrió la ficha #186.b.
+            #[tokio::test]
+            async fn listar_el_expediente_de_un_paciente_entra_en_su_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                segundo_paciente(&e).await;
+                assert_eq!(
+                    enviar(&e, "/api/pacientes/10/historias", ADMIN).await.status(),
+                    StatusCode::OK
+                );
+
+                let v = cuerpo(enviar(&e, "/api/pacientes/10/accesos", ADMIN).await).await;
+                let evs = v.as_array().unwrap();
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["accion"], "listar");
+                assert_eq!(evs[0]["recurso"], "historias");
+                assert_eq!(evs[0]["alcance"]["n"], 1, "una historia suya");
+                assert_eq!(evs[0]["recurso_id"], serde_json::Value::Null, "no hay UN id");
+                // Y dice que NADA salió del sistema: es una consulta, no una
+                // exportación. Esa distinción es el motivo de la tercera forma.
+                assert_eq!(evs[0]["alcance"]["pacientes_n"], 0);
+
+                // No ensucia el rastro del otro paciente de la misma institución.
+                let v = cuerpo(enviar(&e, "/api/pacientes/11/accesos", ADMIN).await).await;
+                assert!(v.as_array().unwrap().is_empty());
+            }
+
+            /// **Es la regla la que decide, no el caso** (directiva 23): el mismo
+            /// endpoint cae en una forma o en otra según lo que se le pida.
+            #[tokio::test]
+            async fn el_mismo_endpoint_cae_en_dos_formas_segun_lo_que_se_pida() {
+                let e = con_admin_y_una_consulta().await;
+
+                // Con paciente: expediente de un titular → entra en su rastro.
+                enviar(&e, "/api/documentos?paciente_id=10&tipo=epicrisis", ADMIN).await;
+                let evs = eslabones_de(&e, "documentos").await;
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["paciente_id"], 10);
+                assert_eq!(evs[0]["alcance"]["filtro"], "tipo=epicrisis");
+                assert_eq!(evs[0]["alcance"]["pacientes"], serde_json::json!([]));
+
+                // Sin paciente: atraviesa titulares → colección, sin titular.
+                enviar(&e, "/api/documentos", ADMIN).await;
+                let evs = eslabones_de(&e, "documentos").await;
+                assert_eq!(evs.len(), 2);
+                assert_eq!(evs[1]["paciente_id"], serde_json::Value::Null);
+                assert_eq!(evs[1]["alcance"]["filtro"], serde_json::Value::Null);
+
+                // Y ese segundo no aparece en el rastro de nadie.
+                let v = cuerpo(enviar(&e, "/api/pacientes/10/accesos", ADMIN).await).await;
+                assert_eq!(v.as_array().unwrap().len(), 1, "solo el acotado a él");
+            }
+
+            /// El hueco que la tercera forma dejó a la vista: abrir la ficha de un
+            /// paciente no dejaba rastro ninguno. Se anotaba su historia y su
+            /// documento, pero no él.
+            #[tokio::test]
+            async fn abrir_la_ficha_de_un_paciente_deja_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                assert_eq!(
+                    enviar(&e, "/api/pacientes/10", ADMIN).await.status(),
+                    StatusCode::OK
+                );
+                let v = cuerpo(enviar(&e, "/api/pacientes/10/accesos", ADMIN).await).await;
+                let evs = v.as_array().unwrap();
+                assert_eq!(evs.len(), 1);
+                assert_eq!(evs[0]["accion"], "ver");
+                assert_eq!(evs[0]["recurso"], "paciente");
+                assert_eq!(evs[0]["recurso_id"], 10);
+                assert!(evs[0].get("alcance").is_none(), "un recurso único no lleva alcance");
+            }
+
+            /// Y una ficha de otra institución no deja rastro, porque no hubo
+            /// acceso: el 404 es anterior. Discrimina el hook de `obtener_paciente`
+            /// contra el error de anotar antes de comprobar el ámbito.
+            #[tokio::test]
+            async fn una_ficha_ajena_no_deja_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (2,'Otra','901')")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                     fecha_nacimiento,sexo,institucion_id) \
+                     VALUES (99,'CC','999','Ajena','Pérez','1990-01-01','F',2)",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+                assert_eq!(
+                    enviar(&e, "/api/pacientes/99", ADMIN).await.status(),
+                    StatusCode::NOT_FOUND
+                );
+                let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+                assert_eq!(n.0, 0, "no hubo acceso que anotar");
+            }
+
+            /// Y lo mismo por la vía de los LISTADOS, que es por donde se coló.
+            ///
+            /// Las cuatro rutas por titular tomaban el `paciente_id` de la
+            /// petición y sellaban el eslabón sin mirar el ámbito. No sale ni un
+            /// dato —las consultas sí filtran, y devuelven la lista vacía—, pero
+            /// el rastro del paciente de la OTRA institución se llenaba de
+            /// accesos que nunca ocurrieron, firmados y encadenados, o sea
+            /// imposibles de quitar sin dejar la bitácora en `Rota`.
+            ///
+            /// Discrimina: quitando la comprobación de
+            /// `registrar_coleccion_de_un_titular`, este contador da 4.
+            #[tokio::test]
+            async fn los_listados_de_un_titular_ajeno_no_dejan_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (2,'Otra','901')")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                     fecha_nacimiento,sexo,institucion_id) \
+                     VALUES (99,'CC','999','Ajena','Pérez','1990-01-01','F',2)",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                for ruta in [
+                    "/api/pacientes/99/historias",
+                    "/api/documentos?paciente_id=99",
+                    "/api/laboratorio/paciente/99/resultados",
+                    "/api/imagenes/paciente/99/informes",
+                ] {
+                    let r = enviar(&e, ruta, ADMIN).await;
+                    assert_eq!(r.status(), StatusCode::OK, "{ruta}: la lista sale vacía, no 403");
+                    assert_eq!(
+                        cuerpo(r).await.as_array().map(|a| a.len()),
+                        Some(0),
+                        "{ruta}: y vacía de verdad, que es lo que impide la fuga"
+                    );
+                }
+
+                let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+                assert_eq!(n.0, 0, "cuatro listados de un titular ajeno, cero eslabones");
+
+                // Y con el titular PROPIO sí anota: una salvaguarda que solo
+                // cierra no se distingue de una que nunca abre.
+                enviar(&e, "/api/pacientes/10/historias", ADMIN).await;
+                let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+                assert_eq!(n.0, 1, "el listado del paciente propio sí deja rastro");
+            }
         }
     }
 }

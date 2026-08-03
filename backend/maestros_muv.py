@@ -112,6 +112,30 @@ def nombres_presentacion() -> list[dict]:
 # leerla del PDF —correctamente, resultó—, pero aquí viene como dato.
 # ---------------------------------------------------------------------------
 
+def _nombre_de_miembro(nombre: str) -> str:
+    """El texto del catálogo convertido en un identificador de Python.
+
+    Es mecánico a propósito —mayúsculas sin tildes, lo que no sea letra o
+    dígito pasa a `_`— porque el nombre lo pone el catálogo y no nosotros. Un
+    nombre «mejor» escrito a mano es una segunda lista que mantener, y el día
+    que el maestro cambie una fila, las dos dirán cosas distintas.
+    """
+    plano = _normalizar(nombre)
+    ident = "".join(c if c.isalnum() else "_" for c in plano)
+    ident = "_".join(p for p in ident.split("_") if p)
+    return ident if ident[:1].isalpha() else f"_{ident}"
+
+
+def finalidades() -> list[dict]:
+    """Las finalidades de la tecnología en salud (11 a 44), de la 948."""
+    return [f for f in cargar("finalidad_tec")["filas"]]
+
+
+def causas_motivo() -> list[dict]:
+    """Las causas o motivos de atención (21 a 49), de la 948."""
+    return [f for f in cargar("causa_motivo")["filas"]]
+
+
 @lru_cache(maxsize=1)
 def _tipos_documento() -> list[dict]:
     return cargar("tipo_doc")["filas"]

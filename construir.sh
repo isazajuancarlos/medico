@@ -18,8 +18,9 @@ cd "$RAIZ"
 
 echo "==> 1/3  interfaz (Angular)"
 cd frontend
-# Los peers de PrimeNG obligan a --legacy-peer-deps, igual que en el CI.
-npm ci --legacy-peer-deps --silent || npm install --legacy-peer-deps --silent
+# Sin --legacy-peer-deps desde el 2026-08-02: la bandera existía por los peers
+# de PrimeNG, y PrimeNG ya no está. Comprobado con `npm ci` limpio.
+npm ci --silent || npm install --silent
 npx ng build --configuration production
 cd "$RAIZ"
 

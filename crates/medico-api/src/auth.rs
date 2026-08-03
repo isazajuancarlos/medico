@@ -35,6 +35,10 @@ pub struct Estado {
     /// Sin proxy declarado, el origen es la dirección del zócalo. Si se declara y
     /// la cabecera no llega, el acceso responde 503 en vez de rellenar el dato.
     pub tras_proxy: bool,
+    /// Las credenciales que esta instalación publica en su pantalla de acceso,
+    /// si —y solo si— el despliegue pidió ser una demostración. `None` en la
+    /// instalación de un cliente, que es el defecto.
+    pub demo: Option<crate::config::Demo>,
     /// Las matrices de capacidades por institución, ya leídas.
     ///
     /// Va en el estado y no se abre por petición porque `Autorizado<C>` la
@@ -209,6 +213,12 @@ impl Exige for GestionarAgenda {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarAgenda;
 }
 
+/// Generar el RIPS de un periodo: el archivo con el que se factura.
+pub struct GenerarRips;
+impl Exige for GenerarRips {
+    const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GenerarRips;
+}
+
 /// Parque de ambulancias y despacho de traslados.
 pub struct GestionarAmbulancias;
 impl Exige for GestionarAmbulancias {
@@ -343,7 +353,7 @@ mod pruebas {
     #[tokio::test]
     async fn usuario_de_una_cookie_valida_es_el_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, demo: None, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         let cookie = sesion::emitir(SECRETO, 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={cookie}").parse().unwrap());
@@ -354,7 +364,7 @@ mod pruebas {
     #[tokio::test]
     async fn sin_cookie_no_hay_usuario() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, demo: None, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         assert!(usuario_de(&estado, &HeaderMap::new()).await.is_none());
     }
 
@@ -363,7 +373,7 @@ mod pruebas {
     #[tokio::test]
     async fn una_cookie_de_otro_secreto_no_entra() {
         let pool = base().await;
-        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
+        let estado = Estado { pool, secreto: SECRETO.to_vec(), minutos: 60, dir_imagenes: std::env::temp_dir(), clave_firma: None, clave_verificacion: None, clave_reposo: None, tras_proxy: false, demo: None, capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()) };
         let ajena = sesion::emitir(b"otro secreto largo de mas de 32 bytes!", 2, 0, 60);
         let mut cabeceras = HeaderMap::new();
         cabeceras.insert(header::COOKIE, format!("medico_sesion={ajena}").parse().unwrap());
@@ -380,6 +390,7 @@ mod pruebas {
             clave_verificacion: None,
             clave_reposo: None,
             tras_proxy: false,
+            demo: None,
             capacidades: std::sync::Arc::new(medico_datos::capacidad::Cache::nueva()),
         }
     }

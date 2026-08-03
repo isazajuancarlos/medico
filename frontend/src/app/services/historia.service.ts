@@ -112,6 +112,31 @@ export interface UnidadDispensacion {
   nombre: string;
 }
 
+/**
+ * Una finalidad de la atención, de la tabla de la Resolución 948 (34 filas,
+ * códigos 11 a 44). El binario las sirve empotradas: son el catálogo del
+ * validador de MinSalud, no algo que configure la institución.
+ *
+ * `aplica_ac` y `aplica_ap` dicen en qué documento del RIPS vale cada una. La
+ * consulta ofrece solo las de `aplica_ac`: unas cuantas son exclusivas de
+ * procedimientos y elegirlas aquí daría un archivo rechazado.
+ */
+export interface Finalidad {
+  codigo: string;
+  nombre: string;
+  aplica_ac: boolean;
+  aplica_ap: boolean;
+}
+
+/** Causa o motivo de la atención (29 filas, códigos 21 a 49). */
+export interface CausaMotivo {
+  codigo: string;
+  nombre: string;
+  aplica_ac: boolean;
+  aplica_au: boolean;
+  aplica_ah: boolean;
+}
+
 export interface FormulaCreate {
   medicamento: string;
   codigo_cum?: string;
@@ -219,6 +244,16 @@ export class HistoriaService {
    *  desincroniza, y de ese código dependen el valor unitario y la cantidad. */
   getUnidadesDispensacion(): Observable<UnidadDispensacion[]> {
     return this.http.get<UnidadDispensacion[]>(`/api/unidades-dispensacion`);
+  }
+
+  /** Las 34 finalidades de la 948, para que el médico elija una. */
+  getFinalidades(): Observable<Finalidad[]> {
+    return this.http.get<Finalidad[]>('/api/finalidades');
+  }
+
+  /** Las 29 causas o motivos de atención de la 948. */
+  getCausasMotivo(): Observable<CausaMotivo[]> {
+    return this.http.get<CausaMotivo[]>('/api/causas-motivo');
   }
 
   createFormula(historiaId: number, data: FormulaCreate): Observable<Formula> {

@@ -18,22 +18,47 @@ números no coinciden con los que viene reportando, el informe nuevo no sirve.
 | | producto vivo | port en curso |
 |---|---|---|
 | **Backend** | FastAPI + SQLModel + PostgreSQL (`backend/`) | axum + SQLx + SQLite (`crates/`) |
-| **Interfaz** | Angular 21 + PrimeNG (`frontend/`) | la misma, **empotrada en el binario** |
+| **Interfaz** | Angular 22 + `@angular/material` (`frontend/`) | la misma, **empotrada en el binario** |
 | **Entrega** | proceso + base de datos | **un archivo** |
 | **Ramas** | `main`, `master` | `feat/*` |
 
-> **PrimeNG aquí es DEUDA, no el estándar.** El estándar de todos los
-> desarrollos es Angular con `@angular/material`; medico es el único que no
-> cumple, y la migración está pendiente. **No se sube `primeng` a la 22**: dejó
-> de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un binario que
-> vive offline en casa de un cliente no puede llevar dentro una clave que caduca.
+> **PrimeNG salió el 2026-08-02.** El estándar de todos los desarrollos es
+> Angular con `@angular/material`; medico era el único que no cumplía. La
+> migración terminó: **287 → 0** importaciones de `primeng`, y la librería y
+> `@primeuix/themes` salieron del `package.json`, con la compilación y las
+> pruebas en verde en cada lote (82 → **366**). La receta y las trampas, en
+> [`MIGRACION_MATERIAL.md`](MIGRACION_MATERIAL.md). Nunca se subió `primeng` a
+> la 22: dejó de ser MIT (es «PrimeUI», comercial, con clave obligatoria) y un
+> binario que vive offline en casa de un cliente no puede llevar dentro una clave
+> que caduca. De la familia solo queda `primeicons`, que es MIT y es una fuente
+> de iconos.
+
+**Y el salto se hizo el mismo día**: Angular 22.1.0, Material 22.1.0, CDK 22.1.0
+y TypeScript 6.0.3 (#254). Con eso los dos desarrollos —medico e informes— corren
+la misma versión de Angular, que era el objetivo. Dos migraciones de la 22 hay
+que leerlas y no solo aceptarlas: en la 22 **OnPush pasa a ser el defecto**
+(`ChangeDetectionStrategy.Eager` es el opt-out que dejó la herramienta en 71
+componentes, y ahí sigue a propósito), y el cliente HTTP pasa a `fetch`
+(`withXhr()` es el opt-out).
+
+El `--legacy-peer-deps` desapareció con PrimeNG: `npm ci` limpio funciona, y así
+está el CI y `construir.sh`.
 
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
 recolector de datos faltantes—, y sin él no hay facturación electrónica, que es
-por lo que le pagan al prestador. Siguen sin backend en Rust `/api/admin`,
-`/api/facturacion`, `/api/quirofano` y `/api/estadisticas`. El ADR no autoriza
-apagar Python hasta que la generación del RIPS sea byte a byte idéntica.
+por lo que le pagan al prestador. Comparados los prefijos de `rutas.rs` contra los
+de `backend/routers/` el 2026-08-01, siguen sin backend en Rust diez prefijos y
+uno va a medias. Cinco los llama la interfaz, así que hoy romperían una pantalla:
+`/api/facturacion`, `/api/estadisticas`, `/api/admin`, `/api/quirofano` y
+`/api/consentimiento`. `/api/rips` ya existe pero **solo emite el AC**, y se
+niega a hacerlo sin un `parcial=true` explícito: un archivo sin los
+procedimientos ni los medicamentos parece completo y no lo está. Los otros cinco
+no los llama nadie desde Angular, pero son
+Python que sigue vivo: `/api/superadmin`, `/api/epicrisis`, `/api/evoluciones`,
+`/api/interconsultas` y `/api/nota-operatoria`. El ADR
+no autoriza apagar Python hasta que la generación del RIPS sea byte a byte
+idéntica.
 
 Lo que el port **sí** cubre: pacientes, historia clínica con firma, urgencias,
 hospitalización, nutrición, rehabilitación, remisiones y contrarreferencia,
@@ -47,18 +72,18 @@ maestros —CIE-10, CUPS, CUM y DIVIPOLA— van empotrados en el binario.
 ```bash
 # --- Python (el producto vivo) ---
 cd backend
-.venv/bin/python -m pytest -q          # 665 pruebas
+.venv/bin/python -m pytest -q          # 702 pruebas
 python seed.py                         # base + datos de prueba (idempotente)
 uvicorn main:app --reload --port 8000  # Swagger en /docs
 
 # --- Rust (el port) ---
 ./construir.sh                         # interfaz → empotrado → binario. EL comando.
-cargo test  --workspace --all-targets  # 392 pruebas
+cargo test  --workspace --all-targets  # 493 pruebas
 cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---
 cd frontend
-npm install --legacy-peer-deps         # obligatorio: conflictos de peers de PrimeNG
+npm ci                                 # sin --legacy-peer-deps: era por PrimeNG, y PrimeNG ya no está
 npm start                              # :4200 con proxy a :8000
 ```
 
@@ -147,7 +172,7 @@ el MUV lo aceptó y devolvió CUV, porque ese campo lo valida por rango.
 |---|---|
 | **Resolución 948/2026** | FEV-RIPS y los 22 campos CIE-11. `tests/test_campos_fev948.py` convierte la norma en prueba. |
 | **Resolución 2275/2023** | estructura RIPS. **2706/2025** CUPS 2026. **2765/2025** PBS 2026. |
-| **Ley 1581/2012** | rastro completo de acceso a datos personales, con bitácora encadenada. |
+| **Ley 1581/2012** | rastro de acceso a datos personales, con bitácora encadenada y firmada. Tres formas de evento: un **recurso** suyo, un **conjunto de registros suyos** (sus historias, sus resultados) y una **colección** que atraviesa pacientes. Las dos primeras entran en el rastro del titular; la tercera, solo si es una exportación y su dato salió. Al consultar el rastro de uno, la lista de exportados no se devuelve: sale cuántos eran, nunca quiénes. |
 | **Ley 527/1999** | firma electrónica de la historia clínica (Ed25519 + ML-DSA-87 vía Quipu). |
 | **Resolución 3100/2019** | habilitación; el módulo de ambulancias usa sus modalidades TAB y TAM. |
 

@@ -1,27 +1,184 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { DialogModule } from 'primeng/dialog';
-import { DatePickerModule } from 'primeng/datepicker';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+} from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { EtiquetaComponent } from '../../shared/ui/etiqueta.component';
+import { Avisos } from '../../shared/ui/avisos.service';
+import { diaLocal } from '../../shared/fecha';
 import { SuperadminService, Institucion, UsuarioResumen } from '../../services/superadmin.service';
+
+/** Alta de una IPS. Devuelve los dos datos, o nada. */
+@Component({
+  selector: 'app-superadmin-ips',
+  standalone: true,
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  template: `
+    <h2 mat-dialog-title>Nueva IPS</h2>
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Nombre *</mat-label>
+        <input matInput [(ngModel)]="nombre" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>NIT *</mat-label>
+        <input matInput [(ngModel)]="nit" />
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Crear
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class SuperadminIpsComponent {
+  nombre = '';
+  nit = '';
+  completo(): boolean { return !!this.nombre.trim() && !!this.nit.trim(); }
+  resultado(): { nombre: string; nit: string } | null {
+    return this.completo() ? { nombre: this.nombre.trim(), nit: this.nit.trim() } : null;
+  }
+}
+
+/** El plan de una IPS: cupo de usuarios y vencimiento opcional. */
+@Component({
+  selector: 'app-superadmin-licencia',
+  standalone: true,
+  imports: [
+    FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule,
+    MatInputModule, MatDatepickerModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Licencia — {{ ips.nombre }}</h2>
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Cupo de usuarios *</mat-label>
+        <input matInput type="number" min="1" [(ngModel)]="maxUsuarios" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Vence (opcional)</mat-label>
+        <input matInput [matDatepicker]="cal" [(ngModel)]="vence" placeholder="Sin vencimiento" />
+        <mat-datepicker-toggle matIconSuffix [for]="cal" />
+        <mat-datepicker #cal />
+      </mat-form-field>
+      <small>
+        Vacío = perpetua. Una licencia vencida bloquea crear usuarios, nunca la lectura.
+      </small>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Fijar plan
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
+    mat-form-field { width:100%; }
+    small { color:#64748b; }
+  `],
+})
+export class SuperadminLicenciaComponent {
+  maxUsuarios: number | null = 10;
+  vence: Date | null = null;
+
+  constructor(@Inject(MAT_DIALOG_DATA) public ips: Institucion) {}
+
+  completo(): boolean { return !!this.maxUsuarios && Number(this.maxUsuarios) >= 1; }
+
+  resultado(): { max_usuarios: number; vence: string | null } | null {
+    if (!this.completo()) return null;
+    return {
+      max_usuarios: Number(this.maxUsuarios),
+      // El día LOCAL, no el UTC: una licencia que vence un día antes de lo
+      // pactado bloquea el alta de usuarios sin que nadie sepa por qué. Ver
+      // `shared/fecha.ts`.
+      vence: this.vence ? diaLocal(this.vence) : null,
+    };
+  }
+}
+
+/** El primer administrador de una IPS recién dada de alta. */
+@Component({
+  selector: 'app-superadmin-admin',
+  standalone: true,
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  template: `
+    <h2 mat-dialog-title>Nuevo administrador — {{ ips.nombre }}</h2>
+    <mat-dialog-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Nombre *</mat-label>
+        <input matInput [(ngModel)]="nombre" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Correo *</mat-label>
+        <input matInput type="email" [(ngModel)]="email" autocomplete="username" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Contraseña *</mat-label>
+        <input matInput [type]="verClave ? 'text' : 'password'" [(ngModel)]="clave"
+          autocomplete="new-password" />
+        <button matIconButton matSuffix type="button" (click)="verClave = !verClave"
+          [attr.aria-label]="verClave ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          [attr.aria-pressed]="verClave">
+          <i class="pi" [class.pi-eye]="!verClave" [class.pi-eye-slash]="verClave"></i>
+        </button>
+      </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>Cancelar</button>
+      <button matButton="filled" [disabled]="!completo()" [mat-dialog-close]="resultado()">
+        <i class="pi pi-check"></i> Crear admin
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    mat-dialog-content { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
+    mat-form-field { width:100%; }
+  `],
+})
+export class SuperadminAdminComponent {
+  nombre = '';
+  email = '';
+  clave = '';
+  verClave = false;
+
+  constructor(@Inject(MAT_DIALOG_DATA) public ips: Institucion) {}
+
+  completo(): boolean {
+    return !!this.nombre.trim() && !!this.email.trim() && !!this.clave;
+  }
+
+  resultado(): { nombre: string; email: string; clave: string } | null {
+    if (!this.completo()) return null;
+    return { nombre: this.nombre.trim(), email: this.email.trim(), clave: this.clave };
+  }
+}
 
 @Component({
   selector: 'app-superadmin',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule,
-    PasswordModule, DialogModule, DatePickerModule, TagModule, ToastModule,
+    CommonModule, MatTableModule, MatPaginatorModule, MatButtonModule,
+    MatProgressBarModule, EtiquetaComponent,
   ],
-  providers: [MessageService],
   template: `
-<p-toast />
 <div class="page-card">
   <div class="fila-titulo">
     <div>
@@ -30,113 +187,121 @@ import { SuperadminService, Institucion, UsuarioResumen } from '../../services/s
         Dé de alta una IPS, fije su plan y cree su primer administrador.
       </p>
     </div>
-    <p-button label="Nueva IPS" icon="pi pi-plus" size="small" (onClick)="abrirIps()" />
+    <button matButton="filled" (click)="abrirIps()">
+      <i class="pi pi-plus"></i> Nueva IPS
+    </button>
   </div>
 
-  <p-table [value]="instituciones()" [loading]="cargando()" dataKey="id" styleClass="p-datatable-sm"
-           [paginator]="instituciones().length > 10" [rows]="10">
-    <ng-template pTemplate="header">
-      <tr><th>IPS</th><th>NIT</th><th>Estado</th><th style="width:1%">Acciones</th></tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-i>
-      <tr>
-        <td>{{ i.nombre }}</td>
-        <td>{{ i.nit }}</td>
-        <td><p-tag [value]="i.activa ? 'Activa' : 'Inactiva'" [severity]="i.activa ? 'success' : 'secondary'" /></td>
-        <td style="white-space:nowrap">
-          <p-button label="Licencia" icon="pi pi-id-card" [text]="true" size="small" (onClick)="abrirLicencia(i)" />
-          <p-button label="Crear admin" icon="pi pi-user-plus" [text]="true" size="small" severity="secondary" (onClick)="abrirAdmin(i)" />
-        </td>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="emptymessage">
-      <tr><td colspan="4" style="text-align:center;padding:2rem;color:#64748b">Aún no hay instituciones. Cree la primera.</td></tr>
-    </ng-template>
-  </p-table>
+  @if (cargando() || guardando()) { <mat-progress-bar mode="indeterminate" /> }
+
+  <table mat-table [dataSource]="ips">
+    <ng-container matColumnDef="nombre">
+      <th mat-header-cell *matHeaderCellDef>IPS</th>
+      <td mat-cell *matCellDef="let i">{{ i.nombre }}</td>
+    </ng-container>
+    <ng-container matColumnDef="nit">
+      <th mat-header-cell *matHeaderCellDef>NIT</th>
+      <td mat-cell *matCellDef="let i">{{ i.nit }}</td>
+    </ng-container>
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef>Estado</th>
+      <td mat-cell *matCellDef="let i">
+        <x-etiqueta [value]="i.activa ? 'Activa' : 'Inactiva'"
+          [severity]="i.activa ? 'success' : 'secondary'" />
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>Acciones</th>
+      <td mat-cell *matCellDef="let i" class="acciones">
+        <button matButton (click)="abrirLicencia(i)">
+          <i class="pi pi-id-card"></i> Licencia
+        </button>
+        <button matButton (click)="abrirAdmin(i)">
+          <i class="pi pi-user-plus"></i> Crear admin
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="colIps"></tr>
+    <tr mat-row *matRowDef="let fila; columns: colIps"></tr>
+  </table>
+
+  @if (!cargando() && ips.data.length === 0) {
+    <p class="vacio">Aún no hay instituciones. Cree la primera.</p>
+  }
+  <mat-paginator #pagIps [pageSize]="10" [pageSizeOptions]="[10, 25, 50]" />
 
   <h3 style="margin:2rem 0 .5rem">Usuarios</h3>
-  <p-table [value]="usuarios()" dataKey="id" styleClass="p-datatable-sm" [paginator]="usuarios().length > 10" [rows]="10">
-    <ng-template pTemplate="header">
-      <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Institución</th><th>Estado</th></tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-u>
-      <tr>
-        <td>{{ u.nombre }}</td>
-        <td>{{ u.email }}</td>
-        <td>{{ u.rol }}</td>
-        <td>{{ nombreInstitucion(u.institucion_id) }}</td>
-        <td><p-tag [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'secondary'" /></td>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="emptymessage">
-      <tr><td colspan="5" style="text-align:center;padding:1.5rem;color:#64748b">Sin usuarios.</td></tr>
-    </ng-template>
-  </p-table>
+
+  <table mat-table [dataSource]="usuarios">
+    <ng-container matColumnDef="nombre">
+      <th mat-header-cell *matHeaderCellDef>Nombre</th>
+      <td mat-cell *matCellDef="let u">{{ u.nombre }}</td>
+    </ng-container>
+    <ng-container matColumnDef="correo">
+      <th mat-header-cell *matHeaderCellDef>Correo</th>
+      <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+    </ng-container>
+    <ng-container matColumnDef="rol">
+      <th mat-header-cell *matHeaderCellDef>Rol</th>
+      <td mat-cell *matCellDef="let u">{{ u.rol }}</td>
+    </ng-container>
+    <ng-container matColumnDef="institucion">
+      <th mat-header-cell *matHeaderCellDef>Institución</th>
+      <td mat-cell *matCellDef="let u">{{ nombreInstitucion(u.institucion_id) }}</td>
+    </ng-container>
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeaderCellDef>Estado</th>
+      <td mat-cell *matCellDef="let u">
+        <x-etiqueta [value]="u.activo ? 'Activo' : 'Inactivo'"
+          [severity]="u.activo ? 'success' : 'secondary'" />
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="colUsuarios"></tr>
+    <tr mat-row *matRowDef="let fila; columns: colUsuarios"></tr>
+  </table>
+
+  @if (usuarios.data.length === 0) { <p class="vacio">Sin usuarios.</p> }
+  <mat-paginator #pagUsuarios [pageSize]="10" [pageSizeOptions]="[10, 25, 50]" />
 </div>
-
-<p-dialog [(visible)]="dlgIps" header="Nueva IPS" [modal]="true" [style]="{width:'420px'}">
-  <div class="campo"><label>Nombre *</label><input pInputText [(ngModel)]="ips.nombre" style="width:100%" /></div>
-  <div class="campo"><label>NIT *</label><input pInputText [(ngModel)]="ips.nit" style="width:100%" /></div>
-  <ng-template pTemplate="footer">
-    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="dlgIps=false" />
-    <p-button label="Crear" icon="pi pi-check" [loading]="guardando()" [disabled]="!ips.nombre || !ips.nit" (onClick)="crearIps()" />
-  </ng-template>
-</p-dialog>
-
-<p-dialog [(visible)]="dlgLic" [header]="'Licencia — ' + (licSel?.nombre || '')" [modal]="true" [style]="{width:'440px'}">
-  <div class="campo"><label>Cupo de usuarios *</label><input pInputText type="number" min="1" [(ngModel)]="lic.max_usuarios" style="width:100%" /></div>
-  <div class="campo">
-    <label>Vence (opcional)</label>
-    <p-datepicker [(ngModel)]="lic.vence" dateFormat="yy-mm-dd" [showButtonBar]="true" placeholder="Sin vencimiento" [style]="{width:'100%'}" appendTo="body" />
-    <small style="color:#64748b">Vacío = perpetua. Una licencia vencida bloquea crear usuarios, nunca la lectura.</small>
-  </div>
-  <ng-template pTemplate="footer">
-    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="dlgLic=false" />
-    <p-button label="Fijar plan" icon="pi pi-check" [loading]="guardando()" [disabled]="!lic.max_usuarios || lic.max_usuarios < 1" (onClick)="fijarLic()" />
-  </ng-template>
-</p-dialog>
-
-<p-dialog [(visible)]="dlgAdmin" [header]="'Nuevo administrador — ' + (adminSel?.nombre || '')" [modal]="true" [style]="{width:'460px'}">
-  <div class="campo"><label>Nombre *</label><input pInputText [(ngModel)]="admin.nombre" style="width:100%" /></div>
-  <div class="campo"><label>Correo *</label><input pInputText type="email" [(ngModel)]="admin.email" style="width:100%" /></div>
-  <div class="campo"><label>Contraseña *</label><p-password [(ngModel)]="admin.clave" [feedback]="false" [toggleMask]="true" [style]="{width:'100%'}" inputStyleClass="w-full" /></div>
-  <ng-template pTemplate="footer">
-    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="dlgAdmin=false" />
-    <p-button label="Crear admin" icon="pi pi-check" [loading]="guardando()" [disabled]="!admin.nombre || !admin.email || !admin.clave" (onClick)="crearAdmin()" />
-  </ng-template>
-</p-dialog>
   `,
   styles: [`
     .fila-titulo { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem }
-    .campo { margin-bottom:1rem }
-    .campo label { display:block; font-size:.875rem; font-weight:500; color:#374151; margin-bottom:.3rem }
+    table { width:100%; }
+    .acciones { white-space:nowrap; }
+    .vacio { text-align:center; padding:2rem; color:#64748b; }
   `],
 })
 export class SuperadminComponent implements OnInit {
   private svc = inject(SuperadminService);
-  private msg = inject(MessageService);
+  private msg = inject(Avisos);
+  private dialogo = inject(MatDialog);
 
-  instituciones = signal<Institucion[]>([]);
-  usuarios = signal<UsuarioResumen[]>([]);
+  readonly colIps = ['nombre', 'nit', 'estado', 'acciones'];
+  readonly colUsuarios = ['nombre', 'correo', 'rol', 'institucion', 'estado'];
+
+  readonly ips = new MatTableDataSource<Institucion>([]);
+  readonly usuarios = new MatTableDataSource<UsuarioResumen>([]);
+
+  // Dos tablas y dos paginadores en la misma pantalla, así que se enganchan por
+  // referencia de plantilla: un `@ViewChild(MatPaginator)` a secas devuelve el
+  // primero y dejaría el segundo mudo sin que nada falle.
+  @ViewChild('pagIps')
+  set paginadorIps(p: MatPaginator | undefined) { if (p) this.ips.paginator = p; }
+
+  @ViewChild('pagUsuarios')
+  set paginadorUsuarios(p: MatPaginator | undefined) { if (p) this.usuarios.paginator = p; }
+
   cargando = signal(true);
   guardando = signal(false);
 
   private nombrePorId = computed(() => {
     const m = new Map<number, string>();
-    for (const i of this.instituciones()) m.set(i.id, i.nombre);
+    for (const i of this.listaIps()) m.set(i.id, i.nombre);
     return m;
   });
-
-  dlgIps = false;
-  ips = { nombre: '', nit: '' };
-
-  dlgLic = false;
-  licSel: Institucion | null = null;
-  lic: { max_usuarios: number | null; vence: Date | null } = { max_usuarios: 10, vence: null };
-
-  dlgAdmin = false;
-  adminSel: Institucion | null = null;
-  admin = { nombre: '', email: '', clave: '' };
+  private listaIps = signal<Institucion[]>([]);
 
   ngOnInit(): void {
     this.cargar();
@@ -149,23 +314,24 @@ export class SuperadminComponent implements OnInit {
   private cargar(): void {
     this.cargando.set(true);
     this.svc.listInstituciones().subscribe({
-      next: (is) => { this.instituciones.set(is); this.cargando.set(false); },
+      next: (is) => { this.ips.data = is; this.listaIps.set(is); this.cargando.set(false); },
       error: () => this.cargando.set(false),
     });
-    this.svc.listUsuarios().subscribe({ next: (us) => this.usuarios.set(us), error: () => {} });
+    this.svc.listUsuarios().subscribe({ next: (us) => (this.usuarios.data = us), error: () => {} });
   }
 
   abrirIps(): void {
-    this.ips = { nombre: '', nit: '' };
-    this.dlgIps = true;
+    this.dialogo
+      .open(SuperadminIpsComponent, { width: '420px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((d?: { nombre: string; nit: string } | null) => { if (d) this.crearIps(d); });
   }
 
-  crearIps(): void {
+  private crearIps(d: { nombre: string; nit: string }): void {
     this.guardando.set(true);
-    this.svc.crearInstitucion(this.ips.nombre.trim(), this.ips.nit.trim()).subscribe({
+    this.svc.crearInstitucion(d.nombre, d.nit).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.dlgIps = false;
         this.msg.add({ severity: 'success', summary: 'IPS creada' });
         this.cargar();
       },
@@ -178,19 +344,19 @@ export class SuperadminComponent implements OnInit {
   }
 
   abrirLicencia(i: Institucion): void {
-    this.licSel = i;
-    this.lic = { max_usuarios: 10, vence: null };
-    this.dlgLic = true;
+    this.dialogo
+      .open(SuperadminLicenciaComponent, { data: i, width: '440px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((d?: { max_usuarios: number; vence: string | null } | null) => {
+        if (d) this.fijarLicencia(i, d);
+      });
   }
 
-  fijarLic(): void {
-    if (!this.licSel || !this.lic.max_usuarios) return;
+  private fijarLicencia(i: Institucion, d: { max_usuarios: number; vence: string | null }): void {
     this.guardando.set(true);
-    const vence = this.lic.vence ? this.lic.vence.toISOString().slice(0, 10) : null;
-    this.svc.fijarLicencia(this.licSel.id, Number(this.lic.max_usuarios), vence).subscribe({
+    this.svc.fijarLicencia(i.id, d.max_usuarios, d.vence).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.dlgLic = false;
         this.msg.add({ severity: 'success', summary: 'Plan fijado' });
       },
       error: () => {
@@ -201,24 +367,19 @@ export class SuperadminComponent implements OnInit {
   }
 
   abrirAdmin(i: Institucion): void {
-    this.adminSel = i;
-    this.admin = { nombre: '', email: '', clave: '' };
-    this.dlgAdmin = true;
+    this.dialogo
+      .open(SuperadminAdminComponent, { data: i, width: '460px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((d?: { nombre: string; email: string; clave: string } | null) => {
+        if (d) this.crearAdmin(i, d);
+      });
   }
 
-  crearAdmin(): void {
-    if (!this.adminSel) return;
+  private crearAdmin(i: Institucion, d: { nombre: string; email: string; clave: string }): void {
     this.guardando.set(true);
-    this.svc.crearUsuario({
-      nombre: this.admin.nombre.trim(),
-      email: this.admin.email.trim(),
-      clave: this.admin.clave,
-      rol: 'admin',
-      institucion_id: this.adminSel.id,
-    }).subscribe({
+    this.svc.crearUsuario({ ...d, rol: 'admin', institucion_id: i.id }).subscribe({
       next: () => {
         this.guardando.set(false);
-        this.dlgAdmin = false;
         this.msg.add({ severity: 'success', summary: 'Administrador creado' });
         this.cargar();
       },
