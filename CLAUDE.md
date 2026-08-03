@@ -806,6 +806,33 @@ reescribe — un valor que nadie eligió, traducido, sigue sin haberlo dicho nad
 encima pasa a ser válido, o sea que ya no lo detecta nada. Los códigos de la tabla
 anterior salen en el informe de cierre diciendo que hay que convertirlos.
 
+### El cuarto, encontrado el 2026-08-03: el documento del profesional (P11/P12)
+
+Mismo patrón que los tres de arriba, y **más difícil de ver porque no había
+defecto que lo tapara**: `usuario.tipo_documento` y `numero_documento` existían
+desde `0037`, el RIPS los exige en los cinco archivos, y **ninguna ruta los
+escribía** —las únicas escrituras del repositorio eran fixtures de prueba, y
+`CrearUsuario` llevaba `nombre, email, clave, rol, institucion_id` y nada más—.
+El recolector los anotaba como ausentes en toda atención y no había forma de
+arreglarlo desde el producto.
+
+Hoy entran por `POST /api/usuarios`, y con tres reglas:
+
+- **o los dos o ninguno**: medio documento no identifica a nadie, y aceptar solo
+  el número dejaría una fila que *parece* traer el dato;
+- **el tipo se valida contra `muv::admite_como_profesional`**, que se genera del
+  maestro del validador — `RC` y `TI` están en el catálogo (un paciente puede
+  tenerlos) pero un menor de edad no firma un acto médico. Es el campo que ya se
+  equivocó una vez mandando el documento del PACIENTE;
+- **no se repite**: `ux_usuario_documento` (migración `0039`), único en todo el
+  sistema y no por institución, porque una persona es la misma en dos IPS.
+
+Sigue siendo opcional, y eso no es una concesión: los usuarios que ya existen no
+lo traen, y exigirlo en el alta no arregla a los que están. **Lo que falta es
+poder ponérselo a un usuario existente** — en Rust no hay ninguna ruta de
+edición de usuario, y la pantalla de administración es de las cinco que aún no
+están portadas.
+
 La salida es marcar el origen: `CONFIRMADO` · `DERIVADO` · `PROPUESTO_ACEPTADO` ·
 `AUSENTE`. Un valor derivado de otros que ya estaban cuesta cero segundos y es
 reproducible. `derivaciones.py` devuelve `None` cuando no puede derivar — no aproxima.
@@ -877,8 +904,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 38, de `0001_fundacion.sql` a
-    `0038_finalidad_de_la_948.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 39, de `0001_fundacion.sql` a
+    `0039_el_documento_del_profesional_es_unico.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==

@@ -206,13 +206,20 @@ pub struct UsuarioNuevo {
     pub password_hash: String,
     pub rol: String,
     pub institucion_id: Option<i64>,
+    /// P11/P12 del RIPS: el documento de quien atiende. Opcional porque los
+    /// usuarios que ya existen no lo traen y **no se inventa** — sin él, el
+    /// recolector anota la falta y el cierre del mes la enseña. Van los dos o
+    /// ninguno; medio documento no identifica a nadie.
+    pub documento: Option<(String, String)>,
 }
 
-/// Los tres desenlaces reales de crear un usuario.
+/// Los cuatro desenlaces reales de crear un usuario.
 pub enum ResultadoCrear {
     Creado(i64),
     SinPermiso,
     EmailEnUso,
+    /// Ese documento ya es de otro profesional.
+    DocumentoEnUso,
 }
 
 /// Crea un usuario. La institución del nuevo la fija QUIÉN crea: un admin lo crea
@@ -232,18 +239,37 @@ pub async fn crear(
     if por_email(pool, &nuevo.email).await?.is_some() {
         return Ok(ResultadoCrear::EmailEnUso);
     }
+    let (tipo_doc, num_doc) = match &nuevo.documento {
+        Some((t, n)) => (Some(t.as_str()), Some(n.as_str())),
+        None => (None, None),
+    };
     let r = sqlx::query(
-        "INSERT INTO usuario (nombre, email, password_hash, rol, institucion_id, activo) \
-         VALUES (?,?,?,?,?,1)",
+        "INSERT INTO usuario (nombre, email, password_hash, rol, institucion_id, activo, \
+         tipo_documento, numero_documento) \
+         VALUES (?,?,?,?,?,1,?,?)",
     )
     .bind(&nuevo.nombre)
     .bind(&nuevo.email)
     .bind(&nuevo.password_hash)
     .bind(&nuevo.rol)
     .bind(institucion_id)
+    .bind(tipo_doc)
+    .bind(num_doc)
     .execute(pool)
-    .await?;
-    Ok(ResultadoCrear::Creado(r.last_insert_rowid()))
+    .await;
+    match r {
+        Ok(r) => Ok(ResultadoCrear::Creado(r.last_insert_rowid())),
+        // El choque lo detecta `ux_usuario_documento`, y se lee del error en vez
+        // de consultarlo antes a propósito: un SELECT previo deja una ventana
+        // entre la comprobación y el INSERT, y es el índice —no nosotros— quien
+        // decide. Misma razón por la que el correo sí se consulta antes: aquel
+        // `UNIQUE` es de la tabla y este es un índice parcial, pero lo que
+        // manda en los dos casos es la base.
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
+            Ok(ResultadoCrear::DocumentoEnUso)
+        }
+        Err(e) => Err(e),
+    }
 }
 
 #[cfg(test)]
@@ -337,6 +363,15 @@ mod pruebas {
             password_hash: "h-nuevo".into(),
             rol: "medico".into(),
             institucion_id: inst,
+            documento: None,
+        }
+    }
+
+    /// El mismo, con el documento del profesional puesto.
+    fn nuevo_con_documento(email: &str, tipo: &str, numero: &str) -> UsuarioNuevo {
+        UsuarioNuevo {
+            documento: Some((tipo.into(), numero.into())),
+            ..nuevo(email, Some(1))
         }
     }
 
@@ -364,5 +399,51 @@ mod pruebas {
         assert!(matches!(crear(&bd, Ambito::Ninguno, &nuevo("n3@x.co", Some(1))).await.unwrap(), ResultadoCrear::SinPermiso));
         // 'ruiz@x.co' ya existe.
         assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("ruiz@x.co", None)).await.unwrap(), ResultadoCrear::EmailEnUso));
+    }
+
+    /// P11/P12: el documento se guarda, y no se repite entre profesionales.
+    ///
+    /// El índice es `ux_usuario_documento` (migración 0039). Se comprueban las
+    /// dos mitades: que el choque se rechaza **y** que los usuarios sin
+    /// documento se siguen pudiendo crear — que es lo que de verdad se rompería
+    /// si a alguien se le ocurriera hacer las columnas obligatorias para
+    /// «arreglar» el hueco del RIPS.
+    ///
+    /// Medido, y va escrito porque contradice lo que yo había supuesto: quitar
+    /// el `WHERE` del índice **no** cambia el comportamiento. En SQL dos NULL no
+    /// son iguales, así que tampoco colisionan en un índice único sin filtro. El
+    /// `WHERE` deja el índice más pequeño y dice a qué filas se refiere; no es
+    /// lo que permite que convivan los usuarios sin documento.
+    #[tokio::test]
+    async fn el_documento_del_profesional_se_guarda_y_no_se_repite() {
+        let bd = base().await;
+
+        let r = crear(&bd, Ambito::institucion(1), &nuevo_con_documento("d1@x.co", "CC", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)), "el documento no impide crear");
+        let guardado: (Option<String>, Option<String>) =
+            sqlx::query_as("SELECT tipo_documento, numero_documento FROM usuario WHERE email='d1@x.co'")
+                .fetch_one(&bd)
+                .await
+                .unwrap();
+        assert_eq!(guardado, (Some("CC".into()), Some("71234567".into())), "y se guarda de verdad");
+
+        // El mismo documento otra vez, con otro correo: lo para el índice.
+        let r = crear(&bd, Ambito::institucion(1), &nuevo_con_documento("d2@x.co", "CC", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::DocumentoEnUso), "dos profesionales no comparten documento");
+
+        // Y no lo para por institución: el de la 2 tampoco puede repetirlo,
+        // porque una persona es la misma persona en las dos IPS.
+        let r = crear(&bd, Ambito::institucion(2), &nuevo_con_documento("d3@x.co", "CC", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::DocumentoEnUso), "el documento es único en todo el sistema");
+
+        // Mismo número con OTRO tipo sí entra: la clave son los dos campos.
+        let r = crear(&bd, Ambito::institucion(1), &nuevo_con_documento("d4@x.co", "CE", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)));
+
+        // Y lo que sostiene todo lo anterior: los que NO traen documento no
+        // chocan entre sí. `base()` ya dejó tres así, y estos dos son dos más.
+        assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("s1@x.co", Some(1))).await.unwrap(), ResultadoCrear::Creado(_)));
+        assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("s2@x.co", Some(1))).await.unwrap(), ResultadoCrear::Creado(_)),
+                "dos usuarios sin documento conviven: es el estado de TODOS los que ya existen");
     }
 }

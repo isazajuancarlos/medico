@@ -2168,6 +2168,10 @@ struct CrearUsuario {
     clave: String,
     rol: String,
     institucion_id: Option<i64>,
+    /// P11/P12: el documento de quien atiende, que el RIPS exige en los cinco
+    /// archivos. Opcionales los dos, y **o los dos o ninguno** — ver abajo.
+    tipo_documento: Option<String>,
+    numero_documento: Option<String>,
 }
 
 async fn crear_usuario(
@@ -2199,6 +2203,46 @@ async fn crear_usuario(
             Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
+    // EL DOCUMENTO DEL PROFESIONAL (P11/P12), que hasta hoy no tenía por dónde
+    // entrar: las columnas existen desde `0037` y ninguna ruta las escribía, así
+    // que el RIPS las anotaba como ausentes en TODA atención y nadie podía
+    // arreglarlo. Es el mismo patrón que `finalidad` y `causa_externa` —campo
+    // obligatorio que ninguna pantalla ofrecía—, con la diferencia de que aquí
+    // no había un defecto tapando el hueco.
+    //
+    // Van los dos o ninguno. Medio documento no identifica a nadie, y aceptar
+    // solo el número dejaría una fila que PARECE tener el dato (directiva 20).
+    let documento = match (&req.tipo_documento, &req.numero_documento) {
+        (None, None) => None,
+        (Some(t), Some(n)) if !t.trim().is_empty() && !n.trim().is_empty() => {
+            // Los ocho que la 948 admite para QUIEN REALIZA la atención, y la
+            // lista sale del maestro del validador, no de aquí: `RC` y `TI`
+            // están en el catálogo —un paciente puede tenerlos— pero un menor
+            // de edad no firma un acto médico. Es el campo que ya se equivocó
+            // una vez, mandando el documento del PACIENTE: el MUV lo destapó
+            // rechazando a los menores, y las atenciones de adultos pasaban.
+            if !medico_dominio::muv::admite_como_profesional(t.trim()) {
+                return detalle(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    format!(
+                        "«{}» no es un tipo de documento válido para quien realiza la atención. \
+                         La Resolución 948 admite: {}.",
+                        t.trim(),
+                        medico_dominio::muv::tipos_documento_profesional_listados()
+                    ),
+                );
+            }
+            Some((t.trim().to_string(), n.trim().to_string()))
+        }
+        _ => {
+            return detalle(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "el documento del profesional va completo —tipo y número— o no va: medio \
+                 documento no identifica a nadie."
+                    .to_string(),
+            );
+        }
+    };
     let Some(hash) = claves::hashear(&req.clave) else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
@@ -2208,6 +2252,7 @@ async fn crear_usuario(
         password_hash: hash,
         rol: req.rol,
         institucion_id: req.institucion_id,
+        documento,
     };
     match usuario::crear(&e.pool, u.ambito(), &nuevo).await {
         Ok(usuario::ResultadoCrear::Creado(id)) => {
@@ -2215,6 +2260,10 @@ async fn crear_usuario(
         }
         Ok(usuario::ResultadoCrear::SinPermiso) => StatusCode::FORBIDDEN.into_response(),
         Ok(usuario::ResultadoCrear::EmailEnUso) => StatusCode::CONFLICT.into_response(),
+        Ok(usuario::ResultadoCrear::DocumentoEnUso) => detalle(
+            StatusCode::CONFLICT,
+            "ese documento ya es de otro profesional.".to_string(),
+        ),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -5503,6 +5552,162 @@ mod pruebas {
             assert_eq!(n.0, 0);
         }
     }
+
+    /// El alta de usuario con el documento del profesional (P11/P12).
+    ///
+    /// Las columnas existen desde `0037` y hasta hoy **ninguna ruta las
+    /// escribía**: el RIPS las anotaba como ausentes en toda atención y no
+    /// había forma de arreglarlo desde el producto. Es el mismo patrón que
+    /// `finalidad` y `causa_externa`, con la diferencia de que allí un defecto
+    /// tapaba el hueco y aquí simplemente no había puerta.
+    ///
+    /// Las tres puertas que se prueban: que el dato ENTRA, que un tipo que la
+    /// 948 no admite para quien atiende se rechaza, y que medio documento no
+    /// pasa por entero.
+    mod documento_del_profesional {
+        use super::*;
+
+        const ADMIN: i64 = 30;
+
+        async fn con_admin() -> Estado {
+            let e = estado_de_prueba(false).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) \
+                 VALUES (?,'Admin','adm-doc@x.co',?,'admin',1,1)",
+            )
+            .bind(ADMIN)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            // Sin licencia vigente la puerta comercial responde 402 y no se
+            // llegaría a mirar el documento: se siembra perpetua para que lo
+            // que falle sea lo que se está probando y no otra cosa.
+            sqlx::query("INSERT INTO licencia (institucion_id, max_usuarios, vence) VALUES (1, 50, NULL)")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            e
+        }
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn alta(e: &Estado, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/usuarios")
+                        .header(header::COOKIE, cookie_de(ADMIN))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        #[tokio::test]
+        async fn el_documento_entra_y_queda_guardado() {
+            let e = con_admin().await;
+            let r = alta(
+                &e,
+                r#"{"nombre":"Dra Ruiz","email":"ruiz-doc@x.co","clave":"clave123456",
+                    "rol":"medico","tipo_documento":"CC","numero_documento":"71234567"}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::CREATED);
+            let g: (Option<String>, Option<String>) = sqlx::query_as(
+                "SELECT tipo_documento, numero_documento FROM usuario WHERE email='ruiz-doc@x.co'",
+            )
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(g, (Some("CC".into()), Some("71234567".into())));
+        }
+
+        #[tokio::test]
+        async fn sin_documento_se_sigue_pudiendo_crear() {
+            // La regla es «o los dos o ninguno», no «obligatorio»: los usuarios
+            // que ya existen no lo traen y el alta no puede exigir un dato que
+            // el alta de ayer no pedía. Sin él, el recolector anota la falta.
+            let e = con_admin().await;
+            let r = alta(
+                &e,
+                r#"{"nombre":"Enfermería","email":"enf-doc@x.co","clave":"clave123456","rol":"enfermeria"}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::CREATED);
+        }
+
+        #[tokio::test]
+        async fn el_tipo_que_la_948_no_admite_para_quien_atiende_se_rechaza() {
+            // RC (registro civil) y TI (tarjeta de identidad) SÍ están en el
+            // maestro —un paciente puede tenerlos— pero un menor de edad no
+            // firma un acto médico. Es exactamente el caso con el que el MUV
+            // destapó que se estaba mandando el documento del PACIENTE.
+            let e = con_admin().await;
+            for tipo in ["RC", "TI", "XX"] {
+                let r = alta(
+                    &e,
+                    &format!(
+                        r#"{{"nombre":"Quien Sea","email":"{tipo}@x.co","clave":"clave123456",
+                            "rol":"medico","tipo_documento":"{tipo}","numero_documento":"1"}}"#
+                    ),
+                )
+                .await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "«{tipo}» no puede identificar a quien realiza la atención"
+                );
+            }
+            let n: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM usuario WHERE email IN ('RC@x.co','TI@x.co','XX@x.co')",
+            )
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+            assert_eq!(n.0, 0, "y no se creó ninguno a medias");
+        }
+
+        #[tokio::test]
+        async fn medio_documento_no_pasa() {
+            let e = con_admin().await;
+            for cuerpo in [
+                r#"{"nombre":"A","email":"a-doc@x.co","clave":"clave123456","rol":"medico","tipo_documento":"CC"}"#,
+                r#"{"nombre":"B","email":"b-doc@x.co","clave":"clave123456","rol":"medico","numero_documento":"9"}"#,
+                r#"{"nombre":"C","email":"c-doc@x.co","clave":"clave123456","rol":"medico","tipo_documento":"CC","numero_documento":"  "}"#,
+            ] {
+                assert_eq!(
+                    alta(&e, cuerpo).await.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "medio documento no identifica a nadie: {cuerpo}"
+                );
+            }
+        }
+
+        #[tokio::test]
+        async fn dos_profesionales_no_comparten_documento() {
+            let e = con_admin().await;
+            let cuerpo = |correo: &str| {
+                format!(
+                    r#"{{"nombre":"Quien","email":"{correo}","clave":"clave123456",
+                        "rol":"medico","tipo_documento":"CC","numero_documento":"71234567"}}"#
+                )
+            };
+            assert_eq!(alta(&e, &cuerpo("uno@x.co")).await.status(), StatusCode::CREATED);
+            assert_eq!(
+                alta(&e, &cuerpo("dos@x.co")).await.status(),
+                StatusCode::CONFLICT,
+                "lo para `ux_usuario_documento`, no una consulta previa"
+            );
+        }
+    }
+
     /// `GET /api/rips` por la ruta de verdad (#250).
     ///
     /// Lo que aquí importa no es que el JSON salga —eso lo prueba
