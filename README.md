@@ -72,13 +72,13 @@ maestros —CIE-10, CUPS, CUM y DIVIPOLA— van empotrados en el binario.
 ```bash
 # --- Python (el producto vivo) ---
 cd backend
-.venv/bin/python -m pytest -q          # 676 pruebas
+.venv/bin/python -m pytest -q          # 702 pruebas
 python seed.py                         # base + datos de prueba (idempotente)
 uvicorn main:app --reload --port 8000  # Swagger en /docs
 
 # --- Rust (el port) ---
 ./construir.sh                         # interfaz → empotrado → binario. EL comando.
-cargo test  --workspace --all-targets  # 488 pruebas
+cargo test  --workspace --all-targets  # 493 pruebas
 cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---

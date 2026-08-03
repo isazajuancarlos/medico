@@ -86,7 +86,7 @@ acepte y devuelva CUV. Ver [La cadena RIPS](#la-cadena-rips--fev-rips--muv).
 ```bash
 # === BACKEND ===
 cd backend
-.venv/bin/python -m pytest -q                    # 676 pruebas (~1 min 20 s)
+.venv/bin/python -m pytest -q                    # 702 pruebas (~2 min 20 s)
 .venv/bin/python -m pytest tests/test_cie11.py -q         # un módulo
 .venv/bin/python -m pytest tests/test_cie11.py::test_x -q # una prueba
 .venv/bin/python -m pytest -k "aislamiento" -q            # por nombre
@@ -99,7 +99,7 @@ uvicorn main:app --reload --port 8000            # Swagger en /docs
 cd frontend
 npm ci                                           # sin banderas: --legacy-peer-deps era por PrimeNG
 npm start                                        # :4200, proxy /api → :8000
-npm test                                         # vitest vía `ng test`: 11 specs, 366 pruebas
+npm test                                         # vitest vía `ng test`: 12 specs, 367 pruebas
 npm run build
 
 # === DOCKER (pila completa) ===
@@ -327,7 +327,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 488 pruebas (~2 min)
+cargo test  --workspace --all-targets                   # 493 pruebas (~2 min 30 s)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -386,8 +386,8 @@ vacía y el acceso responde «credenciales incorrectas», que es indistinguible 
 
 **Lo que el port todavía NO cubre**, para no confundir avance con paridad. La
 lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.rs`
-(106 rutas) contra los de `backend/routers/*.py`; medido el 2026-08-01, siguen sin
-existir en Rust:
+(110 rutas) contra los de `backend/routers/*.py`; vuelto a medir el 2026-08-03,
+siguen sin existir en Rust:
 
 ```
 los que el frontend SÍ llama — hoy romperían la pantalla (5):
