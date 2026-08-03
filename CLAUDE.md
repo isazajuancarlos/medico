@@ -183,15 +183,56 @@ dice la verdad, las dos defensas quedan justificadas y el aviso desaparece solo.
 Silenciarlo habría dejado el tipo mintiendo y las defensas pareciendo
 redundantes: el siguiente que pasara las habría borrado.
 
-**`Eager` se deja, y no por comodidad.** Adoptar OnPush exige auditar componente
-por componente que ningún campo que la plantilla lee se escriba desde un
-callback asíncrono sin señal de por medio. El fallo de esa auditoría es una
-pantalla que no se refresca **sin que nada falle**, que es exactamente lo que ni
-el banco de humo ni el guardián ven. Un cambio a la vez.
+**`Eager` se quitó el 2026-08-02 (#256), y primero se construyó la red.** En la
+22 OnPush es el defecto; adoptarlo exige que ningún campo que la plantilla lee
+se escriba desde un callback asíncrono sin señal de por medio, y el fallo de esa
+auditoría es una pantalla que no se refresca **sin que nada falle**. Ver
+[La tercera red](#la-tercera-red-el-estado-que-la-plantilla-lee-es-señal).
 
 **El `--legacy-peer-deps` se fue con PrimeNG.** Era su bandera: `npm ci` limpio
 funciona desde que la librería no está. Quitado del CI, de `construir.sh`, del
 README y de aquí.
+
+### La tercera red: el estado que la plantilla lee es señal
+
+`src/app/estado-que-la-plantilla-lee-es-señal.spec.ts`. La regla, en una frase:
+**si la plantilla lo lee y algo asíncrono lo escribe, tiene que ser señal.**
+
+Existe porque las otras dos redes no llegan. Un componente OnPush solo se
+repinta cuando algo lo marca sucio: una señal que cambió, un evento de su propia
+vista, o un `markForCheck()`. Un campo llano escrito desde un `subscribe` no
+marca nada — y el fallo no se parece a un fallo: la petición responde, el campo
+cambia, la memoria tiene el dato bueno y **la pantalla sigue mostrando lo
+anterior**. `ng build` pasa; el banco de humo monta la pantalla igual, porque
+monta con la pantalla VACÍA, que es antes de que llegue la respuesta.
+
+Dos decisiones de diseño, y las dos vienen de un error propio:
+
+- **Sigue las llamadas, no solo el cuerpo del callback.** La primera versión
+  miraba únicamente lo que hay dentro del `subscribe` y se dejó fuera
+  `historias`, donde el callback llama a `_loadAnt(...)` y es ESE método el que
+  escribe los cuatro objetos de antecedentes. Hoy recorre transitivamente todo
+  método alcanzable desde una vía asíncrona. Un guardián que mira un solo nivel
+  da un verde que no significa nada.
+- **Lee las EXPRESIONES de la plantilla, no su texto.** Buscar el nombre del
+  campo en el HTML da falsos positivos absurdos: un campo llamado `form`
+  aparece dentro de `mat-form-field` en toda pantalla con un formulario
+  (directiva 23).
+
+**Discrimina, comprobado**: se volvió a poner `errorMessage` como campo llano en
+`login` y el guardián nombró a `LoginComponent` y solo a él.
+
+Lo que encontró al escribirlo: **23 campos en 7 archivos** con el primer
+recorrido, y **35 en 6** con el transitivo. Entre ellos, el mensaje de error del
+acceso (un login fallido no habría mostrado nada), las observaciones de un
+resultado de laboratorio (habrían quedado las del examen ANTERIOR) y los cuatro
+objetos de antecedentes de la historia clínica (los del paciente anterior).
+
+**Y el cambio se notó en las pruebas**, que es la señal de que no era teórico:
+dos que estaban en verde se pusieron rojas al quitar `Eager`, y las dos estaban
+mal escritas — asignaban un `@Input` a pelo (`barra.modo = …`) en vez de usar
+`fixture.componentRef.setInput`, que es lo que hace un padre y lo único que
+marca sucio un OnPush. Pasaban midiendo el estado anterior.
 
 ### La fuente que solo se vio abriendo la aplicación
 

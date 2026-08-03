@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -39,7 +39,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
       <a routerLink="/dashboard" class="volver">Volver al inicio</a>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .aviso {
       max-width: 460px; margin: 4rem auto; padding: 2.5rem 2rem;

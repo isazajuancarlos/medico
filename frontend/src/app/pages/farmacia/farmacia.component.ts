@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -105,7 +105,6 @@ const UBICACIONES: Opcion[] = [
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(34rem, 85vw); }
@@ -214,7 +213,6 @@ export class FarmaciaProveedorComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(36rem, 85vw); }
@@ -322,7 +320,6 @@ export class FarmaciaItemComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .ficha { display:flex; gap:.75rem; align-items:center; margin-bottom:1rem;
       padding:.75rem; background:rgba(99,102,241,0.1); border-radius:6px;
@@ -415,7 +412,6 @@ export class FarmaciaEntradaComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .ficha { display:flex; gap:.75rem; align-items:flex-start; margin-bottom:1rem;
       padding:.75rem; background:rgba(99,102,241,0.1); border-radius:6px;
@@ -933,7 +929,6 @@ export class FarmaciaDispensarComponent {
     </div>
 
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0; }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -318,17 +318,17 @@ function defaultAntPrenatales(): AntPrenatales {
                     <mat-panel-title>Antecedentes familiares</mat-panel-title>
                   </mat-expansion-panel-header>
                   <div class="check-grid">
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.hta">HTA</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.diabetes">Diabetes</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.coronarias">Coronarias</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.cancer">Cáncer</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.acv">ACV</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.tbc">TBC</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam.asma">Asma</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().hta">HTA</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().diabetes">Diabetes</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().coronarias">Coronarias</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().cancer">Cáncer</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().acv">ACV</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().tbc">TBC</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().asma">Asma</mat-checkbox></div>
                   </div>
                   <mat-form-field appearance="outline" style="margin-top:0.75rem">
                         <mat-label>Otros</mat-label>
-                        <input matInput [(ngModel)]="antFam.otros" class="w-full" placeholder="Describa otros antecedentes familiares..." />
+                        <input matInput [(ngModel)]="antFam().otros" class="w-full" placeholder="Describa otros antecedentes familiares..." />
                       </mat-form-field>
                 </mat-expansion-panel>
 
@@ -337,41 +337,41 @@ function defaultAntPrenatales(): AntPrenatales {
                     <mat-panel-title>Antecedentes personales</mat-panel-title>
                   </mat-expansion-panel-header>
                   <div class="check-grid">
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.hta">HTA</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.diabetes">Diabetes</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.coronarias">Coronarias</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.acv">ACV</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.tbc">TBC</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.asma">Asma</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().hta">HTA</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().diabetes">Diabetes</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().coronarias">Coronarias</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().acv">ACV</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().tbc">TBC</mat-checkbox></div>
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().asma">Asma</mat-checkbox></div>
                   </div>
                   <mat-divider />
                   <div class="cond-row">
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.cancer_activo">Cáncer</mat-checkbox></div>
-                    @if (antPers.cancer_activo) {
-                      <input [(ngModel)]="antPers.cancer_desc" class="cond-input" placeholder="Tipo / descripción..." />
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().cancer_activo">Cáncer</mat-checkbox></div>
+                    @if (antPers().cancer_activo) {
+                      <input [(ngModel)]="antPers().cancer_desc" class="cond-input" placeholder="Tipo / descripción..." />
                     }
                   </div>
                   <div class="cond-row">
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.quirurgicos_activo">Quirúrgicos</mat-checkbox></div>
-                    @if (antPers.quirurgicos_activo) {
-                      <input [(ngModel)]="antPers.quirurgicos_desc" class="cond-input" placeholder="Cirugías / descripción..." />
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().quirurgicos_activo">Quirúrgicos</mat-checkbox></div>
+                    @if (antPers().quirurgicos_activo) {
+                      <input [(ngModel)]="antPers().quirurgicos_desc" class="cond-input" placeholder="Cirugías / descripción..." />
                     }
                   </div>
                   <div class="cond-row">
-                    <div class="chk"><mat-checkbox [(ngModel)]="antPers.its_activo">ITS</mat-checkbox></div>
-                    @if (antPers.its_activo) {
-                      <input [(ngModel)]="antPers.its_desc" class="cond-input" placeholder="Descripción..." />
+                    <div class="chk"><mat-checkbox [(ngModel)]="antPers().its_activo">ITS</mat-checkbox></div>
+                    @if (antPers().its_activo) {
+                      <input [(ngModel)]="antPers().its_desc" class="cond-input" placeholder="Descripción..." />
                     }
                   </div>
                   <mat-divider />
                   <div class="form-grid">
                     <mat-form-field appearance="outline">
                         <mat-label>Otros antecedentes</mat-label>
-                        <input matInput [(ngModel)]="antPers.otros" class="w-full" placeholder="Alergias, farmacológicos, tóxicos..." />
+                        <input matInput [(ngModel)]="antPers().otros" class="w-full" placeholder="Alergias, farmacológicos, tóxicos..." />
                       </mat-form-field>
                     <mat-form-field appearance="outline">
                         <mat-label>Hábitos</mat-label>
-                        <input matInput [(ngModel)]="antPers.habitos" class="w-full" placeholder="Tabaco, alcohol, ejercicio..." />
+                        <input matInput [(ngModel)]="antPers().habitos" class="w-full" placeholder="Tabaco, alcohol, ejercicio..." />
                       </mat-form-field>
                   </div>
                 </mat-expansion-panel>
@@ -384,36 +384,36 @@ function defaultAntPrenatales(): AntPrenatales {
                     <div class="form-grid">
                       <mat-form-field appearance="outline">
                         <mat-label>Menarquia (edad)</mat-label>
-                        <input matInput [(ngModel)]="antGineco.menarquia" type="number" min="0" max="25" />
+                        <input matInput [(ngModel)]="antGineco().menarquia" type="number" min="0" max="25" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>FUM</mat-label>
-                        <input matInput type="date" [(ngModel)]="antGineco.fum" class="w-full" />
+                        <input matInput type="date" [(ngModel)]="antGineco().fum" class="w-full" />
                       </mat-form-field>
                     </div>
                     <div class="check-grid" style="margin-bottom:0.75rem">
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.ciclos_regulares">Ciclos regulares</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.dismenorrea">Dismenorrea</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.metrorragia">Metrorragia</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.citologia_vigente">Citología vigente</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.lactancia_actual">Lactancia actual</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().ciclos_regulares">Ciclos regulares</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().dismenorrea">Dismenorrea</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().metrorragia">Metrorragia</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().citologia_vigente">Citología vigente</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().lactancia_actual">Lactancia actual</mat-checkbox></div>
                     </div>
                     <div class="cond-row">
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.planificacion">Planificación familiar</mat-checkbox></div>
-                      @if (antGineco.planificacion) {
-                        <input [(ngModel)]="antGineco.metodo_planificacion" class="cond-input" placeholder="Método..." />
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().planificacion">Planificación familiar</mat-checkbox></div>
+                      @if (antGineco().planificacion) {
+                        <input [(ngModel)]="antGineco().metodo_planificacion" class="cond-input" placeholder="Método..." />
                       }
                     </div>
-                    @if (antGineco.citologia_vigente) {
+                    @if (antGineco().citologia_vigente) {
                       <mat-form-field appearance="outline" style="margin-top:0.5rem">
                         <mat-label>Fecha citología</mat-label>
-                        <input matInput type="date" [(ngModel)]="antGineco.fecha_citologia" style="width:200px" />
+                        <input matInput type="date" [(ngModel)]="antGineco().fecha_citologia" style="width:200px" />
                       </mat-form-field>
                     }
                     <div class="cond-row" style="margin-top:0.5rem">
-                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco.embarazo_actual">Embarazo actual</mat-checkbox></div>
-                      @if (antGineco.embarazo_actual) {
-                        <input [(ngModel)]="antGineco.semanas_gestacion" type="number" min="1" max="42"
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().embarazo_actual">Embarazo actual</mat-checkbox></div>
+                      @if (antGineco().embarazo_actual) {
+                        <input [(ngModel)]="antGineco().semanas_gestacion" type="number" min="1" max="42"
                           placeholder="Semanas" class="cond-input" />
                       }
                     </div>
@@ -421,28 +421,28 @@ function defaultAntPrenatales(): AntPrenatales {
                     <div class="obstetrico-grid">
                       <mat-form-field appearance="outline">
                         <mat-label>G (Gestas)</mat-label>
-                        <input matInput [(ngModel)]="antGineco.gestas" type="number" min="0" />
+                        <input matInput [(ngModel)]="antGineco().gestas" type="number" min="0" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>P (Partos)</mat-label>
-                        <input matInput [(ngModel)]="antGineco.partos" type="number" min="0" />
+                        <input matInput [(ngModel)]="antGineco().partos" type="number" min="0" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>C (Cesáreas)</mat-label>
-                        <input matInput [(ngModel)]="antGineco.cesareas" type="number" min="0" />
+                        <input matInput [(ngModel)]="antGineco().cesareas" type="number" min="0" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>A (Abortos)</mat-label>
-                        <input matInput [(ngModel)]="antGineco.abortos" type="number" min="0" />
+                        <input matInput [(ngModel)]="antGineco().abortos" type="number" min="0" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Hijos vivos</mat-label>
-                        <input matInput [(ngModel)]="antGineco.hijos_vivos" type="number" min="0" />
+                        <input matInput [(ngModel)]="antGineco().hijos_vivos" type="number" min="0" />
                       </mat-form-field>
                     </div>
                     <mat-form-field appearance="outline" style="margin-top:0.75rem">
                         <mat-label>Observaciones</mat-label>
-                        <textarea matInput [(ngModel)]="antGineco.obs_adicionales" rows="2" class="w-full"></textarea>
+                        <textarea matInput [(ngModel)]="antGineco().obs_adicionales" rows="2" class="w-full"></textarea>
                       </mat-form-field>
                   </mat-expansion-panel>
 
@@ -451,37 +451,37 @@ function defaultAntPrenatales(): AntPrenatales {
                       <mat-panel-title>Antecedentes prenatales</mat-panel-title>
                     </mat-expansion-panel-header>
                     <div class="check-grid" style="margin-bottom:0.75rem">
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.embarazo_a_termino">Embarazo a término</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.parto_normal">Parto normal</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.parto_cesarea">Cesárea</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.parto_forceps">Fórceps</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales.lactancia_materna">Lactancia materna</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().embarazo_a_termino">Embarazo a término</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().parto_normal">Parto normal</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().parto_cesarea">Cesárea</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().parto_forceps">Fórceps</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().lactancia_materna">Lactancia materna</mat-checkbox></div>
                     </div>
                     <div class="form-grid">
                       <mat-form-field appearance="outline">
                         <mat-label>Semanas de gestación al nacer</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales.semanas_gestacion_nacer" type="number" min="20" max="44" />
+                        <input matInput [(ngModel)]="antPrenatales().semanas_gestacion_nacer" type="number" min="20" max="44" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Peso al nacer (kg)</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales.peso_nacer" type="number" step="any" />
+                        <input matInput [(ngModel)]="antPrenatales().peso_nacer" type="number" step="any" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Talla al nacer (cm)</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales.talla_nacer" type="number" step="any" />
+                        <input matInput [(ngModel)]="antPrenatales().talla_nacer" type="number" step="any" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>APGAR al minuto</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales.apgar_1min" type="number" min="0" max="10" />
+                        <input matInput [(ngModel)]="antPrenatales().apgar_1min" type="number" min="0" max="10" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>APGAR 5 minutos</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales.apgar_5min" type="number" min="0" max="10" />
+                        <input matInput [(ngModel)]="antPrenatales().apgar_5min" type="number" min="0" max="10" />
                       </mat-form-field>
                     </div>
                     <mat-form-field appearance="outline" style="margin-top:0.5rem">
                         <mat-label>Complicaciones perinatales</mat-label>
-                        <textarea matInput [(ngModel)]="antPrenatales.complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
+                        <textarea matInput [(ngModel)]="antPrenatales().complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
                       </mat-form-field>
                   </mat-expansion-panel>
                 }
@@ -500,35 +500,35 @@ function defaultAntPrenatales(): AntPrenatales {
 
                         <mat-form-field appearance="outline">
                         <mat-label>Perímetro abdominal (cm)</mat-label>
-                        <input matInput [(ngModel)]="form.pabd" type="number" step="any" />
+                        <input matInput [(ngModel)]="form().pabd" type="number" step="any" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Presión arterial media</mat-label>
-                        <input matInput [(ngModel)]="form.pam" class="w-full" placeholder="pam (mmHg)" />
+                        <input matInput [(ngModel)]="form().pam" class="w-full" placeholder="pam (mmHg)" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Temperatura corporal (°C)</mat-label>
-                        <input matInput [(ngModel)]="form.temperatura" type="number" step="any" />
+                        <input matInput [(ngModel)]="form().temperatura" type="number" step="any" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Pulso / min</mat-label>
-                        <input matInput [(ngModel)]="form.pulso" type="number" min="0" />
+                        <input matInput [(ngModel)]="form().pulso" type="number" min="0" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Frec. respiratoria</mat-label>
-                        <input matInput [(ngModel)]="form.frecuencia_respiratoria" type="number" min="0" />
+                        <input matInput [(ngModel)]="form().frecuencia_respiratoria" type="number" min="0" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Frec. cardíaca / min</mat-label>
-                        <input matInput [(ngModel)]="form.frecuencia_cardiaca" type="number" min="0" />
+                        <input matInput [(ngModel)]="form().frecuencia_cardiaca" type="number" min="0" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Perímetro cefálico (cm)</mat-label>
-                        <input matInput [(ngModel)]="form.pc" type="number" step="any" />
+                        <input matInput [(ngModel)]="form().pc" type="number" step="any" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Peso (kg)</mat-label>
-                        <input matInput [(ngModel)]="form.peso" type="number" step="any" />
+                        <input matInput [(ngModel)]="form().peso" type="number" step="any" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Talla (m)</mat-label>
@@ -538,7 +538,7 @@ function defaultAntPrenatales(): AntPrenatales {
                         <!-- CALCULADOS -->
                         <div class="field sv-calc">
                           <label>Peso ideal (kg) <span class="calc-badge">calculo</span></label>
-                          <div class="calc-value">{{ form.peso_ideal != null ? (form.peso_ideal | number:'1.1-1') + ' kg' : '—' }}</div>
+                          <div class="calc-value">{{ form().peso_ideal != null ? (form().peso_ideal | number:'1.1-1') + ' kg' : '—' }}</div>
                         </div>
                         <div class="field sv-calc">
                           <label>Talla ideal (m) <span class="calc-badge">calculo</span></label>
@@ -547,15 +547,15 @@ function defaultAntPrenatales(): AntPrenatales {
                         <div class="field sv-calc">
                           <label>IMC <span class="calc-badge">calculo</span></label>
                           <div class="calc-value">
-                            @if (form.imc) {
-                              {{ form.imc | number:'1.1-1' }}
+                            @if (form().imc) {
+                              {{ form().imc | number:'1.1-1' }}
                               <x-etiqueta [value]="imcLabel()" [severity]="imcSeverity()" style="margin-left:0.5rem" />
                             } @else { — }
                           </div>
                         </div>
                         <div class="field sv-calc" style="grid-column:1/-1">
                           <label>Estado nutricional <span class="calc-badge">calculo</span></label>
-                          <div class="calc-value">{{ form.estado_nutricional || '—' }}</div>
+                          <div class="calc-value">{{ form().estado_nutricional || '—' }}</div>
                         </div>
 
                       </div>
@@ -585,7 +585,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       </div>
                       <mat-form-field appearance="outline" style="margin-top:1.25rem">
                         <mat-label>Hallazgos generales</mat-label>
-                        <textarea matInput [(ngModel)]="form.ef_hallazgos" rows="4" class="w-full"
+                        <textarea matInput [(ngModel)]="form().ef_hallazgos" rows="4" class="w-full"
                           placeholder="Observaciones generales del examen físico..."></textarea>
                       </mat-form-field>
                     </mat-tab>
@@ -602,11 +602,11 @@ function defaultAntPrenatales(): AntPrenatales {
                 <div class="form-grid">
                   <mat-form-field appearance="outline">
                         <mat-label>Código CIE-10 principal</mat-label>
-                        <input matInput [(ngModel)]="form.diagnostico_principal" class="w-full" placeholder="Ej: J06.9" />
+                        <input matInput [(ngModel)]="form().diagnostico_principal" class="w-full" placeholder="Ej: J06.9" />
                       </mat-form-field>
                   <mat-form-field appearance="outline">
                         <mat-label>Código CIE-10 relacionado</mat-label>
-                        <input matInput [(ngModel)]="form.diagnostico_relacionado1" class="w-full" placeholder="Código adicional" />
+                        <input matInput [(ngModel)]="form().diagnostico_relacionado1" class="w-full" placeholder="Código adicional" />
                       </mat-form-field>
                   <!--
                     Finalidad y causa: los dos van al RIPS y hasta el 2026-08-02
@@ -619,7 +619,7 @@ function defaultAntPrenatales(): AntPrenatales {
                   -->
                   <mat-form-field appearance="outline">
                     <mat-label>Finalidad de la atención</mat-label>
-                    <mat-select [(ngModel)]="form.finalidad"
+                    <mat-select [(ngModel)]="form().finalidad"
                       placeholder="Para qué se atendió (Resolución 948)">
                       <!-- Sin opción por defecto y a propósito: hasta el
                            2026-08-02 este campo salía con un código de la tabla
@@ -633,7 +633,7 @@ function defaultAntPrenatales(): AntPrenatales {
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Causa o motivo de la atención</mat-label>
-                    <mat-select [(ngModel)]="form.causa_externa"
+                    <mat-select [(ngModel)]="form().causa_externa"
                       placeholder="Por qué se atendió (Resolución 948)">
                       <mat-option [value]="null">— Sin elegir —</mat-option>
                       @for (c of causasMotivo(); track c.codigo) {
@@ -652,7 +652,7 @@ function defaultAntPrenatales(): AntPrenatales {
             <mat-step label="Plan">
                 <mat-form-field appearance="outline" class="ancho">
                   <mat-label>Plan de tratamiento</mat-label>
-                  <textarea matInput [(ngModel)]="form.plan_tratamiento" rows="8"
+                  <textarea matInput [(ngModel)]="form().plan_tratamiento" rows="8"
                     placeholder="Plan de manejo y tratamiento..."></textarea>
                 </mat-form-field>
                 <div class="step-actions">
@@ -719,27 +719,27 @@ function defaultAntPrenatales(): AntPrenatales {
                       <div class="form-grid">
                         <mat-form-field appearance="outline" style="grid-column:1/-1">
                         <mat-label>Medicamento *</mat-label>
-                        <input matInput [(ngModel)]="fForm.medicamento" class="w-full"
+                        <input matInput [(ngModel)]="fForm().medicamento" class="w-full"
                             placeholder="Nombre del medicamento (manual o desde búsqueda)" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Código CUM</mat-label>
-                        <input matInput [(ngModel)]="fForm.codigo_cum" class="w-full"
+                        <input matInput [(ngModel)]="fForm().codigo_cum" class="w-full"
                             placeholder="Auto desde búsqueda o manual" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Dosis *</mat-label>
-                        <input matInput [(ngModel)]="fForm.dosis" class="w-full"
+                        <input matInput [(ngModel)]="fForm().dosis" class="w-full"
                             placeholder="Ej: 500mg cada 8h por 7 días" />
                       </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Cantidad *</mat-label>
-                        <input matInput [(ngModel)]="fForm.cantidad" type="number" min="1" />
+                        <input matInput [(ngModel)]="fForm().cantidad" type="number" min="1" />
                       </mat-form-field>
                         <div class="campo-con-nota">
                           <mat-form-field appearance="outline">
                             <mat-label>Unidad *</mat-label>
-                            <mat-select [(ngModel)]="fForm.unidad" placeholder="Elija la presentación">
+                            <mat-select [(ngModel)]="fForm().unidad" placeholder="Elija la presentación">
                               @for (u of unidades(); track u.nombre) {
                                 <mat-option [value]="u.nombre">{{ u.nombre }}</mat-option>
                               }
@@ -752,11 +752,11 @@ function defaultAntPrenatales(): AntPrenatales {
                         </div>
                         <mat-form-field appearance="outline">
                         <mat-label>Días de tratamiento *</mat-label>
-                        <input matInput [(ngModel)]="fForm.dias_tratamiento" type="number" min="1" />
+                        <input matInput [(ngModel)]="fForm().dias_tratamiento" type="number" min="1" />
                       </mat-form-field>
                         <mat-form-field appearance="outline" style="grid-column:1/-1">
                         <mat-label>Observaciones</mat-label>
-                        <textarea matInput [(ngModel)]="fForm.observaciones" rows="2" class="w-full"
+                        <textarea matInput [(ngModel)]="fForm().observaciones" rows="2" class="w-full"
                             placeholder="Indicaciones adicionales para el paciente o farmacia..."></textarea>
                       </mat-form-field>
                       </div>
@@ -865,7 +865,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       <div class="form-grid">
                         <mat-form-field appearance="outline">
                           <mat-label>Tipo de orden *</mat-label>
-                          <mat-select [(ngModel)]="oForm.tipo">
+                          <mat-select [(ngModel)]="oForm().tipo">
                             @for (t of tiposOrden; track t.value) {
                               <mat-option [value]="t.value">{{ t.label }}</mat-option>
                             }
@@ -873,22 +873,22 @@ function defaultAntPrenatales(): AntPrenatales {
                         </mat-form-field>
                         <mat-form-field appearance="outline">
                         <mat-label>Código CUPS</mat-label>
-                        <input matInput [(ngModel)]="oForm.codigo_cups" class="w-full" placeholder="Opcional" />
+                        <input matInput [(ngModel)]="oForm().codigo_cups" class="w-full" placeholder="Opcional" />
                       </mat-form-field>
                         <mat-form-field appearance="outline" style="grid-column:1/-1">
                         <mat-label>Descripción *</mat-label>
-                        <input matInput [(ngModel)]="oForm.descripcion" class="w-full"
+                        <input matInput [(ngModel)]="oForm().descripcion" class="w-full"
                             placeholder="Ej: Hemograma completo, Rayos X de tórax..." />
                       </mat-form-field>
                         <mat-form-field appearance="outline" style="grid-column:1/-1">
                         <mat-label>Justificación clínica *</mat-label>
-                        <textarea matInput [(ngModel)]="oForm.justificacion" rows="3" class="w-full"
+                        <textarea matInput [(ngModel)]="oForm().justificacion" rows="3" class="w-full"
                             placeholder="Motivo clínico de la orden..."></textarea>
                       </mat-form-field>
-                        @if (oForm.tipo === 'Remisión Especialista') {
+                        @if (oForm().tipo === 'Remisión Especialista') {
                           <mat-form-field appearance="outline" style="grid-column:1/-1">
                             <mat-label>Especialidad destino</mat-label>
-                            <mat-select [(ngModel)]="oForm.especialidad_destino_id">
+                            <mat-select [(ngModel)]="oForm().especialidad_destino_id">
                               @for (e of especialidades(); track e.id) {
                                 <mat-option [value]="e.id">{{ e.nombre }}</mat-option>
                               }
@@ -984,8 +984,8 @@ function defaultAntPrenatales(): AntPrenatales {
                             accept="image/*,.pdf,.dcm"
                             (change)="onFileSelected($event)" />
                           <button matButton (click)="fileInput.click()"><i class="pi pi-upload"></i> Seleccionar archivo</button>
-                          @if (imagenArchivoSeleccionado) {
-                            <span style="font-size:0.85rem;color:#94a3b8">{{ imagenArchivoSeleccionado.name }}</span>
+                          @if (imagenArchivoSeleccionado(); as archivo) {
+                            <span style="font-size:0.85rem;color:#94a3b8">{{ archivo.name }}</span>
                           }
                         </div>
                       </div>
@@ -995,7 +995,7 @@ function defaultAntPrenatales(): AntPrenatales {
                           placeholder="Ej: Rx tórax PA, ECG, foto lesión..." />
                       </mat-form-field>
                     </div>
-                    <button matButton="filled" [disabled]="!imagenArchivoSeleccionado || uploadingImagen()" (click)="subirImagen()"><i [class]="uploadingImagen() ? 'pi pi-spin pi-spinner' : 'pi pi-cloud-upload'"></i> Subir imagen</button>
+                    <button matButton="filled" [disabled]="!imagenArchivoSeleccionado() || uploadingImagen()" (click)="subirImagen()"><i [class]="uploadingImagen() ? 'pi pi-spin pi-spinner' : 'pi pi-cloud-upload'"></i> Subir imagen</button>
                   </div>
 
                   @if (imagenes().length > 0) {
@@ -1053,7 +1053,6 @@ function defaultAntPrenatales(): AntPrenatales {
 
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     /* ── Búsqueda ── */
     .search-hint { color: #94a3b8; margin-bottom: 1.5rem; font-size: 0.9rem; }
@@ -1225,11 +1224,22 @@ export class HistoriasComponent implements OnInit {
   saving = signal(false);
   signing = signal(false);
 
-  form: Partial<Historia> = {};
-  antFam = defaultAntFam();
-  antPers = defaultAntPers();
-  antGineco = defaultAntGineco();
-  antPrenatales = defaultAntPrenatales();
+  /**
+   * Todo el estado que la plantilla lee es SEÑAL. Estos objetos los reescriben
+   * los `subscribe` que cargan la historia y los antecedentes del paciente, o
+   * sea después de que la detección de cambios haya pasado: con OnPush —el
+   * defecto desde Angular 22— un campo llano habría dejado en pantalla los
+   * datos del paciente ANTERIOR. En una historia clínica eso no es un detalle
+   * de refresco. Lo vigila `estado-que-la-plantilla-lee-es-señal.spec.ts`.
+   *
+   * Teclear muta el objeto sin avisar a la señal, y da igual: el evento de
+   * `ngModel` ya marca la vista sucia en ese mismo instante.
+   */
+  readonly form = signal<Partial<Historia>>({});
+  readonly antFam = signal(defaultAntFam());
+  readonly antPers = signal(defaultAntPers());
+  readonly antGineco = signal(defaultAntGineco());
+  readonly antPrenatales = signal(defaultAntPrenatales());
 
   // ── Examen físico por sistemas ──
   readonly efItems = [
@@ -1250,20 +1260,20 @@ export class HistoriasComponent implements OnInit {
     { key: 'ef_piel', label: 'Piel' },
   ] as const;
   efState: Record<string, { anormal: boolean; texto: string }> = {};
-  tallaMts: number | null = null;
+  readonly tallaMts = signal<number | null>(null);
 
   // ── Fórmulas médicas ──
   formulas = signal<Formula[]>([]);
   mostrarFormFormula = signal(false);
   formulaEditando = signal<Formula | null>(null);
   savingFormula = signal(false);
-  termMed = '';
+  readonly termMed = signal('');
   buscandoMed = signal(false);
   resultadosMed = signal<MedicamentoInfo[]>([]);
   // Sin `unidad: 'tabletas'`: era un dato inventado con aspecto de dato. Vacío,
   // la falta se ve al cerrar el mes; relleno, se factura una presentación que
   // nadie eligió y de la que dependen el valor unitario y la cantidad.
-  fForm: FormulaCreate = { medicamento: '', dosis: '', cantidad: 1 };
+  readonly fForm = signal<FormulaCreate>({ medicamento: '', dosis: '', cantidad: 1 });
   readonly unidades = signal<UnidadDispensacion[]>([]);
   // Las dos tablas de la 948 que la historia tiene que ofrecer. Solo las que
   // aplican al archivo de CONSULTAS: unas cuantas finalidades son exclusivas de
@@ -1277,7 +1287,7 @@ export class HistoriasComponent implements OnInit {
   mostrarFormOrden = signal(false);
   savingOrden = signal(false);
   especialidades = signal<EspecialidadInfo[]>([]);
-  oForm: OrdenCreate = { tipo: '', descripcion: '', justificacion: '' };
+  readonly oForm = signal<OrdenCreate>({ tipo: '', descripcion: '', justificacion: '' });
   readonly tiposOrden = [
     { label: 'Laboratorio', value: 'Laboratorio' },
     { label: 'Imagenología', value: 'Imagenología' },
@@ -1290,8 +1300,8 @@ export class HistoriasComponent implements OnInit {
   // ── Imágenes diagnósticas ──
   imagenes = signal<ImagenDiagnostica[]>([]);
   uploadingImagen = signal(false);
-  imagenArchivoSeleccionado: File | null = null;
-  imagenDescripcion = '';
+  readonly imagenArchivoSeleccionado = signal<File | null>(null);
+  readonly imagenDescripcion = signal('');
 
   esMujer = computed(() => {
     const s = this.paciente()?.sexo ?? '';
@@ -1339,10 +1349,10 @@ export class HistoriasComponent implements OnInit {
       // Viene con historia específica (p.ej. desde citas) → abrir formulario directo
       this.svc.get(Number(historiaId)).subscribe(h => {
         this.historia.set(h);
-        this.form = { ...h };
+        this.form.set({ ...h });
         if (h.paciente) { this.paciente.set(h.paciente); this._loadAnt(h.paciente); }
         if (h.medico) this.medico.set(h.medico);
-        this.tallaMts = h.talla ? Math.round(h.talla / 100 * 100) / 100 : null;
+        this.tallaMts.set(h.talla ? Math.round(h.talla / 100 * 100) / 100 : null);
         this._initEfState();
         this._cargarFormulas(h.id);
         this._cargarOrdenes(h.id);
@@ -1354,8 +1364,8 @@ export class HistoriasComponent implements OnInit {
       // Viene con paciente (p.ej. desde citas para nueva HC) → abrir lista o formulario
       if (citaId) {
         // Con cita: cargar contexto y abrir formulario nuevo
-        this.form.paciente_id = Number(pacienteId);
-        this.form.cita_id = Number(citaId);
+        this.form().paciente_id = Number(pacienteId);
+        this.form().cita_id = Number(citaId);
         this.svc.getPacienteContexto(Number(pacienteId)).subscribe(ctx => {
           this.paciente.set(ctx.paciente);
           if (ctx.medico) this.medico.set(ctx.medico);
@@ -1429,8 +1439,8 @@ export class HistoriasComponent implements OnInit {
     const pacienteId = this.paciente()?.id;
     if (!pacienteId) return;
     this.historia.set(null);
-    this.form = { paciente_id: pacienteId };
-    this.tallaMts = null;
+    this.form.set({ paciente_id: pacienteId });
+    this.tallaMts.set(null);
     this._initEfState();
     this.activeStep.set(1);
     this.vista.set('formulario');
@@ -1438,9 +1448,9 @@ export class HistoriasComponent implements OnInit {
 
   editarHistoria(h: Historia): void {
     this.historia.set(h);
-    this.form = { ...h };
+    this.form.set({ ...h });
     if (h.paciente) this._loadAnt(h.paciente);
-    this.tallaMts = h.talla ? Math.round(h.talla / 100 * 100) / 100 : null;
+    this.tallaMts.set(h.talla ? Math.round(h.talla / 100 * 100) / 100 : null);
     this._initEfState();
     this.activeStep.set(1);
     this.formulas.set([]);
@@ -1496,30 +1506,30 @@ export class HistoriasComponent implements OnInit {
       this._cargarHistoriasPaciente(pacienteId);
     }
     this.historia.set(null);
-    this.form = {};
+    this.form.set({});
     this.activeStep.set(1);
     this.formulas.set([]);
     this.ordenes.set([]);
     this.imagenes.set([]);
     this.cerrarFormFormula();
     this.cerrarFormOrden();
-    this.imagenArchivoSeleccionado = null;
-    this.imagenDescripcion = '';
+    this.imagenArchivoSeleccionado.set(null);
+    this.imagenDescripcion.set('');
     this.vista.set('lista');
   }
 
   // ── Formulario ──
   private _loadAnt(p: PacienteInfo): void {
-    if (p.ant_familiares) this.antFam = { ...defaultAntFam(), ...p.ant_familiares } as AntFamiliares;
-    if (p.ant_personales) this.antPers = { ...defaultAntPers(), ...p.ant_personales } as AntPersonales;
-    if (p.ant_ginecologicos) this.antGineco = { ...defaultAntGineco(), ...p.ant_ginecologicos } as AntGineco;
-    if (p.ant_obstetricos) this.antPrenatales = { ...defaultAntPrenatales(), ...p.ant_obstetricos } as AntPrenatales;
+    if (p.ant_familiares) this.antFam.set({ ...defaultAntFam(), ...p.ant_familiares } as AntFamiliares);
+    if (p.ant_personales) this.antPers.set({ ...defaultAntPers(), ...p.ant_personales } as AntPersonales);
+    if (p.ant_ginecologicos) this.antGineco.set({ ...defaultAntGineco(), ...p.ant_ginecologicos } as AntGineco);
+    if (p.ant_obstetricos) this.antPrenatales.set({ ...defaultAntPrenatales(), ...p.ant_obstetricos } as AntPrenatales);
   }
 
   // ── Examen físico — checkboxes ───────────────────────────────
   private _initEfState(): void {
     for (const item of this.efItems) {
-      const val = (this.form as any)[item.key] as string | undefined;
+      const val = (this.form() as any)[item.key] as string | undefined;
       const anormal = !!val && val !== 'Normal';
       this.efState[item.key] = { anormal, texto: anormal ? val! : '' };
     }
@@ -1533,39 +1543,42 @@ export class HistoriasComponent implements OnInit {
     // Aplica el estado de checkboxes al form antes de avanzar
     for (const item of this.efItems) {
       const s = this.efState[item.key];
-      (this.form as any)[item.key] = s?.anormal ? (s.texto.trim() || 'Anormal') : 'Normal';
+      (this.form() as any)[item.key] = s?.anormal ? (s.texto.trim() || 'Anormal') : 'Normal';
     }
     this.irAPaso(3);
   }
 
   // ── Signos vitales — cálculos ────────────────────────────────
   onTallaChange(m: number | null): void {
-    this.tallaMts = m;
-    this.form.talla = m ? Math.round(m * 100 * 10) / 10 : undefined;
+    this.tallaMts.set(m);
+    this.form().talla = m ? Math.round(m * 100 * 10) / 10 : undefined;
     this.calcularMetrics();
   }
 
   calcularMetrics(): void {
-    const m = this.tallaMts ?? (this.form.talla ? this.form.talla / 100 : null);
-    const kg = this.form.peso ?? null;
+    // La señal se lee UNA vez: `form().x ? form().x / 100` son dos llamadas
+    // distintas para TypeScript, que por eso no puede estrechar el tipo.
+    const f = this.form();
+    const talla = f.talla;
+    const m = this.tallaMts() ?? (talla ? talla / 100 : null);
+    const kg = f.peso ?? null;
 
-    if (m && m > 0) {
-      if (kg && kg > 0) {
-        this.form.imc = Math.round(kg / (m * m) * 10) / 10;
-        this.form.peso_ideal = Math.round(22 * m * m * 10) / 10;
-        this.form.estado_nutricional = this._estadoNutricional(this.form.imc);
-      }
+    if (m && m > 0 && kg && kg > 0) {
+      const imc = Math.round(kg / (m * m) * 10) / 10;
+      f.imc = imc;
+      f.peso_ideal = Math.round(22 * m * m * 10) / 10;
+      f.estado_nutricional = this._estadoNutricional(imc);
     }
   }
 
   tallaIdeal = computed<number | null>(() => {
-    const kg = this.form.peso ?? null;
+    const kg = this.form().peso ?? null;
     if (!kg || kg <= 0) return null;
     return Math.round(Math.sqrt(kg / 22) * 100) / 100;
   });
 
   imcLabel(): string {
-    const v = this.form.imc ?? 0;
+    const v = this.form().imc ?? 0;
     if (v < 16) return 'Desnutrición severa';
     if (v < 17) return 'Desnutrición moderada';
     if (v < 18.5) return 'Bajo peso';
@@ -1577,7 +1590,7 @@ export class HistoriasComponent implements OnInit {
   }
 
   imcSeverity(): 'warn' | 'success' | 'danger' {
-    const v = this.form.imc ?? 0;
+    const v = this.form().imc ?? 0;
     if (v < 18.5 || (v >= 25 && v < 30)) return 'warn';
     if (v >= 30) return 'danger';
     return 'success';
@@ -1596,25 +1609,25 @@ export class HistoriasComponent implements OnInit {
 
   private _antPayload() {
     return {
-      ant_familiares: { ...this.antFam },
+      ant_familiares: { ...this.antFam() },
       ant_personales: {
-        hta: this.antPers.hta, diabetes: this.antPers.diabetes,
-        coronarias: this.antPers.coronarias, acv: this.antPers.acv,
-        tbc: this.antPers.tbc, asma: this.antPers.asma,
-        cancer: this.antPers.cancer_activo ? (this.antPers.cancer_desc || 'Sí') : 'no',
-        quirurgicos: this.antPers.quirurgicos_activo ? (this.antPers.quirurgicos_desc || 'Sí') : 'no',
-        its: this.antPers.its_activo ? (this.antPers.its_desc || 'Sí') : 'no',
-        otros: this.antPers.otros, habitos: this.antPers.habitos,
+        hta: this.antPers().hta, diabetes: this.antPers().diabetes,
+        coronarias: this.antPers().coronarias, acv: this.antPers().acv,
+        tbc: this.antPers().tbc, asma: this.antPers().asma,
+        cancer: this.antPers().cancer_activo ? (this.antPers().cancer_desc || 'Sí') : 'no',
+        quirurgicos: this.antPers().quirurgicos_activo ? (this.antPers().quirurgicos_desc || 'Sí') : 'no',
+        its: this.antPers().its_activo ? (this.antPers().its_desc || 'Sí') : 'no',
+        otros: this.antPers().otros, habitos: this.antPers().habitos,
       },
       ...(this.esMujer() ? {
-        ant_ginecologicos: { ...this.antGineco },
-        ant_obstetricos: { ...this.antPrenatales },
+        ant_ginecologicos: { ...this.antGineco() },
+        ant_obstetricos: { ...this.antPrenatales() },
       } : {}),
     };
   }
 
   guardarYContinuar(): void {
-    const pacienteId = this.form.paciente_id ?? this.historia()?.paciente_id;
+    const pacienteId = this.form().paciente_id ?? this.historia()?.paciente_id;
     if (!pacienteId) return;
     this.saving.set(true);
 
@@ -1623,12 +1636,12 @@ export class HistoriasComponent implements OnInit {
         if (!this.historia()?.id) {
           // Al crear, el formulario debe llevar el paciente y el médico que
           // atiende (el del contexto); la API los exige y no los inventa.
-          this.form.paciente_id = pacienteId;
-          if (this.medico()) this.form.medico_id = this.medico()!.id;
+          this.form().paciente_id = pacienteId;
+          if (this.medico()) this.form().medico_id = this.medico()!.id;
         }
         const obs = this.historia()?.id
-          ? this.svc.update(this.historia()!.id, this.form)
-          : this.svc.create(this.form);
+          ? this.svc.update(this.historia()!.id, this.form())
+          : this.svc.create(this.form());
         obs.subscribe({
           next: h => {
             this.historia.set(h);
@@ -1656,7 +1669,7 @@ export class HistoriasComponent implements OnInit {
   }
 
   guardar(): void {
-    const pacienteId = this.form.paciente_id ?? this.historia()?.paciente_id;
+    const pacienteId = this.form().paciente_id ?? this.historia()?.paciente_id;
     if (!pacienteId) return;
     this.saving.set(true);
 
@@ -1665,12 +1678,12 @@ export class HistoriasComponent implements OnInit {
         if (!this.historia()?.id) {
           // Al crear, el formulario debe llevar el paciente y el médico que
           // atiende (el del contexto); la API los exige y no los inventa.
-          this.form.paciente_id = pacienteId;
-          if (this.medico()) this.form.medico_id = this.medico()!.id;
+          this.form().paciente_id = pacienteId;
+          if (this.medico()) this.form().medico_id = this.medico()!.id;
         }
         const obs = this.historia()?.id
-          ? this.svc.update(this.historia()!.id, this.form)
-          : this.svc.create(this.form);
+          ? this.svc.update(this.historia()!.id, this.form())
+          : this.svc.create(this.form());
         obs.subscribe({
           next: h => {
             this.historia.set(h);
@@ -1715,8 +1728,8 @@ export class HistoriasComponent implements OnInit {
   }
 
   private _resetFForm(): void {
-    this.fForm = { medicamento: '', dosis: '', cantidad: 1 };
-    this.termMed = '';
+    this.fForm.set({ medicamento: '', dosis: '', cantidad: 1 });
+    this.termMed.set('');
     this.resultadosMed.set([]);
     this.formulaEditando.set(null);
   }
@@ -1737,15 +1750,15 @@ export class HistoriasComponent implements OnInit {
   }
 
   seleccionarMedicamento(m: MedicamentoInfo): void {
-    this.fForm.medicamento = `${m.nombre} ${m.concentracion} ${m.forma_farmaceutica}`.trim();
-    this.fForm.codigo_cum = m.codigo_cum;
-    this.termMed = m.nombre;
+    this.fForm().medicamento = `${m.nombre} ${m.concentracion} ${m.forma_farmaceutica}`.trim();
+    this.fForm().codigo_cum = m.codigo_cum;
+    this.termMed.set(m.nombre);
     this.resultadosMed.set([]);
   }
 
   editarFormula(f: Formula): void {
     this.formulaEditando.set(f);
-    this.fForm = {
+    this.fForm.set({
       medicamento: f.medicamento,
       codigo_cum: f.codigo_cum,
       dosis: f.dosis,
@@ -1753,14 +1766,14 @@ export class HistoriasComponent implements OnInit {
       unidad: f.unidad ?? '',
       dias_tratamiento: f.dias_tratamiento,
       observaciones: f.observaciones,
-    };
-    this.termMed = f.medicamento;
+    });
+    this.termMed.set(f.medicamento);
     this.resultadosMed.set([]);
     this.mostrarFormFormula.set(true);
   }
 
   guardarFormula(): void {
-    if (!this.fForm.medicamento || !this.fForm.dosis || !this.fForm.cantidad) {
+    if (!this.fForm().medicamento || !this.fForm().dosis || !this.fForm().cantidad) {
       this.messageService.add({ severity: 'warn', summary: 'Campos requeridos', detail: 'Medicamento, dosis y cantidad son obligatorios' });
       return;
     }
@@ -1770,8 +1783,8 @@ export class HistoriasComponent implements OnInit {
     // Crear devuelve el id y actualizar 204: tipos distintos que aquí no se usan
     // (se recarga la lista), por eso el observable se toma como `unknown`.
     const obs: Observable<unknown> = this.formulaEditando()
-      ? this.svc.updateFormula(historiaId, this.formulaEditando()!.id, this.fForm)
-      : this.svc.createFormula(historiaId, this.fForm);
+      ? this.svc.updateFormula(historiaId, this.formulaEditando()!.id, this.fForm())
+      : this.svc.createFormula(historiaId, this.fForm());
 
     obs.subscribe({
       next: () => {
@@ -1825,7 +1838,7 @@ export class HistoriasComponent implements OnInit {
   }
 
   private _resetOForm(): void {
-    this.oForm = { tipo: '', descripcion: '', justificacion: '' };
+    this.oForm.set({ tipo: '', descripcion: '', justificacion: '' });
   }
 
   abrirFormOrden(): void {
@@ -1839,13 +1852,13 @@ export class HistoriasComponent implements OnInit {
   }
 
   guardarOrden(): void {
-    if (!this.oForm.tipo || !this.oForm.descripcion || !this.oForm.justificacion) {
+    if (!this.oForm().tipo || !this.oForm().descripcion || !this.oForm().justificacion) {
       this.messageService.add({ severity: 'warn', summary: 'Campos requeridos', detail: 'Tipo, descripción y justificación son obligatorios' });
       return;
     }
     this.savingOrden.set(true);
     const historiaId = this.historia()!.id;
-    this.svc.createOrden(historiaId, this.oForm).subscribe({
+    this.svc.createOrden(historiaId, this.oForm()).subscribe({
       next: () => {
         // Se recarga la lista: crear devuelve solo el id, no la fila completa.
         this.svc.listOrdenes(historiaId).subscribe({ next: os => this.ordenes.set(os) });
@@ -1912,23 +1925,24 @@ export class HistoriasComponent implements OnInit {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.imagenArchivoSeleccionado = input.files?.[0] ?? null;
+    this.imagenArchivoSeleccionado.set(input.files?.[0] ?? null);
   }
 
   subirImagen(): void {
-    if (!this.imagenArchivoSeleccionado || !this.historia()?.id) return;
+    const archivo = this.imagenArchivoSeleccionado();
+    if (!archivo || !this.historia()?.id) return;
     this.uploadingImagen.set(true);
     this.svc.uploadImagen(
       this.historia()!.id,
-      this.imagenArchivoSeleccionado,
-      this.imagenDescripcion || this.imagenArchivoSeleccionado.name,
+      archivo,
+      this.imagenDescripcion() || archivo.name,
     ).subscribe({
       next: () => {
         // La subida devuelve solo el id; se recarga la lista para traer la fila
         // completa (mime, tamaño, fecha) tal como la guardó el servidor.
         this._cargarImagenes(this.historia()!.id);
-        this.imagenArchivoSeleccionado = null;
-        this.imagenDescripcion = '';
+        this.imagenArchivoSeleccionado.set(null);
+        this.imagenDescripcion.set('');
         this.uploadingImagen.set(false);
         this.messageService.add({ severity: 'success', summary: 'Subida', detail: 'Imagen adjuntada correctamente' });
       },

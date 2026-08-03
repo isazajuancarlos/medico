@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -132,7 +132,6 @@ const DIAS_SEMANA = [
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(32rem, 85vw); }
@@ -195,7 +194,6 @@ export class AdminUsuarioComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width:min(22rem, 85vw); }
     .quien { color:#64748b; margin-bottom:1rem; }
@@ -249,7 +247,6 @@ export class AdminResetClaveComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(26rem, 85vw); }
@@ -304,7 +301,6 @@ export class AdminCampoComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla { display:grid; grid-template-columns:1fr 1fr; gap:.875rem; padding-top:.5rem;
       min-width:min(26rem, 85vw); }
@@ -914,7 +910,9 @@ export class AdminEntidadComponent {
             <div style="display:flex;gap:.5rem">
               <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:220px">
                 <mat-label>Nueva especialidad</mat-label>
-                <input matInput [(ngModel)]="nuevaEspecialidad" (keyup.enter)="crearEspecialidad()" />
+                <input matInput [ngModel]="nuevaEspecialidad()"
+                  (ngModelChange)="nuevaEspecialidad.set($event)"
+                  (keyup.enter)="crearEspecialidad()" />
               </mat-form-field>
               <button matButton="filled" (click)="crearEspecialidad()">
                 <i class="pi pi-plus"></i> Agregar
@@ -1062,7 +1060,6 @@ export class AdminEntidadComponent {
     </div>
 
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:.5rem }
     .tabla { width:100% }
@@ -1185,7 +1182,11 @@ export class AdminComponent implements OnInit {
   audFechaFin = '';
   audAccion = '';
 
-  nuevaEspecialidad = '';
+  /** Señal: el `subscribe` que crea la especialidad la vacía después, y con
+   *  OnPush un campo llano dejaría el texto escrito en la caja. El enlace va
+   *  partido —`[ngModel]` + `(ngModelChange)`— porque el atajo de las dos vías
+   *  asigna, y a una señal se le escribe con `set`. */
+  readonly nuevaEspecialidad = signal('');
   busqEntidad = '';
 
 
@@ -1510,9 +1511,9 @@ export class AdminComponent implements OnInit {
     this.svc.listEspecialidades().subscribe({ next: r => this.especialidades.set(r), error: () => {} });
   }
   crearEspecialidad() {
-    if (!this.nuevaEspecialidad.trim()) return;
-    this.svc.createEspecialidad(this.nuevaEspecialidad.trim()).subscribe({
-      next: () => { this.ok('Especialidad creada'); this.nuevaEspecialidad = ''; this.cargarEspecialidades(); },
+    if (!this.nuevaEspecialidad().trim()) return;
+    this.svc.createEspecialidad(this.nuevaEspecialidad().trim()).subscribe({
+      next: () => { this.ok('Especialidad creada'); this.nuevaEspecialidad.set(''); this.cargarEspecialidades(); },
       error: e => this.err(e?.error?.detail ?? 'Error'),
     });
   }

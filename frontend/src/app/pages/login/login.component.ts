@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -47,13 +47,13 @@ import { MensajeComponent } from '../../shared/ui/mensaje.component';
             </button>
           </mat-form-field>
 
-          @if (errorMessage) {
-            <x-mensaje severity="error" [text]="errorMessage" />
+          @if (errorMessage()) {
+            <x-mensaje severity="error" [text]="errorMessage()" />
           }
 
           <button matButton="filled" type="submit" class="w-full boton-entrar"
-                  [disabled]="form.invalid || loading">
-            @if (loading) {
+                  [disabled]="form.invalid || cargando()">
+            @if (cargando()) {
               <mat-spinner diameter="18" />
             } @else {
               <i class="pi pi-sign-in"></i>
@@ -64,7 +64,6 @@ import { MensajeComponent } from '../../shared/ui/mensaje.component';
       </div>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .login-wrapper {
       min-height: 100vh; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -97,14 +96,19 @@ export class LoginComponent {
     clave: ['', [Validators.required]],
   });
 
-  loading = false;
-  errorMessage = '';
+  /** Señales, no campos llanos: las escribe el `subscribe` del acceso, o sea
+   *  DESPUÉS de que la detección de cambios haya pasado. Con OnPush un campo
+   *  llano dejaría el mensaje de error sin pintar y el botón girando para
+   *  siempre, sin que nada fallara. Lo vigila
+   *  `estado-que-la-plantilla-lee-es-señal.spec.ts`. */
+  readonly cargando = signal(false);
+  readonly errorMessage = signal('');
   verClave = false;
 
   onSubmit(): void {
     if (this.form.invalid) return;
-    this.loading = true;
-    this.errorMessage = '';
+    this.cargando.set(true);
+    this.errorMessage.set('');
 
     const { email, clave } = this.form.value;
     this.authService.login({ email: email!, clave: clave! }).subscribe({
@@ -112,8 +116,8 @@ export class LoginComponent {
         this.router.navigate([this.authService.getDefaultRoute()]);
       },
       error: (err: { error?: { detail?: string } }) => {
-        this.loading = false;
-        this.errorMessage = err.error?.detail || 'Error al iniciar sesión. Verifique sus credenciales.';
+        this.cargando.set(false);
+        this.errorMessage.set(err.error?.detail || 'Error al iniciar sesión. Verifique sus credenciales.');
       },
     });
   }

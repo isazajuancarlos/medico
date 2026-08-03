@@ -6,18 +6,17 @@
  * BAJE al siguiente campo en vez de enviar: quien lleva años digitando «dato,
  * Enter, dato, Enter» guardaría la historia a medio llenar una y otra vez.
  */
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TeclasDirective } from './teclas.directive';
 
 @Component({
   standalone: true,
   imports: [TeclasDirective],
-  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <form
       appTeclas
-      [enterAvanza]="enterAvanza"
+      [enterAvanza]="enterAvanza()"
       (confirmar)="confirmado = confirmado + 1"
       (cancelar)="cancelado = cancelado + 1"
     >
@@ -31,7 +30,14 @@ import { TeclasDirective } from './teclas.directive';
   `,
 })
 class Anfitrion {
-  enterAvanza = true;
+  /**
+   * Señal, no campo llano, y por la misma razón que en la aplicación: desde
+   * Angular 22 los componentes son OnPush, así que escribir la propiedad desde
+   * fuera —como hace la prueba— no marca la vista sucia y el enlace
+   * `[enterAvanza]` no se vuelve a evaluar. Con un campo llano esta prueba
+   * pasaba a verde por el motivo equivocado: medía el estado anterior.
+   */
+  readonly enterAvanza = signal(true);
   confirmado = 0;
   cancelado = 0;
 }
@@ -108,7 +114,7 @@ describe('atajos de teclado del formulario', () => {
     });
 
     it('con enterAvanza en false se comporta como la web, para un buscador', () => {
-      anfitrion.enterAvanza = false;
+      anfitrion.enterAvanza.set(false);
       fixture.detectChanges();
 
       campo('a').focus();

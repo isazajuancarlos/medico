@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -91,13 +91,12 @@ import { PaginatedResponse } from '../../models/common.models';
            veinte y diría que no hay más. -->
       <mat-paginator
         [length]="total()"
-        [pageSize]="pageSize"
+        [pageSize]="pageSize()"
         [pageSizeOptions]="[10, 20, 50]"
         (page)="alPaginar($event)"
       />
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .tabla { width: 100%; }
     .buscador { width: 100%; max-width: 400px; margin-bottom: 1rem; }
@@ -113,20 +112,22 @@ export class PacientesComponent implements OnInit {
   pacientes = signal<Patient[]>([]);
   loading = signal(true);
   total = signal(0);
-  pageSize = 20;
+  /** Señal: `onSearch` la lee dentro de un `setTimeout` y `loadPacientes` la
+   *  escribe, o sea que su escritura puede caer después de la detección. */
+  readonly pageSize = signal(20);
   private primerVisible = 0;
   searchQuery = '';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.loadPacientes(0, this.pageSize);
+    this.loadPacientes(0, this.pageSize());
   }
 
   /** `first` es el índice de la primera fila; `rows`, el tamaño de página. */
   loadPacientes(first: number, rows: number): void {
     this.loading.set(true);
     this.primerVisible = first;
-    this.pageSize = rows;
+    this.pageSize.set(rows);
     const page = Math.floor(first / rows) + 1;
     this.svc.list(page, rows, this.searchQuery || undefined).subscribe({
       next: (r: PaginatedResponse<Patient>) => {
@@ -144,7 +145,7 @@ export class PacientesComponent implements OnInit {
 
   onSearch(_q: string): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => this.loadPacientes(0, this.pageSize), 400);
+    this.searchTimer = setTimeout(() => this.loadPacientes(0, this.pageSize()), 400);
   }
 
   nuevo(): void {
@@ -182,7 +183,7 @@ export class PacientesComponent implements OnInit {
   /** Tras guardar se recarga la página actual, no la primera: perder el sitio
    *  en una lista de miles obliga a volver a buscar. */
   alGuardar(): void {
-    this.loadPacientes(this.primerVisible, this.pageSize);
+    this.loadPacientes(this.primerVisible, this.pageSize());
   }
 
   getTipoLabel(tipo: string): string {

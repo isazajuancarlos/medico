@@ -1,4 +1,4 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -59,7 +59,6 @@ import { HttpClient, HttpParams } from '@angular/common/http';
       }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     x-mensaje { display: block; margin-top: 1rem; }
     button i { margin-right: 0.4rem; }

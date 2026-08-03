@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
@@ -18,33 +18,32 @@ import { KPIs } from '../../models/common.models';
       <p style="color: #64748b">{{ today }}</p>
     </div>
 
-    @if (kpis) {
+    @if (kpis(); as k) {
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-icon blue"><i class="pi pi-calendar"></i></div>
           <div class="kpi-data">
-            <div class="kpi-value">{{ kpis.citas_hoy }}</div>
+            <div class="kpi-value">{{ k.citas_hoy }}</div>
             <div class="kpi-label">Citas Hoy</div>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon green"><i class="pi pi-calendar-plus"></i></div>
           <div class="kpi-data">
-            <div class="kpi-value">{{ kpis.citas_mes }}</div>
+            <div class="kpi-value">{{ k.citas_mes }}</div>
             <div class="kpi-label">Citas Este Mes</div>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon purple"><i class="pi pi-users"></i></div>
           <div class="kpi-data">
-            <div class="kpi-value">{{ kpis.total_pacientes }}</div>
+            <div class="kpi-value">{{ k.total_pacientes }}</div>
             <div class="kpi-label">Total Pacientes</div>
           </div>
         </div>
       </div>
     }
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
     .kpi-card {
@@ -68,12 +67,14 @@ export class DashboardComponent implements OnInit {
   authService = inject(AuthService);
 
   readonly user = this.authService.currentUser;
-  kpis: KPIs | null = null;
+  /** Señal: la escribe el `subscribe` del arranque. Con OnPush un campo llano
+   *  dejaría el panel en el estado de carga para siempre. */
+  readonly kpis = signal<KPIs | null>(null);
   today = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   ngOnInit(): void {
     this.http.get<KPIs>('/api/estadisticas/kpis').subscribe({
-      next: data => this.kpis = data,
+      next: data => this.kpis.set(data),
       error: () => {},
     });
   }

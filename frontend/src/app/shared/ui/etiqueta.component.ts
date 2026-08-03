@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 /**
  * La etiqueta de estado — lo que en PrimeNG era `<p-tag>` (25 usos) y en
@@ -24,7 +24,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
     }
     {{ value }}
   </span>`,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       .x-etiqueta {

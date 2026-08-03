@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -255,13 +255,15 @@ function defaultFila(): FilaResultado {
 
           <mat-form-field appearance="outline" style="margin-top:1rem">
             <mat-label>Observaciones del bioanalista</mat-label>
-            <textarea matInput [(ngModel)]="observaciones" rows="3"
+            <textarea matInput [ngModel]="observaciones()"
+              (ngModelChange)="observaciones.set($event)" rows="3"
               placeholder="Notas adicionales, interferencias, calidad de la muestra..."
               [disabled]="resultadoValidado()"></textarea>
           </mat-form-field>
 
           <div style="margin-top:0.75rem">
-            <mat-checkbox class="critico" [(ngModel)]="hayValoresCriticos" [disabled]="resultadoValidado()">
+            <mat-checkbox class="critico" [ngModel]="hayValoresCriticos()"
+              (ngModelChange)="hayValoresCriticos.set($event)" [disabled]="resultadoValidado()">
               Contiene valores críticos que requieren notificación inmediata al médico
             </mat-checkbox>
           </div>
@@ -313,12 +315,12 @@ function defaultFila(): FilaResultado {
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Nombre del perfil *</mat-label>
-                <input matInput [(ngModel)]="pForm.nombre"
+                <input matInput [(ngModel)]="pForm().nombre"
                   placeholder="Ej: Hemograma completo, Perfil lipídico..." />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Descripción</mat-label>
-                <input matInput [(ngModel)]="pForm.descripcion" placeholder="Descripción opcional..." />
+                <input matInput [(ngModel)]="pForm().descripcion" placeholder="Descripción opcional..." />
               </mat-form-field>
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
@@ -327,7 +329,7 @@ function defaultFila(): FilaResultado {
                 <i class="pi pi-plus"></i> Agregar parámetro
               </button>
             </div>
-            @for (p of pForm.examenes; track $index) {
+            @for (p of pForm().examenes; track $index) {
               <div class="param-row" style="margin-bottom:0.5rem">
                 <input [(ngModel)]="p['nombre']" placeholder="Parámetro" class="param-input" />
                 <span style="opacity:0.3;font-size:0.8rem;padding:0 0.25rem">valor</span>
@@ -382,7 +384,6 @@ function defaultFila(): FilaResultado {
 
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
@@ -506,8 +507,11 @@ export class LaboratorioComponent implements OnInit {
   ordenActual = signal<OrdenLab | null>(null);
   resultadoActual = signal<ResultadoLab | null>(null);
   filas = signal<FilaResultado[]>([]);
-  observaciones = '';
-  hayValoresCriticos = false;
+  /** Señales: las escribe el `subscribe` que trae el resultado ya guardado, y
+   *  con OnPush un campo llano habría dejado en pantalla las observaciones del
+   *  examen ANTERIOR. En un resultado de laboratorio eso no es un detalle. */
+  readonly observaciones = signal('');
+  readonly hayValoresCriticos = signal(false);
   guardando = signal(false);
   validando = signal(false);
   cambiandoEstado = signal(false);
@@ -517,7 +521,9 @@ export class LaboratorioComponent implements OnInit {
   perfiles = signal<PerfilLab[]>([]);
   mostrarFormPerfil = signal(false);
   guardandoPerfil = signal(false);
-  pForm: PerfilCreate = { nombre: '', examenes: [] };
+  /** Señal: `guardarPerfil` la vacía dentro del `subscribe`, y con OnPush el
+   *  formulario se habría quedado con el perfil anterior escrito. */
+  readonly pForm = signal<PerfilCreate>({ nombre: '', examenes: [] });
 
   resultadoValidado = () => !!this.resultadoActual()?.validado;
 
@@ -542,16 +548,16 @@ export class LaboratorioComponent implements OnInit {
     this.ordenActual.set(o);
     this.resultadoActual.set(null);
     this.filas.set([]);
-    this.observaciones = '';
-    this.hayValoresCriticos = false;
+    this.observaciones.set('');
+    this.hayValoresCriticos.set(false);
     this.perfilSeleccionado = null;
     if (o.tiene_resultado) {
       this.svc.getResultado(o.id).subscribe({
         next: r => {
           this.resultadoActual.set(r);
           this.filas.set(this._resultadoToFilas(r.resultados_json));
-          this.observaciones = r.observaciones ?? '';
-          this.hayValoresCriticos = r.valores_criticos;
+          this.observaciones.set(r.observaciones ?? '');
+          this.hayValoresCriticos.set(r.valores_criticos);
         },
         error: () => this.err('Error al cargar el resultado'),
       });
@@ -648,25 +654,25 @@ export class LaboratorioComponent implements OnInit {
 
   // ── Perfiles ──────────────────────────────────────────────────────
   agregarParamPerfil(): void {
-    this.pForm.examenes.push({ nombre: '', unidad: '', ref_min: '', ref_max: '' } as any);
+    this.pForm.update(f => ({ ...f, examenes: [...f.examenes, { nombre: '', unidad: '', ref_min: '', ref_max: '' } as any] }));
   }
 
   eliminarParamPerfil(idx: number): void {
-    this.pForm.examenes = this.pForm.examenes.filter((_, i) => i !== idx);
+    this.pForm.update(f => ({ ...f, examenes: f.examenes.filter((_, i) => i !== idx) }));
   }
 
   cerrarFormPerfil(): void {
-    this.pForm = { nombre: '', examenes: [] };
+    this.pForm.set({ nombre: '', examenes: [] });
     this.mostrarFormPerfil.set(false);
   }
 
   guardarPerfil(): void {
-    if (!this.pForm.nombre.trim()) {
+    if (!this.pForm().nombre.trim()) {
       this.err('El nombre del perfil es obligatorio');
       return;
     }
     this.guardandoPerfil.set(true);
-    this.svc.createPerfil(this.pForm).subscribe({
+    this.svc.createPerfil(this.pForm()).subscribe({
       next: p => {
         this.perfiles.update(ps => [...ps, p]);
         this.cerrarFormPerfil();
@@ -719,7 +725,7 @@ export class LaboratorioComponent implements OnInit {
         };
       }
     }
-    return { resultados_json, observaciones: this.observaciones || undefined, valores_criticos: this.hayValoresCriticos };
+    return { resultados_json, observaciones: this.observaciones() || undefined, valores_criticos: this.hayValoresCriticos() };
   }
 
   private _resultadoToFilas(json: Record<string, any>): FilaResultado[] {

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -76,7 +76,6 @@ const TIPOS_DE_EGRESO = [
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { margin-bottom:1rem; min-width:min(28rem, 80vw); }
     .rotulo { color:#94a3b8; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
@@ -287,7 +286,7 @@ export class HospitalizacionEgresoComponent {
             <div style="display:flex;gap:0.5rem;align-items:flex-start">
               <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
                 <mat-label>Buscar por nombre o identificación</mat-label>
-                <input matInput [(ngModel)]="busquedaPaciente"
+                <input matInput [ngModel]="busquedaPaciente()" (ngModelChange)="busquedaPaciente.set($event)"
                   placeholder="Ingrese nombre o número de identificación..."
                   (keyup.enter)="buscarPaciente()" />
               </mat-form-field>
@@ -298,21 +297,21 @@ export class HospitalizacionEgresoComponent {
             @if (pacientesResultados().length > 0) {
               <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
                 <mat-label>Seleccionar paciente</mat-label>
-                <mat-select [(ngModel)]="pacienteSeleccionado">
+                <mat-select [ngModel]="pacienteSeleccionado()" (ngModelChange)="pacienteSeleccionado.set($event)">
                   @for (p of pacientesResultados(); track p.id) {
                     <mat-option [value]="p">{{ p.nombre_completo }} — {{ p.identificacion }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
             }
-            @if (pacienteSeleccionado) {
+            @if (pacienteSeleccionado(); as sel) {
               <div class="paciente-card">
                 <i class="pi pi-user" style="color:#818cf8"></i>
                 <div>
-                  <div style="font-weight:600;color:#f1f5f9">{{ pacienteSeleccionado.nombre_completo }}</div>
-                  <div style="font-size:0.82rem;color:#94a3b8">{{ pacienteSeleccionado.identificacion }}</div>
+                  <div style="font-weight:600;color:#f1f5f9">{{ sel.nombre_completo }}</div>
+                  <div style="font-size:0.82rem;color:#94a3b8">{{ sel.identificacion }}</div>
                 </div>
-                <button matIconButton matTooltip="Quitar" (click)="pacienteSeleccionado = null">
+                <button matIconButton matTooltip="Quitar" (click)="pacienteSeleccionado.set(null)">
                   <i class="pi pi-times"></i>
                 </button>
               </div>
@@ -327,7 +326,7 @@ export class HospitalizacionEgresoComponent {
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Cama disponible *</mat-label>
-                <mat-select [(ngModel)]="iForm.cama_id">
+                <mat-select [(ngModel)]="iForm().cama_id">
                   @for (c of camasDisp(); track c.value) {
                     <mat-option [value]="c.value">{{ c.label }}</mat-option>
                   }
@@ -335,7 +334,7 @@ export class HospitalizacionEgresoComponent {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Médico tratante *</mat-label>
-                <mat-select [(ngModel)]="iForm.medico_id">
+                <mat-select [(ngModel)]="iForm().medico_id">
                   @for (m of medicos(); track m.id) {
                     <mat-option [value]="m.id">{{ m.nombre_completo }}</mat-option>
                   }
@@ -343,7 +342,7 @@ export class HospitalizacionEgresoComponent {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Vía de ingreso</mat-label>
-                <mat-select [(ngModel)]="iForm.via_ingreso">
+                <mat-select [(ngModel)]="iForm().via_ingreso">
                   @for (o of opcionesVia; track o.value) {
                     <mat-option [value]="o.value">{{ o.label }}</mat-option>
                   }
@@ -351,7 +350,7 @@ export class HospitalizacionEgresoComponent {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Diagnóstico de ingreso (CIE-10)</mat-label>
-                <input matInput [(ngModel)]="iForm.diagnostico_ingreso" placeholder="Ej: J18.9, Z00.0..." />
+                <input matInput [(ngModel)]="iForm().diagnostico_ingreso" placeholder="Ej: J18.9, Z00.0..." />
               </mat-form-field>
             </div>
           </div>
@@ -364,12 +363,12 @@ export class HospitalizacionEgresoComponent {
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Motivo de ingreso</mat-label>
-                <textarea matInput [(ngModel)]="iForm.motivo_ingreso" rows="3"
+                <textarea matInput [(ngModel)]="iForm().motivo_ingreso" rows="3"
                   placeholder="Descripción del motivo de hospitalización..."></textarea>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Observaciones de ingreso</mat-label>
-                <textarea matInput [(ngModel)]="iForm.observaciones_ingreso" rows="3"
+                <textarea matInput [(ngModel)]="iForm().observaciones_ingreso" rows="3"
                   placeholder="Observaciones adicionales al momento del ingreso..."></textarea>
               </mat-form-field>
             </div>
@@ -378,7 +377,7 @@ export class HospitalizacionEgresoComponent {
           <div class="step-actions">
             <button matButton (click)="volverLista()">Cancelar</button>
             <button matButton="filled" (click)="registrarIngreso()"
-              [disabled]="ingresando() || !pacienteSeleccionado || !iForm.cama_id || !iForm.medico_id">
+              [disabled]="ingresando() || !pacienteSeleccionado() || !iForm().cama_id || !iForm().medico_id">
               <i [class]="ingresando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Registrar ingreso
             </button>
           </div>
@@ -388,7 +387,6 @@ export class HospitalizacionEgresoComponent {
     </div>
 
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
@@ -518,12 +516,16 @@ export class HospitalizacionComponent implements OnInit {
   ];
 
   // Ingreso
-  busquedaPaciente = '';
+  readonly busquedaPaciente = signal('');
   buscandoPaciente = signal(false);
   pacientesResultados = signal<any[]>([]);
-  pacienteSeleccionado: any = null;
+  readonly pacienteSeleccionado = signal<any>(null);
   ingresando = signal(false);
-  iForm: Partial<IngresoCreate> = { diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' };
+  /** Señales: `volverLista()` las reinicia y lo llaman los `subscribe` del
+   *  ingreso y del egreso, o sea después de que la detección haya pasado. Con
+   *  un campo llano el formulario se quedaba con el paciente anterior. */
+  readonly iForm = signal<Partial<IngresoCreate>>(
+    { diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' });
 
   ngOnInit(): void {
     this.cargarHospitalizaciones();
@@ -549,18 +551,18 @@ export class HospitalizacionComponent implements OnInit {
 
   volverLista(): void {
     this.vista.set('lista');
-    this.busquedaPaciente = '';
+    this.busquedaPaciente.set('');
     this.pacientesResultados.set([]);
-    this.pacienteSeleccionado = null;
-    this.iForm = { diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' };
+    this.pacienteSeleccionado.set(null);
+    this.iForm.set({ diagnostico_ingreso: 'Z00.0', via_ingreso: 'PROGRAMADA' });
     this.cargarHospitalizaciones();
     this.cargarCamas();
   }
 
   buscarPaciente(): void {
-    if (!this.busquedaPaciente.trim()) return;
+    if (!this.busquedaPaciente().trim()) return;
     this.buscandoPaciente.set(true);
-    this.svc.searchPacientes(this.busquedaPaciente).subscribe({
+    this.svc.searchPacientes(this.busquedaPaciente()).subscribe({
       next: ps => {
         this.pacientesResultados.set(ps);
         this.buscandoPaciente.set(false);
@@ -571,15 +573,15 @@ export class HospitalizacionComponent implements OnInit {
   }
 
   registrarIngreso(): void {
-    if (!this.pacienteSeleccionado || !this.iForm.cama_id || !this.iForm.medico_id) return;
+    if (!this.pacienteSeleccionado() || !this.iForm().cama_id || !this.iForm().medico_id) return;
     const payload: IngresoCreate = {
-      paciente_id: this.pacienteSeleccionado.id,
-      cama_id: this.iForm.cama_id!,
-      medico_id: this.iForm.medico_id!,
-      diagnostico_ingreso: this.iForm.diagnostico_ingreso || 'Z00.0',
-      via_ingreso: this.iForm.via_ingreso || 'PROGRAMADA',
-      motivo_ingreso: this.iForm.motivo_ingreso,
-      observaciones_ingreso: this.iForm.observaciones_ingreso,
+      paciente_id: this.pacienteSeleccionado().id,
+      cama_id: this.iForm().cama_id!,
+      medico_id: this.iForm().medico_id!,
+      diagnostico_ingreso: this.iForm().diagnostico_ingreso || 'Z00.0',
+      via_ingreso: this.iForm().via_ingreso || 'PROGRAMADA',
+      motivo_ingreso: this.iForm().motivo_ingreso,
+      observaciones_ingreso: this.iForm().observaciones_ingreso,
     };
     this.ingresando.set(true);
     this.svc.ingresar(payload).subscribe({

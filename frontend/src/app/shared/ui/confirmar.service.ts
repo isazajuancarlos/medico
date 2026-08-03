@@ -1,4 +1,4 @@
-import { Component, Inject, Injectable, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, Injectable, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -24,7 +24,6 @@ export interface Confirmacion {
   selector: 'x-confirmar-dialogo',
   standalone: true,
   imports: [MatDialogModule, MatButtonModule],
-  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <h2 mat-dialog-title>
       @if (datos.icon) {

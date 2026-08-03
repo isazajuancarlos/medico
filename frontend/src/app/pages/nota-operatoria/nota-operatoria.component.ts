@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -331,7 +331,6 @@ Post: {{ actual()!.diagnostico_postoperatorio || '—' }}</div>
       }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
     .list-header .page-title { margin-bottom: 0; }

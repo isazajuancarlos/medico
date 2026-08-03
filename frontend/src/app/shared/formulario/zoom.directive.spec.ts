@@ -4,14 +4,13 @@
  * Es el comportamiento más extendido del sistema y el más fácil de descartar
  * por raro. Se prueba para que nadie lo quite sin darse cuenta.
  */
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ZoomDirective } from './zoom.directive';
 
 @Component({
   standalone: true,
   imports: [ZoomDirective],
-  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <span id="etiqueta" appZoom>{{ texto }}</span>
     <input id="campo" appZoom [value]="valor" />

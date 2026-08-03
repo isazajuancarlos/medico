@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, ViewChild, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -42,7 +42,6 @@ import { SuperadminService, Institucion, UsuarioResumen } from '../../services/s
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
     mat-form-field { width:100%; }
@@ -89,7 +88,6 @@ export class SuperadminIpsComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
     mat-form-field { width:100%; }
@@ -150,7 +148,6 @@ export class SuperadminLicenciaComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { display:flex; flex-direction:column; gap:1rem; padding-top:.5rem; }
     mat-form-field { width:100%; }
@@ -269,7 +266,6 @@ export class SuperadminAdminComponent {
   <mat-paginator #pagUsuarios [pageSize]="10" [pageSizeOptions]="[10, 25, 50]" />
 </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .fila-titulo { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem }
     table { width:100%; }

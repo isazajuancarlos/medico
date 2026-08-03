@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -168,21 +168,21 @@ type Vista = 'lista' | 'informe';
         <div class="informe-form">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full">
             <mat-label>Técnica utilizada *</mat-label>
-            <input matInput [(ngModel)]="iForm.tecnica"
+            <input matInput [(ngModel)]="iForm().tecnica"
               placeholder="Ej: Proyecciones PA y lateral de tórax con equipo digital…"
               [disabled]="informeFirmado()" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full separa">
             <mat-label>Hallazgos *</mat-label>
-            <textarea matInput [(ngModel)]="iForm.hallazgos" rows="6"
+            <textarea matInput [(ngModel)]="iForm().hallazgos" rows="6"
               placeholder="Descripción detallada de los hallazgos observados en el estudio…"
               [disabled]="informeFirmado()"></textarea>
           </mat-form-field>
 
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full separa">
             <mat-label>Impresión diagnóstica *</mat-label>
-            <textarea matInput [(ngModel)]="iForm.impresion_diagnostica" rows="4"
+            <textarea matInput [(ngModel)]="iForm().impresion_diagnostica" rows="4"
               placeholder="Conclusión e impresión diagnóstica del estudio…"
               [disabled]="informeFirmado()"></textarea>
           </mat-form-field>
@@ -190,13 +190,13 @@ type Vista = 'lista' | 'informe';
           <div class="form-grid separa">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Recomendaciones</mat-label>
-              <textarea matInput [(ngModel)]="iForm.recomendaciones" rows="3"
+              <textarea matInput [(ngModel)]="iForm().recomendaciones" rows="3"
                 placeholder="Estudios complementarios sugeridos, seguimiento…"
                 [disabled]="informeFirmado()"></textarea>
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Clasificación (BIRADS, ACR, Lung-RADS…)</mat-label>
-              <input matInput [(ngModel)]="iForm.clasificacion"
+              <input matInput [(ngModel)]="iForm().clasificacion"
                 placeholder="Ej: BIRADS 3, ACR C, Lung-RADS 2…"
                 [disabled]="informeFirmado()" />
             </mat-form-field>
@@ -264,7 +264,6 @@ type Vista = 'lista' | 'informe';
 
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
@@ -344,7 +343,15 @@ export class ImagenesComponent implements OnInit {
 
   ordenActual = signal<OrdenImagen | null>(null);
   informeActual = signal<InformeImagen | null>(null);
-  iForm: Partial<InformeCreate> = { tecnica: '', hallazgos: '', impresion_diagnostica: '' };
+  /**
+    * Señal con el formulario dentro. Se escribe con `set` cuando llega entero
+    * —al abrir un informe existente, dentro de un `subscribe`—, que es el caso
+    * que con OnPush dejaría los campos con lo anterior. Teclear muta el objeto
+    * sin avisar a la señal, y da igual: el evento de `ngModel` ya marca la
+    * vista sucia en ese mismo instante.
+    */
+  readonly iForm = signal<Partial<InformeCreate>>(
+    { tecnica: '', hallazgos: '', impresion_diagnostica: '' });
   guardando = signal(false);
   firmando = signal(false);
   cambiandoEstado = signal(false);
@@ -358,7 +365,7 @@ export class ImagenesComponent implements OnInit {
    * escribirlo otra vez, así que pasa a ser uno solo.
    */
   completo = () =>
-    !!this.iForm.tecnica && !!this.iForm.hallazgos && !!this.iForm.impresion_diagnostica;
+    !!this.iForm().tecnica && !!this.iForm().hallazgos && !!this.iForm().impresion_diagnostica;
 
   ngOnInit(): void {
     this.cargarOrdenes();
@@ -375,18 +382,18 @@ export class ImagenesComponent implements OnInit {
   abrirOrden(o: OrdenImagen): void {
     this.ordenActual.set(o);
     this.informeActual.set(null);
-    this.iForm = { tecnica: '', hallazgos: '', impresion_diagnostica: '' };
+    this.iForm.set({ tecnica: '', hallazgos: '', impresion_diagnostica: '' });
     if (o.tiene_resultado) {
       this.svc.getInforme(o.id).subscribe({
         next: inf => {
           this.informeActual.set(inf);
-          this.iForm = {
+          this.iForm.set({
             tecnica: inf.tecnica,
             hallazgos: inf.hallazgos,
             impresion_diagnostica: inf.impresion_diagnostica,
             recomendaciones: inf.recomendaciones,
             clasificacion: inf.clasificacion,
-          };
+          });
         },
         error: () => this.err('Error al cargar el informe'),
       });
@@ -414,7 +421,7 @@ export class ImagenesComponent implements OnInit {
   guardarInforme(): void {
     const o = this.ordenActual();
     if (!o || !this.completo()) return;
-    const payload = this.iForm as InformeCreate;
+    const payload = this.iForm() as InformeCreate;
     this.guardando.set(true);
     const obs$ = this.informeActual()
       ? this.svc.updateInforme(o.id, payload)
@@ -445,7 +452,7 @@ export class ImagenesComponent implements OnInit {
     const o = this.ordenActual();
     if (!o) return;
     // Save then sign
-    const payload = this.iForm as InformeCreate;
+    const payload = this.iForm() as InformeCreate;
     this.firmando.set(true);
     const save$ = this.informeActual()
       ? this.svc.updateInforme(o.id, payload)

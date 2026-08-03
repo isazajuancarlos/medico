@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -160,7 +160,6 @@ type AccionDetalle = 'iniciar' | 'cancelar';
       </div>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     mat-dialog-content { min-width: min(36rem, 88vw); }
     .detalle-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
@@ -258,7 +257,6 @@ export class QuirofanoDetalleComponent {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .ficha { margin-bottom:1rem; padding:0.75rem; background:rgba(99,102,241,0.1);
       border-radius:6px; border:1px solid rgba(99,102,241,0.2); }
@@ -469,7 +467,7 @@ export class QuirofanoCompletarComponent {
             <div style="display:flex;gap:0.5rem;align-items:flex-start">
               <mat-form-field appearance="outline" subscriptSizing="dynamic" style="flex:1">
                 <mat-label>Buscar por nombre o identificación</mat-label>
-                <input matInput [(ngModel)]="busquedaPaciente"
+                <input matInput [ngModel]="busquedaPaciente()" (ngModelChange)="busquedaPaciente.set($event)"
                   placeholder="Ingrese nombre o número de identificación..."
                   (keyup.enter)="buscarPaciente()" />
               </mat-form-field>
@@ -480,21 +478,21 @@ export class QuirofanoCompletarComponent {
             @if (pacientesResultados().length > 0) {
               <mat-form-field appearance="outline" subscriptSizing="dynamic" style="margin-top:0.75rem">
                 <mat-label>Seleccione el paciente…</mat-label>
-                <mat-select [(ngModel)]="pacienteSeleccionado">
+                <mat-select [ngModel]="pacienteSeleccionado()" (ngModelChange)="pacienteSeleccionado.set($event)">
                   @for (p of pacientesResultados(); track p.id) {
                     <mat-option [value]="p">{{ p.nombre_completo }} — {{ p.identificacion }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
             }
-            @if (pacienteSeleccionado) {
+            @if (pacienteSeleccionado(); as sel) {
               <div class="paciente-card">
                 <i class="pi pi-user" style="color:#818cf8"></i>
                 <div>
-                  <div style="font-weight:600;color:#f1f5f9">{{ pacienteSeleccionado.nombre_completo }}</div>
-                  <div style="font-size:0.82rem;color:#94a3b8">{{ pacienteSeleccionado.identificacion }}</div>
+                  <div style="font-weight:600;color:#f1f5f9">{{ sel.nombre_completo }}</div>
+                  <div style="font-size:0.82rem;color:#94a3b8">{{ sel.identificacion }}</div>
                 </div>
-                <button matIconButton matTooltip="Quitar" (click)="pacienteSeleccionado = null">
+                <button matIconButton matTooltip="Quitar" (click)="pacienteSeleccionado.set(null)">
                   <i class="pi pi-times"></i>
                 </button>
               </div>
@@ -509,16 +507,16 @@ export class QuirofanoCompletarComponent {
             <div class="form-grid">
               <mat-form-field appearance="outline" style="grid-column:1/-1">
                 <mat-label>Descripción del procedimiento *</mat-label>
-                <input matInput [(ngModel)]="nForm.procedimiento"
+                <input matInput [(ngModel)]="nForm().procedimiento"
                   placeholder="Ej: Colecistectomía laparoscópica, Apendicectomía..." />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Código CUPS</mat-label>
-                <input matInput [(ngModel)]="nForm.codigo_cups" placeholder="Ej: 472200" />
+                <input matInput [(ngModel)]="nForm().codigo_cups" placeholder="Ej: 472200" />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Tipo de anestesia</mat-label>
-                <mat-select [(ngModel)]="nForm.tipo_anestesia">
+                <mat-select [(ngModel)]="nForm().tipo_anestesia">
                   @for (o of opcionesAnestesia; track o.value) {
                     <mat-option [value]="o.value">{{ o.label }}</mat-option>
                   }
@@ -535,7 +533,7 @@ export class QuirofanoCompletarComponent {
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Sala de quirófano *</mat-label>
-                <mat-select [(ngModel)]="nForm.quirofano_id">
+                <mat-select [(ngModel)]="nForm().quirofano_id">
                   @for (s of salasDisp(); track s.value) {
                     <mat-option [value]="s.value">{{ s.label }}</mat-option>
                   }
@@ -543,7 +541,7 @@ export class QuirofanoCompletarComponent {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Cirujano *</mat-label>
-                <mat-select [(ngModel)]="nForm.cirujano_id">
+                <mat-select [(ngModel)]="nForm().cirujano_id">
                   @for (m of medicos(); track m.id) {
                     <mat-option [value]="m.id">{{ m.nombre_completo }}</mat-option>
                   }
@@ -551,7 +549,7 @@ export class QuirofanoCompletarComponent {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Anestesiólogo</mat-label>
-                <mat-select [(ngModel)]="nForm.anestesiologo_id">
+                <mat-select [(ngModel)]="nForm().anestesiologo_id">
                   <mat-option [value]="null">Sin asignar</mat-option>
                   @for (m of anestesiologos(); track m.id) {
                     <mat-option [value]="m.id">{{ m.nombre_completo }}</mat-option>
@@ -560,11 +558,11 @@ export class QuirofanoCompletarComponent {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Duración estimada (min)</mat-label>
-                <input matInput type="number" [(ngModel)]="nForm.duracion_estimada_min" placeholder="60" />
+                <input matInput type="number" [(ngModel)]="nForm().duracion_estimada_min" placeholder="60" />
               </mat-form-field>
               <mat-form-field appearance="outline" style="grid-column:1/-1">
                 <mat-label>Fecha y hora programada *</mat-label>
-                <input matInput type="datetime-local" [(ngModel)]="nForm.fecha_programada" />
+                <input matInput type="datetime-local" [(ngModel)]="nForm().fecha_programada" />
               </mat-form-field>
             </div>
           </div>
@@ -572,7 +570,7 @@ export class QuirofanoCompletarComponent {
           <div class="step-actions">
             <button matButton (click)="volverLista()">Cancelar</button>
             <button matButton="filled" (click)="guardar()"
-              [disabled]="guardando() || !pacienteSeleccionado || !nForm.quirofano_id || !nForm.cirujano_id || !nForm.procedimiento || !nForm.fecha_programada">
+              [disabled]="guardando() || !pacienteSeleccionado() || !nForm().quirofano_id || !nForm().cirujano_id || !nForm().procedimiento || !nForm().fecha_programada">
               <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i> Programar cirugía
             </button>
           </div>
@@ -581,7 +579,6 @@ export class QuirofanoCompletarComponent {
     </div>
 
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .page-card { padding: 1.5rem; }
     .page-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; margin: 0 0 1.5rem; }
@@ -731,12 +728,14 @@ export class QuirofanoComponent implements OnInit {
   ];
 
   // Formulario nueva programación
-  busquedaPaciente = '';
+  readonly busquedaPaciente = signal('');
   buscandoPaciente = signal(false);
   pacientesResultados = signal<any[]>([]);
-  pacienteSeleccionado: any = null;
+  readonly pacienteSeleccionado = signal<any>(null);
   guardando = signal(false);
-  nForm: Partial<ProgramacionCreate> = { duracion_estimada_min: 60 };
+  /** Señales: `volverLista()` las reinicia y lo llaman los `subscribe` del
+   *  guardado, o sea después de que la detección haya pasado. */
+  readonly nForm = signal<Partial<ProgramacionCreate>>({ duracion_estimada_min: 60 });
 
   accionando = signal(false);
 
@@ -764,18 +763,18 @@ export class QuirofanoComponent implements OnInit {
 
   volverLista(): void {
     this.vista.set('lista');
-    this.busquedaPaciente = '';
+    this.busquedaPaciente.set('');
     this.pacientesResultados.set([]);
-    this.pacienteSeleccionado = null;
-    this.nForm = { duracion_estimada_min: 60 };
+    this.pacienteSeleccionado.set(null);
+    this.nForm.set({ duracion_estimada_min: 60 });
     this.cargarProgramaciones();
     this.cargarSalas();
   }
 
   buscarPaciente(): void {
-    if (!this.busquedaPaciente.trim()) return;
+    if (!this.busquedaPaciente().trim()) return;
     this.buscandoPaciente.set(true);
-    this.svc.searchPacientes(this.busquedaPaciente).subscribe({
+    this.svc.searchPacientes(this.busquedaPaciente()).subscribe({
       next: ps => {
         this.pacientesResultados.set(ps);
         this.buscandoPaciente.set(false);
@@ -786,17 +785,17 @@ export class QuirofanoComponent implements OnInit {
   }
 
   guardar(): void {
-    if (!this.pacienteSeleccionado || !this.nForm.quirofano_id || !this.nForm.cirujano_id || !this.nForm.procedimiento || !this.nForm.fecha_programada) return;
+    if (!this.pacienteSeleccionado() || !this.nForm().quirofano_id || !this.nForm().cirujano_id || !this.nForm().procedimiento || !this.nForm().fecha_programada) return;
     const payload: ProgramacionCreate = {
-      quirofano_id: this.nForm.quirofano_id!,
-      paciente_id: this.pacienteSeleccionado.id,
-      cirujano_id: this.nForm.cirujano_id!,
-      anestesiologo_id: this.nForm.anestesiologo_id,
-      fecha_programada: new Date(this.nForm.fecha_programada!).toISOString(),
-      duracion_estimada_min: Number(this.nForm.duracion_estimada_min) || 60,
-      procedimiento: this.nForm.procedimiento!,
-      codigo_cups: this.nForm.codigo_cups,
-      tipo_anestesia: this.nForm.tipo_anestesia,
+      quirofano_id: this.nForm().quirofano_id!,
+      paciente_id: this.pacienteSeleccionado().id,
+      cirujano_id: this.nForm().cirujano_id!,
+      anestesiologo_id: this.nForm().anestesiologo_id,
+      fecha_programada: new Date(this.nForm().fecha_programada!).toISOString(),
+      duracion_estimada_min: Number(this.nForm().duracion_estimada_min) || 60,
+      procedimiento: this.nForm().procedimiento!,
+      codigo_cups: this.nForm().codigo_cups,
+      tipo_anestesia: this.nForm().tipo_anestesia,
     };
     this.guardando.set(true);
     this.svc.crear(payload).subscribe({

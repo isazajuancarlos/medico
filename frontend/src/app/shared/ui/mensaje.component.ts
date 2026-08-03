@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 /**
  * El aviso EN LA PÁGINA —lo que en PrimeNG era `<p-message>` (7 usos)—, que no
@@ -28,7 +28,6 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
       </div>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       .x-mensaje {

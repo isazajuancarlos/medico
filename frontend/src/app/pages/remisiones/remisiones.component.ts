@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ViewChild } from '@angular/core';
@@ -165,7 +165,6 @@ interface Resumen {
       <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
     .filtros { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:flex-end; }

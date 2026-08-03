@@ -1,4 +1,4 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../core/auth.service';
@@ -65,7 +65,6 @@ import { Confirmar } from '../shared/ui/confirmar.service';
       }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     :host {
       display: flex; align-items: center; justify-content: space-between;

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -29,7 +29,7 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
 <div class="p-4">
 
   <!-- LISTA -->
-  <ng-container *ngIf="vista === 'lista'">
+  <ng-container *ngIf="vista() === 'lista'">
     <div class="mb-4">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Rehabilitación y Terapias</h2>
       <p class="text-gray-500 text-sm">Planes de fisioterapia, terapia ocupacional, lenguaje y respiratoria</p>
@@ -59,7 +59,7 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
     </div>
 
     <div class="mt-4">
-    <mat-progress-bar *ngIf="loading" mode="indeterminate" />
+    <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
     <table mat-table [dataSource]="datosPlanes" class="tabla">
       <ng-container matColumnDef="paciente">
         <th mat-header-cell *matHeaderCellDef>Paciente</th>
@@ -114,15 +114,15 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
     </table>
     <!-- El vacío va fuera de la tabla: mat-table no hereda la plantilla de
          vacío de p-table. -->
-    <p *ngIf="!loading && datosPlanes.data.length === 0" class="vacio">No hay planes registrados</p>
+    <p *ngIf="!loading() && datosPlanes.data.length === 0" class="vacio">No hay planes registrados</p>
     <mat-paginator [pageSize]="15" [pageSizeOptions]="[10, 15, 25]" />
     </div>
   </ng-container>
 
   <!-- NUEVO PLAN -->
-  <ng-container *ngIf="vista === 'nuevo'">
+  <ng-container *ngIf="vista() === 'nuevo'">
     <div class="flex items-center gap-3 mb-6">
-      <button matIconButton (click)="vista = 'lista'"><i class="pi pi-arrow-left"></i></button>
+      <button matIconButton (click)="vista.set('lista')"><i class="pi pi-arrow-left"></i></button>
       <div>
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Nuevo Plan de Rehabilitación</h2>
       </div>
@@ -138,12 +138,12 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
             <input matInput [(ngModel)]="busquedaPaciente" (keyup.enter)="buscarPaciente()"
               placeholder="Buscar por nombre o identificación..." />
           </mat-form-field>
-          <button matButton="filled" [disabled]="buscando" (click)="buscarPaciente()">
-            <i [class]="buscando ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i>
+          <button matButton="filled" [disabled]="buscando()" (click)="buscarPaciente()">
+            <i [class]="buscando() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"></i>
           </button>
         </div>
-        <div *ngIf="resultadosPaciente.length" class="border rounded mt-2 bg-white dark:bg-gray-800 shadow max-h-48 overflow-y-auto">
-          <div *ngFor="let pac of resultadosPaciente"
+        <div *ngIf="resultadosPaciente().length" class="border rounded mt-2 bg-white dark:bg-gray-800 shadow max-h-48 overflow-y-auto">
+          <div *ngFor="let pac of resultadosPaciente()"
             class="px-3 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700"
             (click)="seleccionarPaciente(pac)">
             <span class="font-medium">{{ pac.nombre_completo }}</span>
@@ -189,9 +189,9 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
       </div>
 
       <div class="flex justify-end gap-3 mt-6">
-        <button matButton (click)="vista = 'lista'">Cancelar</button>
-        <button matButton="filled" [disabled]="guardando" (click)="guardarPlan()">
-          <i [class]="guardando ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Crear plan
+        <button matButton (click)="vista.set('lista')">Cancelar</button>
+        <button matButton="filled" [disabled]="guardando()" (click)="guardarPlan()">
+          <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Crear plan
         </button>
       </div>
       </mat-card-content>
@@ -199,35 +199,35 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
   </ng-container>
 
   <!-- DETALLE PLAN -->
-  <ng-container *ngIf="vista === 'detalle' && planActual">
+  <ng-container *ngIf="vista() === 'detalle' && planActual() as plan">
     <div class="flex items-center gap-3 mb-4">
-      <button matIconButton (click)="vista = 'lista'"><i class="pi pi-arrow-left"></i></button>
+      <button matIconButton (click)="vista.set('lista')"><i class="pi pi-arrow-left"></i></button>
       <div class="flex-1">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Plan de Rehabilitación</h2>
-        <p class="text-gray-500 text-sm">{{ planActual.paciente_nombre }} · {{ planActual.tipo_terapia }}</p>
+        <p class="text-gray-500 text-sm">{{ plan.paciente_nombre }} · {{ plan.tipo_terapia }}</p>
       </div>
-      <x-etiqueta [value]="planActual.activo ? 'Activo' : 'Cerrado'"
-        [severity]="planActual.activo ? 'success' : 'secondary'" />
+      <x-etiqueta [value]="plan.activo ? 'Activo' : 'Cerrado'"
+        [severity]="plan.activo ? 'success' : 'secondary'" />
     </div>
 
     <!-- Info del plan -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="p-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
         <div class="text-xs text-blue-500 uppercase tracking-wide mb-1">Terapeuta</div>
-        <div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ planActual.terapeuta_nombre }}</div>
+        <div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ plan.terapeuta_nombre }}</div>
       </div>
       <div class="p-4 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">
         <div class="text-xs text-purple-500 uppercase tracking-wide mb-1">Frecuencia</div>
-        <div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ planActual.frecuencia }}</div>
+        <div class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{{ plan.frecuencia }}</div>
       </div>
       <div class="p-4 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
         <div class="text-xs text-green-500 uppercase tracking-wide mb-1">Sesiones</div>
-        <div class="font-semibold text-gray-800 dark:text-gray-100">{{ planActual.sesiones_realizadas }} / {{ planActual.sesiones_autorizadas }}</div>
-        <mat-progress-bar mode="determinate" [value]="progresoPct(planActual)" class="mt-1" />
+        <div class="font-semibold text-gray-800 dark:text-gray-100">{{ plan.sesiones_realizadas }} / {{ plan.sesiones_autorizadas }}</div>
+        <mat-progress-bar mode="determinate" [value]="progresoPct(plan)" class="mt-1" />
       </div>
       <div class="p-4 rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20">
         <div class="text-xs text-orange-500 uppercase tracking-wide mb-1">Duración sesión</div>
-        <div class="font-semibold text-gray-800 dark:text-gray-100">{{ planActual.duracion_sesion_min }} min</div>
+        <div class="font-semibold text-gray-800 dark:text-gray-100">{{ plan.duracion_sesion_min }} min</div>
       </div>
     </div>
 
@@ -235,13 +235,13 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
       <mat-card>
         <mat-card-header><mat-card-title>Diagnóstico funcional</mat-card-title></mat-card-header>
         <mat-card-content>
-          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ planActual.diagnostico_funcional }}</p>
+          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ plan.diagnostico_funcional }}</p>
         </mat-card-content>
       </mat-card>
       <mat-card>
         <mat-card-header><mat-card-title>Objetivos terapéuticos</mat-card-title></mat-card-header>
         <mat-card-content>
-          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ planActual.objetivos }}</p>
+          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ plan.objetivos }}</p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -250,59 +250,59 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
     <mat-card>
       <mat-card-header>
         <mat-card-title>Sesiones realizadas</mat-card-title>
-        <button matButton="filled" *ngIf="planActual.activo" (click)="mostrarFormSesion = true">
+        <button matButton="filled" *ngIf="plan.activo" (click)="mostrarFormSesion.set(true)">
           <i class="pi pi-plus"></i> Registrar sesión
         </button>
       </mat-card-header>
       <mat-card-content>
 
       <!-- Form nueva sesión -->
-      <div *ngIf="mostrarFormSesion" class="mb-6 p-4 border rounded-xl bg-gray-50 dark:bg-gray-800">
-        <h4 class="font-semibold mb-3">Sesión #{{ (planActual.sesiones_realizadas + 1) }}</h4>
+      <div *ngIf="mostrarFormSesion()" class="mb-6 p-4 border rounded-xl bg-gray-50 dark:bg-gray-800">
+        <h4 class="font-semibold mb-3">Sesión #{{ (plan.sesiones_realizadas + 1) }}</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <mat-form-field appearance="outline" class="md:col-span-2">
             <mat-label>Evaluación funcional *</mat-label>
-            <textarea matInput [(ngModel)]="fs.evaluacion_funcional" rows="3"
+            <textarea matInput [(ngModel)]="fs().evaluacion_funcional" rows="3"
               placeholder="Estado funcional del paciente en esta sesión..."></textarea>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Dolor EVA (0-10)</mat-label>
-            <input matInput type="number" min="0" max="10" [(ngModel)]="fs.dolor_eva" />
+            <input matInput type="number" min="0" max="10" [(ngModel)]="fs().dolor_eva" />
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Rango de movimiento</mat-label>
-            <input matInput [(ngModel)]="fs.rango_movimiento" placeholder="Ej: Flexión 90°, Extensión 30°" />
+            <input matInput [(ngModel)]="fs().rango_movimiento" placeholder="Ej: Flexión 90°, Extensión 30°" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="md:col-span-2">
             <mat-label>Técnicas aplicadas *</mat-label>
-            <textarea matInput [(ngModel)]="fs.tecnicas_aplicadas" rows="2"
+            <textarea matInput [(ngModel)]="fs().tecnicas_aplicadas" rows="2"
               placeholder="Técnicas y procedimientos realizados..."></textarea>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Progreso</mat-label>
-            <mat-select [(ngModel)]="fs.progreso">
+            <mat-select [(ngModel)]="fs().progreso">
               <mat-option *ngFor="let o of opcionesProgreso" [value]="o.value">{{ o.label }}</mat-option>
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Ejercicios en casa</mat-label>
-            <input matInput [(ngModel)]="fs.ejercicios_domicilio" placeholder="Indicaciones para el hogar" />
+            <input matInput [(ngModel)]="fs().ejercicios_domicilio" placeholder="Indicaciones para el hogar" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="md:col-span-2">
             <mat-label>Observaciones</mat-label>
-            <textarea matInput [(ngModel)]="fs.observaciones" rows="2"></textarea>
+            <textarea matInput [(ngModel)]="fs().observaciones" rows="2"></textarea>
           </mat-form-field>
         </div>
         <div class="flex gap-3 justify-end mt-4">
           <button matButton (click)="cancelarSesion()">Cancelar</button>
-          <button matButton="filled" [disabled]="guardandoSesion" (click)="guardarSesion()">
-            <i [class]="guardandoSesion ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar sesión
+          <button matButton="filled" [disabled]="guardandoSesion()" (click)="guardarSesion()">
+            <i [class]="guardandoSesion() ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i> Guardar sesión
           </button>
         </div>
       </div>
 
-      <mat-progress-bar *ngIf="loadingSesiones" mode="indeterminate" />
-      <table mat-table [dataSource]="sesiones" class="tabla">
+      <mat-progress-bar *ngIf="loadingSesiones()" mode="indeterminate" />
+      <table mat-table [dataSource]="sesiones()" class="tabla">
         <ng-container matColumnDef="numero">
           <th mat-header-cell *matHeaderCellDef style="width:60px">#</th>
           <td mat-cell *matCellDef="let s" class="text-center font-bold text-blue-600">{{ s.numero_sesion }}</td>
@@ -337,23 +337,23 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
         <tr mat-header-row *matHeaderRowDef="columnasSesiones"></tr>
         <tr mat-row *matRowDef="let fila; columns: columnasSesiones"></tr>
       </table>
-      <p *ngIf="!loadingSesiones && sesiones.length === 0" class="vacio">No hay sesiones registradas</p>
+      <p *ngIf="!loadingSesiones() && sesiones().length === 0" class="vacio">No hay sesiones registradas</p>
       </mat-card-content>
     </mat-card>
 
     <!-- Resultado final (si cerrado) -->
-    <div *ngIf="!planActual.activo && planActual.resultado_final" class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border">
+    <div *ngIf="!plan.activo && plan.resultado_final" class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border">
       <h4 class="font-semibold mb-2">Resultado Final</h4>
-      <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ planActual.resultado_final }}</p>
+      <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ plan.resultado_final }}</p>
     </div>
 
     <!-- Cerrar plan -->
-    <div *ngIf="planActual.activo && !mostrarCierre" class="mt-4 flex justify-end">
-      <button matButton (click)="mostrarCierre = true">
+    <div *ngIf="plan.activo && !mostrarCierre()" class="mt-4 flex justify-end">
+      <button matButton (click)="mostrarCierre.set(true)">
         <i class="pi pi-check-circle"></i> Cerrar plan
       </button>
     </div>
-    <div *ngIf="mostrarCierre" class="mt-4 p-4 border rounded-xl bg-yellow-50 dark:bg-yellow-900/20">
+    <div *ngIf="mostrarCierre()" class="mt-4 p-4 border rounded-xl bg-yellow-50 dark:bg-yellow-900/20">
       <h4 class="font-semibold mb-3">Cerrar Plan de Rehabilitación</h4>
       <mat-form-field appearance="outline" class="w-full">
         <mat-label>Resultado final</mat-label>
@@ -361,16 +361,15 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
           placeholder="Resumen de resultados y estado final del paciente..."></textarea>
       </mat-form-field>
       <div class="flex gap-3 justify-end">
-        <button matButton (click)="mostrarCierre = false">Cancelar</button>
-        <button matButton="filled" class="peligro" [disabled]="guardando" (click)="cerrarPlan()">
-          <i [class]="guardando ? 'pi pi-spin pi-spinner' : 'pi pi-lock'"></i> Confirmar cierre
+        <button matButton (click)="mostrarCierre.set(false)">Cancelar</button>
+        <button matButton="filled" class="peligro" [disabled]="guardando()" (click)="cerrarPlan()">
+          <i [class]="guardando() ? 'pi pi-spin pi-spinner' : 'pi pi-lock'"></i> Confirmar cierre
         </button>
       </div>
     </div>
   </ng-container>
 </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .filtros { display:grid; grid-template-columns:auto auto 1fr; gap:.75rem; align-items:center; }
     .buscador { display:flex; gap:.5rem; align-items:flex-start; }
@@ -386,7 +385,14 @@ type Vista = 'lista' | 'nuevo' | 'detalle';
   `],
 })
 export class RehabilitacionComponent implements OnInit {
-  vista: Vista = 'lista';
+  /**
+   * Todo el estado que la plantilla lee es SEÑAL, y no por gusto: casi todo
+   * esto lo escriben los `subscribe` del servicio, o sea después de que la
+   * detección de cambios haya pasado. Con OnPush —el defecto desde Angular
+   * 22— un campo llano deja la pantalla mostrando lo anterior sin que nada
+   * falle. Lo vigila `estado-que-la-plantilla-lee-es-señal.spec.ts`.
+   */
+  readonly vista = signal<Vista>('lista');
   readonly columnasPlanes = ['paciente', 'tipo', 'diagnostico', 'progreso', 'frecuencia', 'estado', 'acciones'];
   readonly columnasSesiones = ['numero', 'fecha', 'evaluacion', 'tecnicas', 'dolor', 'progreso'];
   readonly datosPlanes = new MatTableDataSource<PlanRehabilitacion>([]);
@@ -396,22 +402,22 @@ export class RehabilitacionComponent implements OnInit {
   @ViewChild(MatPaginator)
   set paginador(p: MatPaginator | undefined) { if (p) this.datosPlanes.paginator = p; }
 
-  sesiones: SesionTerapia[] = [];
-  planActual: PlanRehabilitacion | null = null;
-  loading = false;
-  loadingSesiones = false;
-  guardando = false;
-  guardandoSesion = false;
-  mostrarFormSesion = false;
-  mostrarCierre = false;
+  readonly sesiones = signal<SesionTerapia[]>([]);
+  readonly planActual = signal<PlanRehabilitacion | null>(null);
+  readonly loading = signal(false);
+  readonly loadingSesiones = signal(false);
+  readonly guardando = signal(false);
+  readonly guardandoSesion = signal(false);
+  readonly mostrarFormSesion = signal(false);
+  readonly mostrarCierre = signal(false);
   resultadoFinal = '';
 
   filtroTipo = '';
   filtroActivo: boolean | null = null;
 
   busquedaPaciente = '';
-  buscando = false;
-  resultadosPaciente: any[] = [];
+  readonly buscando = signal(false);
+  readonly resultadosPaciente = signal<any[]>([]);
   pacienteSeleccionado: any = null;
 
   tiposTerapia = [
@@ -433,7 +439,7 @@ export class RehabilitacionComponent implements OnInit {
   ];
 
   f: PlanCreate = this.emptyPlan();
-  fs: SesionCreate = this.emptySesion();
+  readonly fs = signal<SesionCreate>(this.emptySesion());
 
   constructor(private svc: RehabilitacionService, private msg: Avisos) {}
 
@@ -448,12 +454,12 @@ export class RehabilitacionComponent implements OnInit {
   }
 
   cargarPlanes() {
-    this.loading = true;
+    this.loading.set(true);
     const tipoParam = this.filtroTipo || undefined;
     const activoParam = this.filtroActivo !== null ? this.filtroActivo : undefined;
     this.svc.listPlanes(undefined, tipoParam, activoParam).subscribe({
-      next: p => { this.datosPlanes.data = p; this.loading = false; },
-      error: () => { this.loading = false; },
+      next: p => { this.datosPlanes.data = p; this.loading.set(false); },
+      error: () => { this.loading.set(false); },
     });
   }
 
@@ -461,23 +467,23 @@ export class RehabilitacionComponent implements OnInit {
     this.f = this.emptyPlan();
     this.pacienteSeleccionado = null;
     this.busquedaPaciente = '';
-    this.resultadosPaciente = [];
-    this.vista = 'nuevo';
+    this.resultadosPaciente.set([]);
+    this.vista.set('nuevo');
   }
 
   buscarPaciente() {
     if (!this.busquedaPaciente.trim()) return;
-    this.buscando = true;
+    this.buscando.set(true);
     this.svc.searchPacientes(this.busquedaPaciente).subscribe({
-      next: r => { this.resultadosPaciente = r; this.buscando = false; },
-      error: () => { this.buscando = false; },
+      next: r => { this.resultadosPaciente.set(r); this.buscando.set(false); },
+      error: () => { this.buscando.set(false); },
     });
   }
 
   seleccionarPaciente(pac: any) {
     this.pacienteSeleccionado = pac;
     this.f.paciente_id = pac.id;
-    this.resultadosPaciente = [];
+    this.resultadosPaciente.set([]);
   }
 
   guardarPlan() {
@@ -485,71 +491,74 @@ export class RehabilitacionComponent implements OnInit {
     if (!this.f.diagnostico_funcional.trim() || !this.f.objetivos.trim()) {
       this.msg.add({ severity: 'warn', summary: 'Complete los campos obligatorios' }); return;
     }
-    this.guardando = true;
+    this.guardando.set(true);
     this.svc.createPlan(this.f).subscribe({
       next: p => {
         this.msg.add({ severity: 'success', summary: 'Plan creado exitosamente' });
-        this.guardando = false;
+        this.guardando.set(false);
         this.datosPlanes.data = [p, ...this.datosPlanes.data];
-        this.vista = 'lista';
+        this.vista.set('lista');
       },
-      error: () => { this.guardando = false; this.msg.add({ severity: 'error', summary: 'Error al crear el plan' }); },
+      error: () => { this.guardando.set(false); this.msg.add({ severity: 'error', summary: 'Error al crear el plan' }); },
     });
   }
 
   verDetalle(p: PlanRehabilitacion) {
-    this.planActual = p;
-    this.mostrarFormSesion = false;
-    this.mostrarCierre = false;
+    this.planActual.set(p);
+    this.mostrarFormSesion.set(false);
+    this.mostrarCierre.set(false);
     this.resultadoFinal = '';
-    this.fs = this.emptySesion();
+    this.fs.set(this.emptySesion());
     this.cargarSesiones(p.id);
-    this.vista = 'detalle';
+    this.vista.set('detalle');
   }
 
   cargarSesiones(planId: number) {
-    this.loadingSesiones = true;
+    this.loadingSesiones.set(true);
     this.svc.listSesiones(planId).subscribe({
-      next: s => { this.sesiones = s; this.loadingSesiones = false; },
-      error: () => { this.loadingSesiones = false; },
+      next: s => { this.sesiones.set(s); this.loadingSesiones.set(false); },
+      error: () => { this.loadingSesiones.set(false); },
     });
   }
 
   guardarSesion() {
-    if (!this.fs.evaluacion_funcional.trim() || !this.fs.tecnicas_aplicadas.trim()) {
+    if (!this.fs().evaluacion_funcional.trim() || !this.fs().tecnicas_aplicadas.trim()) {
       this.msg.add({ severity: 'warn', summary: 'Complete los campos obligatorios' }); return;
     }
-    this.guardandoSesion = true;
-    this.svc.createSesion(this.planActual!.id, this.fs).subscribe({
+    this.guardandoSesion.set(true);
+    this.svc.createSesion(this.planActual()!.id, this.fs()).subscribe({
       next: s => {
-        this.sesiones = [...this.sesiones, s];
-        if (this.planActual) {
-          this.planActual.sesiones_realizadas++;
-          if (this.planActual.sesiones_realizadas >= this.planActual.sesiones_autorizadas) {
-            this.planActual.activo = false;
-          }
-        }
-        this.fs = this.emptySesion();
-        this.mostrarFormSesion = false;
-        this.guardandoSesion = false;
+        this.sesiones.set([...this.sesiones(), s]);
+        // Con `update` y objeto nuevo, no mutando: una señal que guarda el
+        // mismo objeto modificado por dentro no avisa a nadie, y la cuenta de
+        // sesiones de la cabecera se quedaría en el número anterior.
+        this.planActual.update(pl => {
+          if (!pl) return pl;
+          const realizadas = pl.sesiones_realizadas + 1;
+          return { ...pl, sesiones_realizadas: realizadas,
+                   activo: realizadas >= pl.sesiones_autorizadas ? false : pl.activo };
+        });
+        this.fs.set(this.emptySesion());
+        this.mostrarFormSesion.set(false);
+        this.guardandoSesion.set(false);
         this.msg.add({ severity: 'success', summary: 'Sesión registrada' });
       },
-      error: () => { this.guardandoSesion = false; this.msg.add({ severity: 'error', summary: 'Error al guardar la sesión' }); },
+      error: () => { this.guardandoSesion.set(false); this.msg.add({ severity: 'error', summary: 'Error al guardar la sesión' }); },
     });
   }
 
   cancelarSesion() {
-    this.mostrarFormSesion = false;
-    this.fs = this.emptySesion();
+    this.mostrarFormSesion.set(false);
+    this.fs.set(this.emptySesion());
   }
 
   cerrarPlan() {
-    this.guardando = true;
-    this.svc.updatePlan(this.planActual!.id, { activo: false, resultado_final: this.resultadoFinal }).subscribe({
+    this.guardando.set(true);
+    this.svc.updatePlan(this.planActual()!.id, { activo: false, resultado_final: this.resultadoFinal }).subscribe({
       next: p => {
-        this.planActual = p;
-        this.mostrarCierre = false;
-        this.guardando = false;
+        this.planActual.set(p);
+        this.mostrarCierre.set(false);
+        this.guardando.set(false);
         this.msg.add({ severity: 'success', summary: 'Plan cerrado correctamente' });
         const idx = this.datosPlanes.data.findIndex(x => x.id === p.id);
         if (idx >= 0) {
@@ -558,7 +567,7 @@ export class RehabilitacionComponent implements OnInit {
           this.datosPlanes.data = copia;
         }
       },
-      error: () => { this.guardando = false; this.msg.add({ severity: 'error', summary: 'Error al cerrar el plan' }); },
+      error: () => { this.guardando.set(false); this.msg.add({ severity: 'error', summary: 'Error al cerrar el plan' }); },
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, ViewChild, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, Inject, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -113,7 +113,6 @@ interface PacienteSugerido {
       </button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .rejilla {
       display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding-top:.5rem;
@@ -308,7 +307,6 @@ export class CitaNuevaComponent {
   <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
 </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
     .cabecera .page-title { margin-bottom:0; }

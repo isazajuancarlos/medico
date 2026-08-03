@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, inject, OnInit, ViewChild, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, inject, OnInit, ViewChild, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -86,7 +86,6 @@ interface Resumen {
       <button matButton mat-dialog-close>Cerrar</button>
     </mat-dialog-actions>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .detalle { display:grid; grid-template-columns:auto 1fr; gap:.4rem 1rem; margin:0; }
     .detalle dt { font-weight:600; color:var(--text-color-secondary); font-size:.85rem; }
@@ -207,7 +206,6 @@ export class IncapacidadCertificacionComponent {
       <mat-paginator [pageSize]="20" [pageSizeOptions]="[10, 20, 50]" />
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .cabecera { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
     .filtros { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:flex-start; }
