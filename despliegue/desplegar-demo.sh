@@ -69,6 +69,13 @@ ssh "$DESTINO" "set -e
     if sudo -n test -f $ENTORNO; then
         echo '    ya existe, no se toca'
     else
+        # El modo va ANTES del contenido, no después. Un \`tee\` de root crea el
+        # archivo con la umask de root —0644— y el \`chmod 0640\` de más abajo
+        # llegaba con el secreto ya escrito y legible por todo el mundo. La
+        # ventana era de dos órdenes, pero en esta máquina viven otros servicios
+        # con su propia cuenta sin privilegios. \`tee\` trunca, no recrea, así
+        # que el modo que pone \`install\` es el que queda.
+        sudo -n install -o root -g medico -m 0640 /dev/null $ENTORNO
         sudo -n tee $ENTORNO >/dev/null <<ENV
 # La demostración pública de medico. NO es una instalación de cliente.
 #
@@ -84,8 +91,6 @@ MEDICO_TRAS_PROXY=true
 MEDICO_DEMO_CORREO=demo@xiliux.com
 MEDICO_DEMO_CLAVE=demo-medico-2026
 ENV
-        sudo -n chown root:medico $ENTORNO
-        sudo -n chmod 0640 $ENTORNO
         echo '    creado con un secreto nuevo'
     fi"
 
@@ -95,7 +100,14 @@ ssh "$DESTINO" "set -e
     sudo -n install -o root -g root -m 0644 /tmp/medico-demo.service /etc/systemd/system/medico-demo.service
     rm -f /tmp/medico-demo.service
     sudo -n systemctl daemon-reload
-    sudo -n -u medico env \$(sudo -n grep -v '^#' $ENTORNO | xargs) $REMOTO/medico-api sembrar-demo
+    # El secreto NO viaja por la línea de órdenes. Con \`env \$(grep … | xargs)\`
+    # el SECRET_KEY acababa en el \`argv\` de tres procesos, y \`/proc/PID/cmdline\`
+    # lo lee cualquier cuenta de la máquina —aquí viven otros servicios— con un
+    # \`ps auxww\` durante el despliegue. Con ese secreto se firma una cookie de
+    # sesión para cualquier usuario, que es saltarse el acceso entero. Lo lee
+    # ahora el propio proceso: el archivo es 0640 root:medico y corre como
+    # \`medico\`, así que no hace falta un permiso más.
+    sudo -n -u medico sh -c 'set -a; . $ENTORNO; set +a; exec $REMOTO/medico-api sembrar-demo'
     sudo -n systemctl enable --now medico-demo
     sudo -n systemctl restart medico-demo
     sleep 8"

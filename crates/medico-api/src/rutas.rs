@@ -910,6 +910,37 @@ pub(crate) async fn registrar_coleccion_de_un_titular(
     filtro: Option<String>,
     n: usize,
 ) {
+    // EL TITULAR TIENE QUE SER DEL ÁMBITO DE QUIEN PREGUNTA, y se comprueba aquí
+    // y no en cada ruta por lo mismo que `obtener()` existe en vez de arreglar
+    // cada `db.get`: un control que hay que acordarse de poner en cuatro sitios
+    // se olvida en el quinto.
+    //
+    // Sin esto, el `paciente_id` entraba tal cual de la petición. Las consultas
+    // SÍ están aisladas —devuelven la lista vacía para un paciente ajeno, así que
+    // no sale ni un dato—, pero el evento se sellaba igual: bastaba recorrer
+    // identificadores contra `/api/pacientes/{id}/historias` para meter eslabones
+    // firmados en el rastro de los pacientes de OTRA institución, donde su
+    // titular los lee como accesos que nunca ocurrieron. Y no se pueden quitar:
+    // la cadena está encadenada por hash, así que borrar el eslabón falso deja la
+    // bitácora entera en `Rota`.
+    //
+    // Es la misma regla que ya seguían `obtener_paciente` y `contexto_paciente`,
+    // que registran dentro del `Ok(Some(...))` — y que una ficha ajena no deje
+    // rastro es justo lo que aquellas prueban.
+    match acceso::paciente_es_del_ambito(&e.pool, u.ambito(), paciente_id).await {
+        Ok(true) => {}
+        // No es suyo: no hubo acceso a ese titular, así que no hay nada que anotar.
+        Ok(false) => return,
+        // Si no se puede saber, no se sella. Un eslabón que quizá sea falso vale
+        // menos que ninguno: el rastro se lee para responder «¿quién miró mi
+        // historia?», y ahí una duda sellada es una respuesta equivocada.
+        Err(err) => {
+            eprintln!(
+                "⚠️  bitácora de acceso: no se registró {accion} de {recurso} (paciente {paciente_id}): no se pudo comprobar el ámbito: {err}"
+            );
+            return;
+        }
+    }
     let alcance = alcance_visto_por(u, filtro, n, vec![]);
     registrar_conjunto(
         e,
@@ -6030,6 +6061,64 @@ mod pruebas {
                     .await
                     .unwrap();
                 assert_eq!(n.0, 0, "no hubo acceso que anotar");
+            }
+
+            /// Y lo mismo por la vía de los LISTADOS, que es por donde se coló.
+            ///
+            /// Las cuatro rutas por titular tomaban el `paciente_id` de la
+            /// petición y sellaban el eslabón sin mirar el ámbito. No sale ni un
+            /// dato —las consultas sí filtran, y devuelven la lista vacía—, pero
+            /// el rastro del paciente de la OTRA institución se llenaba de
+            /// accesos que nunca ocurrieron, firmados y encadenados, o sea
+            /// imposibles de quitar sin dejar la bitácora en `Rota`.
+            ///
+            /// Discrimina: quitando la comprobación de
+            /// `registrar_coleccion_de_un_titular`, este contador da 4.
+            #[tokio::test]
+            async fn los_listados_de_un_titular_ajeno_no_dejan_rastro() {
+                let e = con_admin_y_una_consulta().await;
+                sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (2,'Otra','901')")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+                     fecha_nacimiento,sexo,institucion_id) \
+                     VALUES (99,'CC','999','Ajena','Pérez','1990-01-01','F',2)",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                for ruta in [
+                    "/api/pacientes/99/historias",
+                    "/api/documentos?paciente_id=99",
+                    "/api/laboratorio/paciente/99/resultados",
+                    "/api/imagenes/paciente/99/informes",
+                ] {
+                    let r = enviar(&e, ruta, ADMIN).await;
+                    assert_eq!(r.status(), StatusCode::OK, "{ruta}: la lista sale vacía, no 403");
+                    assert_eq!(
+                        cuerpo(r).await.as_array().map(|a| a.len()),
+                        Some(0),
+                        "{ruta}: y vacía de verdad, que es lo que impide la fuga"
+                    );
+                }
+
+                let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+                assert_eq!(n.0, 0, "cuatro listados de un titular ajeno, cero eslabones");
+
+                // Y con el titular PROPIO sí anota: una salvaguarda que solo
+                // cierra no se distingue de una que nunca abre.
+                enviar(&e, "/api/pacientes/10/historias", ADMIN).await;
+                let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+                assert_eq!(n.0, 1, "el listado del paciente propio sí deja rastro");
             }
         }
     }

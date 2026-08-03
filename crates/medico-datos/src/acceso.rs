@@ -303,7 +303,10 @@ pub async fn verificar(pool: &crate::Pool, vk_hex: Option<&str>) -> Result<Audit
 
 /// `true` si el paciente existe y es visible para el ámbito. Mismo guard que usan
 /// historia y documento: la institución vive en `paciente`, no en la bitácora.
-async fn paciente_es_del_ambito(
+/// Si `paciente_id` es visible desde `ambito`. Pública porque la usan las dos
+/// puntas: la LECTURA del rastro (para no enseñar el de un titular ajeno) y la
+/// ESCRITURA de un evento por titular (para no sellar uno que no ocurrió).
+pub async fn paciente_es_del_ambito(
     pool: &crate::Pool,
     ambito: Ambito,
     paciente_id: i64,

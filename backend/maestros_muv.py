@@ -112,7 +112,6 @@ def nombres_presentacion() -> list[dict]:
 # leerla del PDF —correctamente, resultó—, pero aquí viene como dato.
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=1)
 def _nombre_de_miembro(nombre: str) -> str:
     """El texto del catálogo convertido en un identificador de Python.
 
@@ -137,6 +136,7 @@ def causas_motivo() -> list[dict]:
     return [f for f in cargar("causa_motivo")["filas"]]
 
 
+@lru_cache(maxsize=1)
 def _tipos_documento() -> list[dict]:
     return cargar("tipo_doc")["filas"]
 

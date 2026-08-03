@@ -32,8 +32,20 @@ export interface Confirmacion {
       {{ datos.header }}
     </h2>
     <mat-dialog-content>
-      <!-- El texto lo escribe la aplicación, nunca el usuario ni el servidor:
-           no hay aquí un camino por el que entre HTML de fuera. -->
+      <!-- OJO: "message" SÍ trae dato del servidor. Nueve de los doce sitios que
+           preguntan interpolan algo que no escribimos nosotros —el nombre del
+           paciente, el del medicamento, y en historias el nombre de archivo que
+           subió el cliente—, así que la frase que había aquí antes («el texto lo
+           escribe la aplicación, nunca el usuario ni el servidor») era falsa. Se
+           conserva el innerHTML porque las preguntas ya existentes llevan
+           <strong> y esto viene de p-confirmDialog, que hacía lo mismo; lo que
+           lo hace seguro es que Angular sanea la vinculación.
+
+           NO ENVOLVER ESTO EN bypassSecurityTrustHtml. Es la única pieza del
+           proyecto que pinta HTML, y el saneado es lo único que la sostiene:
+           quitarlo convierte el nombre de un archivo subido en XSS almacenado.
+           Si algún día hace falta marcado que el saneador se come, la salida es
+           partir el campo en texto llano + marcado constante, no confiar. -->
       <div [innerHTML]="datos.message"></div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
