@@ -27,6 +27,11 @@ sqlx = { version = "0.8", default-features = false, features = [
 ] }
 axum = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
+# La zona horaria del prestador, por nombre IANA. Va la base de datos IANA
+# dentro del binario a propósito: un consultorio sin internet no puede depender
+# de la del sistema, y de hecho el problema que este crate resuelve es
+# justamente haber dependido del reloj de la máquina.
+chrono-tz = "0.10"
 # Protección con Quipu (cifrado en reposo + firma de registros). Repo público,
 # fijado por tag para builds reproducibles.
 # Fijada por commit inmutable (= tag v0.3.0), no por el tag: un tag es mutable, y

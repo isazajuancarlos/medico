@@ -19,6 +19,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
+# La zona del prestador viaja en la config (`config.rs`).
+chrono-tz = { workspace = true }
 # Verificación de contraseñas: Argon2, la misma familia que el sistema Python.
 argon2 = "0.5"
 password-hash = { version = "0.5", features = ["std"] }

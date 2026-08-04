@@ -225,7 +225,12 @@ fn edad_en_anios(nacimiento: &str) -> i64 {
     let Ok(nac) = chrono::NaiveDate::parse_from_str(nacimiento.trim(), "%Y-%m-%d") else {
         return 0;
     };
-    let hoy = chrono::Local::now().date_naive();
+    // «Hoy» es el día del PRESTADOR, no el del servidor. La diferencia son las
+    // horas que van de una medianoche a la otra, y ahí decide si el paciente ya
+    // cumplió años: en un servidor en UTC, a las 20:00 de Colombia ya es el día
+    // siguiente y el niño «cumple» un día antes. En pediatría el tramo «0 años»
+    // va del recién nacido al de once meses, así que ese día cuenta.
+    let hoy = medico_dominio::zona::hoy();
     let mut anios = hoy.year() - nac.year();
     if (hoy.month(), hoy.day()) < (nac.month(), nac.day()) {
         anios -= 1;

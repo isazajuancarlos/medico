@@ -185,6 +185,18 @@ async fn main() -> ExitCode {
         }
     };
 
+    // La zona se dice SIEMPRE, no solo cuando se configura. Es el dato que
+    // decide qué día es hoy —la edad del paciente, el vencimiento de la
+    // licencia— y con qué hora se reporta cada atención en el RIPS, y hasta el
+    // 2026-08-03 salía del reloj de la máquina sin que nadie lo supiera: en el
+    // VPS de la demostración, que va en UTC, eso corría cinco horas todas las
+    // atenciones y el archivo se aceptaba igual. Un dato así no puede quedar
+    // implícito; si el log no lo nombra, nadie lo mira hasta que no cuadra algo.
+    println!(
+        "zona horaria del prestador: {} (hoy son las {}). Se cambia con MEDICO_ZONA.",
+        cfg.zona,
+        medico_dominio::zona::ahora().format("%Y-%m-%d %H:%M")
+    );
     println!("medico-api escuchando en http://{dir}");
     // `with_connect_info` y no `serve(listener, app)` a secas: sin esto, el
     // extractor `ConnectInfo` de `/api/acceso` no encuentra la dirección del

@@ -341,6 +341,25 @@ rancio: fija el orden Angular → copia → cargo.
 
 El CI corre clippy y test en perfil **debug**, así que el guardián no dispara ahí.
 
+**La zona horaria es la del PRESTADOR, nunca la del reloj de la máquina**
+(`medico_dominio::zona`, desde el 2026-08-03). Cuatro sitios preguntaban la
+fecha con `chrono::Local` —la hora que el RIPS reporta, los límites del cierre
+del mes, la edad del paciente y el «hoy» que juzga si una licencia venció—, y
+`Local` es la zona del sistema operativo. En el portátil de un consultorio de
+Medellín daba lo correcto por casualidad; el VPS de la demostración corre en
+`Etc/UTC`, así que allí **toda atención se reportaba cinco horas más tarde de la
+que ocurrió**, con el archivo aceptándose igual. Lo destapó una prueba que
+fallaba solo en el CI.
+
+Se fija una vez al arrancar (`MEDICO_ZONA`, defecto `America/Bogota`) y el log
+la dice **siempre**, esté puesta o no. Un nombre que no exista en la base IANA
+**impide arrancar**: no se cae a la del sistema ni al defecto. El defecto no es
+relleno —esto emite RIPS a MinSalud y Colombia tiene una sola zona desde 1993—,
+y no hay columna por institución a propósito: tres de los cuatro sitios no
+tienen institución a la que preguntarle, y una columna sin pantalla que la edite
+(`admin` no está portada) sería una característica falsa. `config.rs` la fija;
+`zona::hoy()`, `desde_utc()` y `a_utc()` la usan.
+
 **Freno al ensayo de contraseñas** (`medico_datos::freno`, siempre activo): cinco
 fallos seguidos del mismo origen contra el mismo correo se responden normal; a
 partir de ahí el intento siguiente recibe **429 con `Retry-After`**, empezando en

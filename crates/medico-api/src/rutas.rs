@@ -2193,7 +2193,10 @@ async fn crear_usuario(
     // listados nunca pasan por aquí. Una licencia vencida no ciega nada: solo
     // impide agregar un usuario más.
     if let Ambito::Institucion(id) = u.ambito() {
-        let hoy = chrono::Local::now().date_naive().to_string();
+        // El día del prestador, no el del servidor: una licencia que vence hoy
+        // no puede darse por vencida porque el reloj de la máquina ya pasó la
+        // medianoche en otro huso.
+        let hoy = medico_dominio::zona::hoy().to_string();
         match licencia::puerta_para_usuario(&e.pool, id, &hoy).await {
             Ok(licencia::Puerta::Abierta) => {}
             Ok(bloqueo) => {
@@ -2400,7 +2403,7 @@ async fn agenda_indicadores(
     Autenticado(u): Autenticado,
     Query(f): Query<FiltroIndicadores>,
 ) -> Response {
-    let hoy = chrono::Local::now().date_naive();
+    let hoy = medico_dominio::zona::hoy();
     let desde = f.desde.unwrap_or_else(|| hoy.format("%Y-%m-01").to_string());
     let hasta = f.hasta.unwrap_or_else(|| hoy.to_string());
     match agenda::indicadores(&e.pool, u.ambito(), f.medico_id, &desde, &hasta).await {
@@ -5718,13 +5721,19 @@ mod pruebas {
         use super::*;
         use chrono::TimeZone;
 
-        /// La hora LOCAL a la que ocurrió la atención de la prueba.
+        /// La hora a la que ocurrió la atención de la prueba, en la zona DEL
+        /// PRESTADOR.
         ///
         /// Todo lo demás se deriva de aquí: la base guarda su equivalente en UTC
         /// y el RIPS tiene que devolver otra vez esta misma hora. Escrita así,
         /// la prueba dice lo mismo en Medellín que en el CI, que corre en UTC.
-        fn atencion_local() -> chrono::DateTime<chrono::Local> {
-            chrono::Local
+        ///
+        /// Usa `zona::zona()` y no `chrono::Local` **a propósito**: `Local` es el
+        /// reloj de la máquina, que es justo lo que el producto dejó de mirar el
+        /// 2026-08-03. Con `Local` aquí, el arnés y el código medirían husos
+        /// distintos y esta prueba volvería a caerse solo en el CI.
+        fn atencion_local() -> chrono::DateTime<chrono_tz::Tz> {
+            medico_dominio::zona::zona()
                 .with_ymd_and_hms(2026, 3, 15, 9, 30, 0)
                 .single()
                 .expect("9:30 del 15 de marzo existe en cualquier huso sensato")

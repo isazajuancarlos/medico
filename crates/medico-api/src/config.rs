@@ -28,6 +28,13 @@ pub enum ErrorConfig {
     #[error("{0} no es un número válido: {1}")]
     NoEsNumero(&'static str, String),
     #[error(
+        "MEDICO_ZONA no sirve: {0}\n\
+         El binario NO arranca sin una zona válida, y no cae a la del sistema a \
+         propósito: un huso equivocado corre TODAS las fechas —la hora del RIPS, \
+         el cierre del mes, la edad del paciente— sin que nada falle."
+    )]
+    ZonaInvalida(String),
+    #[error(
         "el modo demostración necesita MEDICO_DEMO_CORREO y MEDICO_DEMO_CLAVE, y solo llegó \
          {0}. Media configuración no se completa con un defecto: publicar unas credenciales \
          es una decisión, y a medias no se sabe cuál se tomó."
@@ -91,6 +98,9 @@ pub struct Config {
     /// `Some` solo si el despliegue PIDIÓ ser una demostración pública. Ver
     /// [`Demo`].
     pub demo: Option<Demo>,
+    /// La zona horaria DEL PRESTADOR, que es la que decide qué día es hoy y con
+    /// qué hora se reporta cada atención. Ver [`medico_dominio::zona`].
+    pub zona: chrono_tz::Tz,
 }
 
 fn opcional(clave: &str) -> Option<String> {
@@ -192,6 +202,16 @@ impl Config {
             tras_proxy,
             escucha: direccion_de_escucha(opcional("MEDICO_ESCUCHA").as_deref(), tras_proxy)?,
             demo: demo(opcional("MEDICO_DEMO_CORREO"), opcional("MEDICO_DEMO_CLAVE"))?,
+            // Se FIJA aquí, en el arranque y una sola vez: a partir de este
+            // punto `zona::hoy()` y `zona::desde_utc()` responden lo mismo en
+            // todo el proceso. Sin la variable queda America/Bogota, que no es
+            // un relleno sino el dominio del producto —esto emite RIPS al
+            // Ministerio de Salud de Colombia— y el arranque lo dice en el log.
+            zona: match opcional("MEDICO_ZONA") {
+                Some(n) => medico_dominio::zona::fijar_por_nombre(&n)
+                    .map_err(ErrorConfig::ZonaInvalida)?,
+                None => medico_dominio::zona::fijar(medico_dominio::zona::POR_DEFECTO),
+            },
         })
     }
 }
@@ -215,6 +235,47 @@ fn demo(correo: Option<String>, clave: Option<String>) -> Result<Option<Demo>, E
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    /// La zona del RIPS no puede salir del reloj de la máquina.
+    ///
+    /// Es la prueba de la regresión del 2026-08-03: el VPS de la demostración
+    /// corre en `Etc/UTC` y el binario reportaba las atenciones cinco horas
+    /// corridas, con el archivo aceptándose igual. Aquí se comprueba lo que
+    /// **no** puede pasar: que cambiar `TZ` cambie lo que el producto responde.
+    ///
+    /// `TZ` es lo que lee `chrono::Local`, o sea la forma exacta en que el
+    /// sistema operativo se metía en el dato. Si alguien volviera a poner
+    /// `Local::now()` en `zona::hoy()`, este `assert` se cae.
+    #[test]
+    fn el_reloj_del_sistema_no_decide_que_dia_es_hoy() {
+        use medico_dominio::zona;
+        // Kiritimati va en +14 y Baker Island en −12: entre las dos hay 26
+        // horas, así que si el sistema mandara, el «hoy» cambiaría seguro.
+        let dias: Vec<_> = ["Pacific/Kiritimati", "Etc/GMT+12", "UTC"]
+            .iter()
+            .map(|tz| {
+                // SAFETY: prueba de un solo hilo sobre una variable de entorno.
+                unsafe { std::env::set_var("TZ", tz) };
+                zona::hoy()
+            })
+            .collect();
+        unsafe { std::env::remove_var("TZ") };
+        assert!(
+            dias.windows(2).all(|p| p[0] == p[1]),
+            "el día cambió con TZ: {dias:?} — el reloj del sistema volvió a decidir"
+        );
+        // Y es el día de Colombia, no el de UTC ni el del contenedor.
+        assert_eq!(dias[0], chrono::Utc::now().with_timezone(&zona::POR_DEFECTO).date_naive());
+    }
+
+    #[test]
+    fn una_zona_que_no_existe_impide_arrancar() {
+        // No se cae a la del sistema ni al defecto: se detiene. Un huso
+        // equivocado corre todas las fechas en silencio.
+        let e = medico_dominio::zona::fijar_por_nombre("America/Medellin").unwrap_err();
+        assert!(e.contains("America/Medellin"));
+        assert!(e.contains("America/Bogota"), "y dice cómo se escribe bien");
+    }
 
     #[test]
     fn sin_las_dos_variables_no_hay_demo() {

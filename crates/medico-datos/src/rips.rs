@@ -17,8 +17,14 @@
 //! emiten de vuelta en local: **se filtra y se emite en el mismo marco**. Hacer
 //! una cosa en un huso y la otra en otro es peor que hacer las dos mal, porque
 //! las atenciones del borde salen en un mes y con fecha de otro.
+//!
+//! **El huso es el del PRESTADOR, no el del servidor** (`medico_dominio::zona`).
+//! Hasta el 2026-08-03 esto usaba `chrono::Local` y por tanto el reloj de la
+//! máquina: correcto por casualidad en el portátil de un consultorio, y corrido
+//! cinco horas en el VPS de la demostración, que va en UTC.
 
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime};
+use medico_dominio::zona;
 use medico_dominio::rips::{FuenteConsulta, FuenteInstitucion, FuentePaciente, FuenteProfesional};
 
 /// La institución que reporta, o `None` si no existe.
@@ -52,15 +58,17 @@ fn a_texto_utc(dia: NaiveDate, h: u32, m: u32, s: u32) -> String {
     let local = dia
         .and_hms_opt(h, m, s)
         .expect("hora fija y válida por construcción");
-    // Un instante local puede no existir (cambio de hora) o repetirse. Colombia
-    // no cambia la hora, pero el binario tiene que poder correr en otro sitio,
-    // así que se toma la primera lectura válida y, si no hubiera ninguna, se
-    // interpreta el texto como UTC en vez de inventar un desplazamiento.
-    match Local.from_local_datetime(&local).earliest() {
-        Some(t) => t
-            .with_timezone(&Utc)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string(),
+    // La zona es la del PRESTADOR (`medico_dominio::zona`), no la del reloj de
+    // la máquina. Hasta el 2026-08-03 esto era `Local`, y en el VPS de la demo
+    // —que corre en UTC— movía el periodo entero cinco horas sin que nada
+    // fallara.
+    //
+    // Un instante local puede no existir (el salto del horario de verano se come
+    // una hora). Colombia no cambia la hora, pero el binario tiene que poder
+    // correr en otro sitio: si no existe, se interpreta el texto como UTC en vez
+    // de inventar un desplazamiento.
+    match zona::a_utc(local) {
+        Some(t) => t.format("%Y-%m-%d %H:%M:%S").to_string(),
         None => local.format("%Y-%m-%d %H:%M:%S").to_string(),
     }
 }
@@ -74,14 +82,11 @@ fn a_texto_utc(dia: NaiveDate, h: u32, m: u32, s: u32) -> String {
 /// inventada en el RIPS es una atención reportada en un día en que no ocurrió.
 fn fecha_local(texto: &str, historia_id: i64) -> Result<NaiveDateTime, String> {
     if let Ok(t) = DateTime::parse_from_rfc3339(texto) {
-        return Ok(t.with_timezone(&Local).naive_local());
+        return Ok(t.with_timezone(&zona::zona()).naive_local());
     }
     let naive = NaiveDateTime::parse_from_str(texto, "%Y-%m-%d %H:%M:%S")
         .map_err(|e| format!("la historia {historia_id} tiene «{texto}» como fecha: {e}"))?;
-    Ok(Utc
-        .from_utc_datetime(&naive)
-        .with_timezone(&Local)
-        .naive_local())
+    Ok(zona::desde_utc(naive))
 }
 
 /// Busca una historia cuya fecha no tenga forma de fecha, ANTES de filtrar.
@@ -351,11 +356,12 @@ mod pruebas {
         // fecha de marzo — filtrar en un huso y emitir en otro la pondría en
         // abril, o en marzo pero fechada en abril.
         let pool = base().await;
-        let local = Local
-            .from_local_datetime(&dia(2026, 3, 31).and_hms_opt(20, 0, 0).unwrap())
-            .earliest()
-            .unwrap();
-        let en_utc = local.with_timezone(&Utc).format("%Y-%m-%d %H:%M:%S").to_string();
+        // La hora se construye con la zona DEL PRESTADOR, no con la del reloj de
+        // la máquina: así la prueba dice lo mismo aquí que en el CI, que va en UTC.
+        let en_utc = zona::a_utc(dia(2026, 3, 31).and_hms_opt(20, 0, 0).unwrap())
+            .unwrap()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
         historia(&pool, 1, 10, 5, &en_utc).await;
 
         let marzo = consultas_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
@@ -379,11 +385,10 @@ mod pruebas {
     #[tokio::test]
     async fn el_ultimo_dia_entra_entero() {
         let pool = base().await;
-        let local = Local
-            .from_local_datetime(&dia(2026, 3, 31).and_hms_opt(23, 45, 0).unwrap())
-            .earliest()
-            .unwrap();
-        let en_utc = local.with_timezone(&Utc).format("%Y-%m-%d %H:%M:%S").to_string();
+        let en_utc = zona::a_utc(dia(2026, 3, 31).and_hms_opt(23, 45, 0).unwrap())
+            .unwrap()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
         historia(&pool, 1, 10, 5, &en_utc).await;
 
         let cs = consultas_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))

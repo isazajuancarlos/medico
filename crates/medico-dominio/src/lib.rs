@@ -11,6 +11,7 @@ pub mod modulo;
 pub mod muv;
 pub mod rips;
 pub mod rol;
+pub mod zona;
 
 pub use aislamiento::{Ambito, Visibilidad};
 pub use rol::RolUsuario;
