@@ -15,7 +15,7 @@ export interface PacienteInfo {
   ant_familiares?: Record<string, any>;
   ant_personales?: Record<string, any>;
   ant_ginecologicos?: Record<string, any>;
-  ant_obstetricos?: Record<string, any>;
+  ant_perinatales?: Record<string, any>;
 }
 
 export interface MedicoInfo {
@@ -81,7 +81,7 @@ export interface AntecedentesUpdate {
   ant_familiares?: Record<string, any>;
   ant_personales?: Record<string, any>;
   ant_ginecologicos?: Record<string, any>;
-  ant_obstetricos?: Record<string, any>;
+  ant_perinatales?: Record<string, any>;
 }
 
 export interface MedicamentoInfo {

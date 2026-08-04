@@ -29,14 +29,14 @@ pub struct Paciente {
     pub ant_familiares: Json<serde_json::Value>,
     pub ant_personales: Json<serde_json::Value>,
     pub ant_ginecologicos: Json<serde_json::Value>,
-    pub ant_obstetricos: Json<serde_json::Value>,
+    pub ant_perinatales: Json<serde_json::Value>,
     pub institucion_id: i64,
 }
 
 const COLUMNAS: &str = "id, tipo_documento, numero_documento, nombre1, nombre2, \
                         apellido1, apellido2, fecha_nacimiento, sexo, cod_municipio, \
                         celular, email, direccion, tipo_usuario, cod_pais, zona, entidad_id, \
-                        ant_familiares, ant_personales, ant_ginecologicos, ant_obstetricos, \
+                        ant_familiares, ant_personales, ant_ginecologicos, ant_perinatales, \
                         institucion_id";
 
 /// El `Ambito` es un parámetro OBLIGATORIO, no opcional.
@@ -215,7 +215,7 @@ pub struct InfoPaciente {
     pub ant_familiares: serde_json::Value,
     pub ant_personales: serde_json::Value,
     pub ant_ginecologicos: serde_json::Value,
-    pub ant_obstetricos: serde_json::Value,
+    pub ant_perinatales: serde_json::Value,
 }
 
 /// Años cumplidos entre `nacimiento` (YYYY-MM-DD) y hoy. `0` si la fecha no se
@@ -267,7 +267,7 @@ pub async fn info(pool: &crate::Pool, ambito: Ambito, id: i64) -> Result<Option<
         ant_familiares: p.ant_familiares.0.clone(),
         ant_personales: p.ant_personales.0.clone(),
         ant_ginecologicos: p.ant_ginecologicos.0.clone(),
-        ant_obstetricos: p.ant_obstetricos.0.clone(),
+        ant_perinatales: p.ant_perinatales.0.clone(),
     }))
 }
 
@@ -280,7 +280,7 @@ pub struct Antecedentes {
     pub ant_familiares: Option<serde_json::Value>,
     pub ant_personales: Option<serde_json::Value>,
     pub ant_ginecologicos: Option<serde_json::Value>,
-    pub ant_obstetricos: Option<serde_json::Value>,
+    pub ant_perinatales: Option<serde_json::Value>,
 }
 
 /// Actualiza los antecedentes de un paciente **visible para el ámbito**. `false`
@@ -313,8 +313,8 @@ pub async fn actualizar_antecedentes(
     if ant.ant_ginecologicos.is_some() {
         sets.push("ant_ginecologicos = ?");
     }
-    if ant.ant_obstetricos.is_some() {
-        sets.push("ant_obstetricos = ?");
+    if ant.ant_perinatales.is_some() {
+        sets.push("ant_perinatales = ?");
     }
 
     // Sin bloques que escribir: solo confirmar que el paciente es visible, para
@@ -340,7 +340,7 @@ pub async fn actualizar_antecedentes(
     if let Some(v) = &ant.ant_ginecologicos {
         q = q.bind(Json(v));
     }
-    if let Some(v) = &ant.ant_obstetricos {
+    if let Some(v) = &ant.ant_perinatales {
         q = q.bind(Json(v));
     }
     q = q.bind(id);
@@ -568,6 +568,42 @@ mod pruebas {
         let p = obtener(&pool, Ambito::institucion(1), 10).await.unwrap().unwrap();
         assert_eq!(p.ant_personales.0, json!({"hta": true, "diabetes": false}));
         assert_eq!(p.ant_familiares.0, json!({"cancer": "madre"}));
+    }
+
+    /// El cuarto bloque es `ant_perinatales` —del NIÑO— y no `ant_obstetricos`
+    /// —de la madre—, que es como se llamaba y era mentira (migración `0040`).
+    ///
+    /// La prueba guarda los ocho campos que faltaban frente al sistema vivo y
+    /// los vuelve a leer. Son los indicadores de AIEPI y de crecimiento y
+    /// desarrollo: si alguno se pierde por el camino, el informe epidemiológico
+    /// nuevo no puede dar los números que el prestador viene entregando, y eso
+    /// no se nota hasta el cierre del mes.
+    #[tokio::test]
+    async fn los_perinatales_guardan_los_indicadores_de_aiepi() {
+        let pool = base().await;
+        let bloque = json!({
+            "embarazo_deseado": true,
+            "hosp_ira": true,
+            "hosp_eda": false,
+            "hosp_otra": "bronquiolitis a los 8 meses",
+            "lactancia_meses": 12,
+            "inmunizacion_completa": true,
+            "desarrollo_psicomotor_normal": false,
+            "hermanos_muertos_menores_5": 0
+        });
+        let ant = Antecedentes {
+            ant_perinatales: Some(bloque.clone()),
+            ..Default::default()
+        };
+        assert!(actualizar_antecedentes(&pool, Ambito::institucion(1), 10, &ant).await.unwrap());
+
+        let p = obtener(&pool, Ambito::institucion(1), 10).await.unwrap().unwrap();
+        assert_eq!(p.ant_perinatales.0, bloque, "vuelve entero, campo por campo");
+        // `0` y `false` tienen que sobrevivir: son respuestas, no ausencias.
+        // Cero hermanos muertos menores de cinco años es un dato que el clínico
+        // afirmó, y confundirlo con «no preguntado» es la directiva 20 al revés.
+        assert_eq!(p.ant_perinatales.0["hermanos_muertos_menores_5"], json!(0));
+        assert_eq!(p.ant_perinatales.0["desarrollo_psicomotor_normal"], json!(false));
     }
 
     /// Aislamiento en la escritura de antecedentes: la institución 1 no toca al

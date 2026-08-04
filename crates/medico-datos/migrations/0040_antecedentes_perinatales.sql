@@ -1,0 +1,16 @@
+-- `ant_obstetricos` se llama `ant_perinatales`, que es lo que guarda.
+--
+-- Se vio comparando con el formulario del sistema vivo (capturas del
+-- 2026-08-03, pestañas AGO y API de «Examen físico»). La columna dice
+-- «obstétricos» —los antecedentes de la MADRE: gestas, partos, abortos— y lo
+-- que lleva dentro son los del NIÑO: semanas de gestación al nacer, peso y
+-- talla, APGAR, tipo de parto, lactancia. En el original esa pestaña se llama
+-- API, antecedentes patológicos infantiles.
+--
+-- Tres nombres para una cosa —`ant_obstetricos` en la base, `antPrenatales` en
+-- la pantalla, API en el original— es exactamente lo que dejó dos pantallas
+-- muertas con `orden.estado` sin que nada fallara. El nombre lo fija quien ya
+-- lee el dato, y aquí quien lo lee es el pediatra.
+--
+-- `RENAME COLUMN` conserva el contenido: ninguna fila se reescribe.
+ALTER TABLE paciente RENAME COLUMN ant_obstetricos TO ant_perinatales;

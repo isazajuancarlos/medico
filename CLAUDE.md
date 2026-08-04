@@ -861,6 +861,38 @@ La única desviación deliberada es el **cálculo de la edad**: el original usab
 365 días y meses de 30, lo que envejece a la gente. Se corrigió porque en pediatría el
 tramo «0 años» va del recién nacido al de once meses.
 
+### Los antecedentes, contrastados contra la pantalla (2026-08-03)
+
+Se comparó campo a campo el formulario `Examen físico` del sistema vivo —capturas
+en `~/Imágenes/virtualbox`, pestañas GRAL · AF · AP · AGO · API · MVTO— contra
+nuestros cuatro bloques. **AF y AP salieron completos**; los otros dos no.
+
+| bloque | resultado |
+|---|---|
+| **AGO** | faltaban **IRS**, **FPP**, **FUP** y **preclampsia**. Añadidos. |
+| **API** | faltaban **ocho**: embarazo deseado, hospitalización por IRA / EDA / otra, meses de lactancia, inmunización completa, desarrollo psicomotor y hermanos muertos menores de 5 años. Añadidos. |
+
+**Y el cuarto bloque tenía tres nombres.** La columna era `ant_obstetricos`
+—antecedentes de la MADRE— y guarda los del NIÑO; la pantalla lo llamaba
+`antPrenatales` y el original, API. Hoy es `ant_perinatales` en los tres sitios
+(migración `0040`), por la misma razón que se unificó el vocabulario de `orden`.
+
+**Por qué esto no era cosmético**: IRA, EDA, esquema de vacunación completo,
+desarrollo psicomotor y muertes de menores de cinco años son los indicadores de
+AIEPI y de crecimiento y desarrollo, o sea la materia prima de
+`epidemiologia.py`. Sin campo donde ponerlos, el informe nuevo **no puede dar los
+números** que el prestador viene entregando, que es la condición de fidelidad de
+todo el port — y eso no se descubre hasta el cierre del mes.
+
+**Dos campos NO se portaron, a propósito**: `EM` y `M` de la pestaña AGO. No
+están en la fórmula obstétrica G-P-A-C-V y no sabemos qué significan («embarazo
+múltiple» y «muertos»? ¿«ectópico/molar»?). Inventar el sentido de un campo es
+lo mismo que inventar su valor. Preguntado al prestador, junto con la
+incoherencia que se ve en la propia captura: un paciente de **1 año** con
+menarquia a los 11 y FUM de 2023 en la pestaña AGO — o son registros distintos,
+o el formulario admite antecedentes ginecológicos sobre un lactante sin
+quejarse.
+
 ## Frontend
 
 Angular 22.1 + `@angular/material` 22.1, standalone, 30 páginas y 50 entradas en

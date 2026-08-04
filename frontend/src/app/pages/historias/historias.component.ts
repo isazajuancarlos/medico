@@ -49,14 +49,41 @@ interface AntGineco {
   gestas: number | null; partos: number | null; cesareas: number | null;
   abortos: number | null; hijos_vivos: number | null; fum: string;
   obs_adicionales: string;
+  // Los cuatro que el sistema vivo registra y aquí no había dónde poner
+  // (capturas del 2026-08-03, pestaña AGO). No son adorno: `irs` y `preclampsia`
+  // son factores de riesgo que el clínico pregunta, y las dos fechas se usan a
+  // diario — la probable de parto ordena el control prenatal.
+  irs: number | null;            // edad de inicio de relaciones sexuales
+  fpp: string;                   // fecha probable de parto
+  fup: string;                   // fecha del último parto
+  preclampsia: boolean;
+  // `EM` y `M` del formulario original NO se portan todavía, a propósito: no
+  // están en la fórmula obstétrica G-P-A-C-V y no sabemos qué significan.
+  // Podrían ser «embarazo múltiple» y «muertos», o «ectópico/molar». Inventar
+  // el sentido de un campo es lo mismo que inventar su valor, y en el RIPS ya
+  // costó un `cod_consulta_cups` puesto por el sistema. Preguntado al prestador.
 }
 
-interface AntPrenatales {
+interface AntPerinatales {
   embarazo_a_termino: boolean; semanas_gestacion_nacer: number | null;
   peso_nacer: number | null; talla_nacer: number | null;
   apgar_1min: number | null; apgar_5min: number | null;
   parto_normal: boolean; parto_cesarea: boolean; parto_forceps: boolean;
   lactancia_materna: boolean; complicaciones: string;
+  // Los ocho de la pestaña API que faltaban, y son los que MÁS importan: IRA,
+  // EDA, esquema completo, desarrollo psicomotor y muertes de menores de cinco
+  // años son los indicadores de AIEPI y de crecimiento y desarrollo, o sea la
+  // materia prima de `epidemiologia.py`. Sin ellos el informe nuevo no puede dar
+  // los mismos números que el que el prestador viene entregando, que es la
+  // condición de fidelidad de todo este port.
+  embarazo_deseado: boolean;
+  hosp_ira: boolean;
+  hosp_eda: boolean;
+  hosp_otra: string;
+  lactancia_meses: number | null;
+  inmunizacion_completa: boolean;
+  desarrollo_psicomotor_normal: boolean;
+  hermanos_muertos_menores_5: number | null;
 }
 
 function defaultAntFam(): AntFamiliares {
@@ -76,13 +103,17 @@ function defaultAntGineco(): AntGineco {
     lactancia_actual: false, embarazo_actual: false, semanas_gestacion: null,
     gestas: null, partos: null, cesareas: null, abortos: null, hijos_vivos: null, fum: '',
     obs_adicionales: '',
+    irs: null, fpp: '', fup: '', preclampsia: false,
   };
 }
-function defaultAntPrenatales(): AntPrenatales {
+function defaultAntPerinatales(): AntPerinatales {
   return {
     embarazo_a_termino: false, semanas_gestacion_nacer: null, peso_nacer: null, talla_nacer: null,
     apgar_1min: null, apgar_5min: null, parto_normal: false, parto_cesarea: false, parto_forceps: false,
     lactancia_materna: false, complicaciones: '',
+    embarazo_deseado: false, hosp_ira: false, hosp_eda: false, hosp_otra: '',
+    lactancia_meses: null, inmunizacion_completa: false,
+    desarrollo_psicomotor_normal: false, hermanos_muertos_menores_5: null,
   };
 }
 
@@ -387,8 +418,23 @@ function defaultAntPrenatales(): AntPrenatales {
                         <input matInput [(ngModel)]="antGineco().menarquia" type="number" min="0" max="25" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
+                        <mat-label>IRS (edad)</mat-label>
+                        <input matInput [(ngModel)]="antGineco().irs" type="number" min="0" max="60"
+                               matTooltip="Edad de inicio de relaciones sexuales" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
                         <mat-label>FUM</mat-label>
                         <input matInput type="date" [(ngModel)]="antGineco().fum" class="w-full" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>FPP</mat-label>
+                        <input matInput type="date" [(ngModel)]="antGineco().fpp" class="w-full"
+                               matTooltip="Fecha probable de parto" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>FUP</mat-label>
+                        <input matInput type="date" [(ngModel)]="antGineco().fup" class="w-full"
+                               matTooltip="Fecha del último parto" />
                       </mat-form-field>
                     </div>
                     <div class="check-grid" style="margin-bottom:0.75rem">
@@ -397,6 +443,7 @@ function defaultAntPrenatales(): AntPrenatales {
                       <div class="chk"><mat-checkbox [(ngModel)]="antGineco().metrorragia">Metrorragia</mat-checkbox></div>
                       <div class="chk"><mat-checkbox [(ngModel)]="antGineco().citologia_vigente">Citología vigente</mat-checkbox></div>
                       <div class="chk"><mat-checkbox [(ngModel)]="antGineco().lactancia_actual">Lactancia actual</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antGineco().preclampsia">Preclampsia</mat-checkbox></div>
                     </div>
                     <div class="cond-row">
                       <div class="chk"><mat-checkbox [(ngModel)]="antGineco().planificacion">Planificación familiar</mat-checkbox></div>
@@ -448,40 +495,55 @@ function defaultAntPrenatales(): AntPrenatales {
 
                   <mat-expansion-panel expanded class="ant-panel">
                     <mat-expansion-panel-header>
-                      <mat-panel-title>Antecedentes prenatales</mat-panel-title>
+                      <mat-panel-title>Antecedentes perinatales</mat-panel-title>
                     </mat-expansion-panel-header>
                     <div class="check-grid" style="margin-bottom:0.75rem">
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().embarazo_a_termino">Embarazo a término</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().parto_normal">Parto normal</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().parto_cesarea">Cesárea</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().parto_forceps">Fórceps</mat-checkbox></div>
-                      <div class="chk"><mat-checkbox [(ngModel)]="antPrenatales().lactancia_materna">Lactancia materna</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().embarazo_deseado">Embarazo deseado</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().embarazo_a_termino">Embarazo a término</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().parto_normal">Parto normal</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().parto_cesarea">Cesárea</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().parto_forceps">Fórceps</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().lactancia_materna">Lactancia materna</mat-checkbox></div>
+                    </div>
+
+                    <!-- Los indicadores de AIEPI y de crecimiento y desarrollo.
+                         Van juntos y en su propia fila porque son los que
+                         alimentan el informe epidemiológico, no adorno de la
+                         ficha: IRA y EDA son las dos causas de hospitalización
+                         que el programa vigila. -->
+                    <div class="check-grid" style="margin-bottom:0.75rem">
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().hosp_ira"
+                             matTooltip="Infección respiratoria aguda">Hospitalización por IRA</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().hosp_eda"
+                             matTooltip="Enfermedad diarreica aguda">Hospitalización por EDA</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().inmunizacion_completa">Inmunización completa</mat-checkbox></div>
+                      <div class="chk"><mat-checkbox [(ngModel)]="antPerinatales().desarrollo_psicomotor_normal">Desarrollo psicomotor normal</mat-checkbox></div>
                     </div>
                     <div class="form-grid">
                       <mat-form-field appearance="outline">
                         <mat-label>Semanas de gestación al nacer</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales().semanas_gestacion_nacer" type="number" min="20" max="44" />
+                        <input matInput [(ngModel)]="antPerinatales().semanas_gestacion_nacer" type="number" min="20" max="44" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Peso al nacer (kg)</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales().peso_nacer" type="number" step="any" />
+                        <input matInput [(ngModel)]="antPerinatales().peso_nacer" type="number" step="any" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>Talla al nacer (cm)</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales().talla_nacer" type="number" step="any" />
+                        <input matInput [(ngModel)]="antPerinatales().talla_nacer" type="number" step="any" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>APGAR al minuto</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales().apgar_1min" type="number" min="0" max="10" />
+                        <input matInput [(ngModel)]="antPerinatales().apgar_1min" type="number" min="0" max="10" />
                       </mat-form-field>
                       <mat-form-field appearance="outline">
                         <mat-label>APGAR 5 minutos</mat-label>
-                        <input matInput [(ngModel)]="antPrenatales().apgar_5min" type="number" min="0" max="10" />
+                        <input matInput [(ngModel)]="antPerinatales().apgar_5min" type="number" min="0" max="10" />
                       </mat-form-field>
                     </div>
                     <mat-form-field appearance="outline" style="margin-top:0.5rem">
                         <mat-label>Complicaciones perinatales</mat-label>
-                        <textarea matInput [(ngModel)]="antPrenatales().complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
+                        <textarea matInput [(ngModel)]="antPerinatales().complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
                       </mat-form-field>
                   </mat-expansion-panel>
                 }
@@ -1239,7 +1301,7 @@ export class HistoriasComponent implements OnInit {
   readonly antFam = signal(defaultAntFam());
   readonly antPers = signal(defaultAntPers());
   readonly antGineco = signal(defaultAntGineco());
-  readonly antPrenatales = signal(defaultAntPrenatales());
+  readonly antPerinatales = signal(defaultAntPerinatales());
 
   // ── Examen físico por sistemas ──
   readonly efItems = [
@@ -1523,7 +1585,7 @@ export class HistoriasComponent implements OnInit {
     if (p.ant_familiares) this.antFam.set({ ...defaultAntFam(), ...p.ant_familiares } as AntFamiliares);
     if (p.ant_personales) this.antPers.set({ ...defaultAntPers(), ...p.ant_personales } as AntPersonales);
     if (p.ant_ginecologicos) this.antGineco.set({ ...defaultAntGineco(), ...p.ant_ginecologicos } as AntGineco);
-    if (p.ant_obstetricos) this.antPrenatales.set({ ...defaultAntPrenatales(), ...p.ant_obstetricos } as AntPrenatales);
+    if (p.ant_perinatales) this.antPerinatales.set({ ...defaultAntPerinatales(), ...p.ant_perinatales } as AntPerinatales);
   }
 
   // ── Examen físico — checkboxes ───────────────────────────────
@@ -1621,7 +1683,7 @@ export class HistoriasComponent implements OnInit {
       },
       ...(this.esMujer() ? {
         ant_ginecologicos: { ...this.antGineco() },
-        ant_obstetricos: { ...this.antPrenatales() },
+        ant_perinatales: { ...this.antPerinatales() },
       } : {}),
     };
   }
