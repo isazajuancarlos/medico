@@ -30,6 +30,10 @@ type Vista = 'busqueda' | 'lista' | 'formulario';
 interface AntFamiliares {
   hta: boolean; diabetes: boolean; coronarias: boolean; cancer: boolean;
   acv: boolean; tbc: boolean; asma: boolean; otros: string;
+  /// Qué cáncer y en quién. El original lo guarda en `enca_historia.CANCER`
+  /// (C150) y lo tiene atado a un control, o sea que se rellena: «cáncer en la
+  /// familia» sin decir cuál ni de quién no orienta ningún tamizaje.
+  cancer_desc: string;
 }
 
 interface AntPersonales {
@@ -84,10 +88,15 @@ interface AntPerinatales {
   inmunizacion_completa: boolean;
   desarrollo_psicomotor_normal: boolean;
   hermanos_muertos_menores_5: number | null;
+  /// De qué murieron. El original lo tiene atado a un control
+  /// (`enca_historia.CAUSA_HERM`, C100) justo al lado del contador, y con razón:
+  /// el número solo dice cuántos; la causa es lo que convierte el dato en un
+  /// antecedente familiar utilizable —y en materia del informe de AIEPI.
+  causa_muerte_hermanos: string;
 }
 
 function defaultAntFam(): AntFamiliares {
-  return { hta: false, diabetes: false, coronarias: false, cancer: false, acv: false, tbc: false, asma: false, otros: '' };
+  return { hta: false, diabetes: false, coronarias: false, cancer: false, acv: false, tbc: false, asma: false, otros: '', cancer_desc: '' };
 }
 function defaultAntPers(): AntPersonales {
   return {
@@ -114,6 +123,7 @@ function defaultAntPerinatales(): AntPerinatales {
     embarazo_deseado: false, hosp_ira: false, hosp_eda: false, hosp_otra: '',
     lactancia_meses: null, inmunizacion_completa: false,
     desarrollo_psicomotor_normal: false, hermanos_muertos_menores_5: null,
+    causa_muerte_hermanos: '',
   };
 }
 
@@ -352,10 +362,19 @@ function defaultAntPerinatales(): AntPerinatales {
                     <div class="chk"><mat-checkbox [(ngModel)]="antFam().hta">HTA</mat-checkbox></div>
                     <div class="chk"><mat-checkbox [(ngModel)]="antFam().diabetes">Diabetes</mat-checkbox></div>
                     <div class="chk"><mat-checkbox [(ngModel)]="antFam().coronarias">Coronarias</mat-checkbox></div>
-                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().cancer">Cáncer</mat-checkbox></div>
                     <div class="chk"><mat-checkbox [(ngModel)]="antFam().acv">ACV</mat-checkbox></div>
                     <div class="chk"><mat-checkbox [(ngModel)]="antFam().tbc">TBC</mat-checkbox></div>
                     <div class="chk"><mat-checkbox [(ngModel)]="antFam().asma">Asma</mat-checkbox></div>
+                  </div>
+                  <!-- El cáncer familiar va con su descripción, como en el
+                       original (enca_historia.CANCER, C150): «cáncer en la
+                       familia» sin decir cuál ni de quién no orienta ningún
+                       tamizaje. Mismo patrón que el cáncer personal. -->
+                  <div class="cond-row">
+                    <div class="chk"><mat-checkbox [(ngModel)]="antFam().cancer">Cáncer</mat-checkbox></div>
+                    @if (antFam().cancer) {
+                      <input [(ngModel)]="antFam().cancer_desc" class="cond-input" placeholder="Tipo y parentesco..." />
+                    }
                   </div>
                   <mat-form-field appearance="outline" style="margin-top:0.75rem">
                         <mat-label>Otros</mat-label>
@@ -540,7 +559,30 @@ function defaultAntPerinatales(): AntPerinatales {
                         <mat-label>APGAR 5 minutos</mat-label>
                         <input matInput [(ngModel)]="antPerinatales().apgar_5min" type="number" min="0" max="10" />
                       </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Meses de lactancia</mat-label>
+                        <input matInput [(ngModel)]="antPerinatales().lactancia_meses" type="number" min="0" max="72" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Hermanos muertos &lt; 5 años</mat-label>
+                        <input matInput [(ngModel)]="antPerinatales().hermanos_muertos_menores_5" type="number" min="0" max="20" />
+                      </mat-form-field>
                     </div>
+                    <!-- La causa va PEGADA al contador, como en el original: el
+                         número dice cuántos, y la causa es lo que lo convierte en
+                         un antecedente utilizable. Solo se pregunta si hay al
+                         menos uno — preguntar «de qué murieron» cuando no murió
+                         ninguno es la fricción que hace que se rodee el campo. -->
+                    @if ((antPerinatales().hermanos_muertos_menores_5 ?? 0) > 0) {
+                      <mat-form-field appearance="outline" style="margin-top:0.5rem">
+                        <mat-label>Causa de muerte de los hermanos</mat-label>
+                        <input matInput [(ngModel)]="antPerinatales().causa_muerte_hermanos" class="w-full" placeholder="De qué murieron..." />
+                      </mat-form-field>
+                    }
+                    <mat-form-field appearance="outline" style="margin-top:0.5rem">
+                        <mat-label>Hospitalización por otra causa</mat-label>
+                        <input matInput [(ngModel)]="antPerinatales().hosp_otra" class="w-full" placeholder="Cuál, si hubo..." />
+                      </mat-form-field>
                     <mat-form-field appearance="outline" style="margin-top:0.5rem">
                         <mat-label>Complicaciones perinatales</mat-label>
                         <textarea matInput [(ngModel)]="antPerinatales().complicaciones" rows="2" class="w-full" placeholder="Describa si aplica..."></textarea>
