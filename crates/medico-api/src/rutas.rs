@@ -232,6 +232,7 @@ pub fn router(estado: Estado) -> Router {
         .route("/api/instituciones", get(listar_instituciones).post(crear_institucion))
         .route("/api/instituciones/{id}/licencia", put(fijar_licencia))
         .route("/api/usuarios", get(listar_usuarios).post(crear_usuario))
+        .route("/api/usuarios/{id}/documento", put(fijar_documento_usuario))
         // El menú que ve cada institución (#65). Leerlo basta con estar
         // autenticado; cambiar la licencia es del vendedor, no del cliente.
         .route("/api/modulos", get(crate::modulos::listar))
@@ -2174,6 +2175,58 @@ struct CrearUsuario {
     numero_documento: Option<String>,
 }
 
+/// El documento del profesional (P11/P12), validado, o la respuesta que lo
+/// rechaza.
+///
+/// UNA sola escritura de la regla, compartida por el alta y por la corrección.
+/// Dos copias es lo que dejó dos pantallas muertas con `orden.estado`: la
+/// segunda se queda atrás en cuanto una cambia.
+///
+/// Las dos reglas, y las dos son del documento y no del gusto:
+///
+/// - **o los dos campos o ninguno**. Medio documento no identifica a nadie, y
+///   aceptar solo el número dejaría una fila que PARECE traer el dato
+///   (directiva 20). `None` en los dos es válido y significa «no lo tengo»:
+///   sin él, el recolector anota la falta y el cierre del mes la enseña.
+/// - **el tipo sale del maestro del validador**, no de una lista escrita aquí.
+///   `RC` y `TI` están en el catálogo —un paciente puede tenerlos— pero un
+///   menor de edad no firma un acto médico. Es el campo que ya se equivocó una
+///   vez mandando el documento del PACIENTE: el MUV lo destapó rechazando a los
+///   menores, y las atenciones de adultos pasaban.
+///
+/// Devuelve el MOTIVO del rechazo y no una `Response` ya pintada: así el tipo de
+/// error es pequeño (clippy se queja, con razón, de un `Err` del tamaño de una
+/// respuesta HTTP) y quien llama decide cómo la presenta.
+fn documento_del_profesional(
+    tipo: &Option<String>,
+    numero: &Option<String>,
+) -> Result<Option<(String, String)>, (StatusCode, String)> {
+    match (tipo, numero) {
+        (None, None) => Ok(None),
+        (Some(t), Some(n)) if t.trim().is_empty() && n.trim().is_empty() => Ok(None),
+        (Some(t), Some(n)) if !t.trim().is_empty() && !n.trim().is_empty() => {
+            if !medico_dominio::muv::admite_como_profesional(t.trim()) {
+                return Err((
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    format!(
+                        "«{}» no es un tipo de documento válido para quien realiza la atención. \
+                         La Resolución 948 admite: {}.",
+                        t.trim(),
+                        medico_dominio::muv::tipos_documento_profesional_listados()
+                    ),
+                ));
+            }
+            Ok(Some((t.trim().to_string(), n.trim().to_string())))
+        }
+        _ => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "el documento del profesional va completo —tipo y número— o no va: medio \
+             documento no identifica a nadie."
+                .to_string(),
+        )),
+    }
+}
+
 async fn crear_usuario(
     State(e): State<Estado>,
     autorizado: Autorizado<GestionarUsuarios>,
@@ -2215,36 +2268,9 @@ async fn crear_usuario(
     //
     // Van los dos o ninguno. Medio documento no identifica a nadie, y aceptar
     // solo el número dejaría una fila que PARECE tener el dato (directiva 20).
-    let documento = match (&req.tipo_documento, &req.numero_documento) {
-        (None, None) => None,
-        (Some(t), Some(n)) if !t.trim().is_empty() && !n.trim().is_empty() => {
-            // Los ocho que la 948 admite para QUIEN REALIZA la atención, y la
-            // lista sale del maestro del validador, no de aquí: `RC` y `TI`
-            // están en el catálogo —un paciente puede tenerlos— pero un menor
-            // de edad no firma un acto médico. Es el campo que ya se equivocó
-            // una vez, mandando el documento del PACIENTE: el MUV lo destapó
-            // rechazando a los menores, y las atenciones de adultos pasaban.
-            if !medico_dominio::muv::admite_como_profesional(t.trim()) {
-                return detalle(
-                    StatusCode::UNPROCESSABLE_ENTITY,
-                    format!(
-                        "«{}» no es un tipo de documento válido para quien realiza la atención. \
-                         La Resolución 948 admite: {}.",
-                        t.trim(),
-                        medico_dominio::muv::tipos_documento_profesional_listados()
-                    ),
-                );
-            }
-            Some((t.trim().to_string(), n.trim().to_string()))
-        }
-        _ => {
-            return detalle(
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "el documento del profesional va completo —tipo y número— o no va: medio \
-                 documento no identifica a nadie."
-                    .to_string(),
-            );
-        }
+    let documento = match documento_del_profesional(&req.tipo_documento, &req.numero_documento) {
+        Ok(d) => d,
+        Err((c, m)) => return detalle(c, m),
     };
     let Some(hash) = claves::hashear(&req.clave) else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -2264,6 +2290,56 @@ async fn crear_usuario(
         Ok(usuario::ResultadoCrear::SinPermiso) => StatusCode::FORBIDDEN.into_response(),
         Ok(usuario::ResultadoCrear::EmailEnUso) => StatusCode::CONFLICT.into_response(),
         Ok(usuario::ResultadoCrear::DocumentoEnUso) => detalle(
+            StatusCode::CONFLICT,
+            "ese documento ya es de otro profesional.".to_string(),
+        ),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct DocumentoProfesional {
+    tipo_documento: Option<String>,
+    numero_documento: Option<String>,
+}
+
+/// Corrige el documento de identidad de un profesional que YA existe (P11/P12).
+///
+/// # Por qué una ruta que hace SOLO esto
+///
+/// Las columnas existen desde `0037` y el alta las escribe desde hoy, pero
+/// **todos los usuarios dados de alta antes no tenían por dónde recibirlas**: el
+/// RIPS los anotaba como ausentes en toda atención y no había forma de
+/// arreglarlo desde el producto. Eso es lo que cierra esta ruta.
+///
+/// Podría haber sido un `PATCH /api/usuarios/{id}` general, y sería la puerta
+/// por la que se cambia el rol o la clave de otro: `crear_usuario` tiene la
+/// regla de que solo un superadmin fabrica otro superadmin, y un actualizador
+/// general necesitaría esa y varias más, cada una una decisión aparte. Esta no
+/// puede hacer nada más que lo que dice su nombre.
+///
+/// Enviar los dos campos vacíos **borra** el documento, y es deliberado:
+/// corregir un dedazo dejando la fila sin documento es mejor que dejarla con
+/// uno falso, que es justo lo que P11/P12 enseñó a no hacer.
+///
+/// **404 y no 403** para un usuario de otra institución: un 403 confirma que el
+/// id existe, y con eso se enumera la plantilla del vecino.
+async fn fijar_documento_usuario(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Path(id): Path<i64>,
+    Json(req): Json<DocumentoProfesional>,
+) -> Response {
+    let u = autorizado.0;
+    let documento = match documento_del_profesional(&req.tipo_documento, &req.numero_documento) {
+        Ok(d) => d,
+        Err((c, m)) => return detalle(c, m),
+    };
+    let par = documento.as_ref().map(|(t, n)| (t.as_str(), n.as_str()));
+    match usuario::fijar_documento(&e.pool, u.ambito(), id, par).await {
+        Ok(usuario::ResultadoDocumento::Actualizado) => StatusCode::NO_CONTENT.into_response(),
+        Ok(usuario::ResultadoDocumento::NoEncontrado) => StatusCode::NOT_FOUND.into_response(),
+        Ok(usuario::ResultadoDocumento::EnUso) => detalle(
             StatusCode::CONFLICT,
             "ese documento ya es de otro profesional.".to_string(),
         ),
@@ -5689,6 +5765,131 @@ mod pruebas {
                     alta(&e, cuerpo).await.status(),
                     StatusCode::UNPROCESSABLE_ENTITY,
                     "medio documento no identifica a nadie: {cuerpo}"
+                );
+            }
+        }
+
+        /// La ruta de CORRECCIÓN, que es la que faltaba: todos los
+        /// profesionales dados de alta antes de hoy no tienen documento y no
+        /// había por dónde ponérselo.
+        mod corregir_el_de_uno_que_ya_existe {
+            use super::*;
+
+            async fn poner(e: &Estado, id: i64, quien: i64, cuerpo: &str) -> Response {
+                router(e.clone())
+                    .oneshot(
+                        Request::builder()
+                            .method("PUT")
+                            .uri(format!("/api/usuarios/{id}/documento"))
+                            .header(header::COOKIE, cookie_de(quien))
+                            .header(header::CONTENT_TYPE, "application/json")
+                            .body(Body::from(cuerpo.to_string()))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+            }
+
+            async fn doc_de(e: &Estado, id: i64) -> (Option<String>, Option<String>) {
+                sqlx::query_as("SELECT tipo_documento, numero_documento FROM usuario WHERE id = ?")
+                    .bind(id)
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap()
+            }
+
+            #[tokio::test]
+            async fn se_lo_pone_a_uno_que_no_lo_tenia_y_se_lo_puede_quitar() {
+                let e = con_admin().await;
+                // El propio admin sembrado por `con_admin` no trae documento:
+                // es exactamente el caso que esta ruta existe para arreglar.
+                assert_eq!(doc_de(&e, ADMIN).await, (None, None));
+
+                let r = poner(&e, ADMIN, ADMIN, r#"{"tipo_documento":"CC","numero_documento":"71234567"}"#).await;
+                assert_eq!(r.status(), StatusCode::NO_CONTENT);
+                assert_eq!(doc_de(&e, ADMIN).await, (Some("CC".into()), Some("71234567".into())));
+
+                // Y se puede BORRAR: corregir un dedazo dejando la fila sin
+                // documento es mejor que dejarla con uno falso.
+                let r = poner(&e, ADMIN, ADMIN, r#"{"tipo_documento":null,"numero_documento":null}"#).await;
+                assert_eq!(r.status(), StatusCode::NO_CONTENT);
+                assert_eq!(doc_de(&e, ADMIN).await, (None, None));
+            }
+
+            #[tokio::test]
+            async fn un_usuario_de_otra_institucion_da_404_y_no_se_toca() {
+                let e = con_admin().await;
+                sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (2,'Otra','901')")
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) \
+                     VALUES (77,'Ajeno','ajeno@x.co','h','medico',2,1)",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                let r = poner(&e, 77, ADMIN, r#"{"tipo_documento":"CC","numero_documento":"99"}"#).await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::NOT_FOUND,
+                    "404 y NUNCA 403: un 403 confirma que el id existe, y con eso se enumera \
+                     la plantilla del vecino"
+                );
+                assert_eq!(doc_de(&e, 77).await, (None, None), "y no lo tocó");
+            }
+
+            #[tokio::test]
+            async fn el_tipo_se_valida_igual_que_en_el_alta() {
+                // La regla vive en UNA función compartida; esto comprueba que la
+                // ruta nueva la usa y no una copia que se quedará atrás.
+                let e = con_admin().await;
+                for cuerpo in [
+                    r#"{"tipo_documento":"RC","numero_documento":"1"}"#,
+                    r#"{"tipo_documento":"CC"}"#,
+                ] {
+                    assert_eq!(
+                        poner(&e, ADMIN, ADMIN, cuerpo).await.status(),
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        "{cuerpo}"
+                    );
+                }
+                assert_eq!(doc_de(&e, ADMIN).await, (None, None));
+            }
+
+            #[tokio::test]
+            async fn no_se_puede_robar_el_documento_de_otro() {
+                let e = con_admin().await;
+                sqlx::query(
+                    "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo,\
+                     tipo_documento,numero_documento) \
+                     VALUES (78,'Dra','dra@x.co','h','medico',1,1,'CC','71234567')",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+                let r = poner(&e, ADMIN, ADMIN, r#"{"tipo_documento":"CC","numero_documento":"71234567"}"#).await;
+                assert_eq!(r.status(), StatusCode::CONFLICT);
+                assert_eq!(doc_de(&e, 78).await, (Some("CC".into()), Some("71234567".into())), "el dueño lo conserva");
+            }
+
+            #[tokio::test]
+            async fn hace_falta_la_capacidad_de_gestionar_usuarios() {
+                let e = con_admin().await;
+                sqlx::query(
+                    "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo) \
+                     VALUES (79,'Dr','dr@x.co','h','medico',1,1)",
+                )
+                .execute(&e.pool)
+                .await
+                .unwrap();
+                let r = poner(&e, ADMIN, 79, r#"{"tipo_documento":"CC","numero_documento":"5"}"#).await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::FORBIDDEN,
+                    "un médico no edita la ficha de identidad de la planta"
                 );
             }
         }

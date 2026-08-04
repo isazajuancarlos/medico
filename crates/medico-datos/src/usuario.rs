@@ -166,6 +166,65 @@ pub async fn listar(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<ResumenUsu
     }
 }
 
+/// Los desenlaces de corregir el documento de un profesional.
+pub enum ResultadoDocumento {
+    Actualizado,
+    /// No existe, o no es del ámbito de quien pregunta. **Las dos cosas dan lo
+    /// mismo a propósito**: distinguirlas diría si el id existe en otra
+    /// institución, y con eso se enumera la plantilla del vecino.
+    NoEncontrado,
+    /// Ese documento ya es de otro profesional.
+    EnUso,
+}
+
+/// Pone —o quita— el documento de identidad de un profesional (P11/P12).
+///
+/// # Por qué una función que hace SOLO esto
+///
+/// La alternativa era un `actualizar` general de usuario, y sería la puerta por
+/// la que se cambia el rol o la clave de otro: `crear` tiene la regla de que
+/// solo un superadmin fabrica otro superadmin, y un actualizador general
+/// necesitaría esa regla y varias más, cada una una decisión aparte. Esta no
+/// puede hacer nada más que lo que dice su nombre.
+///
+/// `documento: None` **borra** los dos campos, y es deliberado: corregir un
+/// dedazo dejando la fila sin documento es mejor que dejarla con uno falso, que
+/// es justo lo que P11/P12 enseñó a no hacer. Sin él, el recolector vuelve a
+/// anotar la falta y el cierre del mes la enseña.
+pub async fn fijar_documento(
+    pool: &crate::Pool,
+    quien: Ambito,
+    usuario_id: i64,
+    documento: Option<(&str, &str)>,
+) -> Result<ResultadoDocumento, sqlx::Error> {
+    // El filtro del ámbito va DENTRO del UPDATE, no en una consulta previa: una
+    // comprobación separada deja una ventana entre el «es mío» y el «lo cambio».
+    let (tipo, numero) = match documento {
+        Some((t, n)) => (Some(t), Some(n)),
+        None => (None, None),
+    };
+    let sql = match quien {
+        Ambito::Superadmin => {
+            "UPDATE usuario SET tipo_documento = ?, numero_documento = ? WHERE id = ?"
+        }
+        Ambito::Institucion(_) => {
+            "UPDATE usuario SET tipo_documento = ?, numero_documento = ? \
+             WHERE id = ? AND institucion_id = ?"
+        }
+        Ambito::Ninguno => return Ok(ResultadoDocumento::NoEncontrado),
+    };
+    let mut q = sqlx::query(sql).bind(tipo).bind(numero).bind(usuario_id);
+    if let Ambito::Institucion(inst) = quien {
+        q = q.bind(inst);
+    }
+    match q.execute(pool).await {
+        Ok(r) if r.rows_affected() == 1 => Ok(ResultadoDocumento::Actualizado),
+        Ok(_) => Ok(ResultadoDocumento::NoEncontrado),
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Ok(ResultadoDocumento::EnUso),
+        Err(e) => Err(e),
+    }
+}
+
 /// Un médico para poblar selectores (agendar una cita, asignar). Sin datos
 /// sensibles: id y nombre.
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]

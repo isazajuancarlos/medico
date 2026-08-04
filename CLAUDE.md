@@ -405,7 +405,7 @@ vacía y el acceso responde «credenciales incorrectas», que es indistinguible 
 
 **Lo que el port todavía NO cubre**, para no confundir avance con paridad. La
 lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.rs`
-(110 rutas) contra los de `backend/routers/*.py`; vuelto a medir el 2026-08-03,
+(111 rutas) contra los de `backend/routers/*.py`; vuelto a medir el 2026-08-03,
 siguen sin existir en Rust:
 
 ```
@@ -847,10 +847,25 @@ Hoy entran por `POST /api/usuarios`, y con tres reglas:
   sistema y no por institución, porque una persona es la misma en dos IPS.
 
 Sigue siendo opcional, y eso no es una concesión: los usuarios que ya existen no
-lo traen, y exigirlo en el alta no arregla a los que están. **Lo que falta es
-poder ponérselo a un usuario existente** — en Rust no hay ninguna ruta de
-edición de usuario, y la pantalla de administración es de las cinco que aún no
-están portadas.
+lo traen, y exigirlo en el alta no arregla a los que están. Para esos hay
+**`PUT /api/usuarios/{id}/documento`**, con `GestionarUsuarios`, aislado por
+institución (**404 y nunca 403**: un 403 confirma que el id existe y con eso se
+enumera la plantilla del vecino) y con la misma validación —la regla vive en
+`documento_del_profesional`, UNA función que comparten el alta y la corrección,
+porque dos copias es lo que ya dejó dos pantallas muertas con `orden.estado`.
+
+Enviar los dos campos vacíos **borra** el documento, a propósito: corregir un
+dedazo dejando la fila sin documento es mejor que dejarla con uno falso, que es
+justo lo que P11/P12 enseñó a no hacer.
+
+**No es un `PATCH /api/usuarios/{id}` general**, y esa es la decisión: un
+actualizador general sería la puerta por la que se cambia el rol o la clave de
+otro, y necesitaría repetir la regla de que solo un superadmin fabrica otro
+superadmin más varias decisiones aparte. Esta ruta no puede hacer nada más que
+lo que dice su nombre.
+
+Lo que sigue faltando es la PANTALLA: `admin` es uno de los cinco módulos sin
+portar, así que hoy el documento se corrige con la API y no desde la interfaz.
 
 La salida es marcar el origen: `CONFIRMADO` · `DERIVADO` · `PROPUESTO_ACEPTADO` ·
 `AUSENTE`. Un valor derivado de otros que ya estaban cuesta cero segundos y es
