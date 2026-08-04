@@ -63,6 +63,16 @@ export const routes: Routes = [
         canActivate: [moduloGuard('HOSPITALIZACION')],
       },
       {
+        // La planta del prestador contra las rutas que el binario YA sirve.
+        // Aparte de `/admin` porque aquella habla solo con `/api/admin`, que
+        // hoy es Python y da 404 contra el binario. Ver el comentario largo del
+        // componente.
+        path: 'usuarios',
+        loadComponent: () => import('./pages/usuarios/usuarios.component').then(m => m.UsuariosComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'superadmin'] },
+      },
+      {
         path: 'admin',
         loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
         canActivate: [roleGuard],

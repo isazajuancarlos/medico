@@ -150,6 +150,7 @@ export class SidebarComponent {
       label: 'Configuración',
       roles: ['admin', 'superadmin'],
       items: [
+        { label: 'Usuarios', icon: 'pi-id-card', route: '/usuarios', roles: ['admin', 'superadmin'] },
         { label: 'Administración', icon: 'pi-cog', route: '/admin', roles: ['admin', 'superadmin'] },
         { label: 'SuperAdmin', icon: 'pi-shield', route: '/superadmin', roles: ['superadmin'] },
       ]

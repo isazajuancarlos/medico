@@ -325,6 +325,10 @@ pub fn router(estado: Estado) -> Router {
         // rellenaba solo, con códigos que además eran de la tabla anterior.
         .route("/api/finalidades", get(listar_finalidades))
         .route("/api/causas-motivo", get(listar_causas_motivo))
+        .route(
+            "/api/tipos-documento-profesional",
+            get(listar_tipos_documento_profesional),
+        )
         // Todo lo que no sea una ruta de API lo resuelve la interfaz embebida:
         // los archivos del build y, para las rutas del SPA, el index.html.
         .fallback(crate::estaticos::servir)
@@ -2746,6 +2750,36 @@ async fn listar_finalidades(_: Autenticado) -> Json<&'static [medico_dominio::mu
 /// `GET /api/causas-motivo` — las 29 causas o motivos de atención de la 948.
 async fn listar_causas_motivo(_: Autenticado) -> Json<&'static [medico_dominio::muv::CausaMotivo]> {
     Json(medico_dominio::muv::causas_motivo())
+}
+
+/// Un tipo de documento admitido para quien REALIZA la atención (P11/P12).
+#[derive(Serialize)]
+struct TipoDocumentoProfesional {
+    codigo: &'static str,
+    nombre: &'static str,
+}
+
+/// `GET /api/tipos-documento-profesional` — los ocho de la 948.
+///
+/// Existe para que la pantalla que corrige el documento OFREZCA la lista en vez
+/// de escribirla. Ningún código de catálogo se escribe a mano en este proyecto:
+/// una lista en el frontend y otra en `muv.rs` divergen en cuanto el maestro
+/// cambie, y la del navegador sería la que ve el médico.
+///
+/// Son ocho y no los trece del maestro: `RC` y `TI` valen para un PACIENTE pero
+/// no para quien firma el acto médico. Ese filtro vive en el dominio.
+async fn listar_tipos_documento_profesional(
+    _: Autenticado,
+) -> Json<Vec<TipoDocumentoProfesional>> {
+    Json(
+        medico_dominio::muv::tipos_documento_profesional()
+            .iter()
+            .map(|(c, n)| TipoDocumentoProfesional {
+                codigo: c.as_str(),
+                nombre: n.as_str(),
+            })
+            .collect(),
+    )
 }
 
 // --- Laboratorio e imágenes diagnósticas -------------------------------------

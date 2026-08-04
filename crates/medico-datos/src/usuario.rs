@@ -143,11 +143,19 @@ pub struct ResumenUsuario {
     pub rol: String,
     pub institucion_id: Option<i64>,
     pub activo: bool,
+    /// P11/P12. Van en el LISTADO y no solo en el detalle porque la pregunta
+    /// que hay que poder responder de un vistazo es «¿a quién le falta?»: sin
+    /// ellos, la pantalla que existe para corregirlos no sabe a quién señalar
+    /// y habría que abrir uno por uno. No son dato sensible —es el documento
+    /// del profesional, que va impreso en cada fórmula que firma.
+    pub tipo_documento: Option<String>,
+    pub numero_documento: Option<String>,
 }
 
 /// Lista usuarios según el ámbito. Sin el hash: la consulta no lo trae.
 pub async fn listar(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<ResumenUsuario>, sqlx::Error> {
-    const COLS: &str = "id, nombre, email, rol, institucion_id, activo";
+    const COLS: &str =
+        "id, nombre, email, rol, institucion_id, activo, tipo_documento, numero_documento";
     match ambito {
         Ambito::Superadmin => {
             sqlx::query_as::<_, ResumenUsuario>(&format!("SELECT {COLS} FROM usuario ORDER BY nombre"))

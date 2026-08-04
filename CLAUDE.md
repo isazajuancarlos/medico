@@ -864,8 +864,23 @@ otro, y necesitaría repetir la regla de que solo un superadmin fabrica otro
 superadmin más varias decisiones aparte. Esta ruta no puede hacer nada más que
 lo que dice su nombre.
 
-Lo que sigue faltando es la PANTALLA: `admin` es uno de los cinco módulos sin
-portar, así que hoy el documento se corrige con la API y no desde la interfaz.
+**La pantalla es `/usuarios`** (`pages/usuarios/`), y existe aparte de
+`/admin` a propósito. Aquella tiene su pestaña de usuarios pero habla
+ÚNICAMENTE con `/api/admin`, que es Python y da 404 contra el binario; su
+formulario pide además `username`, `especialidad_id`, `registro_medico`,
+`registro_rethus` y `cuenta_bloqueada`, y ninguno existe en la tabla `usuario`
+de Rust —la especialidad y el registro llegan con el maestro de talento humano,
+y el bloqueo no existe porque en su lugar hay un freno que se agota solo—.
+Esperar al port completo de `admin` dejaba P11/P12 vacío para todos los
+profesionales; cuando se porte, esto es su pestaña de usuarios y no trabajo
+tirado.
+
+La pantalla dice **cuántos van sin documento** y lo marca en la tabla, que es la
+pregunta que hay que poder responder de un vistazo — por eso `ResumenUsuario`
+lleva los dos campos: sin ellos habría que abrir uno por uno. Los ocho tipos los
+sirve `GET /api/tipos-documento-profesional`: la lista **no** se escribe en el
+navegador, porque una copia allí y otra en `muv.rs` divergen al primer cambio
+del maestro y la del navegador es la que ve el médico.
 
 La salida es marcar el origen: `CONFIRMADO` · `DERIVADO` · `PROPUESTO_ACEPTADO` ·
 `AUSENTE`. Un valor derivado de otros que ya estaban cuesta cero segundos y es

@@ -42,7 +42,20 @@ from collections import defaultdict
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-TABLAS = Path.home() / "Documentos" / "mapping-cie10-cie-11"
+#: Tablas de mapeo CIE-10 ↔ CIE-11 de la OMS. Apuntaban a
+#: `~/Documentos/mapping-cie10-cie-11`, que el 2026-08-04 YA NO EXISTE: la única
+#: copia viva quedó en `_ajenos-a-quipu/docs`. Se admite ruta por argumento para
+#: no volver a cablear un sitio que puede desaparecer, y si no está se dice
+#: dónde buscarla en vez de reventar con un rastro de pila.
+#: Procedencia y riesgo: `/mnt/data/conocimiento/insumos-normativos.md`.
+TABLAS = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
+    "/mnt/data/_ajenos-a-quipu/docs/mapping-cie10-cie-11")
+if not TABLAS.is_dir():
+    raise SystemExit(
+        f"No encuentro las tablas de la OMS en {TABLAS}.\n"
+        "Pásalas como argumento: generar_mapeo_cie11.py <directorio>.\n"
+        "Qué son y de dónde salen: /mnt/data/conocimiento/insumos-normativos.md"
+    )
 CIE10_RIPS = RAIZ / "backend" / "datos" / "cie10_rips.json"
 SALIDA = RAIZ / "backend" / "datos" / "mapeo_cie10_cie11.json"
 #: La copia que se empotra en el binario de Rust. La escribe ESTA corrida y no
