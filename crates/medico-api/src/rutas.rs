@@ -5716,6 +5716,19 @@ mod pruebas {
     /// que un dato que falta salga como 422 con la lista y no como un 500.
     mod generacion_del_rips {
         use super::*;
+        use chrono::TimeZone;
+
+        /// La hora LOCAL a la que ocurrió la atención de la prueba.
+        ///
+        /// Todo lo demás se deriva de aquí: la base guarda su equivalente en UTC
+        /// y el RIPS tiene que devolver otra vez esta misma hora. Escrita así,
+        /// la prueba dice lo mismo en Medellín que en el CI, que corre en UTC.
+        fn atencion_local() -> chrono::DateTime<chrono::Local> {
+            chrono::Local
+                .with_ymd_and_hms(2026, 3, 15, 9, 30, 0)
+                .single()
+                .expect("9:30 del 15 de marzo existe en cualquier huso sensato")
+        }
 
         fn cookie_de(id: i64) -> String {
             format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
@@ -5760,14 +5773,27 @@ mod pruebas {
             // general» en la tabla ANTERIOR y no existe en la nueva, donde ese
             // concepto es el 38 — sembrarlo hacía fallar la prueba con una falta
             // de más, que es exactamente lo que el generador tiene que hacer.
+            // LA FECHA SE DERIVA DE LA HORA LOCAL, no se escribe literal.
+            //
+            // La base guarda UTC y el RIPS reporta la hora a la que ocurrió la
+            // atención, o sea la local del prestador. Escribir aquí un
+            // `'2026-03-15 14:30:00'` fijo y esperar `09:30` en la salida ataba
+            // la prueba a un huso de −05: pasaba en Medellín y fallaba en el CI,
+            // que corre en UTC y veía `14:30`. Es la misma forma que ya usa
+            // `el_periodo_se_pide_en_local_y_la_base_guarda_utc`.
+            let fecha_utc = atencion_local()
+                .with_timezone(&chrono::Utc)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string();
             sqlx::query(
                 "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,creado_por,\
                  motivo_consulta,enfermedad_actual,plan_tratamiento,diagnostico_principal,\
                  cod_consulta_cups,modalidad_grupo_servicio,grupo_servicios,cod_servicio,\
                  valor_servicio,concepto_recaudo,finalidad,tipo_diagnostico,causa_externa) \
-                 VALUES (1,'2026-03-15 14:30:00','H1',10,2,2,'dolor','desde ayer','reposo','A000',\
+                 VALUES (1,?,'H1',10,2,2,'dolor','desde ayer','reposo','A000',\
                  '890201','01','01',328,45000,'05','11','01','38')",
             )
+            .bind(&fecha_utc)
             .execute(&e.pool)
             .await
             .unwrap();
@@ -5834,7 +5860,11 @@ mod pruebas {
             assert_eq!(u["numDocumentoIdentificacion"], "111");
             let c = &u["servicios"]["consultas"][0];
             assert_eq!(c["codPrestador"], "050010123401");
-            assert_eq!(c["fechaInicioAtencion"], "2026-03-15 09:30");
+            assert_eq!(
+                c["fechaInicioAtencion"],
+                atencion_local().format("%Y-%m-%d %H:%M").to_string(),
+                "se reporta la hora LOCAL a la que ocurrió, no la que guarda la base"
+            );
             // El documento del MÉDICO, no el del paciente. Es el fallo que el
             // MUV destapó en el Python y la razón de que el SELECT aliase las
             // columnas homónimas.
