@@ -1019,7 +1019,7 @@ reescrita «mejor» se suma a la original en vez de sustituirla.
 
 | # | pendiente |
 |---|---|
-| **#16 / #65** | Migración VFP completa. Quedan **21 módulos en 501** y tres sin existir (`soportecobertura`, `terceros`, `ayudasdx`). Orden fijado por Juan: **migración completa primero, mejoras después**. |
+| **#16 / #65** | Migración VFP completa. Quedan **21 módulos en 501** y tres sin portar: `soportecobertura`, `terceros` y `ayudasdx`. **Corregido el 2026-08-03**: aquí decía «tres sin existir», y es falso — los tres tienen formulario en el original (`soportecovertura.scx`, `terceros.scx`, `ayudasdx.scx`) y dos tienen tabla con datos (`TERCEROS.DBF`, `AYUDASDX.DBF`). «No existe» decía que no había nada que migrar; lo que hay es trabajo sin hacer. Orden fijado por Juan: **migración completa primero, mejoras después**. |
 | **#67** | FEV-RIPS por archivo. AC y AM están verificados por dos fuentes; **AP/AU/AH/RN/OS no se implementan sin contrastarlos a ojo contra el PDF** — las tablas de urgencias, recién nacidos y otros servicios no se dejaron extraer por prefijo. |
 | **#77** | Cargar el CUM a **base de datos** (66 mil registros que caducan, no JSON empaquetado). `Medicamento` se queda corto: faltan estado_cum, registro sanitario, vencimiento anulable, ATC, principio activo, vía, unidad e IUM. Pendiente aparte: CUPS (`cups.xlsx`, cabecera corrida una columna). |
 | **#88** | Barrer el backend buscando el patrón «filtro opcional» fuera de los routers, y decidir si `test_guardia_aislamiento.py` puede cubrir esa capa. |
