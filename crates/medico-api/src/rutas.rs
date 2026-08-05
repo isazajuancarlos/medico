@@ -6682,7 +6682,10 @@ mod pruebas {
                 assert_eq!(v["alcance"]["ambito"], "institucion:1");
                 let filtro = v["alcance"]["filtro"].as_str().unwrap();
                 assert!(filtro.contains("2026-03-01..2026-03-31"), "{filtro}");
-                assert!(filtro.contains("parcial"), "el archivo iba incompleto: {filtro}");
+                // `parcial` ya no se anota: no falta ningún documento, y la
+                // cláusula vacía —«parcial (sin )»— era peor que no escribirla.
+                // Un rastro que hay que interpretar se interpreta mal.
+                assert!(!filtro.contains("parcial"), "{filtro}");
 
                 // Y la cadena sigue verificando con el eslabón nuevo dentro.
                 assert_eq!(

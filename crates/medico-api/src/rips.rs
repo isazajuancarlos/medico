@@ -280,7 +280,12 @@ pub async fn generar(
 /// saber si aquel archivo llevaba supuestos o le faltaban cuatro documentos.
 fn descripcion_del_alcance(p: &Periodo) -> String {
     let mut d = format!("periodo {}..{}", p.inicio, p.fin);
-    if p.parcial {
+    // La cláusula solo se escribe si de verdad falta un documento. Con
+    // `SIN_PORTAR` vacío, la versión anterior dejaba «; parcial (sin )» en la
+    // bitácora de la Ley 1581 — y ese registro se lee dentro de un año, cuando
+    // nadie recuerde que aquel paréntesis vacío significaba «no faltaba nada».
+    // Un rastro que hay que interpretar es un rastro que se interpreta mal.
+    if p.parcial && !SIN_PORTAR.is_empty() {
         d.push_str(&format!("; parcial (sin {})", SIN_PORTAR.join(", ")));
     }
     if p.permitir_supuestos {
