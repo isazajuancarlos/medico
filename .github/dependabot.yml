@@ -1,0 +1,117 @@
+# Aviso automático de actualizaciones.
+#
+# POR QUÉ EXISTE, y el motivo es medido: el 2026-08-05 se fue a subir las
+# acciones del CI de informes (tarea #350) y **ya estaban al día**, mientras las
+# de medico seguían en `checkout@v4` y `setup-node@v4` — las que GitHub retira
+# por el fin de Node 20. La diferencia entre los dos repositorios no era que
+# alguien se acordara más de uno: era que informes tiene quien le avise y medico
+# no. Un inventario de versiones que depende de que alguien pase por ahí envejece
+# en silencio, y aquí el silencio duró hasta que se miró por otra cosa.
+#
+# NUNCA poner `target-branch` en una entrada. Desconecta esa entrada de las
+# actualizaciones de SEGURIDAD —que van siempre contra la rama por defecto— y lo
+# hace sin dar error: se queda pareciendo que vigila. El ruido se arregla
+# agrupando, que es lo de abajo, no cambiando de rama.
+version: 2
+updates:
+  # --- Las acciones del CI -------------------------------------------------
+  # Es la entrada que justifica el archivo. Las acciones corren con el
+  # `GITHUB_TOKEN` del repositorio: una acción sin mantener es superficie de
+  # cadena de suministro igual que un crate, y no la mira `cargo-deny`.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      acciones:
+        # `patterns` NO ES OPCIONAL aunque el grupo parezca completo sin él:
+        # `update-types` solo FILTRA lo que ya entró, quien SELECCIONA es
+        # `patterns`. Sin él el grupo queda vacío y dependabot abre un PR por
+        # acción, en silencio y sin error de sintaxis. Medido en guaca el
+        # 2026-08-04: el grupo sin `patterns` produjo cuatro PR sueltos y el que
+        # sí lo llevaba produjo uno, en la misma corrida.
+        patterns: ["*"]
+        # Y aquí NO va `update-types`, al revés que en el grupo `compatibles` de
+        # abajo. Es deliberado y conviene decirlo, porque contradice en apariencia
+        # el párrafo de la directiva 35 que hay unas líneas más abajo: **en las
+        # acciones el salto mayor entra en el PR agrupado**. El motivo es que son
+        # seis acciones, todas de primera parte o de autor conocido, y sus mayores
+        # son casi siempre «el runner pasó a otro Node» —lo que provocó este mismo
+        # archivo—, no un cambio de API que haya que decidir. Un crate mayor sí es
+        # una decisión con motivo; `checkout v7 -> v8` no lo es.
+    open-pull-requests-limit: 3
+
+  # --- Las dependencias de Rust --------------------------------------------
+  # Un solo PR con todo lo compatible. El árbol de medico es casi todo
+  # RustCrypto vía quipu/guaca, y esa familia se mueve en bloque: separarla
+  # produce PR que no compilan por su cuenta, y cuatro PR rojos que nadie puede
+  # arreglar es peor que ninguno — a la tercera vez ya nadie mira los de
+  # dependabot.
+  #
+  # OJO CON LO QUE ESTE ARGUMENTO **NO** ABARCA: `groups` lleva por defecto
+  # `applies-to: version-updates`, así que agrupa el mantenimiento semanal y NO
+  # las actualizaciones de SEGURIDAD. Un CVE en `sha2` seguirá abriendo su PR
+  # suelto, y puede que no compile por lo mismo que se explica arriba. No se
+  # arregla agrupándolas —agrupar actualizaciones de seguridad las retrasa, que
+  # es peor—: se arregla mirando ese PR el día que llegue.
+  #
+  # OJO con «mayor» en crates 0.x: para semver 0.22 -> 0.23 es MINOR, porque el
+  # mayor sigue siendo 0. Así que esos entran en el grupo, que es lo que se
+  # quiere. Lo que queda fuera es 0.x -> 1.x o 1.x -> 2.x, y esos sí son una
+  # decisión con motivo (directiva 35), no un merge más.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      compatibles:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+    # `quipu` y `guaca` NO las mueve dependabot: se suben cuando lo decide la
+    # familia, en el orden guaca -> tunjo -> consumidores y con la puerta de los
+    # seis vectores fijos. Un `cargo update` no puede tomar esa decisión.
+    #
+    # PERO EL MOTIVO POR EL QUE ESTE `ignore` ES INOFENSIVO NO ES ÉSE, y la
+    # diferencia importa. `ignore` **también suprime los PR de actualización de
+    # SEGURIDAD** — la referencia de opciones lo dice literal: «All options marked
+    # with [icono] also change how Dependabot creates pull requests for security
+    # updates, except where `target-branch` is used». Un `dependency-name` sin
+    # `versions` ignora TODAS las versiones, incluida la que arregla un CVE.
+    #
+    # Lo que hace que aquí no suprima nada es otra cosa, y es una CONDICIÓN que
+    # puede dejar de cumplirse: **ninguna de las dos está en un registro**. guaca
+    # se fija por `rev` de git y no existe en crates.io; medico ni siquiera
+    # depende de quipu directamente (entra por guaca). Sin entrada en la Advisory
+    # Database no puede haber alerta, y sin alerta no hay PR que suprimir.
+    #
+    # EL DÍA QUE QUIPU SE PUBLIQUE EN CRATES.IO, este `ignore` pasa de decorativo
+    # a tapar CVEs de la pila criptográfica del producto, y no dará ningún error.
+    # Ese día hay que quitarlo y llevar la decisión de versión a otro sitio (un
+    # `versions: [">= 0"]` acotado, o simplemente revisar el PR y cerrarlo).
+    #
+    # Lo que sí sigue cubierto pase lo que pase: el `ignore` casa por NOMBRE
+    # exacto, así que el árbol transitivo (RustCrypto, base64…) no entra; y la red
+    # que MUERDE es otra y no depende de este archivo — `cargo audit` y
+    # `cargo deny check` corren como jobs bloqueantes en cada PR y leen el
+    # `Cargo.lock` entero, incluido lo que llega por git.
+    ignore:
+      - dependency-name: quipu
+      - dependency-name: guaca
+
+# LO QUE NO SE VIGILA DESDE AQUÍ, dicho para que no pase por cubierto:
+#
+#   · `frontend/package.json` (npm). La versión de Angular NO es libre: la
+#     política de Juan (#254) es una sola versión común a TODOS los desarrollos,
+#     y hoy la marca informes. Un PR semanal de dependabot proponiendo subir
+#     Angular en medico solo pelearía con esa política, y los paquetes de
+#     Angular se peer-dependen con versión exacta, así que ninguno sube suelto.
+#     Se sube a mano, con `ng update`, y en los dos repositorios a la vez.
+#
+#   · `backend/requirements.txt` (pip). Es el sistema que el port a Rust está
+#     sustituyendo. Mantener al día un árbol que se va a apagar gasta minutos de
+#     Actions —repositorio privado— en código con fecha de caducidad. El día que
+#     se decida que el Python se queda, esta entrada se añade.
+#
+# Las dos ausencias son decisiones, no olvidos. Si alguna deja de tener sentido,
+# se añade la entrada y se borra su párrafo.
