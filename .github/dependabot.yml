@@ -55,10 +55,32 @@ updates:
   # arregla agrupándolas —agrupar actualizaciones de seguridad las retrasa, que
   # es peor—: se arregla mirando ese PR el día que llegue.
   #
-  # OJO con «mayor» en crates 0.x: para semver 0.22 -> 0.23 es MINOR, porque el
-  # mayor sigue siendo 0. Así que esos entran en el grupo, que es lo que se
-  # quiere. Lo que queda fuera es 0.x -> 1.x o 1.x -> 2.x, y esos sí son una
-  # decisión con motivo (directiva 35), no un merge más.
+  # LO QUE DEPENDABOT CUENTA COMO «MAYOR» EN UN CRATE 0.x, medido el 2026-08-05
+  # y NO deducido de la especificación de semver — este comentario decía lo
+  # contrario y estaba mal.
+  #
+  # La creencia escrita era: «para semver, 0.22 -> 0.23 es MINOR porque el
+  # mayor sigue siendo 0, así que entran en el grupo». **Es falso para
+  # Dependabot.** En la primera corrida del `dependabot.yml` de chasqui, con
+  # este mismo grupo y este mismo `update-types`, salieron TRES PR SUELTOS:
+  #
+  #     #2  hmac  0.12.1 -> 0.13.0     fuera del grupo
+  #     #3  sqlx  0.8.6  -> 0.9.0      fuera del grupo
+  #     #4  sha2  0.10.9 -> 0.11.0     fuera del grupo
+  #     #1  actions/setup-node 5 -> 7  «in the acciones group»  <- agrupó
+  #
+  # El grupo `acciones`, que NO lleva `update-types`, sí agrupó — misma corrida,
+  # mismo archivo: es la pareja que discrimina. Dependabot trata el salto de
+  # minor en un 0.x como MAYOR, y `update-types: [minor, patch]` lo deja fuera.
+  #
+  # Y ESO TIENE UNA CONSECUENCIA QUE YA MORDIÓ: `hmac` y `sha2` son la misma
+  # generación de RustCrypto y TIENEN que moverse juntos —por separado, el de
+  # sha2 muere con `error[E0277]: the trait bound sha2::Sha256: CoreProxy is
+  # not satisfied`—. O sea que el `update-types` que se puso para agruparlos es
+  # justo lo que impide que se agrupen. Quitarlo los junta, al precio de meter
+  # también los saltos de 1.x a 2.x en el PR semanal. Es una decisión abierta;
+  # hasta tomarla, esos PR llegan sueltos y hay que cerrarlos o resolverlos a
+  # mano — no dejarlos rojos, que es como se deja de mirar los de dependabot.
   - package-ecosystem: cargo
     directory: /
     schedule:
