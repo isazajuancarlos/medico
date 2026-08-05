@@ -27,7 +27,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use medico_dominio::zona;
 use medico_dominio::rips::{
     FuenteConsulta, FuenteInstitucion, FuenteMedicamento, FuentePaciente, FuenteProcedimiento,
-    FuenteProfesional, FuenteUrgencia,
+    FuenteHospitalizacion, FuenteProfesional, FuenteUrgencia,
 };
 
 /// La institución que reporta, o `None` si no existe.
@@ -521,6 +521,138 @@ async fn fecha_ilegible_de_urgencias(
              no entra en ningún periodo y se perdería del informe sin avisar."
         )
     }))
+}
+
+/// Las hospitalizaciones del periodo, de UNA institución, listas para el AH.
+///
+/// **Solo las cerradas.** Una hospitalización activa no tiene estancia que
+/// facturar; el sistema viejo la reportaba igual, con el egreso puesto en el
+/// instante de la generación. Se exige `fecha_egreso` **y** que el estado no sea
+/// `ACTIVA`: son dos formas de decir lo mismo y en una base real se
+/// desincronizan, así que se piden las dos.
+///
+/// El periodo lo fija el INGRESO, como el Python: una estancia que empieza en
+/// marzo y termina en abril es del cierre de marzo.
+pub async fn hospitalizaciones_del_periodo(
+    pool: &crate::Pool,
+    institucion_id: i64,
+    desde: NaiveDate,
+    hasta: NaiveDate,
+) -> Result<Result<Vec<FuenteHospitalizacion>, String>, sqlx::Error> {
+    if let Some(mala) = fecha_ilegible_de_hospitalizacion(pool, institucion_id).await? {
+        return Ok(Err(mala));
+    }
+    let (ini, fin) = limites_utc(desde, hasta);
+    let filas: Vec<FilaHospitalizacion> = sqlx::query_as(
+        "SELECT o.id, o.fecha_ingreso, o.fecha_egreso, o.via_ingreso, o.estado, \
+                o.causa_motivo, o.diagnostico_ingreso, o.diagnostico_egreso, \
+                o.diagnostico_causa_muerte, \
+                p.id AS paciente_id, \
+                p.tipo_documento   AS p_tipo_documento, \
+                p.numero_documento AS p_numero_documento, \
+                p.tipo_usuario, p.fecha_nacimiento, p.sexo, p.cod_pais, \
+                p.cod_municipio, p.zona, p.cod_pais_origen \
+         FROM hospitalizacion o \
+         JOIN paciente p ON p.id = o.paciente_id \
+         WHERE p.institucion_id = ? AND o.fecha_ingreso >= ? AND o.fecha_ingreso <= ? \
+           AND o.fecha_egreso IS NOT NULL AND o.estado <> 'ACTIVA' \
+         ORDER BY o.fecha_ingreso, o.id",
+    )
+    .bind(institucion_id)
+    .bind(&ini)
+    .bind(&fin)
+    .fetch_all(pool)
+    .await?;
+
+    let mut salida = Vec::with_capacity(filas.len());
+    for f in filas {
+        let ingreso = match fecha_local(&f.fecha_ingreso, "la hospitalización", f.id) {
+            Ok(v) => v,
+            Err(e) => return Ok(Err(e)),
+        };
+        let egreso = match f
+            .fecha_egreso
+            .as_deref()
+            .map(|t| fecha_local(t, "la hospitalización", f.id))
+        {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => return Ok(Err(e)),
+            None => continue,
+        };
+        salida.push(FuenteHospitalizacion {
+            id: f.id,
+            fecha_ingreso: ingreso,
+            fecha_egreso: egreso,
+            via_ingreso: f.via_ingreso,
+            estado: f.estado,
+            causa_motivo: f.causa_motivo,
+            diagnostico_ingreso: f.diagnostico_ingreso,
+            diagnostico_egreso: f.diagnostico_egreso,
+            diagnostico_causa_muerte: f.diagnostico_causa_muerte,
+            paciente: FuentePaciente {
+                id: f.paciente_id,
+                tipo_documento: f.p_tipo_documento,
+                numero_documento: f.p_numero_documento,
+                tipo_usuario: f.tipo_usuario,
+                fecha_nacimiento: f.fecha_nacimiento,
+                sexo: f.sexo,
+                cod_pais: f.cod_pais,
+                cod_municipio: f.cod_municipio,
+                zona: f.zona,
+                cod_pais_origen: f.cod_pais_origen,
+            },
+        });
+    }
+    Ok(Ok(salida))
+}
+
+/// El guardián de fechas, sobre la tabla de hospitalización. Va aparte por lo
+/// mismo que el de urgencias: no cuelga de una historia.
+async fn fecha_ilegible_de_hospitalizacion(
+    pool: &crate::Pool,
+    institucion_id: i64,
+) -> Result<Option<String>, sqlx::Error> {
+    let mala: Option<(i64, String)> = sqlx::query_as(
+        "SELECT o.id, o.fecha_ingreso FROM hospitalizacion o \
+         JOIN paciente p ON p.id = o.paciente_id \
+         WHERE p.institucion_id = ? \
+           AND o.fecha_ingreso NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*' \
+         ORDER BY o.id LIMIT 1",
+    )
+    .bind(institucion_id)
+    .fetch_optional(pool)
+    .await?;
+    Ok(mala.map(|(id, texto)| {
+        format!(
+            "la hospitalización {id} tiene «{texto}» como fecha de ingreso, que no \
+             es una fecha. No se genera el RIPS: con ese valor la estancia no \
+             entra en ningún periodo y se perdería del informe sin avisar."
+        )
+    }))
+}
+
+/// La fila cruda del AH. Tampoco trae profesional.
+#[derive(sqlx::FromRow)]
+struct FilaHospitalizacion {
+    id: i64,
+    fecha_ingreso: String,
+    fecha_egreso: Option<String>,
+    via_ingreso: Option<String>,
+    estado: Option<String>,
+    causa_motivo: Option<String>,
+    diagnostico_ingreso: Option<String>,
+    diagnostico_egreso: Option<String>,
+    diagnostico_causa_muerte: Option<String>,
+    paciente_id: i64,
+    p_tipo_documento: String,
+    p_numero_documento: String,
+    tipo_usuario: Option<String>,
+    fecha_nacimiento: String,
+    sexo: String,
+    cod_pais: Option<String>,
+    cod_municipio: Option<String>,
+    zona: Option<String>,
+    cod_pais_origen: Option<String>,
 }
 
 /// La fila cruda del AU. No trae profesional: el AU no admite los campos
@@ -1163,6 +1295,114 @@ mod pruebas {
             .unwrap();
         assert!(r.is_err());
         assert!(r.unwrap_err().contains("atención de urgencias 1"));
+    }
+
+    async fn hospitalizacion(
+        pool: &crate::Pool,
+        id: i64,
+        paciente: i64,
+        ingreso: &str,
+        egreso: Option<&str>,
+        estado: &str,
+    ) {
+        sqlx::query(
+            "INSERT OR IGNORE INTO cama (id,institucion_id,numero,piso,servicio,estado) \
+             VALUES (1,1,'101','1','GENERAL','OCUPADA')",
+        )
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO hospitalizacion (id,paciente_id,cama_id,medico_tratante_id,fecha_ingreso,\
+             fecha_egreso,via_ingreso,estado,diagnostico_ingreso,diagnostico_egreso,causa_motivo) \
+             VALUES (?,?,1,5,?,?,'URGENCIAS',?,'A000','A000','38')",
+        )
+        .bind(id)
+        .bind(paciente)
+        .bind(ingreso)
+        .bind(egreso)
+        .bind(estado)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn la_hospitalizacion_abierta_no_entra_en_el_archivo() {
+        // Dos formas de decir «sigue dentro» —sin egreso y estado ACTIVA— y se
+        // exigen las DOS: en una base real se desincronizan, y con cualquiera de
+        // las dos rotas se reportaría una estancia que no ha terminado.
+        let pool = base().await;
+        hospitalizacion(&pool, 1, 10, "2026-03-10 13:00:00", Some("2026-03-14 16:30:00"), "ALTA_MEDICA").await;
+        hospitalizacion(&pool, 2, 10, "2026-03-11 13:00:00", None, "ACTIVA").await;
+        hospitalizacion(&pool, 3, 10, "2026-03-12 13:00:00", Some("2026-03-13 10:00:00"), "ACTIVA").await;
+
+        let hs = hospitalizaciones_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(hs.len(), 1, "solo la cerrada de verdad");
+        assert_eq!(hs[0].id, 1);
+        assert_eq!(hs[0].via_ingreso.as_deref(), Some("URGENCIAS"));
+        assert_eq!(hs[0].causa_motivo.as_deref(), Some("38"));
+    }
+
+    #[tokio::test]
+    async fn las_hospitalizaciones_de_otra_institucion_no_salen() {
+        let pool = base().await;
+        hospitalizacion(&pool, 1, 10, "2026-03-10 13:00:00", Some("2026-03-14 16:30:00"), "ALTA_MEDICA").await;
+        hospitalizacion(&pool, 2, 20, "2026-03-10 13:00:00", Some("2026-03-14 16:30:00"), "ALTA_MEDICA").await;
+
+        let hs = hospitalizaciones_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(hs.len(), 1);
+        assert_eq!(hs[0].paciente.id, 10);
+    }
+
+    #[tokio::test]
+    async fn la_estancia_es_del_cierre_en_que_empezo() {
+        // Ingresa el 31 de marzo a las 20:00 (1 de abril 01:00 UTC) y sale en
+        // abril: va en el cierre de MARZO, y una sola vez.
+        let pool = base().await;
+        let utc = |d: u32, h: u32| {
+            zona::a_utc(
+                NaiveDate::from_ymd_opt(2026, if d > 31 { 4 } else { 3 }, if d > 31 { d - 31 } else { d })
+                    .unwrap()
+                    .and_hms_opt(h, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+        };
+        hospitalizacion(&pool, 1, 10, &utc(31, 20), Some(&utc(33, 9)), "ALTA_MEDICA").await;
+
+        let marzo = hospitalizaciones_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(marzo.len(), 1);
+        assert_eq!(marzo[0].fecha_ingreso.date(), dia(2026, 3, 31));
+        assert_eq!(marzo[0].fecha_egreso.date(), dia(2026, 4, 2), "el egreso es de abril");
+
+        let abril = hospitalizaciones_del_periodo(&pool, 1, dia(2026, 4, 1), dia(2026, 4, 30))
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(abril.is_empty(), "no se cuenta dos veces");
+    }
+
+    #[tokio::test]
+    async fn una_fecha_de_hospitalizacion_ilegible_no_se_escapa() {
+        let pool = base().await;
+        hospitalizacion(&pool, 1, 10, "sin fecha", Some("2026-03-14 16:30:00"), "ALTA_MEDICA").await;
+        let r = hospitalizaciones_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap();
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("la hospitalización 1"));
     }
 
     #[tokio::test]

@@ -6098,16 +6098,43 @@ mod pruebas {
         }
 
         #[tokio::test]
-        async fn sin_pedir_parcial_se_niega_y_dice_que_falta() {
-            // La puerta que impide entregar un archivo que PARECE un RIPS
-            // completo. Sin ella, quien lo descargue no tiene forma de saber que
-            // le faltan las hospitalizaciones.
+        async fn ya_no_hay_que_pedir_nada_para_generarlo() {
+            // Hasta el 2026-08-04 esto daba 409: faltaban documentos por portar y
+            // el binario se negaba a entregar un archivo que PARECÍA completo.
+            // Con los cinco dentro, la puerta se quitó — y esta prueba es la que
+            // impide que vuelva por inercia.
             let e = con_admin_y_una_consulta().await;
             let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
-            assert_eq!(r.status(), StatusCode::CONFLICT);
+            assert_eq!(r.status(), StatusCode::OK);
             let v = cuerpo(r).await;
-            assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
-            assert!(v["mensaje"].as_str().unwrap().contains("no se cobran"));
+            assert_eq!(v["sin_portar"], serde_json::json!([]), "no falta ninguno");
+            for archivo in ["AC", "AP", "AM", "AU", "AH"] {
+                assert!(
+                    v["archivos"][archivo].is_object(),
+                    "falta el {archivo} en la respuesta"
+                );
+            }
+        }
+
+        #[tokio::test]
+        async fn la_puerta_que_sigue_en_pie_es_la_de_los_supuestos() {
+            // La pareja de la de arriba: quitar el 409 no relajó lo que de verdad
+            // separa «este archivo dice lo que hay» de «este archivo rellena lo
+            // que no hay». Sin datos, sigue negándose.
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query("UPDATE historia SET valor_servicio = NULL")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&permitir_supuestos=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "el camino permisivo lo pide el llamante");
         }
 
         #[tokio::test]
@@ -6149,7 +6176,7 @@ mod pruebas {
             assert_eq!(c["numDocumentoIdentificacion"], "80000000");
             assert_eq!(c["codDiagnosticoPrincipalCIE11"], "1A00&XN8P1&XN8P1");
             // Y la respuesta declara SIEMPRE lo que no lleva.
-            assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
+            assert_eq!(v["sin_portar"], serde_json::json!([]));
         }
 
         /// Una orden y una fórmula colgadas de la MISMA historia de la siembra,
@@ -6266,7 +6293,7 @@ mod pruebas {
                     "«{prohibido}» no va en el AU: {u}"
                 );
             }
-            assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
+            assert_eq!(v["sin_portar"], serde_json::json!([]));
         }
 
         #[tokio::test]
@@ -6353,6 +6380,67 @@ mod pruebas {
                     .await
                     .unwrap();
             assert_eq!(dx.as_deref(), Some("J039"), "no se borró al no mandarlo");
+        }
+
+        #[tokio::test]
+        async fn una_defuncion_hospitalaria_llega_entera_al_ah() {
+            // De punta a punta y por la API: ingreso, egreso y RIPS. Cubre de una
+            // vez los dos mapas que estaban mal en el sistema vivo —la vía de
+            // ingreso INTERCAMBIADA y la defunción reportada como traslado— y los
+            // dos campos que ninguna ruta escribía.
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query(
+                "INSERT INTO cama (id,institucion_id,numero,piso,servicio) \
+                 VALUES (3,1,'201','2','GENERAL')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+
+            let creado = escribir(
+                &e,
+                "POST",
+                "/api/hospitalizacion/ingresar",
+                ADMIN,
+                r#"{"paciente_id":10,"cama_id":3,"medico_id":2,"via_ingreso":"URGENCIAS",
+                    "diagnostico_ingreso":"A000","causa_motivo":"38"}"#,
+            )
+            .await;
+            assert_eq!(creado.status(), StatusCode::CREATED);
+            let id = cuerpo(creado).await["id"].as_i64().unwrap();
+
+            assert_eq!(
+                escribir(
+                    &e,
+                    "PUT",
+                    &format!("/api/hospitalizacion/{id}/egreso"),
+                    ADMIN,
+                    r#"{"tipo_egreso":"DEFUNCION","diagnostico_egreso":"A000",
+                        "diagnostico_causa_muerte":"I219"}"#,
+                )
+                .await
+                .status(),
+                StatusCode::NO_CONTENT
+            );
+
+            let v = cuerpo(enviar(&e, "/api/rips?inicio=2026-01-01&fin=2026-12-31", ADMIN).await)
+                .await;
+            let h = &v["archivos"]["AH"]["usuarios"][0]["servicios"]["hospitalizacion"][0];
+            assert_eq!(
+                h["viaIngresoServicioSalud"], "03",
+                "urgencias es DERIVADO DE URGENCIAS, no el 02 de consulta externa"
+            );
+            assert_eq!(h["causaMotivoAtencion"], "38");
+            assert_eq!(h["codDiagnosticoPrincipal"], "A000");
+            assert_eq!(
+                h["condicionDestinoUsuarioEgreso"], "02",
+                "PACIENTE MUERTO, no el 04 de referido a otra institución"
+            );
+            assert_eq!(h["codDiagnosticoCausaMuerte"], "I219");
+            // Y el AH tampoco admite los campos del profesional ni los de plata.
+            for prohibido in ["tipoDocumentoIdentificacion", "vrServicio", "diasEstancia"] {
+                assert!(h.get(prohibido).is_none(), "«{prohibido}» no va en el AH");
+            }
         }
 
         #[tokio::test]
@@ -6594,7 +6682,10 @@ mod pruebas {
                 assert_eq!(v["alcance"]["ambito"], "institucion:1");
                 let filtro = v["alcance"]["filtro"].as_str().unwrap();
                 assert!(filtro.contains("2026-03-01..2026-03-31"), "{filtro}");
-                assert!(filtro.contains("parcial"), "el archivo iba incompleto: {filtro}");
+                // `parcial` ya no se anota: no falta ningún documento, y la
+                // cláusula vacía —«parcial (sin )»— era peor que no escribirla.
+                // Un rastro que hay que interpretar se interpreta mal.
+                assert!(!filtro.contains("parcial"), "{filtro}");
 
                 // Y la cadena sigue verificando con el eslabón nuevo dentro.
                 assert_eq!(
@@ -6636,11 +6727,13 @@ mod pruebas {
             /// una exportación que nunca salió.
             #[tokio::test]
             async fn un_rips_que_no_llego_a_salir_no_deja_rastro() {
-                // (a) 409: se negó por no pedir `parcial`.
+                // (a) 400: el periodo va al revés y no se generó nada. (Antes
+                // este caso era el 409 de `parcial`, que dejó de existir cuando
+                // entró el quinto documento.)
                 let e = con_admin_y_una_consulta().await;
-                let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
-                assert_eq!(r.status(), StatusCode::CONFLICT);
-                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 409 no exportó nada");
+                let r = enviar(&e, "/api/rips?inicio=2026-03-31&fin=2026-03-01", ADMIN).await;
+                assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+                assert!(eslabones_de(&e, "rips").await.is_empty(), "el 400 no exportó nada");
 
                 // (b) 422: faltaban datos obligatorios.
                 let e = con_admin_y_una_consulta().await;

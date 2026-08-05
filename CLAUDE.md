@@ -426,11 +426,18 @@ que sigue vivo (5):
     cinco routers de Python son código vivo SIN CLIENTE, no huecos
 
 a medias (1):
-  rips — emite AC, AP, AM y AU desde el 2026-08-04; falta el AH
+  rips — LOS CINCO desde el 2026-08-04. Falta el FEV-RIPS, que es
+         la fusión de los cinco en un documento único, no un sexto
 ```
 
-**`/api/rips` se niega por defecto, y esa negativa es la característica.** Emite
-el AC, el AP, el AM y el AU; **el AH** no está portado. Un archivo sin las hospitalizaciones
+**`/api/rips` ya no se niega, y esa es la novedad.** Emite **los cinco**
+documentos —AC, AP, AM, AU y AH—, así que `sin_portar` va vacío y **el 409 se
+quitó**: existía para no entregar un archivo al que le faltaban documentos, y ya
+no falta ninguno. Dejarlo habría sido pedir una bandera que no significa nada, y
+una bandera que no significa nada se pone sin leerla — que es como deja de
+protegerse la siguiente que sí importa (`permitir_supuestos`, que sigue en pie).
+El parámetro `parcial` se acepta y se ignora, para no romperle la llamada a quien
+la tuviera escrita. Un archivo sin las hospitalizaciones
 **tiene la forma de un RIPS completo**: se sube, el
 validador lo acepta, y lo que falta no aparece por ningún lado — es sub-reporte,
 o sea dinero que no se cobra e información incompleta ante la Supersalud. Por eso
@@ -439,10 +446,7 @@ responde **409** salvo que se pida `parcial=true`, igual que
 respuesta lleva siempre `sin_portar` con lo que falta. El RIPS de verdad se sigue
 generando con el Python.
 
-Un consultorio sin hospitalización ya tendría el archivo completo con estos
-cuatro, y aun así se le exige pedir `parcial=true`: el binario no sabe qué
-servicios habilitó el prestador, y deducir «no hospitaliza» de que no haya filas
-es el negativo que no vale — una tabla vacía y un módulo sin portar se ven igual.
+
 
 ### AP y AM (2026-08-04)
 
@@ -484,6 +488,50 @@ es el negativo que no vale — una tabla vacía y un módulo sin portar se ven i
   Antes salían solo del AC, y alguien que en el periodo únicamente tuvo una
   fórmula, un laboratorio o una atención de urgencias iba en el archivo sin
   dejar rastro.
+
+### AH (2026-08-04) — dos mapas más, y estos SÍ emitían
+
+`medico-dominio/src/rips/ah.rs`, `hospitalizaciones_del_periodo` y la migración
+`0043`. Cierra los cinco documentos.
+
+**El AU tuvo suerte: cuatro de sus seis claves no casaban y caían como falta.
+Aquí las claves SÍ casan** —`via_ingreso` y `estado` son texto en mayúsculas—,
+así que los códigos equivocados llegaban al archivo:
+
+| campo | emitía | que en el catálogo es |
+|---|---|---|
+| vía `URGENCIAS` | `02` | DERIVADO DE CONSULTA EXTERNA (urgencias es el **03**) |
+| vía `PROGRAMADA` | `03` | DERIVADO DE URGENCIAS (programada es el **02**) |
+| vía `REMISION` | `04` | DERIVADO DE HOSPITALIZACION — **`AplicaAH = NO`** |
+| egreso `REMISION` | `03` | DERIVADO A OTRO SERVICIO — **`AplicaAH = NO`** |
+| egreso `DEFUNCION` | `04` | REFERIDO A OTRA INSTITUCION (muerto es el **02**) |
+
+Las dos vías estaban **intercambiadas**: quien entró por urgencias se reportaba
+como ingreso programado y al revés. Dos códigos no aplican al AH y hacen que el
+MUV rechace el archivo entero. Y la defunción, otra vez, reportada como traslado.
+
+El maestro de vías (`REFs_ViaIngresoServicioSalud`) **ya estaba extraído desde
+julio** en `backend/datos/maestros_muv/via_ingreso.json` y nadie lo había cruzado
+con el mapa. Hoy `muv_via_ingreso.json` va también en el binario.
+
+- **`PROGRAMADA` se deriva al 02** porque un ingreso programado se origina en la
+  consulta externa; el catálogo no tiene «programada». Es derivación, no
+  parecido: las otras trece filas nombran orígenes que este sistema no distingue.
+- **Las hospitalizaciones abiertas no entran**, y se exigen **las dos** señales
+  —`fecha_egreso IS NOT NULL` y `estado <> 'ACTIVA'`—, porque en una base real se
+  desincronizan. El código viejo sabía que no debían reportarse (su mapa tenía un
+  `ACTIVA: "00"` con el comentario puesto) y las reportaba igual, con el egreso
+  en el instante de la generación.
+- **Ni profesional ni bloque económico**, igual que el AU. Y **no lleva
+  `diasEstancia`**: la 948 no tiene ese campo, la estancia se deduce de las dos
+  fechas.
+- **Los dos campos nuevos ya se capturan**: `causa_motivo` en
+  `POST /api/hospitalizacion/ingresar` —iba quemada en «13», y con eso ninguna
+  hospitalización por accidente de tránsito se cobraba al SOAT— y
+  `diagnostico_causa_muerte` en el egreso, con `COALESCE`.
+
+Lo ata `test_condicion_destino_au.py`, que ahora mide los **cuatro** mapas contra
+los maestros y contra Rust (con los mapas viejos: 5 en rojo).
 
 ### AU (2026-08-04) — y el código que estaba cruzado
 
@@ -555,7 +603,7 @@ rotas», pasarse.
 **FEV-RIPS es el que decide**: sin él no hay facturación electrónica, que es por
 lo que le pagan al prestador, y el ADR no autoriza apagar Python hasta que la
 generación del RIPS sea byte a byte idéntica. En Rust están el recolector de datos
-faltantes y los documentos AC, AP, AM y AU (`medico-dominio/src/rips/`); el FEV-RIPS
+faltantes y los CINCO documentos (`medico-dominio/src/rips/`); el FEV-RIPS
 —el documento ÚNICO que funde los cinco— sigue siendo solo del Python.
 
 `/api/modulos` y `/api/agenda/*` **sí existen ya en Rust** (`rutas.rs:236` y
@@ -1102,8 +1150,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 42, de `0001_fundacion.sql` a
-    `0042_los_campos_del_rips_en_urgencias.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 43, de `0001_fundacion.sql` a
+    `0043_los_campos_del_rips_en_hospitalizacion.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==

@@ -19,6 +19,7 @@ use serde::Serialize;
 
 use super::ac::Consulta;
 use super::am::Medicamento;
+use super::ah::Hospitalizacion;
 use super::ap::Procedimiento;
 use super::au::Urgencia;
 use super::recolector::{Donde, Recolector};
@@ -72,6 +73,8 @@ pub struct Servicios {
     pub medicamentos: Vec<Medicamento>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub urgencias: Vec<Urgencia>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub hospitalizacion: Vec<Hospitalizacion>,
 }
 
 /// El usuario tal y como sale al JSON.

@@ -15,6 +15,7 @@
 //! - [`ap`] — Archivo de Procedimientos.
 //! - [`am`] — Archivo de Medicamentos.
 //! - [`au`] — Archivo de Urgencias.
+//! - [`ah`] — Archivo de Hospitalización.
 //!
 //! # La forma del JSON vive en los tipos
 //!
@@ -31,6 +32,7 @@
 //! se prueban con datos escritos a mano y `medico-datos` solo pone el SQL.
 
 pub mod ac;
+pub mod ah;
 pub mod am;
 pub mod ap;
 pub mod au;
@@ -38,6 +40,7 @@ pub mod documentos;
 pub mod recolector;
 
 pub use ac::{documento_ac, Consulta, FuenteConsulta};
+pub use ah::{documento_ah, FuenteHospitalizacion, Hospitalizacion};
 pub use am::{documento_am, Cantidad, FuenteMedicamento, Medicamento};
 pub use ap::{documento_ap, FuenteProcedimiento, Procedimiento};
 pub use au::{documento_au, FuenteUrgencia, Urgencia};

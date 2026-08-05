@@ -123,3 +123,82 @@ def test_los_dos_sistemas_dicen_lo_mismo():
             f"{de_rust.get(clave_rs)}"
         )
     assert "FUGA" not in de_rust, "la fuga tampoco se traduce en Rust"
+
+
+# ---------------------------------------------------------------------------
+# AH — los otros dos mapas, y estos SÍ emitían
+#
+# A diferencia del AU, aquí las claves casaban con lo que guarda el modelo
+# (`via_ingreso` y `estado` son texto en mayúsculas), así que los códigos
+# equivocados llegaban al archivo en vez de caer como falta.
+# ---------------------------------------------------------------------------
+
+def _mapas_del_ah() -> tuple[dict[str, str], dict[str, str]]:
+    fuente = inspect.getsource(rips_completo.generar_archivo_ah)
+    via = re.search(r"via_map = \{(.*?)\n        \}", fuente, re.S)
+    est = re.search(r"estado_egreso_map = \{(.*?)\n        \}", fuente, re.S)
+    assert via and est, "no se encontraron los mapas en generar_archivo_ah"
+    patron = r'"([A-Z_]+)":\s*"(\d\d)"'
+    return dict(re.findall(patron, via.group(1))), dict(re.findall(patron, est.group(1)))
+
+
+@pytest.fixture(scope="module")
+def vias() -> dict[str, dict]:
+    return {f["Codigo"]: f for f in maestros_muv.vias_ingreso()}
+
+
+def test_la_via_de_ingreso_no_esta_intercambiada(vias):
+    """Urgencias es el 03 y consulta externa el 02. El mapa los tenía al revés."""
+    via, _ = _mapas_del_ah()
+    assert via["URGENCIAS"] == "03"
+    assert "URGENCIAS" in vias["03"]["Nombre"]
+    assert via["PROGRAMADA"] == "02"
+    assert "CONSULTA EXTERNA" in vias["02"]["Nombre"]
+
+
+def test_ningun_codigo_del_ah_es_de_los_que_no_aplican(vias, catalogo):
+    """El 04 de vía y el 03 de condición NO aplican al AH: el MUV los rechaza."""
+    via, estado = _mapas_del_ah()
+    for clave, codigo in via.items():
+        assert vias[codigo]["AplicaAH"] == "SI", (
+            f"«{clave}» apunta al {codigo} ({vias[codigo]['Nombre']}), que no "
+            f"aplica al archivo de hospitalización"
+        )
+    for clave, codigo in estado.items():
+        assert catalogo[codigo]["AplicaAH"] == "SI", (
+            f"«{clave}» apunta al {codigo} ({catalogo[codigo]['Nombre']}), que no "
+            f"aplica al archivo de hospitalización"
+        )
+
+
+def test_la_defuncion_hospitalaria_tampoco_es_un_traslado(catalogo):
+    _, estado = _mapas_del_ah()
+    assert estado["DEFUNCION"] == "02"
+    assert "MUERTO" in catalogo["02"]["Nombre"]
+
+
+def test_activa_ya_no_finge_tener_codigo(catalogo):
+    """Llevaba un «00» que no existe en ninguna tabla."""
+    _, estado = _mapas_del_ah()
+    assert "ACTIVA" not in estado
+    assert "00" not in catalogo
+
+
+def test_el_ah_dice_lo_mismo_en_los_dos_sistemas():
+    import pathlib
+
+    rust = (pathlib.Path(__file__).resolve().parents[2]
+            / "crates" / "medico-dominio" / "src" / "muv.rs").read_text(encoding="utf-8")
+    via_py, est_py = _mapas_del_ah()
+    for nombre, esperado in [
+        ("via_ingreso_de_hospitalizacion", via_py),
+        ("condicion_destino_de_hospitalizacion", est_py),
+    ]:
+        bloque = re.search(rf"pub fn {nombre}\(.*?\n\}}", rust, re.S)
+        assert bloque, f"no se encontró {nombre} en muv.rs"
+        de_rust: dict[str, str] = {}
+        for claves, codigo in re.findall(r'((?:"[A-Z_]+"(?: \| )?)+) => Some\("(\d\d)"\)',
+                                         bloque.group(0)):
+            for c in re.findall(r'"([A-Z_]+)"', claves):
+                de_rust[c] = codigo
+        assert de_rust == esperado, f"{nombre}: Rust {de_rust} vs Python {esperado}"
