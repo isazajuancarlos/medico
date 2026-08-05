@@ -78,17 +78,23 @@ fn a_texto_utc(dia: NaiveDate, h: u32, m: u32, s: u32) -> String {
 
 /// Lee el texto que guarda SQLite y lo devuelve como instante local.
 ///
+/// `registro` es cómo se llama la fila que trae esa fecha —«la historia», «la
+/// orden», «la fórmula»— y no es cosmético: el id que se pasa es el de ESA
+/// tabla. El mensaje decía «la historia» viniera de donde viniera, así que un
+/// procedimiento con la fecha corrupta mandaba a buscar una historia con el id
+/// de la orden. Es la fila equivocada, y en el mejor caso no existe.
+///
 /// Acepta las dos formas que existen en la base: la del `DEFAULT` de SQLite
 /// (`2026-03-15 09:30:00`) y la RFC 3339 que escribe el código Rust
 /// (`2026-03-15T09:30:00Z`). **Lo que no se puede leer no se sustituye por
 /// «ahora»**: se devuelve el error con el id de la fila, porque una fecha
 /// inventada en el RIPS es una atención reportada en un día en que no ocurrió.
-fn fecha_local(texto: &str, historia_id: i64) -> Result<NaiveDateTime, String> {
+fn fecha_local(texto: &str, registro: &str, id: i64) -> Result<NaiveDateTime, String> {
     if let Ok(t) = DateTime::parse_from_rfc3339(texto) {
         return Ok(t.with_timezone(&zona::zona()).naive_local());
     }
     let naive = NaiveDateTime::parse_from_str(texto, "%Y-%m-%d %H:%M:%S")
-        .map_err(|e| format!("la historia {historia_id} tiene «{texto}» como fecha: {e}"))?;
+        .map_err(|e| format!("{registro} {id} tiene «{texto}» como fecha: {e}"))?;
     Ok(zona::desde_utc(naive))
 }
 
@@ -172,7 +178,7 @@ pub async fn consultas_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let fecha = match fecha_local(&f.fecha, f.id) {
+        let fecha = match fecha_local(&f.fecha, "la historia", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
@@ -270,7 +276,7 @@ pub async fn procedimientos_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let fecha = match fecha_local(&f.fecha, f.id) {
+        let fecha = match fecha_local(&f.fecha, "la orden", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
@@ -357,7 +363,7 @@ pub async fn medicamentos_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let fecha = match fecha_local(&f.fecha, f.id) {
+        let fecha = match fecha_local(&f.fecha, "la fórmula", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
@@ -447,14 +453,18 @@ pub async fn urgencias_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let ingreso = match fecha_local(&f.fecha_ingreso, f.id) {
+        let ingreso = match fecha_local(&f.fecha_ingreso, "la atención de urgencias", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
         // El egreso no puede llegar nulo: lo excluye el `WHERE`. Si llegara
         // ilegible se dice cuál, igual que con el ingreso — una fecha de egreso
         // inventada es un alta en un día en que no ocurrió.
-        let egreso = match f.fecha_egreso.as_deref().map(|t| fecha_local(t, f.id)) {
+        let egreso = match f
+            .fecha_egreso
+            .as_deref()
+            .map(|t| fecha_local(t, "la atención de urgencias", f.id))
+        {
             Some(Ok(v)) => v,
             Some(Err(e)) => return Ok(Err(e)),
             None => continue,
@@ -1153,6 +1163,50 @@ mod pruebas {
             .unwrap();
         assert!(r.is_err());
         assert!(r.unwrap_err().contains("atención de urgencias 1"));
+    }
+
+    #[tokio::test]
+    async fn el_error_nombra_la_fila_que_hay_que_ir_a_arreglar() {
+        // Hay DOS caminos para una fecha ilegible y solo uno estaba probado:
+        //
+        //   * el guardián (`fecha_ilegible_de*`), que caza lo que no tiene forma
+        //     de fecha — «sin fecha»;
+        //   * `fecha_local`, que caza lo que SÍ tiene la forma y aun así no es
+        //     una fecha — «2026-13-45 99:99:99» pasa el GLOB y no se parsea.
+        //
+        // El segundo decía «la historia {id}» viniera el id de donde viniera, y
+        // en el AP ese id es el de la ORDEN. Mandaba a buscar una historia que,
+        // con suerte, ni existe.
+        let imposible = "2026-13-45 99:99:99";
+
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, imposible).await;
+        orden(&pool, 100, 1, "Laboratorio", Some("902210")).await;
+        formula(&pool, 200, 1, 30.0).await;
+        let ap = procedimientos_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        let am = medicamentos_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        let ac = consultas_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        assert!(ap.clone().unwrap_err().contains("la orden 100"), "{ap:?}");
+        assert!(am.clone().unwrap_err().contains("la fórmula 200"), "{am:?}");
+        assert!(ac.clone().unwrap_err().contains("la historia 1"), "{ac:?}");
+        // Y el caso rojo del propio mensaje: el del AP NO puede decir «historia».
+        assert!(!ap.unwrap_err().contains("la historia"));
+
+        let pool = base().await;
+        urgencia(&pool, 7, 10, imposible, Some("2026-03-15 18:00:00")).await;
+        let au = urgencias_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        assert!(
+            au.clone().unwrap_err().contains("la atención de urgencias 7"),
+            "{au:?}"
+        );
     }
 
     #[tokio::test]

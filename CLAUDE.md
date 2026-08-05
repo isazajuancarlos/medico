@@ -529,6 +529,22 @@ es el negativo que no vale — una tabla vacía y un módulo sin portar se ven i
   hubo un alta. Se anota como falta con su motivo. **Pregunta abierta para el
   prestador**: qué reporta hoy en ese caso.
 
+- **Y los cuatro campos del AU ya se pueden capturar** — que es la otra mitad, y
+  la que faltó en P11/P12 durante meses. `causa_motivo` entra por
+  `POST /api/urgencias/triage` (se sabe al llegar: accidente de trabajo, de
+  tránsito o agresión son causas distintas con pagadores distintos) y los tres
+  diagnósticos por `PUT /api/urgencias/{id}/egreso`, porque los pone el médico y
+  este módulo no tiene paso de «atender» — el egreso es el único momento en que
+  un médico toca la fila. **El egreso usa `COALESCE`**: lo que el cuerpo omite no
+  borra lo que ya hubiera. Sin esto, `codDiagnosticoPrincipal` —obligatorio— y la
+  causa básica de muerte no se podían llenar desde el producto, y el AU habría
+  salido con cuatro faltas por atención para siempre.
+
+  Lo cierra `lo_que_se_captura_en_urgencias_llega_entero_al_au`, que hace triage
+  y egreso **por la API** y luego pide el RIPS. No es adorno: encontró un `bind`
+  que faltaba en el `INSERT` del triage, o sea la columna escrita en el SQL y el
+  valor nunca enviado.
+
 **Son dos medidas distintas y hay que decir cuál se usa.** La ficha #236 mide lo
 primero —cruce de los `/api/…` que piden los `.ts` contra los `.route(` de
 `rutas.rs`— porque lo que le duele a un cliente es una página muerta. La lista

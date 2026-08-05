@@ -1222,6 +1222,15 @@ async fn urgencias_triage(
 struct EgresoBody {
     destino: String,
     observaciones: Option<String>,
+    /// Los tres diagnósticos del RIPS. Van aquí y no en el triage porque los
+    /// pone el MÉDICO, y el egreso es el único momento en que un médico toca la
+    /// fila en este módulo. **Sin ellos el AU no se puede completar nunca**:
+    /// `codDiagnosticoPrincipal` es obligatorio y la 948 exige la causa básica
+    /// de muerte cuando el paciente muere. Lo que se omite no borra lo que ya
+    /// hubiera.
+    diagnostico_ingreso: Option<String>,
+    diagnostico_egreso: Option<String>,
+    diagnostico_causa_muerte: Option<String>,
 }
 
 async fn urgencias_egreso(
@@ -1231,7 +1240,14 @@ async fn urgencias_egreso(
     Json(b): Json<EgresoBody>,
 ) -> StatusCode {
     let u = autorizado.0;
-    match urgencias::egreso(&e.pool, u.ambito(), id, &b.destino, b.observaciones.as_deref()).await {
+    let datos = urgencias::Egreso {
+        destino: &b.destino,
+        observaciones: b.observaciones.as_deref(),
+        diagnostico_ingreso: b.diagnostico_ingreso.as_deref(),
+        diagnostico_egreso: b.diagnostico_egreso.as_deref(),
+        diagnostico_causa_muerte: b.diagnostico_causa_muerte.as_deref(),
+    };
+    match urgencias::egreso(&e.pool, u.ambito(), id, &datos).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND, // no existe, ajena, cerrada o destino inválido
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -6044,6 +6060,24 @@ mod pruebas {
             e
         }
 
+        /// Una petición con cuerpo, para las rutas que escriben. El módulo de
+        /// capacidades tiene una igual, pero es privada de aquel: duplicar seis
+        /// líneas cuesta menos que abrir el suyo al resto del archivo.
+        async fn escribir(e: &Estado, metodo: &str, uri: &str, quien: i64, json: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .header("content-type", "application/json")
+                        .body(Body::from(json.to_owned()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
         async fn enviar(e: &Estado, uri: &str, quien: i64) -> Response {
             router(e.clone())
                 .oneshot(
@@ -6233,6 +6267,92 @@ mod pruebas {
                 );
             }
             assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
+        }
+
+        #[tokio::test]
+        async fn lo_que_se_captura_en_urgencias_llega_entero_al_au() {
+            // Cruza la frontera del programa de punta a punta: se registra un
+            // triage y un egreso **por la API**, y se pide el RIPS. Es la prueba
+            // que faltaba, y no es de adorno: las cuatro columnas del AU
+            // (`causa_motivo` y los tres diagnósticos) existían en la base y
+            // **ninguna ruta las escribía**, así que el archivo las reportaba
+            // como ausentes en toda atención y no había forma de arreglarlo
+            // desde el producto. Es el mismo patrón que dejó P11/P12 vacío
+            // durante meses.
+            let e = con_admin_y_una_consulta().await;
+
+            let creado = escribir(
+                &e,
+                "POST",
+                "/api/urgencias/triage",
+                ADMIN,
+                r#"{"paciente_id":10,"triage":"TRIAGE_1",
+                    "motivo_consulta":"dolor torácico","causa_motivo":"38"}"#,
+            )
+            .await;
+            assert_eq!(creado.status(), StatusCode::CREATED);
+            let id = cuerpo(creado).await["id"].as_i64().unwrap();
+
+            assert_eq!(
+                escribir(
+                    &e,
+                    "PUT",
+                    &format!("/api/urgencias/{id}/egreso"),
+                    ADMIN,
+                    r#"{"destino":"FALLECIDO","observaciones":"paro irreversible",
+                        "diagnostico_ingreso":"A000","diagnostico_egreso":"A000",
+                        "diagnostico_causa_muerte":"I219"}"#,
+                )
+                .await
+                .status(),
+                StatusCode::NO_CONTENT
+            );
+
+            let v = cuerpo(
+                enviar(
+                    &e,
+                    "/api/rips?inicio=2026-01-01&fin=2026-12-31&parcial=true",
+                    ADMIN,
+                )
+                .await,
+            )
+            .await;
+            let u = &v["archivos"]["AU"]["usuarios"][0]["servicios"]["urgencias"][0];
+            assert_eq!(u["causaMotivoAtencion"], "38");
+            assert_eq!(u["codDiagnosticoPrincipal"], "A000");
+            assert_eq!(u["codDiagnosticoPrincipalE"], "A000");
+            assert_eq!(u["condicionDestinoUsuarioEgreso"], "02", "paciente muerto");
+            assert_eq!(u["codDiagnosticoCausaMuerte"], "I219");
+        }
+
+        #[tokio::test]
+        async fn un_egreso_sin_diagnosticos_no_borra_los_que_hubiera() {
+            // La pareja de la de arriba. `COALESCE` y no asignación directa: si
+            // el cuerpo omite un diagnóstico, se queda el que estuviera. Con
+            // asignación directa, un egreso corregido a mano habría vaciado en
+            // silencio lo que ya se había registrado.
+            let e = con_admin_y_una_consulta().await;
+            sqlx::query(
+                "INSERT INTO atencion_urgencias (id,paciente_id,triage,motivo_consulta,\
+                 enfermera_triage_id,fecha_ingreso,diagnostico_ingreso) \
+                 VALUES (91,10,'TRIAGE_3','fiebre',2,'2026-03-15T10:00:00Z','J039')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+
+            assert_eq!(
+                escribir(&e, "PUT", "/api/urgencias/91/egreso", ADMIN, r#"{"destino":"DOMICILIO"}"#)
+                    .await
+                    .status(),
+                StatusCode::NO_CONTENT
+            );
+            let (dx,): (Option<String>,) =
+                sqlx::query_as("SELECT diagnostico_ingreso FROM atencion_urgencias WHERE id = 91")
+                    .fetch_one(&e.pool)
+                    .await
+                    .unwrap();
+            assert_eq!(dx.as_deref(), Some("J039"), "no se borró al no mandarlo");
         }
 
         #[tokio::test]
