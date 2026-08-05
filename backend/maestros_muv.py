@@ -136,6 +136,19 @@ def causas_motivo() -> list[dict]:
     return [f for f in cargar("causa_motivo")["filas"]]
 
 
+def condiciones_destino() -> list[dict]:
+    """Condición y destino del usuario al egreso (AU, AH y AN).
+
+    La Resolución 948 **no trae esta tabla**: su ficha remite a
+    `web.sispro.gov.co`. Mientras no estuvo extraída, el generador del AU llevaba
+    un mapa escrito a mano con `FALLECIDO = "04"` — y el 04 es «referido a otra
+    institución»; el muerto es el 02. Un fallecimiento se reportaba como un
+    traslado, y con eso se caían las dos validaciones que la norma cuelga de ese
+    campo.
+    """
+    return [f for f in cargar("condicion_destino")["filas"]]
+
+
 @lru_cache(maxsize=1)
 def _tipos_documento() -> list[dict]:
     return cargar("tipo_doc")["filas"]

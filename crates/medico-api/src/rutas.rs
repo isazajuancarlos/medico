@@ -6067,12 +6067,12 @@ mod pruebas {
         async fn sin_pedir_parcial_se_niega_y_dice_que_falta() {
             // La puerta que impide entregar un archivo que PARECE un RIPS
             // completo. Sin ella, quien lo descargue no tiene forma de saber que
-            // le faltan las urgencias y las hospitalizaciones.
+            // le faltan las hospitalizaciones.
             let e = con_admin_y_una_consulta().await;
             let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
             assert_eq!(r.status(), StatusCode::CONFLICT);
             let v = cuerpo(r).await;
-            assert_eq!(v["sin_portar"], serde_json::json!(["AU", "AH"]));
+            assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
             assert!(v["mensaje"].as_str().unwrap().contains("no se cobran"));
         }
 
@@ -6115,7 +6115,7 @@ mod pruebas {
             assert_eq!(c["numDocumentoIdentificacion"], "80000000");
             assert_eq!(c["codDiagnosticoPrincipalCIE11"], "1A00&XN8P1&XN8P1");
             // Y la respuesta declara SIEMPRE lo que no lleva.
-            assert_eq!(v["sin_portar"], serde_json::json!(["AU", "AH"]));
+            assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
         }
 
         /// Una orden y una fórmula colgadas de la MISMA historia de la siembra,
@@ -6187,6 +6187,52 @@ mod pruebas {
                 medico_dominio::muv::codigo_presentacion(Some("tableta")).unwrap()
             );
             assert_ne!(m["unidadMinDispensa"], 1, "el 1 del catálogo es AMPOLLA");
+        }
+
+        #[tokio::test]
+        async fn el_au_reporta_una_muerte_como_muerte_y_no_como_un_traslado() {
+            // El fallo que este port destapó en el sistema vivo: el mapa escrito
+            // a mano del Python emitía «04» —REFERIDO A OTRA INSTITUCION— para un
+            // fallecimiento, porque la 948 no trae esa tabla y nadie la había
+            // sacado del validador. El «02» es PACIENTE MUERTO.
+            let e = con_admin_y_una_consulta().await;
+            let ingreso = atencion_local()
+                .with_timezone(&chrono::Utc)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string();
+            sqlx::query(
+                "INSERT INTO atencion_urgencias (id,paciente_id,triage,motivo_consulta,\
+                 enfermera_triage_id,fecha_ingreso,fecha_egreso,causa_motivo,\
+                 diagnostico_ingreso,diagnostico_egreso,destino_salida,\
+                 diagnostico_causa_muerte) \
+                 VALUES (55,10,'TRIAGE_1','paro',2,?,?,'38','A000','A000','FALLECIDO','I219')",
+            )
+            .bind(&ingreso)
+            .bind(&ingreso)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "no debería faltar nada");
+            let v = cuerpo(r).await;
+            let u = &v["archivos"]["AU"]["usuarios"][0]["servicios"]["urgencias"][0];
+            assert_eq!(u["condicionDestinoUsuarioEgreso"], "02");
+            assert_eq!(u["codDiagnosticoCausaMuerte"], "I219");
+            // Y el AU no puede llevar los campos del profesional ni los de plata:
+            // el MUV rechaza el archivo entero por una propiedad que sobra.
+            for prohibido in ["tipoDocumentoIdentificacion", "vrServicio"] {
+                assert!(
+                    u.get(prohibido).is_none(),
+                    "«{prohibido}» no va en el AU: {u}"
+                );
+            }
+            assert_eq!(v["sin_portar"], serde_json::json!(["AH"]));
         }
 
         #[tokio::test]

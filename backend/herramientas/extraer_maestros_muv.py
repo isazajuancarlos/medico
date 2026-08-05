@@ -59,6 +59,13 @@ TABLAS = {
     "CAUSA_MOTIVO": ("Rips.REFs_CausaMotivoAtencion", "*", None),
     "VIA_INGRESO": ("Rips.REFs_ViaIngresoServicioSalud", "*", None),
     "TIPO_DOC": ("Rips.REFs_TipoDoc", "*", None),
+    #: Condición y destino del usuario al egreso (campos R09 del AU, H12 del AH
+    #: y N10 del AN). La 948 **no trae esta tabla**: remite a
+    #: `web.sispro.gov.co`, así que la única fuente que tenemos offline es esta.
+    #: Antes de extraerla, `rips_completo.generar_archivo_au` llevaba un mapa
+    #: escrito a mano donde `FALLECIDO` era el `04` — que en el catálogo es
+    #: REFERIDO A OTRA INSTITUCION, mientras que muerto es el `02`.
+    "CONDICION_DESTINO": ("Rips.REFs_CondicionDestino", "*", None),
 }
 
 

@@ -426,12 +426,12 @@ que sigue vivo (5):
     cinco routers de Python son código vivo SIN CLIENTE, no huecos
 
 a medias (1):
-  rips — emite AC, AP y AM desde el 2026-08-04; faltan AU y AH
+  rips — emite AC, AP, AM y AU desde el 2026-08-04; falta el AH
 ```
 
 **`/api/rips` se niega por defecto, y esa negativa es la característica.** Emite
-el AC, el AP y el AM; **AU y AH** no están portados. Un archivo sin las urgencias
-ni las hospitalizaciones **tiene la forma de un RIPS completo**: se sube, el
+el AC, el AP, el AM y el AU; **el AH** no está portado. Un archivo sin las hospitalizaciones
+**tiene la forma de un RIPS completo**: se sube, el
 validador lo acepta, y lo que falta no aparece por ningún lado — es sub-reporte,
 o sea dinero que no se cobra e información incompleta ante la Supersalud. Por eso
 responde **409** salvo que se pida `parcial=true`, igual que
@@ -439,11 +439,10 @@ responde **409** salvo que se pida `parcial=true`, igual que
 respuesta lleva siempre `sin_portar` con lo que falta. El RIPS de verdad se sigue
 generando con el Python.
 
-Un consultorio sin urgencias ni hospitalización ya tendría el archivo completo
-con estos tres, y aun así se le exige pedir `parcial=true`: el binario no sabe
-qué servicios habilitó el prestador, y deducir «no tiene urgencias» de que no
-haya filas es el negativo que no vale — una tabla vacía y un módulo sin portar se
-ven igual.
+Un consultorio sin hospitalización ya tendría el archivo completo con estos
+cuatro, y aun así se le exige pedir `parcial=true`: el binario no sabe qué
+servicios habilitó el prestador, y deducir «no hospitaliza» de que no haya filas
+es el negativo que no vale — una tabla vacía y un módulo sin portar se ven igual.
 
 ### AP y AM (2026-08-04)
 
@@ -481,9 +480,54 @@ ven igual.
   campo (el CIE-10, que sí sale de la historia) y lo callaba en el de al lado.
   Arreglado en los dos sistemas en la misma pasada, para que sigan pudiendo
   compararse byte a byte.
-- **La bitácora de la Ley 1581 saca los pacientes de los TRES documentos.**
+- **La bitácora de la Ley 1581 saca los pacientes de TODOS los documentos.**
   Antes salían solo del AC, y alguien que en el periodo únicamente tuvo una
-  fórmula o un laboratorio iba en el archivo sin dejar rastro.
+  fórmula, un laboratorio o una atención de urgencias iba en el archivo sin
+  dejar rastro.
+
+### AU (2026-08-04) — y el código que estaba cruzado
+
+`medico-dominio/src/rips/au.rs`, con `urgencias_del_periodo` y la migración
+`0042`. Dos cosas propias del AU, y una que **estaba mal en el sistema vivo**:
+
+- **No lleva documento del profesional ni bloque económico.** El MUV lo dice
+  literal: «Propiedades no permitidas en la estructura de urgencias:
+  tipoDocumentoIdentificacion, numDocumentoIdentificacion». Tampoco
+  `vrServicio`, `conceptoRecaudo`, `valorPagoModerador` ni `numFEVPagoModerador`.
+  **Un campo que SOBRA hace rechazar el archivo entero**, igual que uno que
+  falta, y por eso `FuenteUrgencia` ni siquiera trae profesional: pedirlo en la
+  consulta habría sido la manera de que acabara en el JSON.
+- **Las atenciones sin egreso no entran.** No han terminado y no se pueden
+  facturar; antes se les ponía la hora de la generación, o sea que un paciente
+  todavía en urgencias se reportaba como dado de alta en el instante en que
+  alguien pidió el archivo.
+- **`condicionDestinoUsuarioEgreso` salía con el código equivocado.** La 948 no
+  trae esa tabla —su ficha remite a `web.sispro.gov.co`—, así que el Python
+  llevaba un mapa **escrito a mano**. Se sacó del contenedor del validador
+  (`Rips.REFs_CondicionDestino`, ocho filas, ahora en `condicion_destino.json` y
+  `muv_condicion_destino.json`) y el mapa estaba mal de dos maneras a la vez:
+
+  | destino que guarda el sistema | emitía | que en el catálogo es |
+  |---|---|---|
+  | `Domicilio`, `Hospitalización`, `Remisión`, `Observación` | *nada* (falta → con supuestos, `01`) | — |
+  | `Fuga` | `05` | CONTRAREFERIDO A OTRA INSTITUCION |
+  | **`Fallecido`** | **`04`** | **REFERIDO A OTRA INSTITUCION** |
+
+  Sus claves (`ALTA`, `HOSPITALIZADO`, `REMITIDO`, `OBSERVACION`) no son las de
+  `DestinoSalidaUrgencias`, así que cuatro de seis no casaban con nada; y los dos
+  que casaban emitían otro código. **Una muerte en urgencias se reportaba como un
+  traslado**, y con eso se caen las dos validaciones que la norma cuelga de ese
+  campo (que no haya servicios con fecha posterior a la muerte, y que se informe
+  la causa básica). Corregido en los dos sistemas, con
+  `backend/tests/test_condicion_destino_au.py` midiendo el mapa contra el ENUM y
+  contra el MAESTRO — las dos mitades por las que se rompió (comprobado: con el
+  mapa viejo, 7 de 10 en rojo).
+
+- **La fuga no se traduce, a propósito.** El catálogo no tiene código para «el
+  paciente se fue sin que nadie le diera salida»; el más parecido por su forma
+  es el `01`, y el `01` afirma que salió con destino a su domicilio, o sea que
+  hubo un alta. Se anota como falta con su motivo. **Pregunta abierta para el
+  prestador**: qué reporta hoy en ese caso.
 
 **Son dos medidas distintas y hay que decir cuál se usa.** La ficha #236 mide lo
 primero —cruce de los `/api/…` que piden los `.ts` contra los `.route(` de
@@ -495,7 +539,7 @@ rotas», pasarse.
 **FEV-RIPS es el que decide**: sin él no hay facturación electrónica, que es por
 lo que le pagan al prestador, y el ADR no autoriza apagar Python hasta que la
 generación del RIPS sea byte a byte idéntica. En Rust están el recolector de datos
-faltantes y los documentos AC, AP y AM (`medico-dominio/src/rips/`); el FEV-RIPS
+faltantes y los documentos AC, AP, AM y AU (`medico-dominio/src/rips/`); el FEV-RIPS
 —el documento ÚNICO que funde los cinco— sigue siendo solo del Python.
 
 `/api/modulos` y `/api/agenda/*` **sí existen ya en Rust** (`rutas.rs:236` y
@@ -1042,8 +1086,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 41, de `0001_fundacion.sql` a
-    `0041_los_campos_del_rips_en_orden_y_formula.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 42, de `0001_fundacion.sql` a
+    `0042_los_campos_del_rips_en_urgencias.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==
