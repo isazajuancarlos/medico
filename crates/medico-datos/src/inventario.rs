@@ -273,13 +273,7 @@ pub struct FormulaPendiente {
 
 // --- Consultas ---------------------------------------------------------------
 
-fn filtro_ambito(ambito: Ambito, col: &str) -> Option<(String, Option<i64>)> {
-    match ambito {
-        Ambito::Superadmin => Some(("1 = 1".into(), None)),
-        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
-        Ambito::Ninguno => None,
-    }
-}
+use crate::filtro_ambito;
 
 /// La fecha de hoy en `YYYY-MM-DD`, que es como se guardan los vencimientos.
 pub fn hoy() -> String {

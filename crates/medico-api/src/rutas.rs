@@ -5,7 +5,7 @@
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
 use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ use crate::auth::{
     autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
     EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
     EscribirRehabilitacion, Estado, Firmar, GestionarAgenda, GestionarAmbulancias,
-    GestionarFarmacia, GestionarRemision, GestionarUsuarios,
+    GestionarFacturacion, GestionarFarmacia, GestionarRemision, GestionarUsuarios,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
@@ -24,6 +24,7 @@ use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::diagnostico;
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
+use medico_datos::facturacion;
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
 use medico_datos::hospitalizacion::{self, Egreso, Ingreso};
@@ -316,6 +317,46 @@ pub fn router(estado: Estado) -> Router {
             "/api/ambulancias/{id}",
             get(amb_obtener).put(amb_actualizar).delete(amb_eliminar),
         )
+        // Facturación. Los tres segmentos literales —`glosas`, `contratos` y
+        // `entidades`— son hermanos de `facturas`, así que no compiten con
+        // `{id}`; dentro de `facturas` sí hay que dejar `{id}` para el final.
+        .route("/api/facturacion/stats", get(fac_stats))
+        .route(
+            "/api/facturacion/facturas",
+            get(fac_listar).post(fac_crear),
+        )
+        .route(
+            "/api/facturacion/facturas/{id}",
+            get(fac_obtener).put(fac_actualizar).delete(fac_eliminar),
+        )
+        .route("/api/facturacion/facturas/{id}/radicar", put(fac_radicar))
+        .route("/api/facturacion/facturas/{id}/estado", put(fac_estado))
+        .route(
+            "/api/facturacion/facturas/{id}/detalles",
+            post(fac_detalle_agregar),
+        )
+        .route(
+            "/api/facturacion/facturas/{id}/detalles/{detalle_id}",
+            delete(fac_detalle_eliminar),
+        )
+        .route(
+            "/api/facturacion/facturas/{id}/glosas",
+            post(fac_glosa_agregar),
+        )
+        .route("/api/facturacion/glosas", get(fac_glosas))
+        .route(
+            "/api/facturacion/glosas/{id}/responder",
+            put(fac_glosa_responder),
+        )
+        .route(
+            "/api/facturacion/contratos",
+            get(fac_contratos).post(fac_contrato_crear),
+        )
+        .route(
+            "/api/facturacion/contratos/{id}",
+            put(fac_contrato_actualizar),
+        )
+        .route("/api/facturacion/entidades", get(fac_entidades))
         // Catálogos de referencia: los lee cualquier usuario autenticado.
         .route("/api/especialidades", get(listar_especialidades))
         .route("/api/medicamentos/buscar", get(buscar_medicamentos))
@@ -3687,6 +3728,369 @@ async fn farm_movimientos(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Facturación
+//
+// LEER no exige capacidad; ESCRIBIR exige `GestionarFacturacion`. Es el mismo
+// reparto que farmacia, y por la misma razón: quien atiende en ventanilla
+// consulta el estado de una factura para responderle al paciente, y eso no lo
+// habilita para radicar ni anular.
+//
+// Todo lo que devuelve una factura pasa por `medico_datos::facturacion`, que
+// aplica el ámbito en la consulta. Aquí no se filtra nada a mano — si hiciera
+// falta, sería el sitio por donde se olvidaría.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Traduce un [`facturacion::Resultado`] de fallo a su respuesta HTTP.
+///
+/// `NoExiste` da **404 y nunca 403**, también cuando la factura existe pero es
+/// de otra institución: un 403 confirmaría su existencia y con eso se enumera.
+fn fac_fallo(r: facturacion::Resultado) -> Response {
+    use facturacion::Resultado::*;
+    match r {
+        Hecho => StatusCode::NO_CONTENT.into_response(),
+        NoExiste => StatusCode::NOT_FOUND.into_response(),
+        EstadoNoAdmite { estado } => detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Una factura en estado {estado} no admite esta operación. \
+                 Solo se editan, borran y radican las que están en BORRADOR."
+            ),
+        ),
+        TransicionInvalida {
+            desde,
+            hacia,
+            permitidas,
+        } => detalle(
+            StatusCode::BAD_REQUEST,
+            if permitidas.is_empty() {
+                format!("{desde} es un estado final: no se puede pasar a {hacia}.")
+            } else {
+                format!(
+                    "Transición no permitida: {desde} → {hacia}. Desde {desde} solo se puede ir a {}.",
+                    permitidas.join(", ")
+                )
+            },
+        ),
+        SinValor => detalle(
+            StatusCode::BAD_REQUEST,
+            "No se puede radicar una factura sin valor: añádale líneas primero.".into(),
+        ),
+        ReferenciaInvalida { que } => detalle(
+            StatusCode::BAD_REQUEST,
+            match que {
+                "contrato" => "Ese contrato no existe o no es de esta institución.".into(),
+                "tipo_tarifa" => {
+                    "El tipo de tarifa tiene que ser ISS, SOAT, CUPS o PERSONALIZADA.".to_string()
+                }
+                otro => format!("No existe la {otro} que indica."),
+            },
+        ),
+        NumeroRepetido { numero } => detalle(
+            StatusCode::BAD_REQUEST,
+            format!("Ya hay un contrato con el número {numero} en esta institución."),
+        ),
+        FaltaTexto { campo } => detalle(
+            StatusCode::BAD_REQUEST,
+            format!("Falta «{campo}», y sin él la fila no dice nada."),
+        ),
+    }
+}
+
+/// Devuelve la factura ya compuesta tras una escritura, que es lo que espera la
+/// pantalla: todas sus rutas de modificación responden con la factura entera.
+async fn fac_devolver(e: &Estado, ambito: Ambito, id: i64, creada: bool) -> Response {
+    match facturacion::obtener_factura(&e.pool, ambito, id).await {
+        Ok(Some(f)) => {
+            let codigo = if creada {
+                StatusCode::CREATED
+            } else {
+                StatusCode::OK
+            };
+            (codigo, Json(f)).into_response()
+        }
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_stats(State(e): State<Estado>, u: Autenticado) -> Response {
+    match facturacion::stats(&e.pool, u.0.ambito()).await {
+        Ok(s) => Json(s).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_listar(
+    State(e): State<Estado>,
+    u: Autenticado,
+    Query(f): Query<facturacion::FiltrosFactura>,
+) -> Response {
+    match facturacion::listar_facturas(&e.pool, u.0.ambito(), &f).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_obtener(State(e): State<Estado>, u: Autenticado, Path(id): Path<i64>) -> Response {
+    match facturacion::obtener_factura(&e.pool, u.0.ambito(), id).await {
+        Ok(Some(f)) => Json(f).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Json(n): Json<facturacion::FacturaNueva>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "Las facturas son de una institución y esta cuenta no está adscrita a ninguna.".into(),
+        );
+    };
+    match facturacion::crear_factura(&e.pool, u.ambito(), institucion_id, &n).await {
+        Ok(facturacion::ResultadoAlta::Creado(id)) => fac_devolver(&e, u.ambito(), id, true).await,
+        Ok(facturacion::ResultadoAlta::Fallo(r)) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Json(ed): Json<facturacion::FacturaEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::actualizar_factura(&e.pool, u.ambito(), id, &ed).await {
+        Ok(facturacion::Resultado::Hecho) => fac_devolver(&e, u.ambito(), id, false).await,
+        Ok(r) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+) -> Response {
+    match facturacion::eliminar_factura(&e.pool, autorizado.0.ambito(), id).await {
+        Ok(facturacion::Resultado::Hecho) => StatusCode::NO_CONTENT.into_response(),
+        Ok(r) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_radicar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Json(r): Json<facturacion::Radicacion>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::radicar(&e.pool, u.ambito(), id, &r).await {
+        Ok(facturacion::Resultado::Hecho) => fac_devolver(&e, u.ambito(), id, false).await,
+        Ok(x) => fac_fallo(x),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct CambioDeEstado {
+    nuevo_estado: String,
+}
+
+/// El estado va por parámetro de consulta porque así lo llama la pantalla
+/// (`facturacion.service.ts:155`), no por gusto: cambiarlo aquí rompería el
+/// producto vivo.
+async fn fac_estado(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Query(q): Query<CambioDeEstado>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(destino) =
+        medico_dominio::facturacion::EstadoFactura::desde_texto(&q.nuevo_estado)
+    else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "«{}» no es un estado de factura. Son BORRADOR, RADICADA, ACEPTADA, \
+                 GLOSADA, PAGADA y ANULADA.",
+                q.nuevo_estado
+            ),
+        );
+    };
+    match facturacion::cambiar_estado(&e.pool, u.ambito(), id, destino).await {
+        Ok(facturacion::Resultado::Hecho) => fac_devolver(&e, u.ambito(), id, false).await,
+        Ok(r) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_detalle_agregar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Json(d): Json<facturacion::DetalleNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::agregar_detalle(&e.pool, u.ambito(), id, &d).await {
+        Ok(facturacion::Resultado::Hecho) => fac_devolver(&e, u.ambito(), id, true).await,
+        Ok(r) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_detalle_eliminar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path((id, detalle_id)): Path<(i64, i64)>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::eliminar_detalle(&e.pool, u.ambito(), id, detalle_id).await {
+        Ok(facturacion::Resultado::Hecho) => fac_devolver(&e, u.ambito(), id, false).await,
+        Ok(r) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroGlosa {
+    estado: Option<String>,
+}
+
+async fn fac_glosas(
+    State(e): State<Estado>,
+    u: Autenticado,
+    Query(f): Query<FiltroGlosa>,
+) -> Response {
+    match facturacion::listar_glosas(&e.pool, u.0.ambito(), f.estado.as_deref()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_glosa_agregar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Json(g): Json<facturacion::GlosaNueva>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::agregar_glosa(&e.pool, u.ambito(), id, &g).await {
+        Ok(facturacion::ResultadoAlta::Creado(glosa_id)) => {
+            // Se devuelve LA GLOSA, no la factura: es lo que espera la pantalla.
+            match facturacion::listar_glosas(&e.pool, u.ambito(), None).await {
+                Ok(v) => match v.into_iter().find(|x| x.id == glosa_id) {
+                    Some(g) => (StatusCode::CREATED, Json(g)).into_response(),
+                    None => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+                },
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            }
+        }
+        Ok(facturacion::ResultadoAlta::Fallo(r)) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_glosa_responder(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Json(r): Json<facturacion::RespuestaGlosa>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::responder_glosa(&e.pool, u.ambito(), id, &r).await {
+        Ok(facturacion::Resultado::Hecho) => {
+            match facturacion::listar_glosas(&e.pool, u.ambito(), None).await {
+                Ok(v) => match v.into_iter().find(|x| x.id == id) {
+                    Some(g) => Json(g).into_response(),
+                    None => StatusCode::NOT_FOUND.into_response(),
+                },
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            }
+        }
+        Ok(x) => fac_fallo(x),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroContrato {
+    activo: Option<bool>,
+}
+
+async fn fac_contratos(
+    State(e): State<Estado>,
+    u: Autenticado,
+    Query(f): Query<FiltroContrato>,
+) -> Response {
+    match facturacion::listar_contratos(&e.pool, u.0.ambito(), f.activo).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_contrato_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Json(c): Json<facturacion::ContratoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(institucion_id) = u.institucion_id else {
+        return detalle(
+            StatusCode::BAD_REQUEST,
+            "Los contratos son de una institución y esta cuenta no está adscrita a ninguna.".into(),
+        );
+    };
+    match facturacion::crear_contrato(&e.pool, u.ambito(), institucion_id, &c).await {
+        Ok(facturacion::ResultadoAlta::Creado(id)) => {
+            match facturacion::obtener_contrato(&e.pool, u.ambito(), id).await {
+                Ok(Some(c)) => (StatusCode::CREATED, Json(c)).into_response(),
+                Ok(None) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            }
+        }
+        Ok(facturacion::ResultadoAlta::Fallo(r)) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn fac_contrato_actualizar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarFacturacion>,
+    Path(id): Path<i64>,
+    Json(ed): Json<facturacion::ContratoEdicion>,
+) -> Response {
+    let u = autorizado.0;
+    match facturacion::actualizar_contrato(&e.pool, u.ambito(), id, &ed).await {
+        Ok(facturacion::Resultado::Hecho) => {
+            match facturacion::obtener_contrato(&e.pool, u.ambito(), id).await {
+                Ok(Some(c)) => Json(c).into_response(),
+                Ok(None) => StatusCode::NOT_FOUND.into_response(),
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            }
+        }
+        Ok(r) => fac_fallo(r),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Catálogo nacional de EPS/aseguradoras. Lo lee cualquier usuario autenticado:
+/// no lleva institución porque una EPS es la misma para todos los prestadores.
+async fn fac_entidades(State(e): State<Estado>, _u: Autenticado) -> Response {
+    match facturacion::listar_entidades(&e.pool).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -6990,6 +7394,513 @@ mod pruebas {
                     .await
                     .unwrap();
                 assert_eq!(n.0, 1, "el listado del paciente propio sí deja rastro");
+            }
+        }
+    }
+
+    /// Facturación entre DOS instituciones.
+    ///
+    /// Es el banco que da sentido a todo el módulo. El sistema vivo en Python
+    /// falla abierto en cinco sitios —`/stats`, `/facturas`, las glosas de
+    /// `/stats`, `/glosas` y `/contratos`—, y ninguno se ve con una sola
+    /// institución en la base: la consulta sin filtro devuelve exactamente lo
+    /// mismo que la consulta filtrada. Por eso aquí SIEMPRE hay dos, y por eso
+    /// cada prueba mira las dos mitades: lo propio que tiene que verse, y lo
+    /// ajeno que no.
+    mod facturacion_entre_instituciones {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn enviar(e: &Estado, metodo: &str, uri: &str, quien: i64, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn json(r: Response) -> serde_json::Value {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 22).await.unwrap();
+            serde_json::from_slice(&b).unwrap()
+        }
+
+        /// Dos prestadores en la misma base, cada uno con su admin y su médico.
+        ///
+        /// | id | quién | institución |
+        /// |---|---|---|
+        /// | 50 | admin | 1 |
+        /// | 51 | admin | 2 |
+        /// | 52 | médico | 1 |
+        ///
+        /// La entidad (una EPS) es UNA sola y compartida a propósito: es el
+        /// catálogo nacional, y que las dos facturen a la misma aseguradora es
+        /// justo el caso en que un filtro flojo se nota.
+        async fn dos_prestadores() -> Estado {
+            let e = estado_de_prueba(false).await;
+            sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (2,'Dos','901')")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (50,'Admin Uno','a1@x.co',?,'admin',1,1),
+                        (51,'Admin Dos','a2@x.co',?,'admin',2,1),
+                        (52,'Medico Uno','m1@x.co',?,'medico',1,1)",
+            )
+            .bind(&h)
+            .bind(&h)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO entidad (id, nit, nombre, codigo_eps) VALUES (1,'800','EPS Común','EPS001')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            e
+        }
+
+        /// Crea una factura con una línea y la devuelve ya con su id.
+        async fn factura_de(e: &Estado, admin: i64, servicio: &str, valor: f64) -> i64 {
+            let cuerpo = format!(
+                r#"{{"entidad_id":1,"periodo_inicio":"2026-01-01","periodo_fin":"2026-01-31",
+                     "detalles":[{{"servicio":"{servicio}","cantidad":1,"valor_unitario":{valor}}}]}}"#
+            );
+            let r = enviar(e, "POST", "/api/facturacion/facturas", admin, &cuerpo).await;
+            assert_eq!(r.status(), StatusCode::CREATED, "no se pudo crear la factura");
+            json(r).await["id"].as_i64().unwrap()
+        }
+
+        // ── El listado ──────────────────────────────────────────────────────
+
+        /// LA PRUEBA QUE IMPORTA, con sus dos mitades: cada admin ve SU factura
+        /// y no ve la de la otra institución.
+        ///
+        /// Con la mitad de arriba sola, un filtro que no filtre nada pasa igual
+        /// —las dos facturas incluyen la propia—. Con la de abajo sola pasaría
+        /// un módulo que no devolviera nunca nada.
+        #[tokio::test]
+        async fn cada_prestador_ve_sus_facturas_y_solo_las_suyas() {
+            let e = dos_prestadores().await;
+            factura_de(&e, 50, "Consulta de Uno", 1000.0).await;
+            factura_de(&e, 51, "Consulta de Dos", 2000.0).await;
+
+            for (admin, mio, ajeno) in [(50, "Consulta de Uno", 2000.0), (51, "Consulta de Dos", 1000.0)] {
+                let v = json(enviar(&e, "GET", "/api/facturacion/facturas", admin, "").await).await;
+                let filas = v.as_array().unwrap();
+                assert_eq!(filas.len(), 1, "el admin {admin} vio {} facturas", filas.len());
+                assert_eq!(filas[0]["valor_neto"].as_f64().unwrap(), if mio.ends_with("Uno") { 1000.0 } else { 2000.0 });
+                let texto = serde_json::to_string(&v).unwrap();
+                assert!(
+                    !texto.contains(&ajeno.to_string()),
+                    "el admin {admin} vio el importe ajeno {ajeno}"
+                );
+            }
+        }
+
+        /// Pedir por id la factura de la otra institución da **404 y no 403**:
+        /// un 403 confirmaría que existe, y con eso se enumera.
+        #[tokio::test]
+        async fn la_factura_ajena_no_existe_para_el_vecino() {
+            let e = dos_prestadores().await;
+            let de_uno = factura_de(&e, 50, "Consulta de Uno", 1000.0).await;
+
+            let propia = enviar(&e, "GET", &format!("/api/facturacion/facturas/{de_uno}"), 50, "").await;
+            assert_eq!(propia.status(), StatusCode::OK, "control: la propia sí se ve");
+
+            let ajena = enviar(&e, "GET", &format!("/api/facturacion/facturas/{de_uno}"), 51, "").await;
+            assert_eq!(ajena.status(), StatusCode::NOT_FOUND, "la ajena tiene que ser 404");
+        }
+
+        /// El panel cuenta y SUMA EN DINERO. Sin filtro, el prestador pequeño
+        /// ve el volumen facturado del grande.
+        #[tokio::test]
+        async fn el_panel_cuenta_solo_lo_propio() {
+            let e = dos_prestadores().await;
+            factura_de(&e, 50, "Una de Uno", 1000.0).await;
+            factura_de(&e, 51, "Una de Dos", 2000.0).await;
+            factura_de(&e, 51, "Otra de Dos", 3000.0).await;
+
+            let v = json(enviar(&e, "GET", "/api/facturacion/stats", 50, "").await).await;
+            assert_eq!(v["total_facturas"], 1);
+            let v2 = json(enviar(&e, "GET", "/api/facturacion/stats", 51, "").await).await;
+            assert_eq!(v2["total_facturas"], 2, "control: el otro sí ve las suyas dos");
+        }
+
+        // ── Numeración ──────────────────────────────────────────────────────
+
+        /// La secuencia es POR INSTITUCIÓN: las dos primeras facturas del año se
+        /// llaman igual en los dos prestadores.
+        ///
+        /// En el Python la secuencia es global, así que la primera factura del
+        /// segundo prestador se habría llamado `-00002` — y ese número le dice
+        /// cuántas lleva emitidas el vecino.
+        #[tokio::test]
+        async fn la_numeracion_no_se_comparte_entre_prestadores() {
+            let e = dos_prestadores().await;
+            let a = factura_de(&e, 50, "Uno", 1000.0).await;
+            let b = factura_de(&e, 51, "Dos", 1000.0).await;
+
+            let na = json(enviar(&e, "GET", &format!("/api/facturacion/facturas/{a}"), 50, "").await)
+                .await["numero_factura"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            let nb = json(enviar(&e, "GET", &format!("/api/facturacion/facturas/{b}"), 51, "").await)
+                .await["numero_factura"]
+                .as_str()
+                .unwrap()
+                .to_string();
+
+            assert!(na.ends_with("-00001"), "la primera de Uno es {na}");
+            assert_eq!(na, nb, "cada prestador empieza su propia serie");
+
+            // Y la segunda del mismo prestador SÍ avanza. Sin esta mitad, un
+            // generador que devolviera siempre `-00001` pasaría la de arriba.
+            let c = factura_de(&e, 50, "Otra de Uno", 500.0).await;
+            let nc = json(enviar(&e, "GET", &format!("/api/facturacion/facturas/{c}"), 50, "").await)
+                .await["numero_factura"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            assert!(nc.ends_with("-00002"), "la segunda de Uno es {nc}");
+        }
+
+        // ── Contratos ───────────────────────────────────────────────────────
+
+        const CONTRATO_001: &str = r#"{"entidad_id":1,"nombre":"Capitación","numero_contrato":"001",
+            "fecha_inicio":"2026-01-01","fecha_fin":"2026-12-31","tipo_tarifa":"ISS"}"#;
+
+        /// Dos prestadores pueden numerar su contrato «001» sin chocar.
+        ///
+        /// En el Python la unicidad es global (`numero_contrato == payload`), así
+        /// que el segundo recibía un 400 — y con él, la confirmación de que el
+        /// vecino ya tiene ese número.
+        #[tokio::test]
+        async fn el_numero_de_contrato_es_unico_por_institucion_y_no_global() {
+            let e = dos_prestadores().await;
+            let r1 = enviar(&e, "POST", "/api/facturacion/contratos", 50, CONTRATO_001).await;
+            assert_eq!(r1.status(), StatusCode::CREATED);
+            let r2 = enviar(&e, "POST", "/api/facturacion/contratos", 51, CONTRATO_001).await;
+            assert_eq!(r2.status(), StatusCode::CREATED, "el vecino también puede tener su 001");
+
+            // Y la pareja: repetirlo DENTRO de la misma institución sí choca.
+            let r3 = enviar(&e, "POST", "/api/facturacion/contratos", 50, CONTRATO_001).await;
+            assert_eq!(r3.status(), StatusCode::BAD_REQUEST, "repetido en la misma sí choca");
+        }
+
+        #[tokio::test]
+        async fn cada_prestador_ve_sus_contratos_y_solo_los_suyos() {
+            let e = dos_prestadores().await;
+            enviar(&e, "POST", "/api/facturacion/contratos", 50, CONTRATO_001).await;
+            enviar(&e, "POST", "/api/facturacion/contratos", 51, CONTRATO_001).await;
+
+            for admin in [50, 51] {
+                let v = json(enviar(&e, "GET", "/api/facturacion/contratos", admin, "").await).await;
+                assert_eq!(v.as_array().unwrap().len(), 1, "el admin {admin} vio contratos de más");
+            }
+        }
+
+        /// Colgar la factura del contrato del VECINO no se puede.
+        #[tokio::test]
+        async fn no_se_puede_facturar_contra_el_contrato_de_otro() {
+            let e = dos_prestadores().await;
+            let r = enviar(&e, "POST", "/api/facturacion/contratos", 51, CONTRATO_001).await;
+            let del_vecino = json(r).await["id"].as_i64().unwrap();
+
+            let cuerpo = format!(
+                r#"{{"entidad_id":1,"contrato_id":{del_vecino},
+                     "periodo_inicio":"2026-01-01","periodo_fin":"2026-01-31","detalles":[]}}"#
+            );
+            let r = enviar(&e, "POST", "/api/facturacion/facturas", 50, &cuerpo).await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+
+            // Control: con su PROPIO contrato sí se puede.
+            let r = enviar(&e, "POST", "/api/facturacion/contratos", 50, CONTRATO_001).await;
+            let propio = json(r).await["id"].as_i64().unwrap();
+            let cuerpo = format!(
+                r#"{{"entidad_id":1,"contrato_id":{propio},
+                     "periodo_inicio":"2026-01-01","periodo_fin":"2026-01-31","detalles":[]}}"#
+            );
+            let r = enviar(&e, "POST", "/api/facturacion/facturas", 50, &cuerpo).await;
+            assert_eq!(r.status(), StatusCode::CREATED, "control: el propio sí sirve");
+        }
+
+        // ── Glosas ──────────────────────────────────────────────────────────
+
+        /// Una glosa lleva dentro el número de factura y el importe discutido.
+        /// El listado del Python no filtra NADA.
+        #[tokio::test]
+        async fn cada_prestador_ve_sus_glosas_y_solo_las_suyas() {
+            let e = dos_prestadores().await;
+            for (admin, servicio) in [(50, "De Uno"), (51, "De Dos")] {
+                let id = factura_de(&e, admin, servicio, 1000.0).await;
+                let r = enviar(
+                    &e,
+                    "PUT",
+                    &format!("/api/facturacion/facturas/{id}/radicar"),
+                    admin,
+                    r#"{"num_radicado":"R1"}"#,
+                )
+                .await;
+                assert_eq!(r.status(), StatusCode::OK, "no se pudo radicar");
+                let r = enviar(
+                    &e,
+                    "POST",
+                    &format!("/api/facturacion/facturas/{id}/glosas"),
+                    admin,
+                    &format!(r#"{{"item_glosado":"{servicio}","motivo":"tarifa","valor_glosado":100}}"#),
+                )
+                .await;
+                assert_eq!(r.status(), StatusCode::CREATED, "no se pudo glosar");
+            }
+
+            for (admin, ajeno) in [(50, "De Dos"), (51, "De Uno")] {
+                let v = json(enviar(&e, "GET", "/api/facturacion/glosas", admin, "").await).await;
+                assert_eq!(v.as_array().unwrap().len(), 1, "el admin {admin} vio glosas de más");
+                assert!(
+                    !serde_json::to_string(&v).unwrap().contains(ajeno),
+                    "el admin {admin} vio la glosa ajena"
+                );
+            }
+        }
+
+        /// Las glosas pendientes del panel también se acotan. En el Python esa
+        /// consulta va suelta, así que sumaba el dinero glosado de todos.
+        #[tokio::test]
+        async fn el_panel_no_suma_las_glosas_del_vecino() {
+            let e = dos_prestadores().await;
+            let id = factura_de(&e, 51, "De Dos", 1000.0).await;
+            enviar(&e, "PUT", &format!("/api/facturacion/facturas/{id}/radicar"), 51, "{}").await;
+            enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/glosas"),
+                51,
+                r#"{"item_glosado":"x","motivo":"y","valor_glosado":777}"#,
+            )
+            .await;
+
+            let v = json(enviar(&e, "GET", "/api/facturacion/stats", 50, "").await).await;
+            assert_eq!(v["glosas_pendientes"], 0);
+            assert_eq!(v["valor_glosado_pendiente"].as_f64().unwrap(), 0.0);
+
+            let v2 = json(enviar(&e, "GET", "/api/facturacion/stats", 51, "").await).await;
+            assert_eq!(v2["glosas_pendientes"], 1, "control: el dueño sí la ve");
+            assert_eq!(v2["valor_glosado_pendiente"].as_f64().unwrap(), 777.0);
+        }
+
+        // ── Estados ─────────────────────────────────────────────────────────
+
+        /// El camino completo por la API, incluido ANULAR — que es el estado que
+        /// faltaba en el CHECK de la 0044 y que la pantalla ya ofrece.
+        #[tokio::test]
+        async fn el_ciclo_de_vida_de_una_factura_por_la_api() {
+            let e = dos_prestadores().await;
+            let id = factura_de(&e, 50, "Consulta", 1000.0).await;
+
+            let v = json(enviar(&e, "GET", &format!("/api/facturacion/facturas/{id}"), 50, "").await).await;
+            assert_eq!(v["estado"], "BORRADOR");
+            assert_eq!(v["valor_neto"].as_f64().unwrap(), 1000.0, "el total se calcula solo");
+
+            let r = enviar(&e, "PUT", &format!("/api/facturacion/facturas/{id}/radicar"), 50, "{}").await;
+            assert_eq!(r.status(), StatusCode::OK);
+            assert_eq!(json(r).await["estado"], "RADICADA");
+
+            let r = enviar(
+                &e,
+                "PUT",
+                &format!("/api/facturacion/facturas/{id}/estado?nuevo_estado=ANULADA"),
+                50,
+                "",
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "anular tiene que funcionar");
+            assert_eq!(json(r).await["estado"], "ANULADA");
+        }
+
+        /// De un estado terminal no se sale, y el mensaje lo dice.
+        #[tokio::test]
+        async fn de_una_anulada_no_se_vuelve() {
+            let e = dos_prestadores().await;
+            let id = factura_de(&e, 50, "Consulta", 1000.0).await;
+            enviar(&e, "PUT", &format!("/api/facturacion/facturas/{id}/radicar"), 50, "{}").await;
+            enviar(
+                &e,
+                "PUT",
+                &format!("/api/facturacion/facturas/{id}/estado?nuevo_estado=ANULADA"),
+                50,
+                "",
+            )
+            .await;
+            let r = enviar(
+                &e,
+                "PUT",
+                &format!("/api/facturacion/facturas/{id}/estado?nuevo_estado=RADICADA"),
+                50,
+                "",
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+        }
+
+        /// Una factura radicada ya no se edita ni se borra: salió del sistema.
+        #[tokio::test]
+        async fn lo_radicado_no_se_edita_ni_se_borra() {
+            let e = dos_prestadores().await;
+            let id = factura_de(&e, 50, "Consulta", 1000.0).await;
+
+            // Control: en BORRADOR sí se puede.
+            let r = enviar(
+                &e,
+                "PUT",
+                &format!("/api/facturacion/facturas/{id}"),
+                50,
+                r#"{"observaciones":"aún se puede"}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "control: el borrador sí se edita");
+
+            enviar(&e, "PUT", &format!("/api/facturacion/facturas/{id}/radicar"), 50, "{}").await;
+
+            let r = enviar(
+                &e,
+                "PUT",
+                &format!("/api/facturacion/facturas/{id}"),
+                50,
+                r#"{"observaciones":"ya no"}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+            let r = enviar(&e, "DELETE", &format!("/api/facturacion/facturas/{id}"), 50, "").await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+        }
+
+        /// Radicar una factura sin líneas no se puede: no hay nada que cobrar.
+        #[tokio::test]
+        async fn no_se_radica_una_factura_sin_valor() {
+            let e = dos_prestadores().await;
+            let cuerpo = r#"{"entidad_id":1,"periodo_inicio":"2026-01-01",
+                             "periodo_fin":"2026-01-31","detalles":[]}"#;
+            let r = enviar(&e, "POST", "/api/facturacion/facturas", 50, cuerpo).await;
+            let id = json(r).await["id"].as_i64().unwrap();
+            let r = enviar(&e, "PUT", &format!("/api/facturacion/facturas/{id}/radicar"), 50, "{}").await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+        }
+
+        // ── Capacidad ───────────────────────────────────────────────────────
+
+        /// Un médico LEE la facturación pero no la escribe. Es el mismo reparto
+        /// que farmacia: consultar en ventanilla no habilita para radicar.
+        #[tokio::test]
+        async fn el_medico_lee_pero_no_factura() {
+            let e = dos_prestadores().await;
+            factura_de(&e, 50, "Consulta", 1000.0).await;
+
+            let r = enviar(&e, "GET", "/api/facturacion/facturas", 52, "").await;
+            assert_eq!(r.status(), StatusCode::OK, "leer sí");
+            let r = enviar(&e, "GET", "/api/facturacion/stats", 52, "").await;
+            assert_eq!(r.status(), StatusCode::OK, "el panel también");
+
+            let cuerpo = r#"{"entidad_id":1,"periodo_inicio":"2026-01-01",
+                             "periodo_fin":"2026-01-31","detalles":[]}"#;
+            let r = enviar(&e, "POST", "/api/facturacion/facturas", 52, cuerpo).await;
+            assert_eq!(r.status(), StatusCode::FORBIDDEN, "crear no");
+        }
+
+        // ── Líneas ──────────────────────────────────────────────────────────
+
+        /// Añadir y quitar líneas recalcula el total, y el descuento no deja el
+        /// neto en negativo.
+        #[tokio::test]
+        async fn las_lineas_recalculan_el_total() {
+            let e = dos_prestadores().await;
+            let cuerpo = r#"{"entidad_id":1,"periodo_inicio":"2026-01-01","periodo_fin":"2026-01-31",
+                             "descuentos":500,"detalles":[]}"#;
+            let id = json(enviar(&e, "POST", "/api/facturacion/facturas", 50, cuerpo).await)
+                .await["id"]
+                .as_i64()
+                .unwrap();
+
+            let r = enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/detalles"),
+                50,
+                r#"{"servicio":"Consulta","cantidad":2,"valor_unitario":300}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::CREATED);
+            let v = json(r).await;
+            assert_eq!(v["valor_bruto"].as_f64().unwrap(), 600.0, "2 × 300");
+            assert_eq!(v["valor_neto"].as_f64().unwrap(), 100.0, "600 − 500 de descuento");
+
+            let detalle_id = v["detalles"][0]["id"].as_i64().unwrap();
+            let r = enviar(
+                &e,
+                "DELETE",
+                &format!("/api/facturacion/facturas/{id}/detalles/{detalle_id}"),
+                50,
+                "",
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let v = json(r).await;
+            assert_eq!(v["valor_bruto"].as_f64().unwrap(), 0.0);
+            assert_eq!(v["valor_neto"].as_f64().unwrap(), 0.0, "el neto no baja de cero");
+        }
+
+        /// Borrar la línea nombrando una factura propia y un detalle AJENO no
+        /// se puede: el `AND factura_id = ?` es lo que lo impide.
+        #[tokio::test]
+        async fn no_se_borra_la_linea_de_otra_factura() {
+            let e = dos_prestadores().await;
+            let mia = factura_de(&e, 50, "Mía", 100.0).await;
+            let del_vecino = factura_de(&e, 51, "Suya", 100.0).await;
+
+            let v = json(enviar(&e, "GET", &format!("/api/facturacion/facturas/{del_vecino}"), 51, "").await).await;
+            let linea_ajena = v["detalles"][0]["id"].as_i64().unwrap();
+
+            let r = enviar(
+                &e,
+                "DELETE",
+                &format!("/api/facturacion/facturas/{mia}/detalles/{linea_ajena}"),
+                50,
+                "",
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::NOT_FOUND);
+
+            // Control: la línea ajena sigue ahí.
+            let v = json(enviar(&e, "GET", &format!("/api/facturacion/facturas/{del_vecino}"), 51, "").await).await;
+            assert_eq!(v["detalles"].as_array().unwrap().len(), 1, "la línea ajena se borró");
+        }
+
+        // ── Entidades ───────────────────────────────────────────────────────
+
+        /// El catálogo de EPS SÍ es común, y eso es la decisión de la 0044: una
+        /// aseguradora es la misma persona jurídica para todos los prestadores.
+        /// Va aquí para que la asimetría con contratos quede escrita en una
+        /// prueba y no solo en un comentario.
+        #[tokio::test]
+        async fn las_entidades_son_catalogo_nacional_y_las_ven_los_dos() {
+            let e = dos_prestadores().await;
+            for admin in [50, 51] {
+                let v = json(enviar(&e, "GET", "/api/facturacion/entidades", admin, "").await).await;
+                assert_eq!(v.as_array().unwrap().len(), 1, "el admin {admin} no vio la EPS");
             }
         }
     }

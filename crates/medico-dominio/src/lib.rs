@@ -8,6 +8,7 @@ pub mod aislamiento;
 pub mod ajustes;
 pub mod cie11;
 pub mod cum;
+pub mod facturacion;
 pub mod modulo;
 pub mod muv;
 pub mod rips;

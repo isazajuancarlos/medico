@@ -102,7 +102,7 @@ pub const CATALOGO: &[Modulo] = &[
     // --- Traslados ----------------------------------------------------------
     m("AMBULANCIAS", "Traslados", Some("/api/ambulancias")),
     // --- Administrativo -----------------------------------------------------
-    m("FACTURACION", "Administrativo", None),
+    m("FACTURACION", "Administrativo", Some("/api/facturacion")),
     m("RIPS", "Administrativo", None),
     m("AUDITORIA", "Administrativo", Some("/api/acceso")),
     m("ESTADISTICAS", "Administrativo", None),

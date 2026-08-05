@@ -10,6 +10,7 @@ pub mod clinico;
 pub mod diagnostico;
 pub mod divipola;
 pub mod documento;
+pub mod facturacion;
 pub mod formula;
 pub mod freno;
 pub mod historia;
@@ -30,6 +31,38 @@ pub mod urgencias;
 pub mod usuario;
 
 pub type Pool = sqlx::SqlitePool;
+
+/// El trozo de `WHERE` que acota una consulta al ámbito de quien pregunta, y el
+/// valor que hay que enlazar (o `None` si no hay ninguno).
+///
+/// **Devolver `None` significa «no ve nada», y el llamante tiene que cortar ahí.**
+/// Ese es el diseño: `Ambito::Ninguno` no produce un filtro laxo ni un `1 = 1`,
+/// produce la ausencia de consulta. El `let … else` de cada función es lo que lo
+/// hace imposible de olvidar — no compila si no se decide qué devolver.
+///
+/// # Por qué vive aquí desde el 2026-08-05
+///
+/// Había SEIS copias byte a byte de esta función —`proveedor`, `rehabilitacion`,
+/// `ambulancia`, `diagnostico`, `inventario`, `nutricion`—, comprobado con
+/// `md5sum`: las seis daban `6fad6250d033`. Al escribir `facturacion` tocaba
+/// añadir la séptima, y una regla de aislamiento repetida siete veces es una
+/// regla que se arregla en seis sitios y se olvida en el séptimo (directiva 1: si
+/// vas a añadir un mecanismo para sostener lo que creó otro, quita el primero).
+///
+/// No es refactor por estética: es que esta función decide quién ve los datos de
+/// quién. El día que haya que cambiarla —un ámbito nuevo, una institución con
+/// sedes— tiene que haber UN sitio donde cambiarla.
+pub fn filtro_ambito(
+    ambito: medico_dominio::Ambito,
+    col: &str,
+) -> Option<(String, Option<i64>)> {
+    use medico_dominio::Ambito;
+    match ambito {
+        Ambito::Superadmin => Some(("1 = 1".into(), None)),
+        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
+        Ambito::Ninguno => None,
+    }
+}
 
 /// Resultado de editar o borrar algo que puede estar firmado. `Firmada` NO es
 /// `NoExiste`: existe y es del ámbito, pero está cerrado. Lo comparten la

@@ -190,13 +190,7 @@ pub struct FiltrosTraslado {
     pub paciente_id: Option<i64>,
 }
 
-fn filtro_ambito(ambito: Ambito, col: &str) -> Option<(String, Option<i64>)> {
-    match ambito {
-        Ambito::Superadmin => Some(("1 = 1".into(), None)),
-        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
-        Ambito::Ninguno => None,
-    }
-}
+use crate::filtro_ambito;
 
 fn ahora() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)

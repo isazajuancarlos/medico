@@ -233,6 +233,17 @@ impl Exige for GestionarFarmacia {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::GestionarFarmacia;
 }
 
+/// Facturar: contratos, facturas, sus líneas y las glosas.
+///
+/// La exigen las ESCRITURAS y no las lecturas, igual que en farmacia: quien
+/// consulta en ventanilla el estado de una factura para responderle al paciente
+/// no tiene por qué poder radicarla ni anularla.
+pub struct GestionarFacturacion;
+impl Exige for GestionarFacturacion {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::GestionarFacturacion;
+}
+
 /// Dar de alta al personal y decidir quién puede qué. Es la MISMA capacidad a
 /// propósito: partirlas crearía la figura del administrador que nombra pero no
 /// autoriza, que no existe en ninguna IPS.
