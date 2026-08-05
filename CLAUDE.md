@@ -405,16 +405,25 @@ vacía y el acceso responde «credenciales incorrectas», que es indistinguible 
 
 **Lo que el port todavía NO cubre**, para no confundir avance con paridad. La
 lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.rs`
-(111 rutas) contra los de `backend/routers/*.py`; vuelto a medir el 2026-08-03,
-siguen sin existir en Rust:
+(112 rutas, 154 pares ruta×método) contra los de `backend/routers/*.py` (219
+endpoints en 28 routers); vuelto a medir el 2026-08-04, siguen sin existir en
+Rust —y la lista no se ha movido desde el 03—:
 
 ```
 los que el frontend SÍ llama — hoy romperían la pantalla (5):
-  facturacion  estadisticas  admin  quirofano  consentimiento
+  admin (14 llamadas)  facturacion (13)  estadisticas (8)  quirofano (8)
+  consentimiento (2)
+  → 45 de las 137 rutas que el frontend llama se quedan sin servidor, y las
+    45 son de esos cinco módulos: NINGÚN módulo portado se queda a medias
+    (ni un solo verbo suelto sin servir)
 
 los que no llama nadie desde Angular — no rompen nada, pero son Python
 que sigue vivo (5):
   superadmin  epicrisis  evoluciones  interconsultas  nota-operatoria
+  → y sus PANTALLAS sí funcionan contra el binario, por otra ruta: las
+    cuatro clínicas hablan con `/api/documentos` (la espina genérica) y
+    superadmin con `/api/instituciones` y `/api/usuarios`. O sea que estos
+    cinco routers de Python son código vivo SIN CLIENTE, no huecos
 
 a medias (1):
   rips — existe desde el 2026-08-02, pero SOLO emite el AC
