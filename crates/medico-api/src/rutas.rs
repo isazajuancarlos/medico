@@ -7904,4 +7904,308 @@ mod pruebas {
             }
         }
     }
+
+    /// Aislamiento entre instituciones en los SEIS módulos que comparten
+    /// `filtro_ambito` y no lo tenían probado.
+    ///
+    /// # Por qué existe, y cómo se supo que faltaba
+    ///
+    /// No salió de leer código: salió de un MUTANTE. El 2026-08-05, al portar
+    /// facturación, se cambió `medico_datos::filtro_ambito` para que
+    /// `Ambito::Institucion(_)` devolviera `1 = 1` —exactamente el no-op que
+    /// tiene el Python vivo— y se corrió el workspace entero. Fallaron **6 de
+    /// 160**, y las seis eran de facturación. `inventario`, `proveedor`,
+    /// `ambulancia`, `diagnostico`, `nutricion` y `rehabilitacion` se quedaron
+    /// EN VERDE con el aislamiento apagado.
+    ///
+    /// No es que estuvieran mal escritos —lo estaban bien—: es que ninguna
+    /// prueba tenía DOS instituciones en la base. Con una sola, la consulta sin
+    /// filtro devuelve exactamente lo mismo que la filtrada, así que el banco no
+    /// puede distinguirlas. Es la directiva 33 en su forma más barata de
+    /// cometer: sin el caso que TIENE que no ver, el instrumento dice que sí a
+    /// todo.
+    ///
+    /// # El criterio de cierre
+    ///
+    /// Que este módulo exista no basta. Lo que cierra la tarea es que el mismo
+    /// mutante ponga en ROJO las siete tandas y no una — comprobado al
+    /// escribirlo.
+    mod aislamiento_de_los_seis_modulos {
+        use super::*;
+
+        fn cookie_de(id: i64) -> String {
+            format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
+        }
+
+        async fn pedir(e: &Estado, uri: &str, quien: i64) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn json(r: Response) -> serde_json::Value {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 22).await.unwrap();
+            serde_json::from_slice(&b).unwrap()
+        }
+
+        /// Dos prestadores con TODO duplicado: su admin, su paciente, su
+        /// historia, y una fila de cada uno de los seis módulos.
+        ///
+        /// | | institución 1 | institución 2 |
+        /// |---|---|---|
+        /// | admin | 60 | 61 |
+        /// | paciente | 100 | 200 |
+        /// | historia | 100 | 200 |
+        /// | la marca en los textos | `UNO` | `DOS` |
+        ///
+        /// La marca en el texto es lo que permite afirmar no solo «vi una fila»
+        /// sino «no vi la del otro», que es la mitad que de verdad mide.
+        async fn dos_prestadores_con_todo() -> Estado {
+            let e = estado_de_prueba(false).await;
+            sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (2,'Dos','901')")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (60,'Admin Uno','au@x.co',?,'admin',1,1),
+                        (61,'Admin Dos','ad@x.co',?,'admin',2,1)",
+            )
+            .bind(&h)
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+
+            for (inst, pac, marca) in [(1i64, 100i64, "UNO"), (2, 200, "DOS")] {
+                let admin = if inst == 1 { 60 } else { 61 };
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,
+                                           fecha_nacimiento,sexo,institucion_id)
+                     VALUES (?,'CC',?,?,'Perez','1990-01-01','M',?)",
+                )
+                .bind(pac)
+                .bind(format!("doc{pac}"))
+                .bind(format!("Paciente{marca}"))
+                .bind(inst)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                sqlx::query(
+                    "INSERT INTO historia (id,codigo_historia,paciente_id,medico_id,creado_por,
+                                           motivo_consulta,enfermedad_actual,
+                                           diagnostico_principal,plan_tratamiento)
+                     VALUES (?,?,?,?,?,'dolor','desde ayer','J00','reposo')",
+                )
+                .bind(pac)
+                .bind(format!("H-{marca}"))
+                .bind(pac)
+                .bind(admin)
+                .bind(admin)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                // 1. inventario — columna propia
+                sqlx::query(
+                    "INSERT INTO item_inventario (institucion_id,nombre,tipo) VALUES (?,?,'MEDICAMENTO')",
+                )
+                .bind(inst)
+                .bind(format!("Adrenalina{marca}"))
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                // 2. proveedor — columna propia
+                sqlx::query("INSERT INTO proveedor (institucion_id,razon_social) VALUES (?,?)")
+                    .bind(inst)
+                    .bind(format!("Droguería{marca}"))
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+
+                // 3. ambulancia — columna propia
+                sqlx::query("INSERT INTO ambulancia (institucion_id,placa,tipo) VALUES (?,?,'TAB')")
+                    .bind(inst)
+                    .bind(format!("PLA{marca}"))
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+
+                // 4. nutrición — columna propia
+                sqlx::query(
+                    "INSERT INTO valoracion_nutricional
+                       (paciente_id,nutricionista_id,fecha_valoracion,peso,talla,imc,
+                        diagnostico_nutricional,institucion_id)
+                     VALUES (?,?,'2026-01-01T10:00:00Z',70,1.7,24.2,?,?)",
+                )
+                .bind(pac)
+                .bind(admin)
+                .bind(format!("Riesgo{marca}"))
+                .bind(inst)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                // 5. rehabilitación — columna propia
+                sqlx::query(
+                    "INSERT INTO plan_rehabilitacion
+                       (paciente_id,terapeuta_id,fecha_creacion,diagnostico_funcional,objetivos,
+                        tipo_terapia,frecuencia,institucion_id)
+                     VALUES (?,?,'2026-01-01T10:00:00Z',?,'andar','FISICA','diaria',?)",
+                )
+                .bind(pac)
+                .bind(admin)
+                .bind(format!("Funcional{marca}"))
+                .bind(inst)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
+                // 6. diagnóstico — NO tiene columna propia: cuelga del paciente,
+                //    y por eso su filtro es `p.institucion_id`. Va aquí para que
+                //    la asimetría quede probada y no solo comentada.
+                sqlx::query(
+                    "INSERT INTO orden (historia_id,tipo,descripcion,justificacion)
+                     VALUES (?,'Laboratorio',?,'Control')",
+                )
+                .bind(pac)
+                .bind(format!("Hemograma{marca}"))
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            }
+            e
+        }
+
+        /// Los seis listados, con las DOS mitades cada uno.
+        ///
+        /// Una tabla y un bucle en vez de seis pruebas copiadas: si mañana entra
+        /// un módulo nuevo que use `filtro_ambito`, añadir su fila aquí cuesta
+        /// una línea — y no añadirla se nota, porque el recuento de abajo deja
+        /// de cuadrar con los usos reales.
+        #[tokio::test]
+        async fn cada_prestador_ve_lo_suyo_y_nada_de_lo_ajeno() {
+            let e = dos_prestadores_con_todo().await;
+
+            let casos = [
+                ("inventario", "/api/farmacia/inventario", "Adrenalina"),
+                ("proveedor", "/api/farmacia/proveedores", "Droguería"),
+                ("ambulancia", "/api/ambulancias", "PLA"),
+                ("nutricion", "/api/nutricion/valoraciones", "Riesgo"),
+                ("rehabilitacion", "/api/rehabilitacion/planes", "Funcional"),
+                ("diagnostico", "/api/laboratorio/ordenes", "Hemograma"),
+            ];
+
+            // Se ACUMULAN los fallos en vez de cortar en el primero, y no es
+            // cosmético: con `assert!` dentro del bucle, apagar el aislamiento
+            // rompe esta prueba en el PRIMER módulo y los otros cinco no llegan
+            // a medirse. Diría «rojo» sin haber comprobado que los seis
+            // discriminan, que es justo lo que este banco vino a demostrar.
+            let mut fallos: Vec<String> = Vec::new();
+
+            for (modulo, uri, prefijo) in casos {
+                for (admin, mio, ajeno) in [(60, "UNO", "DOS"), (61, "DOS", "UNO")] {
+                    let r = pedir(&e, uri, admin).await;
+                    if r.status() != StatusCode::OK {
+                        fallos.push(format!("{modulo}: el admin {admin} no pudo ni leer ({})", r.status()));
+                        continue;
+                    }
+                    let texto = serde_json::to_string(&json(r).await).unwrap();
+
+                    // La mitad que casi todo el mundo escribe.
+                    if !texto.contains(&format!("{prefijo}{mio}")) {
+                        fallos.push(format!("{modulo}: el admin {admin} NO vio lo suyo ({prefijo}{mio})"));
+                    }
+                    // La mitad que decide. Sin ésta, un filtro que no filtra
+                    // pasa igual: lo propio está dentro de «todo».
+                    if texto.contains(&format!("{prefijo}{ajeno}")) {
+                        fallos.push(format!(
+                            "{modulo}: FUGA — el admin {admin} vio {prefijo}{ajeno}, de la otra institución"
+                        ));
+                    }
+                }
+            }
+
+            assert!(
+                fallos.is_empty(),
+                "{} fallo(s) de aislamiento:\n  {}",
+                fallos.len(),
+                fallos.join("\n  ")
+            );
+        }
+
+        /// El recuento que impide que un módulo nuevo se cuele sin prueba.
+        ///
+        /// Cuenta los archivos de `medico-datos/src/` que usan `filtro_ambito` y
+        /// lo compara con lo que este banco cubre. No mide que la prueba sea
+        /// buena —eso lo mide el mutante— pero sí que NADIE se quede fuera de la
+        /// lista, que es exactamente lo que pasó con estos seis: el mecanismo
+        /// estaba bien y nadie lo estaba mirando.
+        #[test]
+        fn todos_los_modulos_que_acotan_por_ambito_estan_en_este_banco() {
+            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .unwrap()
+                .join("medico-datos/src");
+            let mut usan = Vec::new();
+            for entrada in std::fs::read_dir(&dir).expect("no se pudo leer medico-datos/src") {
+                let ruta = entrada.unwrap().path();
+                if ruta.extension().is_none_or(|x| x != "rs") {
+                    continue;
+                }
+                let nombre = ruta.file_stem().unwrap().to_string_lossy().to_string();
+                if nombre == "lib" {
+                    continue; // es donde vive la función, no un consumidor
+                }
+                let texto = std::fs::read_to_string(&ruta).unwrap();
+                if texto.contains("filtro_ambito(ambito") {
+                    usan.push(nombre);
+                }
+            }
+            usan.sort();
+
+            // `facturacion` tiene su propio banco de dos instituciones, más
+            // completo (17 pruebas); los otros seis están en éste.
+            let cubiertos: std::collections::BTreeSet<&str> = [
+                "ambulancia",
+                "diagnostico",
+                "facturacion",
+                "inventario",
+                "nutricion",
+                "proveedor",
+                "rehabilitacion",
+            ]
+            .into_iter()
+            .collect();
+
+            let sin_cubrir: Vec<_> = usan
+                .iter()
+                .filter(|m| !cubiertos.contains(m.as_str()))
+                .collect();
+            assert!(
+                sin_cubrir.is_empty(),
+                "estos módulos acotan por ámbito y NO tienen prueba de dos \
+                 instituciones: {sin_cubrir:?}. Añade su fila a `casos` y su \
+                 nombre a `cubiertos` — un módulo que filtra sin banco es \
+                 exactamente el hueco que este archivo existe para cerrar."
+            );
+            assert!(
+                usan.len() >= 7,
+                "solo se encontraron {} módulos usando `filtro_ambito` ({usan:?}): \
+                 el recuento no está mirando el árbol que cree",
+                usan.len()
+            );
+        }
+    }
 }
