@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import Factura, DetalleFactura, Glosa, Contrato, Entidad, Paciente, Usuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from models import RolUsuario
 from core.aislamiento import obtener
 from schemas.facturacion import (
     FacturaRead, FacturaCreate, FacturaUpdate, DetalleRead, DetalleCreate,
@@ -26,12 +27,35 @@ _TRANSICIONES = {
 }
 
 
-def _gen_numero_factura(db: Session) -> str:
+def _de_mi_institucion(user: Usuario):
+    """La condición del JOIN que acota una glosa por la institución de su factura.
+
+    Una glosa no lleva institución propia y no debe llevarla: cuelga de una
+    factura con `factura_id` obligatorio, así que su dueño es demostrable en un
+    salto. Darle columna crearía la posibilidad de que dijera una institución y
+    su factura otra — dos verdades para un hecho.
+    """
+    if user.rol == RolUsuario.SUPERADMIN:
+        return True
+    return Factura.institucion_id == user.institucion_id
+
+
+def _gen_numero_factura(db: Session, institucion_id: Optional[int]) -> str:
+    """El siguiente `FAC-{año}-{n}` DE ESTA INSTITUCIÓN.
+
+    Hasta el 2026-08-05 la secuencia era global —el `WHERE` no llevaba
+    institución— y eso hacía tres cosas malas a la vez con dos prestadores en la
+    misma base: los números saltaban sin explicación (el 00007 después del 00004
+    porque los tres de en medio son del vecino), **el propio número revelaba
+    cuántas facturas había emitido el otro**, y dos prestadores no podían
+    numerar en paralelo sin pisarse.
+    """
     anio = date.today().year
     prefix = f"FAC-{anio}-"
     last = db.exec(
         select(Factura)
         .where(Factura.numero_factura.like(f"{prefix}%"))
+        .where(Factura.institucion_id == institucion_id)
         .order_by(Factura.numero_factura.desc())
     ).first()
     if last:
@@ -91,8 +115,15 @@ def get_stats(
     query = select(Factura)
     query = filtrar_por_institucion(query, Factura, current_user)
     facturas = db.exec(query).all()
+    # Las glosas se acotan POR SU FACTURA. Esta consulta no llevaba filtro
+    # NINGUNO —ni siquiera pasaba por `filtrar_por_institucion`—, así que el
+    # panel de un prestador contaba y SUMABA EN DINERO las glosas de todos los
+    # demás. Es la fuga que menos se veía, porque un contador no parece un dato.
     glosas = db.exec(
-        select(Glosa).where(Glosa.estado == "PENDIENTE")
+        select(Glosa)
+        .join(Factura, Glosa.factura_id == Factura.id)
+        .where(Glosa.estado == "PENDIENTE")
+        .where(_de_mi_institucion(current_user))
     ).all()
     return StatsFacturacion(
         total_facturas=len(facturas),
@@ -153,8 +184,11 @@ def crear_factura(
     if not db.get(Entidad, payload.entidad_id):  # aislamiento: ya autorizado por el padre
         raise HTTPException(status_code=404, detail="Entidad no encontrada")
 
-    numero = _gen_numero_factura(db)
+    numero = _gen_numero_factura(db, current_user.institucion_id)
     factura = Factura(
+        # La factura NACE con dueño. Sin esto la fila queda en NULL y no la ve
+        # nadie —ni quien la acaba de crear—, que es fallar cerrado pero inútil.
+        institucion_id=current_user.institucion_id,
         numero_factura=numero,
         entidad_id=payload.entidad_id,
         contrato_id=payload.contrato_id,
@@ -326,7 +360,13 @@ def list_glosas(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = select(Glosa)
+    # `select(Glosa)` a secas devolvía las glosas de TODAS las instituciones, y
+    # encima el bucle de abajo las enriquecía con el `numero_factura` ajeno.
+    query = (
+        select(Glosa)
+        .join(Factura, Glosa.factura_id == Factura.id)
+        .where(_de_mi_institucion(current_user))
+    )
     if estado:
         query = query.where(Glosa.estado == estado)
     query = query.order_by(Glosa.fecha_glosa.desc())
@@ -398,7 +438,7 @@ def list_contratos(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = select(Contrato)
+    query = filtrar_por_institucion(select(Contrato), Contrato, current_user)
     if activo is not None:
         query = query.where(Contrato.activo == activo)
     query = query.order_by(Contrato.nombre)
@@ -419,10 +459,17 @@ def crear_contrato(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    existing = db.exec(select(Contrato).where(Contrato.numero_contrato == payload.numero_contrato)).first()
+    # La unicidad se mira DENTRO de la institución. Era global, así que el
+    # segundo prestador que numerara sus contratos «001» recibía un 400 — y con
+    # él, la confirmación de que el vecino ya tiene ese número.
+    existing = db.exec(
+        select(Contrato)
+        .where(Contrato.numero_contrato == payload.numero_contrato)
+        .where(Contrato.institucion_id == current_user.institucion_id)
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Ya existe un contrato con ese número")
-    c = Contrato(**payload.model_dump())
+    c = Contrato(**payload.model_dump(), institucion_id=current_user.institucion_id)
     db.add(c)
     db.commit()
     db.refresh(c)

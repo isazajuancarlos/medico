@@ -67,10 +67,100 @@ def get_institucion_id(user: Usuario = Depends(get_current_active_user)) -> Opti
 
 
 def filtrar_por_institucion(query, model, user: Usuario):
-    """Filtra por institución si el usuario no es SUPERADMIN"""
-    if user.rol != RolUsuario.SUPERADMIN and hasattr(model, "institucion_id"):
-        query = query.where(model.institucion_id == user.institucion_id)
-    return query
+    """Acota un LISTADO a la institución de quien pregunta.
+
+    Es la capa 1 del aislamiento —la de las consultas por lista—; la 2, el acceso
+    por identificador, es `core.aislamiento.obtener`.
+
+    # Por qué esto no es lo que había
+
+    Hasta el 2026-08-05 el cuerpo entero era::
+
+        if user.rol != SUPERADMIN and hasattr(model, "institucion_id"):
+            query = query.where(model.institucion_id == user.institucion_id)
+        return query
+
+    Con `hasattr` falso —un modelo sin esa columna— el `where` no se añadía y la
+    consulta **se devolvía sin acotar**. La llamada estaba escrita, parecía que
+    filtraba, y el resultado salía con HTTP 200 y sin una línea en ningún log.
+    Convertía lo que habría sido un `AttributeError` ruidoso el primer día en una
+    fuga silenciosa e indefinida: la directiva 20 en su forma canónica, y un
+    guardián que falla ABIERTO y callado.
+
+    Afectaba a `Factura` (`/facturacion/facturas` y `/facturacion/stats`) y a
+    `Hospitalizacion`, que es la que se arregla sola aquí.
+
+    # Las tres respuestas, y ninguna es «pasa lo que sea»
+
+    Se reutiliza el vocabulario que este proyecto YA tiene en
+    `core.aislamiento` en vez de inventar otro (directiva 1: no se añade un
+    mecanismo para sostener lo que hace otro):
+
+    1. **columna propia** → se filtra por ella, como siempre.
+    2. **declarado en `COMPARTIDOS`** → no se filtra, porque alguien decidió por
+       escrito que ese modelo es de todos. Es una decisión, no un silencio.
+    3. **enlace de `ENLACES`** → se filtra por SUBCONSULTA sobre el modelo
+       enlazado. `Hospitalizacion` no tiene `institucion_id` pero sí
+       `paciente_id`, y `Paciente` sí la tiene: la cadena que `obtener` ya
+       recorría para el acceso por id existía y esta capa no la usaba.
+    4. **nada de lo anterior** → **se levanta `RuntimeError`**. Es exactamente lo
+       que `institucion_de` ya hace para el acceso por id desde que se escribió;
+       lo que faltaba era que las dos capas fallaran igual.
+
+    El SUPERADMIN sigue viendo todo: tiene `institucion_id = NULL` porque es el
+    dueño del sistema, no un cliente, y ese caso va primero.
+
+    # Lo que NO se hace, y es deliberado (directiva 21)
+
+    No se cierra a lo bruto. Un `raise` para todo modelo sin columna rompería
+    también los listados de catálogos —`Cie10`, `Cups`, `Medicamento`— en un
+    despliegue de UNA sola institución, donde no hay absolutamente nada que
+    filtrar. Por eso la salida ruidosa es solo para lo NO DECLARADO: lo que nadie
+    clasificó. Un modelo nuevo sin decidir de quién es se cae en la primera
+    prueba que lo liste, que es donde tiene que caerse.
+    """
+    from core.aislamiento import COMPARTIDOS, ENLACES
+
+    if user.rol == RolUsuario.SUPERADMIN:
+        return query
+
+    nombre = model.__name__
+
+    # 1. Columna propia.
+    if hasattr(model, "institucion_id"):
+        return query.where(model.institucion_id == user.institucion_id)
+
+    # 2. Declarado de todos.
+    if nombre in COMPARTIDOS:
+        return query
+
+    # 3. Por la cadena de enlaces. Se recorre en el ORDEN de ENLACES, que es el
+    #    de preferencia declarado ahí, para que dos modelos con el mismo par de
+    #    enlaces no acoten por caminos distintos según cómo se lea el objeto.
+    import models as _modelos
+
+    for campo, destino in ENLACES:
+        if not hasattr(model, campo):
+            continue
+        objetivo = getattr(_modelos, destino, None)
+        if objetivo is None or not hasattr(objetivo, "institucion_id"):
+            # El eslabón existe pero tampoco sabe de quién es. Seguir saltando
+            # aquí sería reimplementar `institucion_de` en SQL; se prueba el
+            # siguiente enlace y, si ninguno sirve, se cae por el `raise` de
+            # abajo. Es la dirección segura.
+            continue
+        sub = select(objetivo.id).where(objetivo.institucion_id == user.institucion_id)
+        return query.where(getattr(model, campo).in_(sub))
+
+    # 4. No se puede saber. Se dice.
+    raise RuntimeError(
+        f"`{nombre}` no tiene `institucion_id`, ninguno de sus enlaces lleva a un "
+        f"modelo que la tenga, y no está declarado en COMPARTIDOS. Decida a quién "
+        f"pertenece —dándole la columna, enlazándolo con su paciente o su "
+        f"factura— o inclúyalo en COMPARTIDOS si de verdad es de todos. "
+        f"Devolver la consulta sin acotar NO es una opción: sale con 200 y nadie "
+        f"se entera."
+    )
 
 
 # =====================================================================

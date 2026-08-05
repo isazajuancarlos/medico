@@ -61,7 +61,19 @@ COMPARTIDOS: frozenset[str] = frozenset({
     # Catálogos de códigos
     "Cie10", "Cups", "Medicamento", "Especialidad", "Entidad",
     # Configuración e inventario que hoy no está segmentado
-    "ConfigCampo", "BloqueHorario", "Cama", "ItemInventario", "Contrato",
+    # `Contrato` SALIÓ de aquí el 2026-08-05: ya tiene `institucion_id`. Estaba
+    # junto a los catálogos de códigos como si fuera nacional, y no lo es —es el
+    # acuerdo entre UN prestador y UNA entidad, con SUS tarifas—. Además era la
+    # causa de que `institucion_de(Factura)` respondiera «de todos»: la cadena
+    # de enlaces de la factura terminaba justo aquí.
+    #
+    # `Entidad` se QUEDA, y las dos decisiones son opuestas a propósito: una EPS
+    # es la misma persona jurídica para todos los prestadores del país.
+    #
+    # `TarifaContrato` sigue aquí pero ya no por el mismo motivo: cuelga de
+    # `contrato_id`, y `Contrato` ya sabe de quién es. Queda como tarea sacarla
+    # también; se deja ahora para no mezclar dos cambios de alcance en uno.
+    "ConfigCampo", "BloqueHorario", "Cama", "ItemInventario",
     "TarifaContrato",
     # Tablas de sistema: su propio control de acceso es otro
     "Institucion", "AuditoriaSuperAdmin", "HistorialPassword", "Token2FA",
