@@ -20,6 +20,7 @@ const FINALIDAD_JSON: &str = include_str!("../datos/muv_finalidad.json");
 const CAUSA_JSON: &str = include_str!("../datos/muv_causa_motivo.json");
 const UPR_JSON: &str = include_str!("../datos/muv_upr.json");
 const CONDICION_DESTINO_JSON: &str = include_str!("../datos/muv_condicion_destino.json");
+const VIA_INGRESO_JSON: &str = include_str!("../datos/muv_via_ingreso.json");
 
 #[derive(Debug, Deserialize)]
 struct FilaTipoDoc {
@@ -390,6 +391,102 @@ pub fn condicion_destino_de_urgencias(destino: Option<&str>) -> Option<&'static 
     }
 }
 
+/// Si el código existe en el catálogo **y aplica al archivo de hospitalización**.
+///
+/// La columna importa: el `03` («paciente derivado a otro servicio») vale para
+/// urgencias y **no** para hospitalización, y el Python lo emitía ahí.
+pub fn condicion_destino_de_hospitalizacion_existe(codigo: &str) -> bool {
+    condiciones_destino()
+        .iter()
+        .any(|c| c.codigo == codigo && c.aplica_ah)
+}
+
+/// El código de egreso que corresponde al estado con que se cierra una
+/// hospitalización, o `None` si el catálogo no dice ninguno.
+///
+/// | estado del sistema | código | nombre en el catálogo |
+/// |---|---|---|
+/// | `ALTA_MEDICA`     | 01 | PACIENTE CON DESTINO A SU DOMICILIO |
+/// | `ALTA_VOLUNTARIA` | 01 | PACIENTE CON DESTINO A SU DOMICILIO |
+/// | `REMISION`        | 04 | REFERIDO A OTRA INSTITUCION |
+/// | `DEFUNCION`       | 02 | PACIENTE MUERTO |
+///
+/// El mapa del Python decía `DEFUNCION = "04"` —que es el traslado— y
+/// `REMISION = "03"`, que **no aplica al AH**. `ACTIVA` no está: una
+/// hospitalización abierta no se reporta, y el generador la descarta antes.
+pub fn condicion_destino_de_hospitalizacion(estado: Option<&str>) -> Option<&'static str> {
+    match estado? {
+        "ALTA_MEDICA" | "ALTA_VOLUNTARIA" => Some("01"),
+        "DEFUNCION" => Some("02"),
+        "REMISION" => Some("04"),
+        _ => None,
+    }
+}
+
+/// Una vía de ingreso al servicio de salud (`REFs_ViaIngresoServicioSalud`).
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+pub struct ViaIngreso {
+    #[serde(rename(deserialize = "Codigo"))]
+    pub codigo: String,
+    #[serde(rename(deserialize = "Nombre"))]
+    pub nombre: String,
+    #[serde(rename(deserialize = "AplicaAP"), deserialize_with = "si_no")]
+    pub aplica_ap: bool,
+    #[serde(rename(deserialize = "AplicaAH"), deserialize_with = "si_no")]
+    pub aplica_ah: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct ArchivoViaIngreso {
+    filas: Vec<ViaIngreso>,
+}
+
+/// Las catorce vías de ingreso, ordenadas por código.
+pub fn vias_ingreso() -> &'static [ViaIngreso] {
+    static CACHE: OnceLock<Vec<ViaIngreso>> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        let mut filas = serde_json::from_str::<ArchivoViaIngreso>(VIA_INGRESO_JSON)
+            .expect("el maestro va empotrado y las pruebas lo validan")
+            .filas;
+        filas.sort_by(|a, b| a.codigo.cmp(&b.codigo));
+        filas
+    })
+}
+
+/// Si el código existe y aplica al archivo de hospitalización.
+pub fn via_ingreso_de_hospitalizacion_existe(codigo: &str) -> bool {
+    vias_ingreso()
+        .iter()
+        .any(|v| v.codigo == codigo && v.aplica_ah)
+}
+
+/// El código de vía de ingreso que corresponde a cómo entró el paciente.
+///
+/// | vía del sistema | código | nombre en el catálogo |
+/// |---|---|---|
+/// | `URGENCIAS`  | 03 | DERIVADO DE URGENCIAS |
+/// | `PROGRAMADA` | 02 | DERIVADO DE CONSULTA EXTERNA |
+/// | `REMISION`   | 13 | REFERIDO DE OTRA INSTITUCION |
+///
+/// **El mapa del Python tenía las dos primeras INTERCAMBIADAS** —`URGENCIAS`
+/// daba el 02 y `PROGRAMADA` el 03—, así que quien entró por urgencias se
+/// reportaba como programado y al revés. Y `REMISION` daba el `04` («derivado de
+/// hospitalización»), que el catálogo marca como **no aplicable al AH**: el MUV
+/// lo rechaza.
+///
+/// `PROGRAMADA` no tiene nombre propio en el catálogo; se traduce al 02 porque
+/// un ingreso programado se origina en la consulta externa. Es una derivación,
+/// no un parecido: las otras trece filas nombran orígenes que este sistema no
+/// distingue (sala de partos, telemedicina, jornada de salud).
+pub fn via_ingreso_de_hospitalizacion(via: Option<&str>) -> Option<&'static str> {
+    match via? {
+        "URGENCIAS" => Some("03"),
+        "PROGRAMADA" => Some("02"),
+        "REMISION" => Some("13"),
+        _ => None,
+    }
+}
+
 /// Las finalidades que el maestro marca como aplicables al archivo de consultas.
 pub fn finalidades_de_consulta() -> Vec<&'static str> {
     cargadas()
@@ -545,6 +642,65 @@ mod pruebas {
         assert!(tres.aplica_au);
         assert!(!tres.aplica_ah, "el 03 no aplica a hospitalización");
         assert!(!condicion_destino_de_urgencias_existe("99"));
+    }
+
+    #[test]
+    fn la_via_de_ingreso_no_esta_intercambiada() {
+        // El mapa del Python daba el 02 a URGENCIAS y el 03 a PROGRAMADA, que es
+        // exactamente al revés. Los nombres se leen del ARTEFACTO.
+        let nombre_de = |c: &str| {
+            vias_ingreso()
+                .iter()
+                .find(|x| x.codigo == c)
+                .map(|x| x.nombre.as_str())
+                .unwrap_or("(no existe)")
+        };
+        assert_eq!(via_ingreso_de_hospitalizacion(Some("URGENCIAS")), Some("03"));
+        assert!(nombre_de("03").contains("URGENCIAS"), "{}", nombre_de("03"));
+        assert_eq!(via_ingreso_de_hospitalizacion(Some("PROGRAMADA")), Some("02"));
+        assert!(nombre_de("02").contains("CONSULTA EXTERNA"), "{}", nombre_de("02"));
+    }
+
+    #[test]
+    fn ninguna_via_ni_condicion_del_ah_usa_un_codigo_que_no_le_aplica() {
+        // El Python emitía el 04 de vía («derivado de hospitalización») y el 03
+        // de condición («derivado a otro servicio»), y el catálogo marca los dos
+        // como NO aplicables al AH. El MUV rechaza el archivo por eso.
+        for via in ["URGENCIAS", "PROGRAMADA", "REMISION"] {
+            let c = via_ingreso_de_hospitalizacion(Some(via)).expect(via);
+            assert!(
+                via_ingreso_de_hospitalizacion_existe(c),
+                "«{via}» da el {c}, que no aplica al AH"
+            );
+        }
+        for estado in ["ALTA_MEDICA", "ALTA_VOLUNTARIA", "REMISION", "DEFUNCION"] {
+            let c = condicion_destino_de_hospitalizacion(Some(estado)).expect(estado);
+            assert!(
+                condicion_destino_de_hospitalizacion_existe(c),
+                "«{estado}» da el {c}, que no aplica al AH"
+            );
+        }
+        // Y el caso rojo: los dos códigos que el Python usaba NO aplican.
+        assert!(!via_ingreso_de_hospitalizacion_existe("04"));
+        assert!(!condicion_destino_de_hospitalizacion_existe("03"));
+    }
+
+    #[test]
+    fn el_muerto_del_ah_tambien_es_el_02() {
+        assert_eq!(condicion_destino_de_hospitalizacion(Some("DEFUNCION")), Some("02"));
+        assert_eq!(condicion_destino_de_hospitalizacion(Some("REMISION")), Some("04"));
+        // ACTIVA no se traduce: una hospitalización abierta no se reporta, y el
+        // Python le daba un «00» que no existe en ninguna tabla.
+        assert_eq!(condicion_destino_de_hospitalizacion(Some("ACTIVA")), None);
+        assert!(!condiciones_destino().iter().any(|c| c.codigo == "00"));
+    }
+
+    #[test]
+    fn el_catalogo_de_vias_esta_completo_y_discrimina_por_archivo() {
+        assert_eq!(vias_ingreso().len(), 14);
+        let uno = vias_ingreso().iter().find(|v| v.codigo == "01").unwrap();
+        assert!(uno.aplica_ap);
+        assert!(!uno.aplica_ah, "demanda espontánea no aplica a hospitalización");
     }
 
     #[test]

@@ -13,23 +13,19 @@
 //!    pedirlo (`permitir_supuestos=true`), y lo supuesto viaja EN la respuesta:
 //!    quien lo firma tiene que ver qué lleva inventado antes de firmarlo, no
 //!    encontrarlo en un log aparte.
-//! 3. **Aquí existen el AC, el AP, el AM y el AU; falta el AH.** Un archivo
-//!    sin el documento de hospitalización **tiene la forma de un RIPS
-//!    completo**: se puede subir, el validador lo acepta, y lo que falta no
-//!    aparece por ningún lado — es sub-reporte, que en una factura es dinero que
-//!    no se cobra, y ante la Supersalud, información incompleta.
+//! 3. **Están los cinco.** El AC, el AP, el AM, el AU y el AH se generan aquí
+//!    desde el 2026-08-04, así que `sin_portar` va vacío y **el 409 se quitó**:
+//!    existía para no entregar un archivo al que le faltaban documentos, y ya no
+//!    falta ninguno.
 //!
-//!    Por eso el endpoint **se sigue negando por defecto** (409) y hay que
-//!    pedirle `parcial=true`, igual que con los supuestos: el camino permisivo
-//!    existe, lo pide el llamante, y la respuesta dice a gritos qué falta.
-//!    Mientras tanto el RIPS de verdad se genera con el Python, que es el
-//!    producto vivo.
+//!    Lo que NO significa es que el archivo esté completo: significa que si algo
+//!    falta, lo dice el recolector con el registro y el campo. La puerta que
+//!    sigue en pie es `permitir_supuestos`, que es la que de verdad separa «este
+//!    archivo dice lo que hay» de «este archivo rellena lo que no hay».
 //!
-//!    Un consultorio sin hospitalización tendría el archivo completo con estos
-//!    cuatro, y aun así se le exige pedirlo: el binario no sabe qué servicios
-//!    habilitó el prestador, y suponer que no hospitaliza porque no hay filas es
-//!    la clase de negativo que no vale (una tabla vacía y un módulo sin portar se
-//!    ven igual).
+//!    Sigue faltando el **FEV-RIPS**: el documento ÚNICO que funde los cinco en
+//!    uno, que es lo que se le sube al validador para facturar. Eso es una
+//!    transformación sobre estos cinco, no un sexto generador.
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -39,13 +35,20 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 use medico_dominio::rips::documentos::Documento;
-use medico_dominio::rips::{documento_ac, documento_am, documento_ap, documento_au, Recolector};
+use medico_dominio::rips::{
+    documento_ac, documento_ah, documento_am, documento_ap, documento_au, Recolector,
+};
 
 use crate::auth::{Autorizado, Estado, GenerarRips};
 
-/// Los documentos que este binario todavía NO emite. Se nombran en la respuesta
-/// y en el error: una lista vacía sería la manera de que nadie se enterara.
-const SIN_PORTAR: [&str; 1] = ["AH"];
+/// Los documentos que este binario todavía NO emite.
+///
+/// **Está vacía desde el 2026-08-04**, y por eso el 409 desapareció: los cinco
+/// archivos de la 948 se generan aquí. Se conserva la constante —y el campo en
+/// la respuesta— porque el día que la norma añada uno, la lista vuelve a
+/// llenarse y todo lo que hay montado encima sigue funcionando. Una lista vacía
+/// dice «no falta nada», que es distinto de no decir nada.
+const SIN_PORTAR: [&str; 0] = [];
 
 #[derive(Debug, Deserialize)]
 pub struct Periodo {
@@ -54,14 +57,17 @@ pub struct Periodo {
     /// Genera aunque falten datos obligatorios, reportando lo supuesto.
     #[serde(default)]
     pub permitir_supuestos: bool,
-    /// Acepta un archivo con SOLO el AC. Ver la cabecera del módulo.
+    /// Se conserva por compatibilidad: **ya no hace falta**, porque no falta
+    /// ningún documento. Aceptarlo y no exigirlo es lo que evita romperle la
+    /// llamada a quien la tenía escrita; rechazarlo sería un error por hacer
+    /// bien las cosas.
     #[serde(default)]
     pub parcial: bool,
 }
 
 #[derive(Debug, Serialize)]
 pub struct Salida {
-    /// Los documentos generados, por nombre: hoy `AC`, `AP`, `AM` y `AU`.
+    /// Los cinco documentos de la Resolución 948.
     pub archivos: Archivos,
     /// Cuántos valores se supusieron, por etiqueta. Vacío si no se supuso nada.
     pub supuestos: std::collections::BTreeMap<String, usize>,
@@ -79,6 +85,8 @@ pub struct Archivos {
     pub am: Documento,
     #[serde(rename = "AU")]
     pub au: Documento,
+    #[serde(rename = "AH")]
+    pub ah: Documento,
 }
 
 #[derive(Debug, Serialize)]
@@ -132,21 +140,11 @@ pub async fn generar(
         ));
     }
 
-    if !p.parcial {
-        return Err(problema(
-            StatusCode::CONFLICT,
-            &format!(
-                "este binario emite el AC, el AP, el AM y el AU; {} todavía no \
-                 está portado. Un archivo sin él parece completo y no lo está: las \
-                 atenciones que falten no se cobran y nadie las echa de menos. \
-                 Genere el RIPS con el sistema Python, o pida `parcial=true` si \
-                 lo que quiere es revisar lo que sí sale.",
-                SIN_PORTAR.join(", ")
-            ),
-            vec![],
-            SIN_PORTAR.to_vec(),
-        ));
-    }
+    // Aquí estaba la puerta del 409. Se quita porque su motivo se acabó: se
+    // negaba a entregar un archivo al que le faltaban documentos, y ya no falta
+    // ninguno. Dejarla sería pedir una bandera que no significa nada, y una
+    // bandera que no significa nada se pone siempre sin leerla — que es como
+    // deja de proteger la siguiente que sí importe (`permitir_supuestos`).
 
     let institucion = medico_datos::rips::institucion_que_reporta(&e.pool, institucion_id)
         .await
@@ -186,6 +184,11 @@ pub async fn generar(
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
             .map_err(dato_corrupto)?;
+    let hospitalizaciones =
+        medico_datos::rips::hospitalizaciones_del_periodo(&e.pool, institucion_id, p.inicio, p.fin)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .map_err(dato_corrupto)?;
 
     // Un solo recolector para los tres documentos: quien cierra el mes necesita
     // UNA lista de lo que hay que corregir, no tres. Cada falta ya dice de qué
@@ -199,6 +202,7 @@ pub async fn generar(
     let ap = documento_ap(&institucion, &procedimientos, &mut rec);
     let am = documento_am(&institucion, &medicamentos, &mut rec);
     let au = documento_au(&institucion, &urgencias, &mut rec);
+    let ah = documento_ah(&institucion, &hospitalizaciones, &mut rec);
 
     // El resumen se saca ANTES de cerrar, porque `cerrar` consume el recolector.
     let supuestos = resumen(&rec);
@@ -244,11 +248,15 @@ pub async fn generar(
         .chain(procedimientos.iter().map(|x| x.paciente.id))
         .chain(medicamentos.iter().map(|x| x.paciente.id))
         .chain(urgencias.iter().map(|x| x.paciente.id))
+        .chain(hospitalizaciones.iter().map(|x| x.paciente.id))
         .collect();
     pacientes.sort_unstable();
     pacientes.dedup();
-    let registros =
-        consultas.len() + procedimientos.len() + medicamentos.len() + urgencias.len();
+    let registros = consultas.len()
+        + procedimientos.len()
+        + medicamentos.len()
+        + urgencias.len()
+        + hospitalizaciones.len();
     crate::rutas::registrar_coleccion(
         &e,
         &u,
@@ -261,7 +269,7 @@ pub async fn generar(
     .await;
 
     Ok(Json(Salida {
-        archivos: Archivos { ac, ap, am, au },
+        archivos: Archivos { ac, ap, am, au, ah },
         supuestos,
         sin_portar: SIN_PORTAR.to_vec(),
     }))

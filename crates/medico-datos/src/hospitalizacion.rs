@@ -68,6 +68,11 @@ pub struct Ingreso {
     pub diagnostico_ingreso: Option<String>,
     pub motivo_ingreso: Option<String>,
     pub observaciones_ingreso: Option<String>,
+    /// Causa o motivo de la atención (tabla del MUV, 21 a 49). Se pregunta al
+    /// ingresar, que es cuando se sabe. El generador la llevaba QUEMADA en «13»
+    /// —enfermedad general—, y con eso ninguna hospitalización por accidente de
+    /// tránsito se cobraba al SOAT.
+    pub causa_motivo: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -75,6 +80,10 @@ pub struct Egreso {
     pub tipo_egreso: String,
     pub diagnostico_egreso: Option<String>,
     pub resumen_clinico: Option<String>,
+    /// Causa básica de muerte. La 948 la exige cuando el egreso es `DEFUNCION`,
+    /// y no se deduce del estado: se registra. Sin este campo, una defunción
+    /// hospitalaria salía en el RIPS sin su causa.
+    pub diagnostico_causa_muerte: Option<String>,
 }
 
 const SELECT_ENRIQUECIDO: &str = "\
@@ -230,8 +239,8 @@ pub async fn ingresar(
     let r = sqlx::query(
         "INSERT INTO hospitalizacion \
          (paciente_id, cama_id, medico_tratante_id, fecha_ingreso, via_ingreso, estado, \
-          diagnostico_ingreso, motivo_ingreso, observaciones_ingreso) \
-         VALUES (?,?,?,?,?, 'ACTIVA', ?,?,?)",
+          diagnostico_ingreso, motivo_ingreso, observaciones_ingreso, causa_motivo) \
+         VALUES (?,?,?,?,?, 'ACTIVA', ?,?,?,?)",
     )
     .bind(i.paciente_id)
     .bind(i.cama_id)
@@ -241,6 +250,7 @@ pub async fn ingresar(
     .bind(&i.diagnostico_ingreso)
     .bind(&i.motivo_ingreso)
     .bind(&i.observaciones_ingreso)
+    .bind(&i.causa_motivo)
     .execute(&mut *tx)
     .await;
     let id = match r {
@@ -297,13 +307,18 @@ pub async fn egreso(
 
     let fecha = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
     sqlx::query(
+        // `COALESCE` en la causa de muerte por lo mismo que en urgencias: lo que
+        // el cuerpo omite no borra lo que ya hubiera.
         "UPDATE hospitalizacion SET estado = ?, fecha_egreso = ?, diagnostico_egreso = ?, \
-         resumen_clinico = ? WHERE id = ? AND estado = 'ACTIVA'",
+         resumen_clinico = ?, \
+         diagnostico_causa_muerte = COALESCE(?, diagnostico_causa_muerte) \
+         WHERE id = ? AND estado = 'ACTIVA'",
     )
     .bind(&e.tipo_egreso)
     .bind(&fecha)
     .bind(&e.diagnostico_egreso)
     .bind(&e.resumen_clinico)
+    .bind(&e.diagnostico_causa_muerte)
     .bind(id)
     .execute(&mut *tx)
     .await?;
@@ -337,6 +352,7 @@ mod pruebas {
 
     fn ingreso(paciente_id: i64, cama_id: i64) -> Ingreso {
         Ingreso {
+            causa_motivo: None,
             paciente_id,
             cama_id,
             medico_id: 5,
@@ -422,11 +438,11 @@ mod pruebas {
     async fn el_egreso_libera_la_cama_y_saca_de_los_activos() {
         let pool = base().await;
         let id = ingresar(&pool, Ambito::institucion(1), &ingreso(10, 1)).await.unwrap().unwrap();
-        let e = Egreso { tipo_egreso: "ALTA_MEDICA".into(), diagnostico_egreso: Some("J18.9".into()), resumen_clinico: Some("mejoró".into()) };
+        let e = Egreso { tipo_egreso: "ALTA_MEDICA".into(), diagnostico_egreso: Some("J18.9".into()), resumen_clinico: Some("mejoró".into()) , diagnostico_causa_muerte: None };
         // Un ámbito ajeno no egresa lo que no es suyo.
         assert!(!egreso(&pool, Ambito::institucion(2), id, &e).await.unwrap());
         // Tipo de egreso inventado.
-        let malo = Egreso { tipo_egreso: "SE_FUE".into(), diagnostico_egreso: None, resumen_clinico: None };
+        let malo = Egreso { tipo_egreso: "SE_FUE".into(), diagnostico_egreso: None, resumen_clinico: None , diagnostico_causa_muerte: None };
         assert!(!egreso(&pool, Ambito::institucion(1), id, &malo).await.unwrap());
         // El dueño sí; libera la cama y sale de los ACTIVA.
         assert!(egreso(&pool, Ambito::institucion(1), id, &e).await.unwrap());

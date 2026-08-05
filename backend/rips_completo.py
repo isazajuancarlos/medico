@@ -1068,20 +1068,43 @@ def generar_archivo_ah(
         usuarios_map: Dict[int, Dict] = {}
         consecutivo_usuario = 1
 
-        # Vía de ingreso → código RIPS
+        # Vía de ingreso → `Rips.REFs_ViaIngresoServicioSalud`
+        #
+        # ESTABA MAL, y de tres maneras (medido 2026-08-04 contra el maestro):
+        #
+        #   * `URGENCIAS` daba el 02, que es DERIVADO DE CONSULTA EXTERNA, y
+        #     `PROGRAMADA` el 03, que es DERIVADO DE URGENCIAS. Los dos
+        #     **intercambiados**: quien entró por urgencias se reportaba como
+        #     ingreso programado y al revés.
+        #   * `REMISION` daba el 04 (DERIVADO DE HOSPITALIZACION), que el
+        #     catálogo marca `AplicaAH = NO`. El MUV rechaza el archivo por eso.
+        #
+        # Y a diferencia del mapa del AU, aquí las claves SÍ casaban con lo que
+        # guarda el modelo, así que estos códigos se emitían de verdad.
+        #
+        # `PROGRAMADA` no tiene nombre propio en el catálogo: se traduce al 02
+        # porque un ingreso programado se origina en la consulta externa. Es una
+        # derivación, no un parecido — las otras trece filas nombran orígenes que
+        # este sistema no distingue (sala de partos, telemedicina, jornada).
         via_map = {
-            "URGENCIAS": "02",
-            "PROGRAMADA": "03",
-            "REMISION": "04",
+            "URGENCIAS": "03",   # DERIVADO DE URGENCIAS
+            "PROGRAMADA": "02",  # DERIVADO DE CONSULTA EXTERNA
+            "REMISION": "13",    # REFERIDO DE OTRA INSTITUCION
         }
 
-        # Estado de egreso → condición destino RIPS
+        # Estado de egreso → `Rips.REFs_CondicionDestino`
+        #
+        # También estaba mal: `DEFUNCION` daba el 04 —REFERIDO A OTRA
+        # INSTITUCION—, o sea **una muerte reportada como un traslado**, igual
+        # que en el AU; y `REMISION` daba el 03, que no aplica al AH.
+        #
+        # `ACTIVA` sale del mapa: llevaba un "00" que no existe en ninguna tabla,
+        # y esas filas ya se descartan doce líneas más abajo por no tener egreso.
         estado_egreso_map = {
-            "ALTA_MEDICA": "01",
-            "ALTA_VOLUNTARIA": "01",
-            "REMISION": "03",
-            "DEFUNCION": "04",
-            "ACTIVA": "00",  # Aún hospitalizado (no debería reportarse)
+            "ALTA_MEDICA": "01",      # PACIENTE CON DESTINO A SU DOMICILIO
+            "ALTA_VOLUNTARIA": "01",  # PACIENTE CON DESTINO A SU DOMICILIO
+            "DEFUNCION": "02",        # PACIENTE MUERTO
+            "REMISION": "04",         # REFERIDO A OTRA INSTITUCION
         }
 
         for h in hospitalizaciones:

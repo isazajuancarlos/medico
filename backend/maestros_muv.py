@@ -136,6 +136,16 @@ def causas_motivo() -> list[dict]:
     return [f for f in cargar("causa_motivo")["filas"]]
 
 
+def vias_ingreso() -> list[dict]:
+    """Vía de ingreso al servicio de salud (AP y AH).
+
+    Trae la columna `AplicaAH`, y la columna importa: el `04` («derivado de
+    hospitalización») vale para procedimientos y **no** para hospitalización, y
+    el generador del AH lo emitía ahí.
+    """
+    return [f for f in cargar("via_ingreso")["filas"]]
+
+
 def condiciones_destino() -> list[dict]:
     """Condición y destino del usuario al egreso (AU, AH y AN).
 
