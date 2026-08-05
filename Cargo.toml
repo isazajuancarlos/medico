@@ -40,7 +40,14 @@ chrono-tz = "0.10"
 # código —`git diff 2ffe134 d786d1c -- src Cargo.toml` sale vacío— pero un
 # árbol SIN LICENSE: se traía la librería sin el texto de la AGPL que la
 # ampara. Se mueve por eso, no por funcionalidad.
-guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "d786d1c394ddc816f6959c12696ec2c6742acb28" }
+#
+# 2026-08-05: sube a `23395f3` (9 commits), el mismo rev que fijan tunjo e
+# informes — un solo árbol de guaca en todo el universo. Trae los cinco vectores
+# fijos de compatibilidad y el salto de guaca a quipu 0.11. medico NO depende de
+# quipu directamente, así que aquí basta mover el rev; el control se corre igual
+# —`grep -c '^name = "quipu"$' Cargo.lock` tiene que dar 1— porque «no debería
+# pasar» no es una medición.
+guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "23395f3587e0cb6a88b123a732dfdf9ecbe1bc0f" }
 
 [profile.release]
 lto = true
