@@ -41,7 +41,7 @@ use medico_dominio::facturacion::EstadoFactura;
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 
-use crate::filtro_ambito;
+use crate::{filtro_ambito, hoy};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos que salen
@@ -523,10 +523,6 @@ pub async fn stats(pool: &crate::Pool, ambito: Ambito) -> Result<Stats, sqlx::Er
 // ─────────────────────────────────────────────────────────────────────────────
 // Escrituras
 // ─────────────────────────────────────────────────────────────────────────────
-
-fn hoy() -> String {
-    medico_dominio::zona::hoy().to_string()
-}
 
 /// El siguiente `FAC-{año}-{n}` **de esta institución**.
 ///

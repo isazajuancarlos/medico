@@ -32,6 +32,35 @@ pub mod usuario;
 
 pub type Pool = sqlx::SqlitePool;
 
+/// Qué día es HOY para el prestador, en `YYYY-MM-DD`.
+///
+/// **No es `Utc::now().date_naive()`**, y la diferencia no es cosmética: entre
+/// las 19:00 y la medianoche de Bogotá (UTC−5) esa expresión devuelve el día
+/// SIGUIENTE. Todo lo que se fecha con ella en la última franja de la tarde
+/// —justo cuando cierra una farmacia— queda un día adelantado.
+///
+/// # Por qué existía el fallo, que es la parte que interesa
+///
+/// El 2026-08-03 se barrió el proyecto por este mismo motivo y se arreglaron
+/// cuatro sitios. Aquel barrido buscó **`Local`**, y estos dos usaban **`Utc`**:
+/// la pareja del caso ruidoso no se miró, así que sobrevivieron
+/// `inventario::hoy()` y `ambulancia::hoy()` (directiva 23 — un falso negativo
+/// que comparte causa con el ruidoso y no se queja nunca).
+///
+/// En el portátil de un consultorio, con el reloj en hora local, el error no
+/// aparece. En el VPS de la demostración, que corre en `Etc/UTC`, aparece todos
+/// los días.
+///
+/// # Lo que SÍ debe seguir usando `Utc::now()`
+///
+/// Un **instante** que se guarda (`to_rfc3339_opts`) va en UTC y así está bien:
+/// es un punto en la línea del tiempo, no un día del calendario, y
+/// [`medico_dominio::zona::desde_utc`] existe justamente para leerlo después en
+/// la zona del prestador. Lo que no se puede es derivar una FECHA de él.
+pub fn hoy() -> String {
+    medico_dominio::zona::hoy().to_string()
+}
+
 /// El trozo de `WHERE` que acota una consulta al ámbito de quien pregunta, y el
 /// valor que hay que enlazar (o `None` si no hay ninguno).
 ///
@@ -107,4 +136,86 @@ pub async fn abrir(url: &str) -> Result<Pool, sqlx::Error> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
     Ok(pool)
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// `hoy()` es la del PRESTADOR, no la del reloj de la máquina.
+    ///
+    /// Hoy es tautológico —una línea que delega— y esa es la intención: pinta la
+    /// delegación para que quitarla se note. El mecanismo de verdad lo prueba
+    /// `medico_dominio::zona`, con instantes FIJOS y no con la hora actual
+    /// (`la_atencion_de_la_noche_cambia_de_dia_al_guardarse`).
+    #[test]
+    fn hoy_es_la_fecha_del_prestador() {
+        assert_eq!(hoy(), medico_dominio::zona::hoy().to_string());
+    }
+
+    /// GUARDIÁN: nadie vuelve a derivar una FECHA de `Utc`.
+    ///
+    /// Existe porque el barrido del 2026-08-03 buscó `Local` y estos dos usaban
+    /// `Utc`, así que sobrevivieron sin que nada fallara —`inventario::hoy()` y
+    /// `ambulancia::hoy()`, encontrados el 2026-08-05—. Un barrido a mano se
+    /// hace una vez; esto se ejecuta en cada corrida.
+    ///
+    /// **Discrimina, y esa es la mitad que importa**: `Utc::now()` para guardar
+    /// un INSTANTE (`to_rfc3339_opts`) es correcto y abunda en este crate — es
+    /// un punto en la línea del tiempo, no un día del calendario—. El guardián
+    /// solo caza `.date_naive()`, y el control de abajo comprueba que el patrón
+    /// permitido sigue estando presente: si algún día no lo estuviera, este
+    /// guardián estaría midiendo un árbol vacío y diría que sí a todo.
+    #[test]
+    fn ninguna_fecha_se_deriva_de_utc() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut culpables = Vec::new();
+        let mut instantes = 0usize;
+        let mut leidos = 0usize;
+
+        for entrada in std::fs::read_dir(&dir).expect("no se pudo leer src/") {
+            let ruta = entrada.expect("entrada ilegible").path();
+            if ruta.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let texto = std::fs::read_to_string(&ruta).expect("archivo ilegible");
+            leidos += 1;
+            for (n, linea) in texto.lines().enumerate() {
+                // Los comentarios NO cuentan. La primera versión de este
+                // guardián se cazó a sí mismo dos veces —su propio doc de
+                // `hoy()` y la línea de abajo— y arreglarlo caso a caso habría
+                // sido excluir este archivo, que es justo como un guardián deja
+                // de vigilarse. Se arregla en la REGLA: se mira código.
+                let limpia = linea.trim_start();
+                if limpia.starts_with("//") || limpia.starts_with("*") {
+                    continue;
+                }
+                // La aguja va PARTIDA a propósito, para que no exista literal en
+                // el código de su propio guardián. Escribirla entera es la otra
+                // mitad del mismo falso positivo.
+                let aguja = concat!("Utc::now()", ".date_naive()");
+                if linea.contains(aguja) {
+                    culpables.push(format!("{}:{}", ruta.display(), n + 1));
+                }
+                // El control: guardar un INSTANTE en UTC, que sí está bien.
+                if linea.contains("Utc::now()") && linea.contains("to_rfc3339") {
+                    instantes += 1;
+                }
+            }
+        }
+
+        assert!(leidos > 10, "solo se leyeron {leidos} archivos: el guardián no está mirando el árbol");
+        assert!(
+            instantes > 0,
+            "CONTROL EN ROJO: no se encontró ni un `Utc::now().to_rfc3339…`. \
+             O el crate dejó de guardar instantes, o este guardián no está \
+             leyendo lo que cree — en los dos casos su verde no significa nada."
+        );
+        assert!(
+            culpables.is_empty(),
+            "una fecha derivada de UTC en {culpables:?} — usa `medico_datos::hoy()`, \
+             que respeta la zona del prestador. Guardar un instante con \
+             `Utc::now().to_rfc3339_opts(…)` sí es correcto y no lo caza esto."
+        );
+    }
 }

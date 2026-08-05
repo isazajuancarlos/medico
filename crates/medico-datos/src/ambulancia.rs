@@ -190,15 +190,12 @@ pub struct FiltrosTraslado {
     pub paciente_id: Option<i64>,
 }
 
-use crate::filtro_ambito;
+use crate::{filtro_ambito, hoy};
 
 fn ahora() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)
 }
 
-pub fn hoy() -> String {
-    Utc::now().date_naive().to_string()
-}
 
 fn limite_aviso(hoy: &str) -> String {
     match chrono::NaiveDate::parse_from_str(hoy, "%Y-%m-%d") {

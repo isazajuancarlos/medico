@@ -3227,14 +3227,14 @@ async fn amb_listar(
     Autenticado(u): Autenticado,
     Query(f): Query<ambulancia::FiltrosAmbulancia>,
 ) -> Response {
-    match ambulancia::listar(&e.pool, u.ambito(), &f, &ambulancia::hoy()).await {
+    match ambulancia::listar(&e.pool, u.ambito(), &f, &medico_datos::hoy()).await {
         Ok(a) => Json(a).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
 async fn amb_obtener(State(e): State<Estado>, Autenticado(u): Autenticado, Path(id): Path<i64>) -> Response {
-    match ambulancia::obtener(&e.pool, u.ambito(), id, &ambulancia::hoy()).await {
+    match ambulancia::obtener(&e.pool, u.ambito(), id, &medico_datos::hoy()).await {
         Ok(Some(a)) => Json(a).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -3255,7 +3255,7 @@ async fn amb_crear(
                 .into(),
         );
     };
-    match ambulancia::crear(&e.pool, u.ambito(), institucion_id, &a, &ambulancia::hoy()).await {
+    match ambulancia::crear(&e.pool, u.ambito(), institucion_id, &a, &medico_datos::hoy()).await {
         Ok(r) => respuesta_ambulancia(r, true),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -3268,7 +3268,7 @@ async fn amb_actualizar(
     Json(cambios): Json<ambulancia::AmbulanciaEdicion>,
 ) -> Response {
     let u = autorizado.0;
-    match ambulancia::actualizar(&e.pool, u.ambito(), id, &cambios, &ambulancia::hoy()).await {
+    match ambulancia::actualizar(&e.pool, u.ambito(), id, &cambios, &medico_datos::hoy()).await {
         Ok(r) => respuesta_ambulancia(r, false),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -3324,7 +3324,7 @@ async fn amb_despachar(
 ) -> Response {
     use ambulancia::ResultadoDespacho as R;
     let u = autorizado.0;
-    match ambulancia::despachar(&e.pool, u.ambito(), u.id, &t, &ambulancia::hoy()).await {
+    match ambulancia::despachar(&e.pool, u.ambito(), u.id, &t, &medico_datos::hoy()).await {
         Ok(R::Hecho(t)) => (StatusCode::CREATED, Json(*t)).into_response(),
         Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
         Ok(R::Ocupada { traslado_id }) => detalle(
@@ -3409,7 +3409,7 @@ fn detalle(codigo: StatusCode, texto: String) -> Response {
 }
 
 async fn farm_stats(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
-    match inventario::stats(&e.pool, u.ambito(), &inventario::hoy()).await {
+    match inventario::stats(&e.pool, u.ambito(), &medico_datos::hoy()).await {
         Ok(s) => Json(s).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -3420,7 +3420,7 @@ async fn farm_listar(
     Autenticado(u): Autenticado,
     Query(f): Query<inventario::Filtros>,
 ) -> Response {
-    match inventario::listar(&e.pool, u.ambito(), &f, &inventario::hoy()).await {
+    match inventario::listar(&e.pool, u.ambito(), &f, &medico_datos::hoy()).await {
         Ok(items) => Json(items).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -3446,7 +3446,7 @@ async fn farm_crear(
         );
     };
     match inventario::crear(&e.pool, u.ambito(), institucion_id, &i).await {
-        Ok(Some(id)) => match inventario::obtener(&e.pool, u.ambito(), id, &inventario::hoy()).await {
+        Ok(Some(id)) => match inventario::obtener(&e.pool, u.ambito(), id, &medico_datos::hoy()).await {
             Ok(Some(item)) => (StatusCode::CREATED, Json(item)).into_response(),
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
@@ -3470,7 +3470,7 @@ async fn farm_actualizar(
 ) -> Response {
     let u = autorizado.0;
     match inventario::actualizar(&e.pool, u.ambito(), id, &cambios).await {
-        Ok(true) => match inventario::obtener(&e.pool, u.ambito(), id, &inventario::hoy()).await {
+        Ok(true) => match inventario::obtener(&e.pool, u.ambito(), id, &medico_datos::hoy()).await {
             Ok(Some(item)) => Json(item).into_response(),
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
@@ -3507,7 +3507,7 @@ async fn farm_entrada(
     Json(entrada): Json<inventario::Entrada>,
 ) -> Response {
     let u = autorizado.0;
-    match inventario::entrada(&e.pool, u.ambito(), id, u.id, &entrada, &inventario::hoy()).await {
+    match inventario::entrada(&e.pool, u.ambito(), id, u.id, &entrada, &medico_datos::hoy()).await {
         Ok(inventario::ResultadoEntrada::Hecha(item)) => Json(*item).into_response(),
         Ok(inventario::ResultadoEntrada::NoExiste) => StatusCode::NOT_FOUND.into_response(),
         Ok(inventario::ResultadoEntrada::CantidadInvalida) => detalle(
@@ -3663,7 +3663,7 @@ async fn farm_dispensar(
 ) -> Response {
     use inventario::ResultadoDispensa as R;
     let u = autorizado.0;
-    match inventario::dispensar(&e.pool, u.ambito(), u.id, &d, &inventario::hoy()).await {
+    match inventario::dispensar(&e.pool, u.ambito(), u.id, &d, &medico_datos::hoy()).await {
         Ok(R::Hecha(disp)) => (StatusCode::CREATED, Json(*disp)).into_response(),
         Ok(R::NoExiste) => StatusCode::NOT_FOUND.into_response(),
         Ok(R::CantidadInvalida) => detalle(
