@@ -58,6 +58,11 @@ pub struct TriageNuevo {
     pub triage: String,
     pub motivo_consulta: String,
     pub signos_vitales: Option<String>,
+    /// Causa o motivo de la atención (tabla del MUV, 21 a 49). Se pregunta al
+    /// llegar, que es cuando se sabe: un accidente de trabajo, uno de tránsito y
+    /// una agresión llegan los tres por urgencias, son causas distintas y tienen
+    /// responsables de pago distintos. Sin esto, el AU no puede llevarla.
+    pub causa_motivo: Option<String>,
 }
 
 async fn paciente_es_del_ambito(
@@ -109,8 +114,9 @@ pub async fn registrar(
     let fecha = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
     let r = sqlx::query(
         "INSERT INTO atencion_urgencias \
-         (paciente_id, triage, motivo_consulta, signos_vitales, enfermera_triage_id, fecha_ingreso) \
-         VALUES (?,?,?,?,?,?)",
+         (paciente_id, triage, motivo_consulta, signos_vitales, enfermera_triage_id, \
+          fecha_ingreso, causa_motivo) \
+         VALUES (?,?,?,?,?,?,?)",
     )
     .bind(n.paciente_id)
     .bind(&n.triage)
@@ -118,6 +124,7 @@ pub async fn registrar(
     .bind(&n.signos_vitales)
     .bind(enfermera_id)
     .bind(&fecha)
+    .bind(&n.causa_motivo)
     .execute(pool)
     .await?;
     Ok(Some(r.last_insert_rowid()))
@@ -125,13 +132,34 @@ pub async fn registrar(
 
 /// Registra el egreso de una atención abierta del ámbito. `false` si el destino
 /// no es válido, si no existe/está cerrada, o si es de otra institución.
+/// Lo que se registra al cerrar una atención de urgencias.
+///
+/// Los tres diagnósticos van juntos porque los tres los pone el MÉDICO y este
+/// módulo no tiene paso de «atender»: el egreso es el único momento en que un
+/// médico toca la fila. Cuando exista ese paso, el de ingreso se mueve allí.
+///
+/// **Sin ellos el AU no se puede completar nunca**: `codDiagnosticoPrincipal` es
+/// obligatorio y `codDiagnosticoCausaMuerte` es el que la 948 exige cuando el
+/// paciente muere. Las columnas existían desde la `0042` y no las escribía nadie
+/// — el mismo patrón que dejó P11/P12 vacío durante meses.
+#[derive(Debug, Default, Clone)]
+pub struct Egreso<'a> {
+    pub destino: &'a str,
+    pub observaciones: Option<&'a str>,
+    pub diagnostico_ingreso: Option<&'a str>,
+    pub diagnostico_egreso: Option<&'a str>,
+    /// Causa básica de muerte. La 948 la pide cuando la condición de egreso es
+    /// «paciente muerto», y por eso no se deduce del destino: se registra.
+    pub diagnostico_causa_muerte: Option<&'a str>,
+}
+
 pub async fn egreso(
     pool: &crate::Pool,
     ambito: Ambito,
     id: i64,
-    destino: &str,
-    observaciones: Option<&str>,
+    e: &Egreso<'_>,
 ) -> Result<bool, sqlx::Error> {
+    let destino = e.destino;
     if !DESTINOS.contains(&destino) {
         return Ok(false);
     }
@@ -151,13 +179,23 @@ pub async fn egreso(
         return Ok(false);
     }
     let fecha = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+    // `COALESCE` y no asignación directa: un egreso que no trae el diagnóstico
+    // de ingreso no puede BORRAR el que ya estuviera puesto. Lo que se omite se
+    // queda como está; para vaciarlo hay que mandarlo vacío a propósito.
     let r = sqlx::query(
-        "UPDATE atencion_urgencias SET destino_salida = ?, observaciones_egreso = ?, fecha_egreso = ? \
+        "UPDATE atencion_urgencias \
+         SET destino_salida = ?, observaciones_egreso = ?, fecha_egreso = ?, \
+             diagnostico_ingreso = COALESCE(?, diagnostico_ingreso), \
+             diagnostico_egreso = COALESCE(?, diagnostico_egreso), \
+             diagnostico_causa_muerte = COALESCE(?, diagnostico_causa_muerte) \
          WHERE id = ? AND destino_salida IS NULL",
     )
     .bind(destino)
-    .bind(observaciones)
+    .bind(e.observaciones)
     .bind(&fecha)
+    .bind(e.diagnostico_ingreso)
+    .bind(e.diagnostico_egreso)
+    .bind(e.diagnostico_causa_muerte)
     .bind(id)
     .execute(pool)
     .await?;
@@ -188,6 +226,7 @@ mod pruebas {
 
     fn triage(paciente_id: i64, nivel: &str) -> TriageNuevo {
         TriageNuevo {
+            causa_motivo: None,
             paciente_id,
             triage: nivel.into(),
             motivo_consulta: "dolor".into(),
@@ -231,13 +270,13 @@ mod pruebas {
         let pool = base().await;
         let id = registrar(&pool, Ambito::institucion(1), 5, &triage(10, "TRIAGE_2")).await.unwrap().unwrap();
         // Un ámbito ajeno no egresa lo que no es suyo.
-        assert!(!egreso(&pool, Ambito::institucion(2), id, "DOMICILIO", None).await.unwrap());
+        assert!(!egreso(&pool, Ambito::institucion(2), id, &Egreso { destino: "DOMICILIO", observaciones: None, ..Default::default() }).await.unwrap());
         // Destino inventado: rechazado.
-        assert!(!egreso(&pool, Ambito::institucion(1), id, "A_CASA", None).await.unwrap());
+        assert!(!egreso(&pool, Ambito::institucion(1), id, &Egreso { destino: "A_CASA", observaciones: None, ..Default::default() }).await.unwrap());
         // El dueño sí; y entonces sale de la cola.
-        assert!(egreso(&pool, Ambito::institucion(1), id, "DOMICILIO", Some("estable")).await.unwrap());
+        assert!(egreso(&pool, Ambito::institucion(1), id, &Egreso { destino: "DOMICILIO", observaciones: Some("estable"), ..Default::default() }).await.unwrap());
         assert!(cola(&pool, Ambito::institucion(1)).await.unwrap().is_empty());
         // Egresar dos veces no hace nada.
-        assert!(!egreso(&pool, Ambito::institucion(1), id, "DOMICILIO", None).await.unwrap());
+        assert!(!egreso(&pool, Ambito::institucion(1), id, &Egreso { destino: "DOMICILIO", observaciones: None, ..Default::default() }).await.unwrap());
     }
 }

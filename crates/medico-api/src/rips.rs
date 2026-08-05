@@ -13,9 +13,9 @@
 //!    pedirlo (`permitir_supuestos=true`), y lo supuesto viaja EN la respuesta:
 //!    quien lo firma tiene que ver qué lleva inventado antes de firmarlo, no
 //!    encontrarlo en un log aparte.
-//! 3. **Aquí existen el AC, el AP y el AM; faltan el AU y el AH.** Un archivo
-//!    sin los documentos de urgencias y hospitalización **tiene la forma de un
-//!    RIPS completo**: se puede subir, el validador lo acepta, y lo que falta no
+//! 3. **Aquí existen el AC, el AP, el AM y el AU; falta el AH.** Un archivo
+//!    sin el documento de hospitalización **tiene la forma de un RIPS
+//!    completo**: se puede subir, el validador lo acepta, y lo que falta no
 //!    aparece por ningún lado — es sub-reporte, que en una factura es dinero que
 //!    no se cobra, y ante la Supersalud, información incompleta.
 //!
@@ -25,11 +25,11 @@
 //!    Mientras tanto el RIPS de verdad se genera con el Python, que es el
 //!    producto vivo.
 //!
-//!    Un consultorio sin urgencias ni hospitalización tendría el archivo
-//!    completo con estos tres, y aun así se le exige pedirlo: el binario no sabe
-//!    qué servicios habilitó el prestador, y suponer que no tiene urgencias
-//!    porque no hay filas es la clase de negativo que no vale (una tabla vacía y
-//!    un módulo sin portar se ven igual).
+//!    Un consultorio sin hospitalización tendría el archivo completo con estos
+//!    cuatro, y aun así se le exige pedirlo: el binario no sabe qué servicios
+//!    habilitó el prestador, y suponer que no hospitaliza porque no hay filas es
+//!    la clase de negativo que no vale (una tabla vacía y un módulo sin portar se
+//!    ven igual).
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -39,13 +39,13 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 use medico_dominio::rips::documentos::Documento;
-use medico_dominio::rips::{documento_ac, documento_am, documento_ap, Recolector};
+use medico_dominio::rips::{documento_ac, documento_am, documento_ap, documento_au, Recolector};
 
 use crate::auth::{Autorizado, Estado, GenerarRips};
 
 /// Los documentos que este binario todavía NO emite. Se nombran en la respuesta
 /// y en el error: una lista vacía sería la manera de que nadie se enterara.
-const SIN_PORTAR: [&str; 2] = ["AU", "AH"];
+const SIN_PORTAR: [&str; 1] = ["AH"];
 
 #[derive(Debug, Deserialize)]
 pub struct Periodo {
@@ -61,7 +61,7 @@ pub struct Periodo {
 
 #[derive(Debug, Serialize)]
 pub struct Salida {
-    /// Los documentos generados, por nombre: hoy `AC`, `AP` y `AM`.
+    /// Los documentos generados, por nombre: hoy `AC`, `AP`, `AM` y `AU`.
     pub archivos: Archivos,
     /// Cuántos valores se supusieron, por etiqueta. Vacío si no se supuso nada.
     pub supuestos: std::collections::BTreeMap<String, usize>,
@@ -77,6 +77,8 @@ pub struct Archivos {
     pub ap: Documento,
     #[serde(rename = "AM")]
     pub am: Documento,
+    #[serde(rename = "AU")]
+    pub au: Documento,
 }
 
 #[derive(Debug, Serialize)]
@@ -134,8 +136,8 @@ pub async fn generar(
         return Err(problema(
             StatusCode::CONFLICT,
             &format!(
-                "este binario emite el AC, el AP y el AM; {} todavía no están \
-                 portados. Un archivo sin ellos parece completo y no lo está: las \
+                "este binario emite el AC, el AP, el AM y el AU; {} todavía no \
+                 está portado. Un archivo sin él parece completo y no lo está: las \
                  atenciones que falten no se cobran y nadie las echa de menos. \
                  Genere el RIPS con el sistema Python, o pida `parcial=true` si \
                  lo que quiere es revisar lo que sí sale.",
@@ -179,6 +181,11 @@ pub async fn generar(
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
             .map_err(dato_corrupto)?;
+    let urgencias =
+        medico_datos::rips::urgencias_del_periodo(&e.pool, institucion_id, p.inicio, p.fin)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .map_err(dato_corrupto)?;
 
     // Un solo recolector para los tres documentos: quien cierra el mes necesita
     // UNA lista de lo que hay que corregir, no tres. Cada falta ya dice de qué
@@ -191,6 +198,7 @@ pub async fn generar(
     let ac = documento_ac(&institucion, &consultas, &mut rec);
     let ap = documento_ap(&institucion, &procedimientos, &mut rec);
     let am = documento_am(&institucion, &medicamentos, &mut rec);
+    let au = documento_au(&institucion, &urgencias, &mut rec);
 
     // El resumen se saca ANTES de cerrar, porque `cerrar` consume el recolector.
     let supuestos = resumen(&rec);
@@ -235,10 +243,12 @@ pub async fn generar(
         .map(|c| c.paciente.id)
         .chain(procedimientos.iter().map(|x| x.paciente.id))
         .chain(medicamentos.iter().map(|x| x.paciente.id))
+        .chain(urgencias.iter().map(|x| x.paciente.id))
         .collect();
     pacientes.sort_unstable();
     pacientes.dedup();
-    let registros = consultas.len() + procedimientos.len() + medicamentos.len();
+    let registros =
+        consultas.len() + procedimientos.len() + medicamentos.len() + urgencias.len();
     crate::rutas::registrar_coleccion(
         &e,
         &u,
@@ -251,7 +261,7 @@ pub async fn generar(
     .await;
 
     Ok(Json(Salida {
-        archivos: Archivos { ac, ap, am },
+        archivos: Archivos { ac, ap, am, au },
         supuestos,
         sin_portar: SIN_PORTAR.to_vec(),
     }))

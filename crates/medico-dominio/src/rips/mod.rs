@@ -14,6 +14,7 @@
 //! - [`ac`] — Archivo de Consultas.
 //! - [`ap`] — Archivo de Procedimientos.
 //! - [`am`] — Archivo de Medicamentos.
+//! - [`au`] — Archivo de Urgencias.
 //!
 //! # La forma del JSON vive en los tipos
 //!
@@ -32,11 +33,13 @@
 pub mod ac;
 pub mod am;
 pub mod ap;
+pub mod au;
 pub mod documentos;
 pub mod recolector;
 
 pub use ac::{documento_ac, Consulta, FuenteConsulta};
 pub use am::{documento_am, Cantidad, FuenteMedicamento, Medicamento};
 pub use ap::{documento_ap, FuenteProcedimiento, Procedimiento};
+pub use au::{documento_au, FuenteUrgencia, Urgencia};
 pub use documentos::{FuenteInstitucion, FuentePaciente, FuenteProfesional, Servicios, Usuario};
 pub use recolector::{Dato, DatoNumero, DatosIncompletos, Donde, Falta, Recolector};

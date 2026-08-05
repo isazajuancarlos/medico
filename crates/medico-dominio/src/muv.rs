@@ -19,6 +19,7 @@ const TIPO_DOC_JSON: &str = include_str!("../datos/muv_tipo_doc.json");
 const FINALIDAD_JSON: &str = include_str!("../datos/muv_finalidad.json");
 const CAUSA_JSON: &str = include_str!("../datos/muv_causa_motivo.json");
 const UPR_JSON: &str = include_str!("../datos/muv_upr.json");
+const CONDICION_DESTINO_JSON: &str = include_str!("../datos/muv_condicion_destino.json");
 
 #[derive(Debug, Deserialize)]
 struct FilaTipoDoc {
@@ -302,6 +303,93 @@ pub fn codigo_presentacion(unidad: Option<&str>) -> Option<i64> {
     mapa.get(&n).copied()
 }
 
+// ---------------------------------------------------------------------------
+// CondicionDestino — condición y destino del usuario al egreso
+//
+// Campos R09 del AU, H12 del AH y N10 del AN. **La Resolución 948 no trae esta
+// tabla**: su ficha remite a `web.sispro.gov.co`, así que el contenedor del
+// validador es la única fuente que tenemos sin red.
+//
+// Lo que había antes en el Python era un mapa escrito a mano —`FALLECIDO: "04"`,
+// `HOSPITALIZADO: "02"`— y los dos están CRUZADOS: el 02 es «paciente muerto» y
+// el 04 «referido a otra institución». Medido el 2026-08-04: de los seis
+// destinos que el sistema guarda, cuatro no casaban con ninguna clave del mapa
+// —salían como falta, y con supuestos permitidos como «domicilio»— y los dos
+// que sí casaban emitían el código equivocado. Una muerte en urgencias se
+// reportaba como un traslado.
+// ---------------------------------------------------------------------------
+
+/// Una condición/destino de egreso del catálogo `REFs_CondicionDestino`.
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+pub struct CondicionDestino {
+    #[serde(rename(deserialize = "Codigo"))]
+    pub codigo: String,
+    #[serde(rename(deserialize = "Nombre"))]
+    pub nombre: String,
+    /// Si aplica al archivo de URGENCIAS.
+    #[serde(rename(deserialize = "AplicaAU"), deserialize_with = "si_no")]
+    pub aplica_au: bool,
+    /// Si aplica al de HOSPITALIZACIÓN. El `03` (derivado a otro servicio) no.
+    #[serde(rename(deserialize = "AplicaAH"), deserialize_with = "si_no")]
+    pub aplica_ah: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct ArchivoCondicionDestino {
+    filas: Vec<CondicionDestino>,
+}
+
+/// Las ocho condiciones/destinos de egreso, ordenadas por código.
+pub fn condiciones_destino() -> &'static [CondicionDestino] {
+    static CACHE: OnceLock<Vec<CondicionDestino>> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        let mut filas = serde_json::from_str::<ArchivoCondicionDestino>(CONDICION_DESTINO_JSON)
+            .expect("el maestro va empotrado y las pruebas lo validan")
+            .filas;
+        filas.sort_by(|a, b| a.codigo.cmp(&b.codigo));
+        filas
+    })
+}
+
+/// Si el código existe en el catálogo **y aplica al archivo de urgencias**.
+pub fn condicion_destino_de_urgencias_existe(codigo: &str) -> bool {
+    condiciones_destino()
+        .iter()
+        .any(|c| c.codigo == codigo && c.aplica_au)
+}
+
+/// El código de egreso que corresponde a un `destino_salida` de urgencias, o
+/// `None` si el catálogo no dice ninguno.
+///
+/// Los cinco que devuelven algo son equivalencias **exactas** con el nombre del
+/// catálogo, no parecidos:
+///
+/// | lo que guarda el sistema | código | nombre en el catálogo |
+/// |---|---|---|
+/// | `DOMICILIO`       | 01 | PACIENTE CON DESTINO A SU DOMICILIO |
+/// | `FALLECIDO`       | 02 | PACIENTE MUERTO |
+/// | `HOSPITALIZACION` | 03 | PACIENTE DERIVADO A OTRO SERVICIO |
+/// | `REMISION`        | 04 | REFERIDO A OTRA INSTITUCION |
+/// | `OBSERVACION`     | 08 | PACIENTE CONTINUA EN EL SERVICIO (CORTE FACTURACION) |
+///
+/// **`FUGA` devuelve `None` a propósito, y no es un olvido**: el catálogo no
+/// tiene ningún código para «el paciente se fue sin que nadie le diera salida».
+/// El más cercano por su forma sería el `01`, y el `01` afirma que el paciente
+/// salió con destino a su domicilio, o sea que hubo un alta. Elegirlo
+/// convertiría un abandono del servicio —que tiene consecuencias clínicas y
+/// legales— en una atención terminada con normalidad. Se anota como falta y se
+/// le pregunta al prestador qué reporta hoy en ese caso.
+pub fn condicion_destino_de_urgencias(destino: Option<&str>) -> Option<&'static str> {
+    match destino? {
+        "DOMICILIO" => Some("01"),
+        "FALLECIDO" => Some("02"),
+        "HOSPITALIZACION" => Some("03"),
+        "REMISION" => Some("04"),
+        "OBSERVACION" => Some("08"),
+        _ => None,
+    }
+}
+
 /// Las finalidades que el maestro marca como aplicables al archivo de consultas.
 pub fn finalidades_de_consulta() -> Vec<&'static str> {
     cargadas()
@@ -392,6 +480,71 @@ mod pruebas {
         // Positivo de control: si el JSON no se leyera, todo lo de arriba daría
         // `None` y las pruebas de «no se parece a nada» pasarían igual.
         assert_eq!(presentaciones().len(), 73);
+    }
+
+    #[test]
+    fn el_muerto_es_el_02_y_no_el_04() {
+        // El mapa escrito a mano del Python decía FALLECIDO=04 y
+        // HOSPITALIZADO=02, cruzados. Los códigos se leen del ARTEFACTO —el
+        // maestro empotrado— y no de constantes escritas aquí, que es lo que
+        // haría que la prueba se diera la razón a sí misma.
+        let nombre_de = |c: &str| {
+            condiciones_destino()
+                .iter()
+                .find(|x| x.codigo == c)
+                .map(|x| x.nombre.as_str())
+                .unwrap_or("(no existe)")
+        };
+        assert_eq!(
+            condicion_destino_de_urgencias(Some("FALLECIDO")),
+            Some("02")
+        );
+        assert!(nombre_de("02").contains("MUERTO"), "{}", nombre_de("02"));
+        assert!(
+            nombre_de("04").contains("REFERIDO A OTRA"),
+            "el 04 es un traslado, no una muerte: {}",
+            nombre_de("04")
+        );
+    }
+
+    #[test]
+    fn la_fuga_no_se_reporta_como_un_alta() {
+        // La pareja: cinco destinos tienen código exacto y uno NO tiene ninguno.
+        for (destino, codigo) in [
+            ("DOMICILIO", "01"),
+            ("FALLECIDO", "02"),
+            ("HOSPITALIZACION", "03"),
+            ("REMISION", "04"),
+            ("OBSERVACION", "08"),
+        ] {
+            assert_eq!(
+                condicion_destino_de_urgencias(Some(destino)),
+                Some(codigo),
+                "{destino}"
+            );
+            assert!(
+                condicion_destino_de_urgencias_existe(codigo),
+                "{codigo} tiene que estar en el catálogo y aplicar al AU"
+            );
+        }
+        assert_eq!(
+            condicion_destino_de_urgencias(Some("FUGA")),
+            None,
+            "el catálogo no tiene código para una fuga, y el 01 afirmaría un alta"
+        );
+        assert_eq!(condicion_destino_de_urgencias(None), None);
+        assert_eq!(condicion_destino_de_urgencias(Some("LO QUE SEA")), None);
+    }
+
+    #[test]
+    fn el_catalogo_de_condicion_destino_esta_completo_y_discrimina_por_archivo() {
+        // Positivo de control + que la columna AplicaAH se lee de verdad: el 03
+        // (derivado a otro servicio) aplica al AU y NO al AH.
+        assert_eq!(condiciones_destino().len(), 8);
+        let tres = condiciones_destino().iter().find(|c| c.codigo == "03").unwrap();
+        assert!(tres.aplica_au);
+        assert!(!tres.aplica_ah, "el 03 no aplica a hospitalización");
+        assert!(!condicion_destino_de_urgencias_existe("99"));
     }
 
     #[test]

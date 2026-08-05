@@ -27,7 +27,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use medico_dominio::zona;
 use medico_dominio::rips::{
     FuenteConsulta, FuenteInstitucion, FuenteMedicamento, FuentePaciente, FuenteProcedimiento,
-    FuenteProfesional,
+    FuenteProfesional, FuenteUrgencia,
 };
 
 /// La institución que reporta, o `None` si no existe.
@@ -78,17 +78,23 @@ fn a_texto_utc(dia: NaiveDate, h: u32, m: u32, s: u32) -> String {
 
 /// Lee el texto que guarda SQLite y lo devuelve como instante local.
 ///
+/// `registro` es cómo se llama la fila que trae esa fecha —«la historia», «la
+/// orden», «la fórmula»— y no es cosmético: el id que se pasa es el de ESA
+/// tabla. El mensaje decía «la historia» viniera de donde viniera, así que un
+/// procedimiento con la fecha corrupta mandaba a buscar una historia con el id
+/// de la orden. Es la fila equivocada, y en el mejor caso no existe.
+///
 /// Acepta las dos formas que existen en la base: la del `DEFAULT` de SQLite
 /// (`2026-03-15 09:30:00`) y la RFC 3339 que escribe el código Rust
 /// (`2026-03-15T09:30:00Z`). **Lo que no se puede leer no se sustituye por
 /// «ahora»**: se devuelve el error con el id de la fila, porque una fecha
 /// inventada en el RIPS es una atención reportada en un día en que no ocurrió.
-fn fecha_local(texto: &str, historia_id: i64) -> Result<NaiveDateTime, String> {
+fn fecha_local(texto: &str, registro: &str, id: i64) -> Result<NaiveDateTime, String> {
     if let Ok(t) = DateTime::parse_from_rfc3339(texto) {
         return Ok(t.with_timezone(&zona::zona()).naive_local());
     }
     let naive = NaiveDateTime::parse_from_str(texto, "%Y-%m-%d %H:%M:%S")
-        .map_err(|e| format!("la historia {historia_id} tiene «{texto}» como fecha: {e}"))?;
+        .map_err(|e| format!("{registro} {id} tiene «{texto}» como fecha: {e}"))?;
     Ok(zona::desde_utc(naive))
 }
 
@@ -172,7 +178,7 @@ pub async fn consultas_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let fecha = match fecha_local(&f.fecha, f.id) {
+        let fecha = match fecha_local(&f.fecha, "la historia", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
@@ -270,7 +276,7 @@ pub async fn procedimientos_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let fecha = match fecha_local(&f.fecha, f.id) {
+        let fecha = match fecha_local(&f.fecha, "la orden", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
@@ -357,7 +363,7 @@ pub async fn medicamentos_del_periodo(
 
     let mut salida = Vec::with_capacity(filas.len());
     for f in filas {
-        let fecha = match fecha_local(&f.fecha, f.id) {
+        let fecha = match fecha_local(&f.fecha, "la fórmula", f.id) {
             Ok(v) => v,
             Err(e) => return Ok(Err(e)),
         };
@@ -399,6 +405,146 @@ pub async fn medicamentos_del_periodo(
         });
     }
     Ok(Ok(salida))
+}
+
+/// Las atenciones de urgencias del periodo, de UNA institución, listas para el AU.
+///
+/// **Solo las que ya egresaron.** Una atención sin `fecha_egreso` no ha
+/// terminado y no se puede facturar; el sistema viejo le ponía la hora de la
+/// generación, o sea que un paciente todavía en urgencias se reportaba como dado
+/// de alta en el instante en que alguien pidió el archivo. Entrará en el cierre
+/// del periodo en que de verdad salga.
+///
+/// El periodo se filtra por el INGRESO, como el Python: una atención que empieza
+/// el 31 de marzo y termina el 1 de abril es del cierre de marzo.
+///
+/// `atencion_urgencias` cuelga del paciente directamente —no pasa por la
+/// historia—, así que aquí el filtro de institución es un `JOIN` menos.
+pub async fn urgencias_del_periodo(
+    pool: &crate::Pool,
+    institucion_id: i64,
+    desde: NaiveDate,
+    hasta: NaiveDate,
+) -> Result<Result<Vec<FuenteUrgencia>, String>, sqlx::Error> {
+    if let Some(mala) = fecha_ilegible_de_urgencias(pool, institucion_id).await? {
+        return Ok(Err(mala));
+    }
+    let (ini, fin) = limites_utc(desde, hasta);
+    let filas: Vec<FilaUrgencia> = sqlx::query_as(
+        "SELECT a.id, a.fecha_ingreso, a.fecha_egreso, a.causa_motivo, \
+                a.diagnostico_ingreso, a.diagnostico_egreso, a.destino_salida, \
+                a.diagnostico_causa_muerte, \
+                p.id AS paciente_id, \
+                p.tipo_documento   AS p_tipo_documento, \
+                p.numero_documento AS p_numero_documento, \
+                p.tipo_usuario, p.fecha_nacimiento, p.sexo, p.cod_pais, \
+                p.cod_municipio, p.zona, p.cod_pais_origen \
+         FROM atencion_urgencias a \
+         JOIN paciente p ON p.id = a.paciente_id \
+         WHERE p.institucion_id = ? AND a.fecha_ingreso >= ? AND a.fecha_ingreso <= ? \
+           AND a.fecha_egreso IS NOT NULL \
+         ORDER BY a.fecha_ingreso, a.id",
+    )
+    .bind(institucion_id)
+    .bind(&ini)
+    .bind(&fin)
+    .fetch_all(pool)
+    .await?;
+
+    let mut salida = Vec::with_capacity(filas.len());
+    for f in filas {
+        let ingreso = match fecha_local(&f.fecha_ingreso, "la atención de urgencias", f.id) {
+            Ok(v) => v,
+            Err(e) => return Ok(Err(e)),
+        };
+        // El egreso no puede llegar nulo: lo excluye el `WHERE`. Si llegara
+        // ilegible se dice cuál, igual que con el ingreso — una fecha de egreso
+        // inventada es un alta en un día en que no ocurrió.
+        let egreso = match f
+            .fecha_egreso
+            .as_deref()
+            .map(|t| fecha_local(t, "la atención de urgencias", f.id))
+        {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => return Ok(Err(e)),
+            None => continue,
+        };
+        salida.push(FuenteUrgencia {
+            id: f.id,
+            fecha_ingreso: ingreso,
+            fecha_egreso: egreso,
+            causa_motivo: f.causa_motivo,
+            diagnostico_ingreso: f.diagnostico_ingreso,
+            diagnostico_egreso: f.diagnostico_egreso,
+            destino_salida: f.destino_salida,
+            diagnostico_causa_muerte: f.diagnostico_causa_muerte,
+            paciente: FuentePaciente {
+                id: f.paciente_id,
+                tipo_documento: f.p_tipo_documento,
+                numero_documento: f.p_numero_documento,
+                tipo_usuario: f.tipo_usuario,
+                fecha_nacimiento: f.fecha_nacimiento,
+                sexo: f.sexo,
+                cod_pais: f.cod_pais,
+                cod_municipio: f.cod_municipio,
+                zona: f.zona,
+                cod_pais_origen: f.cod_pais_origen,
+            },
+        });
+    }
+    Ok(Ok(salida))
+}
+
+/// El mismo guardián de `fecha_ilegible_de`, sobre la tabla de urgencias.
+///
+/// Va aparte porque la atención de urgencias **no cuelga de una historia**: una
+/// fecha corrupta aquí no la ve el guardián del AC, y la atención desaparecería
+/// del archivo sin que nada fallara.
+async fn fecha_ilegible_de_urgencias(
+    pool: &crate::Pool,
+    institucion_id: i64,
+) -> Result<Option<String>, sqlx::Error> {
+    let mala: Option<(i64, String)> = sqlx::query_as(
+        "SELECT a.id, a.fecha_ingreso FROM atencion_urgencias a \
+         JOIN paciente p ON p.id = a.paciente_id \
+         WHERE p.institucion_id = ? \
+           AND a.fecha_ingreso NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*' \
+         ORDER BY a.id LIMIT 1",
+    )
+    .bind(institucion_id)
+    .fetch_optional(pool)
+    .await?;
+    Ok(mala.map(|(id, texto)| {
+        format!(
+            "la atención de urgencias {id} tiene «{texto}» como fecha de ingreso, \
+             que no es una fecha. No se genera el RIPS: con ese valor la atención \
+             no entra en ningún periodo y se perdería del informe sin avisar."
+        )
+    }))
+}
+
+/// La fila cruda del AU. No trae profesional: el AU no admite los campos
+/// P11/P12, y pedirlos aquí habría sido la manera de que acabaran en el JSON.
+#[derive(sqlx::FromRow)]
+struct FilaUrgencia {
+    id: i64,
+    fecha_ingreso: String,
+    fecha_egreso: Option<String>,
+    causa_motivo: Option<String>,
+    diagnostico_ingreso: Option<String>,
+    diagnostico_egreso: Option<String>,
+    destino_salida: Option<String>,
+    diagnostico_causa_muerte: Option<String>,
+    paciente_id: i64,
+    p_tipo_documento: String,
+    p_numero_documento: String,
+    tipo_usuario: Option<String>,
+    fecha_nacimiento: String,
+    sexo: String,
+    cod_pais: Option<String>,
+    cod_municipio: Option<String>,
+    zona: Option<String>,
+    cod_pais_origen: Option<String>,
 }
 
 /// La fila cruda del AP. Mismo aliasado que la del AC y por lo mismo: `id`,
@@ -919,6 +1065,148 @@ mod pruebas {
         assert!(ap.is_err(), "el AP tiene que negarse");
         assert!(am.is_err(), "y el AM también");
         assert!(ap.unwrap_err().contains("no es una fecha"));
+    }
+
+    async fn urgencia(
+        pool: &crate::Pool,
+        id: i64,
+        paciente: i64,
+        ingreso: &str,
+        egreso: Option<&str>,
+    ) {
+        sqlx::query(
+            "INSERT INTO atencion_urgencias (id,paciente_id,triage,motivo_consulta,\
+             enfermera_triage_id,fecha_ingreso,diagnostico_ingreso,destino_salida,fecha_egreso,\
+             causa_motivo,diagnostico_egreso) \
+             VALUES (?,?,'TRIAGE_2','dolor torácico',5,?,'A000','DOMICILIO',?,'38','A000')",
+        )
+        .bind(id)
+        .bind(paciente)
+        .bind(ingreso)
+        .bind(egreso)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn la_atencion_sin_egreso_no_entra_en_el_archivo() {
+        // La que sigue en urgencias no ha terminado y no se puede facturar. El
+        // sistema viejo le ponía la hora de la generación: un paciente todavía
+        // dentro se reportaba como dado de alta.
+        let pool = base().await;
+        urgencia(&pool, 1, 10, "2026-03-15 14:00:00", Some("2026-03-15 18:00:00")).await;
+        urgencia(&pool, 2, 10, "2026-03-16 14:00:00", None).await;
+
+        let us = urgencias_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(us.len(), 1, "solo la que egresó");
+        assert_eq!(us[0].id, 1);
+        assert_eq!(us[0].destino_salida.as_deref(), Some("DOMICILIO"));
+        assert_eq!(us[0].causa_motivo.as_deref(), Some("38"));
+        assert_eq!(us[0].diagnostico_causa_muerte, None);
+    }
+
+    #[tokio::test]
+    async fn las_urgencias_de_otra_institucion_no_salen() {
+        let pool = base().await;
+        urgencia(&pool, 1, 10, "2026-03-15 14:00:00", Some("2026-03-15 18:00:00")).await;
+        urgencia(&pool, 2, 20, "2026-03-15 14:00:00", Some("2026-03-15 18:00:00")).await;
+
+        let us = urgencias_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(us.len(), 1, "la del paciente de la institución 2 no puede salir");
+        assert_eq!(us[0].paciente.id, 10);
+    }
+
+    #[tokio::test]
+    async fn la_urgencia_se_pide_en_local_aunque_la_base_guarde_utc() {
+        // Un ingreso del 31 de marzo a las 20:00 en Bogotá se guarda como el 1 de
+        // abril a las 01:00 UTC, y va en el cierre de MARZO con fecha de marzo.
+        let pool = base().await;
+        let utc = |h: u32| {
+            zona::a_utc(
+                NaiveDate::from_ymd_opt(2026, 3, 31)
+                    .unwrap()
+                    .and_hms_opt(h, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+        };
+        urgencia(&pool, 1, 10, &utc(20), Some(&utc(23))).await;
+
+        let us = urgencias_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(us.len(), 1);
+        assert_eq!(us[0].fecha_ingreso.date(), dia(2026, 3, 31));
+        assert_eq!(us[0].fecha_egreso.date(), dia(2026, 3, 31));
+    }
+
+    #[tokio::test]
+    async fn una_fecha_de_urgencias_ilegible_no_se_escapa() {
+        // El guardián del AC mira `historia`, y la atención de urgencias NO
+        // cuelga de una historia: sin este, una fecha corrupta aquí dejaría la
+        // atención fuera del archivo sin que nada fallara.
+        let pool = base().await;
+        urgencia(&pool, 1, 10, "sin fecha", Some("2026-03-15 18:00:00")).await;
+
+        let r = urgencias_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap();
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("atención de urgencias 1"));
+    }
+
+    #[tokio::test]
+    async fn el_error_nombra_la_fila_que_hay_que_ir_a_arreglar() {
+        // Hay DOS caminos para una fecha ilegible y solo uno estaba probado:
+        //
+        //   * el guardián (`fecha_ilegible_de*`), que caza lo que no tiene forma
+        //     de fecha — «sin fecha»;
+        //   * `fecha_local`, que caza lo que SÍ tiene la forma y aun así no es
+        //     una fecha — «2026-13-45 99:99:99» pasa el GLOB y no se parsea.
+        //
+        // El segundo decía «la historia {id}» viniera el id de donde viniera, y
+        // en el AP ese id es el de la ORDEN. Mandaba a buscar una historia que,
+        // con suerte, ni existe.
+        let imposible = "2026-13-45 99:99:99";
+
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, imposible).await;
+        orden(&pool, 100, 1, "Laboratorio", Some("902210")).await;
+        formula(&pool, 200, 1, 30.0).await;
+        let ap = procedimientos_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        let am = medicamentos_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        let ac = consultas_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        assert!(ap.clone().unwrap_err().contains("la orden 100"), "{ap:?}");
+        assert!(am.clone().unwrap_err().contains("la fórmula 200"), "{am:?}");
+        assert!(ac.clone().unwrap_err().contains("la historia 1"), "{ac:?}");
+        // Y el caso rojo del propio mensaje: el del AP NO puede decir «historia».
+        assert!(!ap.unwrap_err().contains("la historia"));
+
+        let pool = base().await;
+        urgencia(&pool, 7, 10, imposible, Some("2026-03-15 18:00:00")).await;
+        let au = urgencias_del_periodo(&pool, 1, dia(2026, 1, 1), dia(2026, 12, 31))
+            .await
+            .unwrap();
+        assert!(
+            au.clone().unwrap_err().contains("la atención de urgencias 7"),
+            "{au:?}"
+        );
     }
 
     #[tokio::test]

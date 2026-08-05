@@ -891,14 +891,37 @@ def generar_archivo_au(
         usuarios_map: Dict[int, Dict] = {}
         consecutivo_usuario = 1
 
-        # Mapa destino de salida → código RIPS
+        # Destino de salida → código de `Rips.REFs_CondicionDestino`, el maestro
+        # del validador (`maestros_muv.condiciones_destino`).
+        #
+        # ESTE MAPA ESTABA MAL, y de dos maneras a la vez (medido 2026-08-04):
+        #
+        # 1. Sus claves —ALTA, HOSPITALIZADO, REMITIDO, OBSERVACION— no son las
+        #    de `DestinoSalidaUrgencias`, que guarda «Domicilio»,
+        #    «Hospitalización», «Remisión» y «Observación». Con el `.upper()` de
+        #    abajo, cuatro de los seis destinos no casaban con NADA: salían como
+        #    falta y, con supuestos permitidos, como «01» (a su casa).
+        # 2. Los dos que sí casaban emitían el código EQUIVOCADO. El mapa decía
+        #    FALLECIDO = "04", y el 04 del catálogo es REFERIDO A OTRA
+        #    INSTITUCION; el muerto es el 02. O sea que **una muerte en urgencias
+        #    se reportaba como un traslado** — y con eso se pierden las dos
+        #    validaciones que la 948 cuelga de ahí (que no haya servicios con
+        #    fecha posterior a la muerte, y que se informe la causa básica).
+        #
+        # La tabla no está en el PDF de la norma: su ficha remite a
+        # web.sispro.gov.co. Por eso se sacó del contenedor del validador, que es
+        # la fuente contra la que el MUV juzga, y por eso no se vuelve a escribir
+        # a mano ningún código de catálogo.
+        #
+        # FUGA no está: el catálogo no tiene código para «el paciente se fue sin
+        # que nadie le diera salida», y el 01 afirmaría un alta a domicilio. Se
+        # anota como falta y se le pregunta al prestador qué reporta hoy.
         destino_map = {
-            "ALTA": "01",
-            "HOSPITALIZADO": "02",
-            "REMITIDO": "03",
-            "FALLECIDO": "04",
-            "FUGA": "05",
-            "OBSERVACION": "06",
+            "DOMICILIO": "01",        # PACIENTE CON DESTINO A SU DOMICILIO
+            "FALLECIDO": "02",        # PACIENTE MUERTO
+            "HOSPITALIZACIÓN": "03",  # PACIENTE DERIVADO A OTRO SERVICIO
+            "REMISIÓN": "04",         # REFERIDO A OTRA INSTITUCION
+            "OBSERVACIÓN": "08",      # PACIENTE CONTINUA EN EL SERVICIO
         }
 
         for au in atenciones:
