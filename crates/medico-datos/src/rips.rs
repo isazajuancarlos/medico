@@ -25,7 +25,10 @@
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use medico_dominio::zona;
-use medico_dominio::rips::{FuenteConsulta, FuenteInstitucion, FuentePaciente, FuenteProfesional};
+use medico_dominio::rips::{
+    FuenteConsulta, FuenteInstitucion, FuenteMedicamento, FuentePaciente, FuenteProcedimiento,
+    FuenteProfesional,
+};
 
 /// La institución que reporta, o `None` si no existe.
 ///
@@ -215,6 +218,252 @@ pub async fn consultas_del_periodo(
         });
     }
     Ok(Ok(salida))
+}
+
+/// Los procedimientos del periodo, de UNA institución, listos para el AP.
+///
+/// Son las **órdenes** colgadas de una historia. El periodo se filtra por la
+/// fecha de la HISTORIA y no por `orden.fecha_orden`, que es lo que hace el
+/// Python: lo que el RIPS reporta es la atención, y una orden escrita al día
+/// siguiente pertenece a la atención en que se ordenó. Si se filtrara por la
+/// fecha de la orden, un examen pedido el 31 a las 20:00 y registrado el 1 se
+/// iría al mes siguiente mientras su consulta se queda en este — y las dos
+/// mitades de la misma atención acabarían en facturas distintas.
+///
+/// El aislamiento va por el PACIENTE, igual que en el AC: `orden` no tiene
+/// `institucion_id`, cuelga de la historia, que cuelga del paciente.
+pub async fn procedimientos_del_periodo(
+    pool: &crate::Pool,
+    institucion_id: i64,
+    desde: NaiveDate,
+    hasta: NaiveDate,
+) -> Result<Result<Vec<FuenteProcedimiento>, String>, sqlx::Error> {
+    if let Some(mala) = fecha_ilegible_de(pool, institucion_id).await? {
+        return Ok(Err(mala));
+    }
+    let (ini, fin) = limites_utc(desde, hasta);
+    let filas: Vec<FilaProcedimiento> = sqlx::query_as(
+        "SELECT o.id, h.fecha, o.codigo_cups, o.tipo, o.via_ingreso_servicio, \
+                o.grupo_servicios, o.cod_servicio, h.finalidad, \
+                h.diagnostico_principal, h.diagnostico_relacionado1, \
+                o.valor_servicio, o.concepto_recaudo, o.valor_pago_moderador, \
+                o.num_fev_pago_moderador, \
+                p.id AS paciente_id, \
+                p.tipo_documento   AS p_tipo_documento, \
+                p.numero_documento AS p_numero_documento, \
+                p.tipo_usuario, p.fecha_nacimiento, p.sexo, p.cod_pais, \
+                p.cod_municipio, p.zona, p.cod_pais_origen, \
+                u.tipo_documento   AS m_tipo_documento, \
+                u.numero_documento AS m_numero_documento \
+         FROM orden o \
+         JOIN historia h ON h.id = o.historia_id \
+         JOIN paciente p ON p.id = h.paciente_id \
+         JOIN usuario  u ON u.id = h.medico_id \
+         WHERE p.institucion_id = ? AND h.fecha >= ? AND h.fecha <= ? \
+         ORDER BY h.fecha, o.id",
+    )
+    .bind(institucion_id)
+    .bind(&ini)
+    .bind(&fin)
+    .fetch_all(pool)
+    .await?;
+
+    let mut salida = Vec::with_capacity(filas.len());
+    for f in filas {
+        let fecha = match fecha_local(&f.fecha, f.id) {
+            Ok(v) => v,
+            Err(e) => return Ok(Err(e)),
+        };
+        salida.push(FuenteProcedimiento {
+            id: f.id,
+            fecha,
+            cod_procedimiento_cups: f.codigo_cups,
+            tipo: f.tipo,
+            via_ingreso_servicio: f.via_ingreso_servicio,
+            grupo_servicios: f.grupo_servicios,
+            cod_servicio: f.cod_servicio,
+            finalidad: f.finalidad,
+            diagnostico_principal: f.diagnostico_principal,
+            diagnostico_relacionado: f.diagnostico_relacionado1,
+            valor_servicio: f.valor_servicio,
+            concepto_recaudo: f.concepto_recaudo,
+            valor_pago_moderador: f.valor_pago_moderador,
+            num_fev_pago_moderador: f.num_fev_pago_moderador,
+            paciente: FuentePaciente {
+                id: f.paciente_id,
+                tipo_documento: f.p_tipo_documento,
+                numero_documento: f.p_numero_documento,
+                tipo_usuario: f.tipo_usuario,
+                fecha_nacimiento: f.fecha_nacimiento,
+                sexo: f.sexo,
+                cod_pais: f.cod_pais,
+                cod_municipio: f.cod_municipio,
+                zona: f.zona,
+                cod_pais_origen: f.cod_pais_origen,
+            },
+            profesional: FuenteProfesional {
+                tipo_documento: f.m_tipo_documento,
+                numero_documento: f.m_numero_documento,
+            },
+        });
+    }
+    Ok(Ok(salida))
+}
+
+/// Las fórmulas del periodo, de UNA institución, listas para el AM.
+///
+/// Mismo criterio que los procedimientos: el periodo lo fija la fecha de la
+/// HISTORIA, no `formula.fecha_formula`.
+///
+/// **Se emiten todas las fórmulas del periodo, dispensadas o no**, que es lo que
+/// hace el Python. Filtrar por `dispensada` sería una decisión distinta —el AM
+/// es el archivo de lo *dispensado o administrado*— y no se toma de paso en un
+/// port: cambiaría lo que se factura, y hay que preguntarle al prestador si su
+/// sistema marca ese campo de verdad.
+pub async fn medicamentos_del_periodo(
+    pool: &crate::Pool,
+    institucion_id: i64,
+    desde: NaiveDate,
+    hasta: NaiveDate,
+) -> Result<Result<Vec<FuenteMedicamento>, String>, sqlx::Error> {
+    if let Some(mala) = fecha_ilegible_de(pool, institucion_id).await? {
+        return Ok(Err(mala));
+    }
+    let (ini, fin) = limites_utc(desde, hasta);
+    let filas: Vec<FilaMedicamento> = sqlx::query_as(
+        "SELECT f.id, h.fecha, f.codigo_cum, f.tipo_medicamento, f.medicamento, \
+                h.diagnostico_principal, f.unidad, f.cantidad, f.dias_tratamiento, \
+                f.valor_unitario, f.valor_servicio, f.concepto_recaudo, \
+                f.valor_pago_moderador, f.num_fev_pago_moderador, \
+                p.id AS paciente_id, \
+                p.tipo_documento   AS p_tipo_documento, \
+                p.numero_documento AS p_numero_documento, \
+                p.tipo_usuario, p.fecha_nacimiento, p.sexo, p.cod_pais, \
+                p.cod_municipio, p.zona, p.cod_pais_origen, \
+                u.tipo_documento   AS m_tipo_documento, \
+                u.numero_documento AS m_numero_documento \
+         FROM formula f \
+         JOIN historia h ON h.id = f.historia_id \
+         JOIN paciente p ON p.id = h.paciente_id \
+         JOIN usuario  u ON u.id = h.medico_id \
+         WHERE p.institucion_id = ? AND h.fecha >= ? AND h.fecha <= ? \
+         ORDER BY h.fecha, f.id",
+    )
+    .bind(institucion_id)
+    .bind(&ini)
+    .bind(&fin)
+    .fetch_all(pool)
+    .await?;
+
+    let mut salida = Vec::with_capacity(filas.len());
+    for f in filas {
+        let fecha = match fecha_local(&f.fecha, f.id) {
+            Ok(v) => v,
+            Err(e) => return Ok(Err(e)),
+        };
+        salida.push(FuenteMedicamento {
+            id: f.id,
+            // El AM lleva la fecha SIN hora (`fechaDispensAdmon`), pero se
+            // convierte igual a local antes de quedarse con el día: quedarse con
+            // los diez primeros caracteres del texto UTC devolvería el día
+            // siguiente para toda atención posterior a las 19:00 en Colombia.
+            fecha: fecha.date(),
+            codigo_cum: f.codigo_cum,
+            tipo_medicamento: f.tipo_medicamento,
+            medicamento: f.medicamento,
+            diagnostico_principal: f.diagnostico_principal,
+            unidad: f.unidad,
+            cantidad: Some(f.cantidad),
+            dias_tratamiento: f.dias_tratamiento,
+            valor_unitario: f.valor_unitario,
+            valor_servicio: f.valor_servicio,
+            concepto_recaudo: f.concepto_recaudo,
+            valor_pago_moderador: f.valor_pago_moderador,
+            num_fev_pago_moderador: f.num_fev_pago_moderador,
+            paciente: FuentePaciente {
+                id: f.paciente_id,
+                tipo_documento: f.p_tipo_documento,
+                numero_documento: f.p_numero_documento,
+                tipo_usuario: f.tipo_usuario,
+                fecha_nacimiento: f.fecha_nacimiento,
+                sexo: f.sexo,
+                cod_pais: f.cod_pais,
+                cod_municipio: f.cod_municipio,
+                zona: f.zona,
+                cod_pais_origen: f.cod_pais_origen,
+            },
+            profesional: FuenteProfesional {
+                tipo_documento: f.m_tipo_documento,
+                numero_documento: f.m_numero_documento,
+            },
+        });
+    }
+    Ok(Ok(salida))
+}
+
+/// La fila cruda del AP. Mismo aliasado que la del AC y por lo mismo: `id`,
+/// `tipo_documento` y `numero_documento` están en tres tablas del `SELECT`.
+#[derive(sqlx::FromRow)]
+struct FilaProcedimiento {
+    id: i64,
+    fecha: String,
+    codigo_cups: Option<String>,
+    tipo: String,
+    via_ingreso_servicio: Option<String>,
+    grupo_servicios: Option<String>,
+    cod_servicio: Option<i64>,
+    finalidad: Option<String>,
+    diagnostico_principal: Option<String>,
+    diagnostico_relacionado1: Option<String>,
+    valor_servicio: Option<i64>,
+    concepto_recaudo: Option<String>,
+    valor_pago_moderador: Option<i64>,
+    num_fev_pago_moderador: Option<String>,
+    paciente_id: i64,
+    p_tipo_documento: String,
+    p_numero_documento: String,
+    tipo_usuario: Option<String>,
+    fecha_nacimiento: String,
+    sexo: String,
+    cod_pais: Option<String>,
+    cod_municipio: Option<String>,
+    zona: Option<String>,
+    cod_pais_origen: Option<String>,
+    m_tipo_documento: Option<String>,
+    m_numero_documento: Option<String>,
+}
+
+/// La fila cruda del AM.
+#[derive(sqlx::FromRow)]
+struct FilaMedicamento {
+    id: i64,
+    fecha: String,
+    codigo_cum: Option<String>,
+    tipo_medicamento: Option<String>,
+    medicamento: String,
+    diagnostico_principal: Option<String>,
+    unidad: Option<String>,
+    /// `REAL` en la base: la cantidad puede venir fraccionaria, y el dominio se
+    /// niega a truncarla.
+    cantidad: f64,
+    dias_tratamiento: Option<i64>,
+    valor_unitario: Option<i64>,
+    valor_servicio: Option<i64>,
+    concepto_recaudo: Option<String>,
+    valor_pago_moderador: Option<i64>,
+    num_fev_pago_moderador: Option<String>,
+    paciente_id: i64,
+    p_tipo_documento: String,
+    p_numero_documento: String,
+    tipo_usuario: Option<String>,
+    fecha_nacimiento: String,
+    sexo: String,
+    cod_pais: Option<String>,
+    cod_municipio: Option<String>,
+    zona: Option<String>,
+    cod_pais_origen: Option<String>,
+    m_tipo_documento: Option<String>,
+    m_numero_documento: Option<String>,
 }
 
 /// La fila cruda. `FromRow` casa por NOMBRE de columna, no por posición, y tres
@@ -471,6 +720,205 @@ mod pruebas {
             .unwrap();
         assert_eq!(cs[0].profesional.tipo_documento, None);
         assert_eq!(cs[0].profesional.numero_documento, None);
+    }
+
+    // ---------------------------------------------------------------------
+    // AP y AM. Las dos consultas nuevas repiten las reglas del AC —periodo en
+    // local, aislamiento por el paciente, orden fijo—, así que se prueban las
+    // tres otra vez: una regla que se cumple en una consulta y no en la de al
+    // lado es exactamente lo que no se ve mirando el código.
+    // ---------------------------------------------------------------------
+
+    async fn orden(pool: &crate::Pool, id: i64, historia_id: i64, tipo: &str, cups: Option<&str>) {
+        sqlx::query(
+            "INSERT INTO orden (id,historia_id,tipo,codigo_cups,descripcion,justificacion) \
+             VALUES (?,?,?,?,'algo','porque')",
+        )
+        .bind(id)
+        .bind(historia_id)
+        .bind(tipo)
+        .bind(cups)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    async fn formula(pool: &crate::Pool, id: i64, historia_id: i64, cantidad: f64) {
+        sqlx::query(
+            "INSERT INTO formula (id,historia_id,medicamento,codigo_cum,dosis,cantidad,unidad,\
+             dias_tratamiento) VALUES (?,?,'Acetaminofén','20048021-41','1 c/8h',?,'tableta',10)",
+        )
+        .bind(id)
+        .bind(historia_id)
+        .bind(cantidad)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn trae_el_procedimiento_con_la_fecha_de_la_historia() {
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "2026-03-15 14:30:00").await;
+        orden(&pool, 100, 1, "Laboratorio", Some("902210")).await;
+
+        let ps = procedimientos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(ps.len(), 1);
+        assert_eq!(ps[0].id, 100, "el id es el de la ORDEN, donde se corrige");
+        assert_eq!(ps[0].cod_procedimiento_cups.as_deref(), Some("902210"));
+        assert_eq!(ps[0].tipo, "Laboratorio");
+        // De la historia, no de la orden: la orden no tiene diagnóstico propio.
+        assert_eq!(ps[0].diagnostico_principal.as_deref(), Some("A000"));
+        assert_eq!(ps[0].finalidad.as_deref(), Some("11"));
+        // El del MÉDICO, no el del paciente.
+        assert_eq!(ps[0].profesional.numero_documento.as_deref(), Some("71234567"));
+        assert_eq!(ps[0].paciente.numero_documento, "1");
+        // Los campos que ninguna pantalla captura llegan vacíos, no rellenos.
+        assert_eq!(ps[0].via_ingreso_servicio, None);
+        assert_eq!(ps[0].valor_servicio, None);
+    }
+
+    #[tokio::test]
+    async fn los_procedimientos_de_otra_institucion_no_salen() {
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "2026-03-15 14:30:00").await;
+        historia(&pool, 2, 20, 6, "2026-03-15 14:30:00").await;
+        orden(&pool, 100, 1, "Laboratorio", Some("902210")).await;
+        orden(&pool, 200, 2, "Laboratorio", Some("902210")).await;
+
+        let ps = procedimientos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(ps.len(), 1, "la orden de la institución 2 no puede salir");
+        assert_eq!(ps[0].id, 100);
+    }
+
+    #[tokio::test]
+    async fn el_procedimiento_sigue_el_periodo_de_su_atencion() {
+        // Una orden de una atención del 31 de marzo a las 20:00 en Bogotá (1 de
+        // abril a las 01:00 UTC) va en el cierre de MARZO, con su consulta. Si
+        // fuera al otro, las dos mitades de la misma atención acabarían en
+        // facturas distintas.
+        let pool = base().await;
+        let utc = zona::a_utc(
+            NaiveDate::from_ymd_opt(2026, 3, 31)
+                .unwrap()
+                .and_hms_opt(20, 0, 0)
+                .unwrap(),
+        )
+        .unwrap()
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string();
+        historia(&pool, 1, 10, 5, &utc).await;
+        orden(&pool, 100, 1, "Cirugía", Some("902210")).await;
+
+        let marzo = procedimientos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(marzo.len(), 1, "es del cierre de marzo");
+        assert_eq!(marzo[0].fecha.date(), dia(2026, 3, 31), "y con fecha de marzo");
+
+        let abril = procedimientos_del_periodo(&pool, 1, dia(2026, 4, 1), dia(2026, 4, 30))
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(abril.is_empty(), "y no se cuenta dos veces");
+    }
+
+    #[tokio::test]
+    async fn el_orden_de_los_procedimientos_es_fijo() {
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "2026-03-15 14:30:00").await;
+        orden(&pool, 300, 1, "Laboratorio", Some("902210")).await;
+        orden(&pool, 100, 1, "Terapia", Some("930101")).await;
+
+        let ps = procedimientos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        let ids: Vec<i64> = ps.iter().map(|p| p.id).collect();
+        assert_eq!(ids, vec![100, 300], "sin orden fijo los consecutivos bailan");
+    }
+
+    #[tokio::test]
+    async fn trae_la_formula_con_su_cantidad_sin_redondear() {
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "2026-03-15 14:30:00").await;
+        formula(&pool, 100, 1, 2.5).await;
+
+        let ms = medicamentos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(ms.len(), 1);
+        assert_eq!(ms[0].cantidad, Some(2.5), "la fracción llega entera al dominio");
+        assert_eq!(ms[0].codigo_cum.as_deref(), Some("20048021-41"));
+        assert_eq!(ms[0].unidad.as_deref(), Some("tableta"));
+        assert_eq!(ms[0].dias_tratamiento, Some(10));
+        // M05: el diagnóstico sale de la historia en que se formuló.
+        assert_eq!(ms[0].diagnostico_principal.as_deref(), Some("A000"));
+        assert_eq!(ms[0].profesional.numero_documento.as_deref(), Some("71234567"));
+        assert_eq!(ms[0].tipo_medicamento, None, "no lo captura ninguna pantalla");
+    }
+
+    #[tokio::test]
+    async fn las_formulas_de_otra_institucion_no_salen() {
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "2026-03-15 14:30:00").await;
+        historia(&pool, 2, 20, 6, "2026-03-15 14:30:00").await;
+        formula(&pool, 100, 1, 30.0).await;
+        formula(&pool, 200, 2, 30.0).await;
+
+        let ms = medicamentos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(ms.len(), 1);
+        assert_eq!(ms[0].id, 100);
+    }
+
+    #[tokio::test]
+    async fn la_fecha_de_dispensacion_es_el_dia_local_y_no_el_del_texto_utc() {
+        // El AM emite la fecha SIN hora. Quedarse con los diez primeros
+        // caracteres del texto UTC daría el día siguiente para toda atención
+        // posterior a las 19:00 en Colombia — un medicamento dispensado el 31 de
+        // marzo reportado el 1 de abril, en otro cierre.
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "2026-04-01 01:00:00").await;
+        formula(&pool, 100, 1, 30.0).await;
+
+        let ms = medicamentos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(ms.len(), 1, "cae en el cierre de marzo");
+        assert_eq!(ms[0].fecha, dia(2026, 3, 31), "y con fecha del 31 de marzo");
+    }
+
+    #[tokio::test]
+    async fn una_fecha_ilegible_tampoco_deja_generar_el_ap_ni_el_am() {
+        // El mismo guardián del AC: una historia con fecha corrupta se queda
+        // fuera del filtro de texto y su procedimiento desaparecería del informe
+        // sin que nada fallara.
+        let pool = base().await;
+        historia(&pool, 1, 10, 5, "sin fecha").await;
+        orden(&pool, 100, 1, "Laboratorio", Some("902210")).await;
+        formula(&pool, 200, 1, 30.0).await;
+
+        let ap = procedimientos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap();
+        let am = medicamentos_del_periodo(&pool, 1, dia(2026, 3, 1), dia(2026, 3, 31))
+            .await
+            .unwrap();
+        assert!(ap.is_err(), "el AP tiene que negarse");
+        assert!(am.is_err(), "y el AM también");
+        assert!(ap.unwrap_err().contains("no es una fecha"));
     }
 
     #[tokio::test]

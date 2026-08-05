@@ -346,9 +346,21 @@ impl Recolector {
         let d = self.dato(valor, donde);
         let Dato::Hay(v) = &d else { return d };
         if let Err(motivo) = validar(v) {
-            self.faltantes.push(donde.falta(Some(motivo)));
+            self.no_vale(donde, motivo);
         }
         d
+    }
+
+    /// Anota un dato que **está y no vale**, cuando el motivo no sale de
+    /// contrastarlo con un catálogo.
+    ///
+    /// Existe por la cantidad del AM: `2.5` está presente, es un número, y aun
+    /// así el RIPS no lo admite. Pasarlo por [`Recolector::codigo`] obligaba a
+    /// inventarse un valor de mentira para dárselo al validador —y un centinela
+    /// en una lista de faltas reales es la clase de detalle que dentro de un año
+    /// alguien lee como un dato.
+    pub fn no_vale(&mut self, donde: &Donde, motivo: String) {
+        self.faltantes.push(donde.falta(Some(motivo)));
     }
 
     /// El supuesto declarado para un sitio, o `None`. Lo necesita el llamante

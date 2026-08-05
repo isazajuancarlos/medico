@@ -674,12 +674,25 @@ def generar_archivo_ap(
                 "consecutivo": len(usuarios_map[p.id]["servicios"]["procedimientos"]) + 1,
                 # CIE-11 derivado del CIE-10 de origen; vacío si la
                 # equivalencia no es exacta y única. La 948 lo admite.
-                "codDiagnosticoPrincipalCIE11": _par_cie11(getattr(orden, 'diagnostico_principal', None))[0],
-                "nomCodDiagnosticoPrincipalCIE11": _par_cie11(getattr(orden, 'diagnostico_principal', None))[1],
-                "codDiagnosticoRelacionadoCIE11": _par_cie11(getattr(orden, 'diagnostico_relacionado', None))[0],
-                "nomCodDiagnosticoRelacionadoCIE11": _par_cie11(getattr(orden, 'diagnostico_relacionado', None))[1],
-                "codComplicacionCIE11": _par_cie11(getattr(orden, 'complicacion', None))[0],
-                "nomCodComplicacionCIE11": _par_cie11(getattr(orden, 'complicacion', None))[1],
+                #
+                # Sale de la HISTORIA, que es de donde sale el CIE-10 de doce
+                # líneas más arriba. Hasta el 2026-08-04 estos seis campos se
+                # derivaban de `getattr(orden, 'diagnostico_principal', None)`
+                # y `Orden` NO TIENE ese campo —los diagnósticos viven en la
+                # historia—, así que el `getattr` devolvía `None` en toda
+                # ejecución y el par salía `("", "")` siempre. El archivo decía
+                # el diagnóstico en un campo y lo callaba en el de al lado.
+                # Lo destapó el port a Rust (`medico-dominio/src/rips/ap.rs`).
+                #
+                # `complicacion` no existe en ningún modelo de este sistema, así
+                # que su par se queda vacío a propósito: no hay de dónde
+                # derivarlo, y «no hubo complicación» es la respuesta normal.
+                "codDiagnosticoPrincipalCIE11": _par_cie11(h.diagnostico_principal)[0],
+                "nomCodDiagnosticoPrincipalCIE11": _par_cie11(h.diagnostico_principal)[1],
+                "codDiagnosticoRelacionadoCIE11": _par_cie11(h.diagnostico_relacionado1)[0],
+                "nomCodDiagnosticoRelacionadoCIE11": _par_cie11(h.diagnostico_relacionado1)[1],
+                "codComplicacionCIE11": "",
+                "nomCodComplicacionCIE11": "",
             }
             usuarios_map[p.id]["servicios"]["procedimientos"].append(procedimiento)
 

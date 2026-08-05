@@ -6067,12 +6067,12 @@ mod pruebas {
         async fn sin_pedir_parcial_se_niega_y_dice_que_falta() {
             // La puerta que impide entregar un archivo que PARECE un RIPS
             // completo. Sin ella, quien lo descargue no tiene forma de saber que
-            // le faltan los procedimientos y los medicamentos.
+            // le faltan las urgencias y las hospitalizaciones.
             let e = con_admin_y_una_consulta().await;
             let r = enviar(&e, "/api/rips?inicio=2026-03-01&fin=2026-03-31", ADMIN).await;
             assert_eq!(r.status(), StatusCode::CONFLICT);
             let v = cuerpo(r).await;
-            assert_eq!(v["sin_portar"], serde_json::json!(["AP", "AM", "AU", "AH"]));
+            assert_eq!(v["sin_portar"], serde_json::json!(["AU", "AH"]));
             assert!(v["mensaje"].as_str().unwrap().contains("no se cobran"));
         }
 
@@ -6115,7 +6115,140 @@ mod pruebas {
             assert_eq!(c["numDocumentoIdentificacion"], "80000000");
             assert_eq!(c["codDiagnosticoPrincipalCIE11"], "1A00&XN8P1&XN8P1");
             // Y la respuesta declara SIEMPRE lo que no lleva.
-            assert_eq!(v["sin_portar"], serde_json::json!(["AP", "AM", "AU", "AH"]));
+            assert_eq!(v["sin_portar"], serde_json::json!(["AU", "AH"]));
+        }
+
+        /// Una orden y una fórmula colgadas de la MISMA historia de la siembra,
+        /// con todo lo que el RIPS pide. Los campos que ninguna pantalla captura
+        /// se rellenan aquí a mano —es lo que hará el tarifador— para poder
+        /// probar el camino en que el archivo sale completo.
+        async fn con_procedimiento_y_medicamento(e: &Estado) {
+            sqlx::query(
+                "INSERT INTO orden (id,historia_id,tipo,codigo_cups,descripcion,justificacion,\
+                 via_ingreso_servicio,grupo_servicios,cod_servicio,valor_servicio,\
+                 concepto_recaudo) \
+                 VALUES (77,1,'Laboratorio','902210','Hemograma','control','01','02',105,32000,'05')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO formula (id,historia_id,medicamento,codigo_cum,dosis,cantidad,\
+                 unidad,dias_tratamiento,tipo_medicamento,valor_unitario,valor_servicio,\
+                 concepto_recaudo) \
+                 VALUES (88,1,'Acetaminofén 500 mg','20048021-41','1 c/8h',30,'tableta',10,\
+                 '01',300,9000,'05')",
+            )
+            .execute(&e.pool)
+            .await
+            .unwrap();
+        }
+
+        #[tokio::test]
+        async fn el_ap_y_el_am_salen_con_su_procedimiento_y_su_medicamento_dentro() {
+            let e = con_admin_y_una_consulta().await;
+            con_procedimiento_y_medicamento(&e).await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK, "no debería faltar nada");
+            let v = cuerpo(r).await;
+
+            let p = &v["archivos"]["AP"]["usuarios"][0]["servicios"]["procedimientos"][0];
+            assert_eq!(p["codProcedimiento"], "902210");
+            assert_eq!(p["modalidadGrupoServicioTecSal"], "02", "laboratorio es apoyo dx");
+            assert_eq!(
+                p["fechaInicioAtencion"],
+                atencion_local().format("%Y-%m-%d %H:%M").to_string(),
+                "la hora LOCAL de la atención, igual que el AC"
+            );
+            // El documento del MÉDICO, no el del paciente.
+            assert_eq!(p["numDocumentoIdentificacion"], "80000000");
+            // El CIE-11 sale del mismo diagnóstico que el CIE-10 de al lado. En
+            // el Python iba vacío SIEMPRE, por un `getattr` sobre `Orden`.
+            assert_eq!(p["codDiagnosticoPrincipal"], "A000");
+            assert_eq!(p["codDiagnosticoPrincipalCIE11"], "1A00&XN8P1&XN8P1");
+
+            let m = &v["archivos"]["AM"]["usuarios"][0]["servicios"]["medicamentos"][0];
+            assert_eq!(m["codTecnologiaSalud"], "20048021-41");
+            assert_eq!(m["nomTecnologiaSalud"], "Acetaminofén 500 mg");
+            assert_eq!(m["cantidadMedicamento"], 30, "entero, no 30.0");
+            assert_eq!(m["diasTratamiento"], 10);
+            assert_eq!(
+                m["fechaDispensAdmon"],
+                atencion_local().format("%Y-%m-%d").to_string()
+            );
+            // El código del catálogo REFs_UPR, no un número inventado.
+            assert_eq!(
+                m["unidadMinDispensa"],
+                medico_dominio::muv::codigo_presentacion(Some("tableta")).unwrap()
+            );
+            assert_ne!(m["unidadMinDispensa"], 1, "el 1 del catálogo es AMPOLLA");
+        }
+
+        #[tokio::test]
+        async fn el_cum_que_no_esta_en_el_catalogo_del_invima_para_el_archivo() {
+            // La pareja de la de arriba: el mismo camino, con el CUM cambiado por
+            // uno que tiene la forma correcta y no existe. Sin esta comprobación
+            // el archivo sale, el MUV lo acepta o lo rechaza tres semanas después
+            // y la factura entera se cae.
+            let e = con_admin_y_una_consulta().await;
+            con_procedimiento_y_medicamento(&e).await;
+            sqlx::query("UPDATE formula SET codigo_cum = '00000000' WHERE id = 88")
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let v = cuerpo(r).await;
+            let f = v["faltantes"].as_array().unwrap();
+            assert_eq!(f.len(), 1);
+            assert_eq!(f[0]["archivo"], "AM");
+            assert_eq!(f[0]["registro"], 88, "dice CUÁL fórmula");
+            assert!(f[0]["motivo"]
+                .as_str()
+                .unwrap()
+                .contains("CatalogoCUMs"));
+        }
+
+        #[tokio::test]
+        async fn el_paciente_que_solo_tuvo_una_formula_entra_en_el_rastro() {
+            // La bitácora de la Ley 1581 sacaba los pacientes SOLO del AC. Con el
+            // AP y el AM dentro, alguien puede aparecer en el archivo por una
+            // fórmula o un laboratorio de una atención que no es suya en el AC —
+            // y su dato salió igual del sistema.
+            let e = con_admin_y_una_consulta().await;
+            con_procedimiento_y_medicamento(&e).await;
+            let r = enviar(
+                &e,
+                "/api/rips?inicio=2026-03-01&fin=2026-03-31&parcial=true",
+                ADMIN,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let filas: Vec<(String,)> =
+                sqlx::query_as("SELECT contenido FROM acceso ORDER BY secuencia ASC")
+                    .fetch_all(&e.pool)
+                    .await
+                    .unwrap();
+            let eslabon = filas
+                .iter()
+                .map(|(c,)| serde_json::from_str::<serde_json::Value>(c).unwrap())
+                .find(|v| v["recurso"] == "rips")
+                .expect("la exportación deja su eslabón");
+            assert_eq!(eslabon["alcance"]["pacientes"], serde_json::json!([10]));
+            assert_eq!(
+                eslabon["alcance"]["n"], 3,
+                "una consulta, un procedimiento y un medicamento"
+            );
         }
 
         #[tokio::test]
