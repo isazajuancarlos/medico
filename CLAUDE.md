@@ -426,18 +426,64 @@ que sigue vivo (5):
     cinco routers de Python son código vivo SIN CLIENTE, no huecos
 
 a medias (1):
-  rips — existe desde el 2026-08-02, pero SOLO emite el AC
+  rips — emite AC, AP y AM desde el 2026-08-04; faltan AU y AH
 ```
 
 **`/api/rips` se niega por defecto, y esa negativa es la característica.** Emite
-únicamente el AC; AP, AM, AU y AH no están portados. Un archivo con las consultas
-y sin los procedimientos ni los medicamentos **tiene la forma de un RIPS
-completo**: se sube, el validador lo acepta, y lo que falta no aparece por ningún
-lado — es sub-reporte, o sea dinero que no se cobra e información incompleta ante
-la Supersalud. Por eso responde **409** salvo que se pida `parcial=true`, igual
-que `permitir_supuestos`: el camino permisivo existe, lo pide el llamante, y la
+el AC, el AP y el AM; **AU y AH** no están portados. Un archivo sin las urgencias
+ni las hospitalizaciones **tiene la forma de un RIPS completo**: se sube, el
+validador lo acepta, y lo que falta no aparece por ningún lado — es sub-reporte,
+o sea dinero que no se cobra e información incompleta ante la Supersalud. Por eso
+responde **409** salvo que se pida `parcial=true`, igual que
+`permitir_supuestos`: el camino permisivo existe, lo pide el llamante, y la
 respuesta lleva siempre `sin_portar` con lo que falta. El RIPS de verdad se sigue
 generando con el Python.
+
+Un consultorio sin urgencias ni hospitalización ya tendría el archivo completo
+con estos tres, y aun así se le exige pedir `parcial=true`: el binario no sabe
+qué servicios habilitó el prestador, y deducir «no tiene urgencias» de que no
+haya filas es el negativo que no vale — una tabla vacía y un módulo sin portar se
+ven igual.
+
+### AP y AM (2026-08-04)
+
+`medico-dominio/src/rips/ap.rs` y `am.rs`, con sus consultas en
+`medico-datos/src/rips.rs` y la migración `0041`. Lo que hay que saber:
+
+- **El periodo lo fija la fecha de la HISTORIA**, no la de la orden ni la de la
+  fórmula. Una orden escrita al día siguiente pertenece a la atención en que se
+  ordenó; filtrar por su propia fecha partiría la misma atención en dos facturas.
+- **La `0041` añade trece columnas que hoy no escribe ninguna pantalla**
+  (`via_ingreso_servicio`, `grupo_servicios`, `cod_servicio` y el bloque
+  económico en `orden`; eso más `tipo_medicamento` y `valor_unitario` en
+  `formula`). Todas NULL y **ninguna con `DEFAULT`**, que es la lección de la
+  `0038`: un defecto haría que el recolector —que solo ve AUSENCIAS— no tuviera
+  nada que anotar. Son las mismas de `CamposRips` en `backend/models.py`.
+  Consecuencia hoy: **el AP y el AM salen con faltas** hasta que alguien las
+  capture o las llene el tarifador, y esa es la conducta correcta.
+- **El CUM se valida contra el catálogo del INVIMA**, no solo «que no esté
+  vacío». Van los 65 997 códigos empotrados en
+  `medico-dominio/datos/cum_codigos.txt` (710 KB), que genera
+  `herramientas/generar_cum_para_rust.py` **del mismo `cum.json.gz` que lee el
+  Python**; `backend/tests/test_cum_paridad_con_rust.py` se pone rojo si las dos
+  copias se separan (comprobado quitándole un código).
+- **`unidadMinDispensa` (M13) sale de `REFs_UPR`** (`muv_upr.json`, 73
+  presentaciones). Se tolera el plural y las mayúsculas; lo que **no** se hace es
+  aproximar a la más parecida. Es el campo donde ya se coló un dato falso —
+  `tableta = 1`, cuando el 1 del catálogo es AMPOLLA— porque el MUV lo valida por
+  rango.
+- **La cantidad no se trunca**: `2.5` sale tal cual y se anota. Truncarla a `2`
+  perdería media dosis en silencio.
+- **Y se corrigió un fallo del Python al portarlo**: los seis campos CIE-11 del
+  AP salían **siempre vacíos**, porque se derivaban de
+  `getattr(orden, 'diagnostico_principal', None)` y `Orden` no tiene ese campo —
+  los diagnósticos viven en la historia. El archivo decía el diagnóstico en un
+  campo (el CIE-10, que sí sale de la historia) y lo callaba en el de al lado.
+  Arreglado en los dos sistemas en la misma pasada, para que sigan pudiendo
+  compararse byte a byte.
+- **La bitácora de la Ley 1581 saca los pacientes de los TRES documentos.**
+  Antes salían solo del AC, y alguien que en el periodo únicamente tuvo una
+  fórmula o un laboratorio iba en el archivo sin dejar rastro.
 
 **Son dos medidas distintas y hay que decir cuál se usa.** La ficha #236 mide lo
 primero —cruce de los `/api/…` que piden los `.ts` contra los `.route(` de
@@ -448,8 +494,9 @@ rotas», pasarse.
 
 **FEV-RIPS es el que decide**: sin él no hay facturación electrónica, que es por
 lo que le pagan al prestador, y el ADR no autoriza apagar Python hasta que la
-generación del RIPS sea byte a byte idéntica. En Rust solo está el recolector de
-datos faltantes (`medico-dominio/src/rips.rs`).
+generación del RIPS sea byte a byte idéntica. En Rust están el recolector de datos
+faltantes y los documentos AC, AP y AM (`medico-dominio/src/rips/`); el FEV-RIPS
+—el documento ÚNICO que funde los cinco— sigue siendo solo del Python.
 
 `/api/modulos` y `/api/agenda/*` **sí existen ya en Rust** (`rutas.rs:236` y
 `rutas.rs:260`…), así que la pantalla de Agenda Médica carga contra el binario —
@@ -775,6 +822,7 @@ un paso deliberado.
 |---|---|---|
 | `divipola.json` | municipios y departamentos | publicaciones oficiales |
 | `cum.json.gz` | 65 997 CUM del INVIMA (2,6 MB) | `herramientas/generar_cum.py` |
+| `../crates/medico-dominio/datos/cum_codigos.txt` | los mismos 65 997 códigos, para el binario Rust | `../herramientas/generar_cum_para_rust.py` |
 | `mapeo_cie10_cie11.json` | tablas de la OMS | `../herramientas/generar_mapeo_cie11.py` |
 | `cie10_rips.json` | 12 422 códigos | `../herramientas/extraer_cie10_rips.py` |
 | `maestros_muv/*` | 8 catálogos del validador | `herramientas/extraer_maestros_muv.py` |
@@ -994,8 +1042,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 39, de `0001_fundacion.sql` a
-    `0039_el_documento_del_profesional_es_unico.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 41, de `0001_fundacion.sql` a
+    `0041_los_campos_del_rips_en_orden_y_formula.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==

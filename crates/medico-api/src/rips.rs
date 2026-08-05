@@ -13,18 +13,23 @@
 //!    pedirlo (`permitir_supuestos=true`), y lo supuesto viaja EN la respuesta:
 //!    quien lo firma tiene que ver qué lleva inventado antes de firmarlo, no
 //!    encontrarlo en un log aparte.
-//! 3. **Y aquí solo existe el AC.** Los otros cuatro documentos —AP, AM, AU,
-//!    AH— todavía no están portados. Un archivo con las consultas y sin los
-//!    procedimientos ni los medicamentos **tiene la forma de un RIPS completo**:
-//!    se puede subir, el validador lo acepta, y lo que falta no aparece por
-//!    ningún lado — es sub-reporte, que en una factura es dinero que no se
-//!    cobra, y ante la Supersalud, información incompleta.
+//! 3. **Aquí existen el AC, el AP y el AM; faltan el AU y el AH.** Un archivo
+//!    sin los documentos de urgencias y hospitalización **tiene la forma de un
+//!    RIPS completo**: se puede subir, el validador lo acepta, y lo que falta no
+//!    aparece por ningún lado — es sub-reporte, que en una factura es dinero que
+//!    no se cobra, y ante la Supersalud, información incompleta.
 //!
-//!    Por eso el endpoint **se niega por defecto** (409) y hay que pedirle
-//!    `parcial=true` para que emita solo el AC, igual que con los supuestos: el
-//!    camino permisivo existe, lo pide el llamante, y la respuesta dice a gritos
-//!    qué falta. Mientras tanto el RIPS de verdad se genera con el Python, que
-//!    es el producto vivo.
+//!    Por eso el endpoint **se sigue negando por defecto** (409) y hay que
+//!    pedirle `parcial=true`, igual que con los supuestos: el camino permisivo
+//!    existe, lo pide el llamante, y la respuesta dice a gritos qué falta.
+//!    Mientras tanto el RIPS de verdad se genera con el Python, que es el
+//!    producto vivo.
+//!
+//!    Un consultorio sin urgencias ni hospitalización tendría el archivo
+//!    completo con estos tres, y aun así se le exige pedirlo: el binario no sabe
+//!    qué servicios habilitó el prestador, y suponer que no tiene urgencias
+//!    porque no hay filas es la clase de negativo que no vale (una tabla vacía y
+//!    un módulo sin portar se ven igual).
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -34,13 +39,13 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 use medico_dominio::rips::documentos::Documento;
-use medico_dominio::rips::{documento_ac, Recolector};
+use medico_dominio::rips::{documento_ac, documento_am, documento_ap, Recolector};
 
 use crate::auth::{Autorizado, Estado, GenerarRips};
 
 /// Los documentos que este binario todavía NO emite. Se nombran en la respuesta
 /// y en el error: una lista vacía sería la manera de que nadie se enterara.
-const SIN_PORTAR: [&str; 4] = ["AP", "AM", "AU", "AH"];
+const SIN_PORTAR: [&str; 2] = ["AU", "AH"];
 
 #[derive(Debug, Deserialize)]
 pub struct Periodo {
@@ -56,7 +61,7 @@ pub struct Periodo {
 
 #[derive(Debug, Serialize)]
 pub struct Salida {
-    /// Los documentos generados, por nombre: hoy solo `AC`.
+    /// Los documentos generados, por nombre: hoy `AC`, `AP` y `AM`.
     pub archivos: Archivos,
     /// Cuántos valores se supusieron, por etiqueta. Vacío si no se supuso nada.
     pub supuestos: std::collections::BTreeMap<String, usize>,
@@ -68,6 +73,10 @@ pub struct Salida {
 pub struct Archivos {
     #[serde(rename = "AC")]
     pub ac: Documento,
+    #[serde(rename = "AP")]
+    pub ap: Documento,
+    #[serde(rename = "AM")]
+    pub am: Documento,
 }
 
 #[derive(Debug, Serialize)]
@@ -125,11 +134,11 @@ pub async fn generar(
         return Err(problema(
             StatusCode::CONFLICT,
             &format!(
-                "este binario solo emite el AC; {} todavía no están portados. Un \
-                 archivo sin ellos parece completo y no lo está: las atenciones \
-                 que falten no se cobran y nadie las echa de menos. Genere el \
-                 RIPS con el sistema Python, o pida `parcial=true` si lo que \
-                 quiere es revisar el AC.",
+                "este binario emite el AC, el AP y el AM; {} todavía no están \
+                 portados. Un archivo sin ellos parece completo y no lo está: las \
+                 atenciones que falten no se cobran y nadie las echa de menos. \
+                 Genere el RIPS con el sistema Python, o pida `parcial=true` si \
+                 lo que quiere es revisar lo que sí sale.",
                 SIN_PORTAR.join(", ")
             ),
             vec![],
@@ -149,27 +158,39 @@ pub async fn generar(
             )
         })?;
 
+    // 422 y no 500: la petición está bien y el servidor también; lo que está mal
+    // es un dato de la base, y se dice cuál.
+    let dato_corrupto = |texto: String| {
+        problema(StatusCode::UNPROCESSABLE_ENTITY, &texto, vec![], vec![])
+    };
+
     let consultas =
         medico_datos::rips::consultas_del_periodo(&e.pool, institucion_id, p.inicio, p.fin)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .map_err(|dato_corrupto| {
-                // 422 y no 500: la petición está bien y el servidor también; lo
-                // que está mal es un dato de la base, y se dice cuál.
-                problema(
-                    StatusCode::UNPROCESSABLE_ENTITY,
-                    &dato_corrupto,
-                    vec![],
-                    vec![],
-                )
-            })?;
+            .map_err(dato_corrupto)?;
+    let procedimientos =
+        medico_datos::rips::procedimientos_del_periodo(&e.pool, institucion_id, p.inicio, p.fin)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .map_err(dato_corrupto)?;
+    let medicamentos =
+        medico_datos::rips::medicamentos_del_periodo(&e.pool, institucion_id, p.inicio, p.fin)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .map_err(dato_corrupto)?;
 
+    // Un solo recolector para los tres documentos: quien cierra el mes necesita
+    // UNA lista de lo que hay que corregir, no tres. Cada falta ya dice de qué
+    // archivo es y en qué registro.
     let mut rec = if p.permitir_supuestos {
         Recolector::permitiendo_supuestos()
     } else {
         Recolector::estricto()
     };
     let ac = documento_ac(&institucion, &consultas, &mut rec);
+    let ap = documento_ap(&institucion, &procedimientos, &mut rec);
+    let am = documento_am(&institucion, &medicamentos, &mut rec);
 
     // El resumen se saca ANTES de cerrar, porque `cerrar` consume el recolector.
     let supuestos = resumen(&rec);
@@ -205,22 +226,32 @@ pub async fn generar(
     //
     // A diferencia de un listado, esta SÍ guarda los ids: el dato del titular
     // salió, y él tiene derecho a saber en qué archivo iba.
-    let mut pacientes: Vec<i64> = consultas.iter().map(|c| c.paciente.id).collect();
+    //
+    // Y los pacientes salen de los TRES documentos, no solo del AC: alguien que
+    // en el periodo solo tuvo una fórmula o un laboratorio va en el archivo
+    // igual, y su rastro no puede depender de en cuál de los tres apareció.
+    let mut pacientes: Vec<i64> = consultas
+        .iter()
+        .map(|c| c.paciente.id)
+        .chain(procedimientos.iter().map(|x| x.paciente.id))
+        .chain(medicamentos.iter().map(|x| x.paciente.id))
+        .collect();
     pacientes.sort_unstable();
     pacientes.dedup();
+    let registros = consultas.len() + procedimientos.len() + medicamentos.len();
     crate::rutas::registrar_coleccion(
         &e,
         &u,
         "exportar",
         "rips",
         Some(descripcion_del_alcance(&p)),
-        consultas.len(),
+        registros,
         pacientes,
     )
     .await;
 
     Ok(Json(Salida {
-        archivos: Archivos { ac },
+        archivos: Archivos { ac, ap, am },
         supuestos,
         sin_portar: SIN_PORTAR.to_vec(),
     }))
