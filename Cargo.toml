@@ -53,3 +53,12 @@ guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "23395f3587e0c
 lto = true
 codegen-units = 1
 strip = true
+
+# Las DEPENDENCIAS optimizadas también en debug: deja NUESTROS crates en debug
+# puro —iteración y depurador intactos— y quita el peaje del banco. Medido en
+# quipu el 2026-08-05: 597,8 s -> 61,2 s (9,8x) con el MISMO conteo de pruebas.
+# `debug_assertions` sigue activo con opt-level > 0, comprobado con su caso rojo.
+# Aquí pesa el doble: en repo PRIVADO el runner es de 2 vCPU, la mitad que el
+# de uno publico, y compilar sin optimizar se paga sobre esa mitad.
+[profile.dev.package."*"]
+opt-level = 3
