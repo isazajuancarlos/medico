@@ -157,6 +157,11 @@ pub struct ChecklistCambio {
     pub ayuno_verificado: Option<bool>,
     pub labs_prequirurgicos: Option<bool>,
     pub valoracion_preanestesica: Option<bool>,
+    /// El grupo sanguíneo. **Una cadena vacía lo BORRA**, y no es un detalle de
+    /// forma: con `COALESCE` a secas, un «O+» mal capturado solo se puede
+    /// sustituir por otro grupo, nunca vaciar — y en una lista de verificación
+    /// prequirúrgica «no lo sé» y «O+ equivocado» no son lo mismo. Lo señaló la
+    /// revisión de esta rama.
     pub hemoclasificacion: Option<String>,
     pub reserva_sangre: Option<bool>,
 }
@@ -182,8 +187,11 @@ pub enum FalloAlCrear {
     NoVisible(&'static str),
     /// La sala existe y es suya, pero no se puede usar.
     SalaNoDisponible(String),
-    /// El consentimiento existe pero es de OTRO paciente.
-    ConsentimientoDeOtroPaciente,
+    /// La fecha no es RFC 3339. Se rechaza aquí y no en el `INSERT`: un `CHECK`
+    /// reventado sale como 500, y esto es entrada del cliente.
+    FechaInvalida(String),
+    /// Un dato del cuerpo que el esquema rechazaría. Mismo motivo.
+    Invalido(String),
 }
 
 impl FalloAlCrear {
@@ -193,9 +201,11 @@ impl FalloAlCrear {
             FalloAlCrear::SalaNoDisponible(estado) => {
                 format!("la sala no está disponible (estado: {estado})")
             }
-            FalloAlCrear::ConsentimientoDeOtroPaciente => {
-                "el consentimiento informado es de otro paciente".into()
-            }
+            FalloAlCrear::FechaInvalida(f) => format!(
+                "«{f}» no es una fecha: fecha_programada se escribe en RFC 3339, \
+                 como 2026-09-01T13:00:00Z"
+            ),
+            FalloAlCrear::Invalido(m) => m.clone(),
         }
     }
 }
@@ -323,16 +333,22 @@ pub async fn obtener(
 // Comprobaciones de pertenencia
 // ─────────────────────────────────────────────────────────────────────────────
 
-async fn paciente_visible(
+/// De qué institución es ese paciente, **si quien pregunta puede verlo**. `None`
+/// si no existe o es ajeno: las dos cosas se responden igual.
+///
+/// Devuelve la institución y no un `bool` porque es el dato con el que se
+/// comprueba todo lo demás: la sala, el cirujano y el anestesiólogo tienen que
+/// ser de la institución DEL PACIENTE.
+async fn institucion_del_paciente(
     pool: &crate::Pool,
     ambito: Ambito,
     id: i64,
-) -> Result<bool, sqlx::Error> {
+) -> Result<Option<i64>, sqlx::Error> {
     let fila: Option<(i64,)> = sqlx::query_as("SELECT institucion_id FROM paciente WHERE id = ?")
         .bind(id)
         .fetch_optional(pool)
         .await?;
-    Ok(fila.is_some_and(|(i,)| ambito.puede_ver(Some(i)) == Visibilidad::Si))
+    Ok(fila.and_then(|(i,)| (ambito.puede_ver(Some(i)) == Visibilidad::Si).then_some(i)))
 }
 
 /// Un profesional del ámbito, activo y con uno de los dos roles que operan.
@@ -386,14 +402,46 @@ pub async fn crear(
     ambito: Ambito,
     n: &ProgramacionNueva,
 ) -> Result<Result<i64, FalloAlCrear>, sqlx::Error> {
-    if !paciente_visible(pool, ambito, n.paciente_id).await? {
-        return Ok(Err(FalloAlCrear::NoVisible("paciente")));
+    // La fecha se PARSEA. El esquema la documenta como RFC 3339 y entraba como
+    // texto libre; el `ORDER BY fecha_programada DESC` es lexicográfico, así que
+    // un formato distinto reordena el listado en silencio. Es el patrón que este
+    // repositorio persigue en otros sitios: el dato que *parece* estar.
+    if chrono::DateTime::parse_from_rfc3339(&n.fecha_programada).is_err() {
+        return Ok(Err(FalloAlCrear::FechaInvalida(n.fecha_programada.clone())));
     }
-    if !profesional_visible(pool, ambito, n.cirujano_id).await? {
+    if n.duracion_estimada_min <= 0 {
+        return Ok(Err(FalloAlCrear::Invalido(
+            "la duración estimada tiene que ser mayor que cero".into(),
+        )));
+    }
+    if let Some(t) = &n.tipo_anestesia
+        && !matches!(t.as_str(), "GENERAL" | "REGIONAL" | "LOCAL" | "SEDACION")
+    {
+        return Ok(Err(FalloAlCrear::Invalido(format!(
+            "«{t}» no es un tipo de anestesia: GENERAL, REGIONAL, LOCAL o SEDACION"
+        ))));
+    }
+
+    // TODO se comprueba contra la institución DEL PACIENTE, no contra la de
+    // quien llama, y esa diferencia solo se ve con el superadmin.
+    //
+    // Para un admin de institución las dos coinciden y el caso normal no cambia.
+    // Para el SUPERADMIN, `puede_ver` dice que sí a todo: podía crear una
+    // programación con paciente de la institución 1, sala de la 2 y cirujano de
+    // la 3, y entonces la institución 1 veía en su listado el nombre de una sala
+    // y un cirujano ajenos —y podía cambiar el estado de la sala de la 2 al
+    // iniciar—. No es un atacante, es el dueño del sistema; pero una fila
+    // incoherente que ningún filtro puede alcanzar no la arregla nadie después.
+    // Lo señaló la revisión de esta rama.
+    let Some(duenio) = institucion_del_paciente(pool, ambito, n.paciente_id).await? else {
+        return Ok(Err(FalloAlCrear::NoVisible("paciente")));
+    };
+    let suyo = Ambito::Institucion(duenio);
+    if !profesional_visible(pool, suyo, n.cirujano_id).await? {
         return Ok(Err(FalloAlCrear::NoVisible("cirujano")));
     }
     if let Some(a) = n.anestesiologo_id
-        && !profesional_visible(pool, ambito, a).await?
+        && !profesional_visible(pool, suyo, a).await?
     {
         return Ok(Err(FalloAlCrear::NoVisible("anestesiólogo")));
     }
@@ -403,17 +451,19 @@ pub async fn crear(
                 .bind(c)
                 .fetch_optional(pool)
                 .await?;
-        match fila {
-            None => return Ok(Err(FalloAlCrear::NoVisible("consentimiento"))),
-            Some((pac,)) if pac != n.paciente_id => {
-                // El paciente ya se comprobó visible, así que comparar contra él
-                // es más estricto que comparar instituciones y no filtra nada.
-                return Ok(Err(FalloAlCrear::ConsentimientoDeOtroPaciente));
-            }
-            Some(_) => {}
+        // EL AJENO Y EL INEXISTENTE DAN LO MISMO, y la primera versión no.
+        //
+        // Distinguía «no existe» (404) de «es de otro paciente» (400), y eso
+        // contradecía la regla que este mismo módulo declara en su cabecera. La
+        // revisión de la rama refutó el ataque —el id es una secuencia global y
+        // el 400 salía igual para un consentimiento de la propia institución—,
+        // pero una regla escrita en absoluto que el código incumple es peor que
+        // el oráculo: la próxima vez nadie sabe cuál de las dos manda.
+        if !matches!(fila, Some((pac,)) if pac == n.paciente_id) {
+            return Ok(Err(FalloAlCrear::NoVisible("consentimiento")));
         }
     }
-    let Some(estado_sala) = sala_del_ambito(pool, ambito, n.quirofano_id).await? else {
+    let Some(estado_sala) = sala_del_ambito(pool, suyo, n.quirofano_id).await? else {
         return Ok(Err(FalloAlCrear::NoVisible("sala de quirófano")));
     };
     if matches!(estado_sala.as_str(), "MANTENIMIENTO" | "BLOQUEADO") {
@@ -465,23 +515,44 @@ pub async fn actualizar_checklist(
             estado.como_texto()
         )));
     }
-    sqlx::query(
+    // `AND estado = ?` con el estado LEÍDO, igual que `mover`. Sin esta cláusula
+    // hay una ventana en la que un `completar` concurrente cierra la cirugía y el
+    // checklist se escribe igual sobre una COMPLETADA — justo lo que el párrafo
+    // de arriba dice impedir. Lo señaló la revisión de esta rama: era el único
+    // escritor del módulo sin compare-and-swap.
+    let escrito = sqlx::query(
         "UPDATE programacion_quirurgica SET \
          ayuno_verificado = COALESCE(?, ayuno_verificado), \
          labs_prequirurgicos = COALESCE(?, labs_prequirurgicos), \
          valoracion_preanestesica = COALESCE(?, valoracion_preanestesica), \
-         hemoclasificacion = COALESCE(?, hemoclasificacion), \
+         hemoclasificacion = CASE WHEN ? THEN ? ELSE hemoclasificacion END, \
          reserva_sangre = COALESCE(?, reserva_sangre) \
-         WHERE id = ?",
+         WHERE id = ? AND estado = ?",
     )
     .bind(c.ayuno_verificado)
     .bind(c.labs_prequirurgicos)
     .bind(c.valoracion_preanestesica)
-    .bind(&c.hemoclasificacion)
+    // Dos binds y no uno: el PRIMERO dice si el campo venía en la petición y el
+    // segundo qué escribir. Con `COALESCE` a secas, «vacío» y «ausente» colapsan
+    // en el mismo NULL y el valor no se puede borrar nunca.
+    .bind(c.hemoclasificacion.is_some())
+    .bind(
+        c.hemoclasificacion
+            .as_deref()
+            .map(str::trim)
+            .filter(|h| !h.is_empty())
+            .map(str::to_string),
+    )
     .bind(c.reserva_sangre)
     .bind(id)
+    .bind(estado.como_texto())
     .execute(pool)
     .await?;
+    if escrito.rows_affected() == 0 {
+        return Ok(Resultado::Rechazado(
+            "la cirugía cambió de estado mientras se procesaba la petición".into(),
+        ));
+    }
     Ok(Resultado::Hecho)
 }
 
@@ -554,10 +625,28 @@ pub async fn mover(
     match paso.sala {
         EfectoEnSala::Ninguno => {}
         EfectoEnSala::Ocupar => {
-            sqlx::query("UPDATE quirofano SET estado = 'EN_USO' WHERE id = ? AND estado = 'DISPONIBLE'")
-                .bind(actual.quirofano_id)
-                .execute(&mut *tx)
-                .await?;
+            // EL `rows_affected` NO SE DESCARTA, y esa línea es el arreglo.
+            //
+            // La primera versión lanzaba este `UPDATE` y seguía. La transacción
+            // hacía atómicas las dos escrituras, sí, pero **no impedía la doble
+            // ocupación**: dos cirugías podían quedar EN_CURSO en la misma sala
+            // —medido por la revisión de esta rama— y al terminar la primera, la
+            // sala volvía a DISPONIBLE con la segunda operando dentro. El
+            // docstring de esta función afirmaba justo lo contrario.
+            let ocupada = sqlx::query(
+                "UPDATE quirofano SET estado = 'EN_USO' WHERE id = ? AND estado = 'DISPONIBLE'",
+            )
+            .bind(actual.quirofano_id)
+            .execute(&mut *tx)
+            .await?;
+            if ocupada.rows_affected() == 0 {
+                tx.rollback().await?;
+                return Ok(Resultado::Rechazado(
+                    "la sala no está disponible: ya hay una cirugía en curso, o está en \
+                     mantenimiento o bloqueada"
+                        .into(),
+                ));
+            }
         }
         EfectoEnSala::Liberar => {
             // Solo desde `EN_USO`. Una sala en MANTENIMIENTO o BLOQUEADO la puso
@@ -790,20 +879,117 @@ mod pruebas {
         ).execute(&pool).await.unwrap();
 
         let mut n = nueva();
+        // El de OTRO paciente y el INEXISTENTE se responden IGUAL. Distinguirlos
+        // era un oráculo —débil, pero contradecía la regla que este módulo
+        // declara en su cabecera— y lo cazó la revisión de la rama.
         n.consentimiento_id = Some(2); // el del paciente de la OTRA institución
-        assert_eq!(
-            crear(&pool, UNO, &n).await.unwrap().unwrap_err(),
-            FalloAlCrear::ConsentimientoDeOtroPaciente
-        );
-
-        n.consentimiento_id = Some(1);
-        assert!(crear(&pool, UNO, &n).await.unwrap().is_ok(), "el suyo sí");
-
-        n.consentimiento_id = Some(999);
         assert_eq!(
             crear(&pool, UNO, &n).await.unwrap().unwrap_err(),
             FalloAlCrear::NoVisible("consentimiento")
         );
+        n.consentimiento_id = Some(999); // no existe
+        assert_eq!(
+            crear(&pool, UNO, &n).await.unwrap().unwrap_err(),
+            FalloAlCrear::NoVisible("consentimiento"),
+            "el ajeno y el inexistente tienen que dar exactamente lo mismo"
+        );
+
+        // Y la pareja: el suyo sí entra.
+        n.consentimiento_id = Some(1);
+        assert!(crear(&pool, UNO, &n).await.unwrap().is_ok(), "el suyo sí");
+    }
+
+    /// **Dos cirugías no pueden estar EN_CURSO en la misma sala.**
+    ///
+    /// Medido por la revisión de la rama: la versión anterior lanzaba el
+    /// `UPDATE` de la sala y descartaba su `rows_affected`, así que la segunda
+    /// entraba igual — y al terminar la primera, la sala volvía a DISPONIBLE con
+    /// la segunda operando dentro.
+    #[tokio::test]
+    async fn una_sala_no_admite_dos_cirugias_a_la_vez() {
+        let pool = base().await;
+        let a = programar(&pool).await;
+        let b = programar(&pool).await;
+
+        assert_eq!(
+            mover(&pool, UNO, a, Accion::Iniciar, &CierreCirugia::default()).await.unwrap(),
+            Resultado::Hecho
+        );
+        let r = mover(&pool, UNO, b, Accion::Iniciar, &CierreCirugia::default()).await.unwrap();
+        assert!(
+            matches!(r, Resultado::Rechazado(_)),
+            "la segunda cirugía entró en una sala ocupada: {r:?}"
+        );
+        // Y el rechazo NO dejó la segunda a medias.
+        assert_eq!(obtener(&pool, UNO, b).await.unwrap().unwrap().estado, "PROGRAMADA");
+        assert!(obtener(&pool, UNO, b).await.unwrap().unwrap().hora_inicio_real.is_none());
+
+        // La pareja: liberada la sala, la segunda sí entra.
+        mover(&pool, UNO, a, Accion::Completar, &CierreCirugia::default()).await.unwrap();
+        assert_eq!(
+            mover(&pool, UNO, b, Accion::Iniciar, &CierreCirugia::default()).await.unwrap(),
+            Resultado::Hecho
+        );
+    }
+
+    /// La fecha se parsea, y el resto del cuerpo también: son entrada del
+    /// cliente, así que se rechazan aquí y no reventando un `CHECK`.
+    #[tokio::test]
+    async fn el_cuerpo_se_valida_antes_de_tocar_la_base() {
+        let pool = base().await;
+        let mut n = nueva();
+        n.fecha_programada = "mañana a las tres".into();
+        assert!(matches!(
+            crear(&pool, UNO, &n).await.unwrap().unwrap_err(),
+            FalloAlCrear::FechaInvalida(_)
+        ));
+
+        let mut n = nueva();
+        n.duracion_estimada_min = 0;
+        assert!(matches!(
+            crear(&pool, UNO, &n).await.unwrap().unwrap_err(),
+            FalloAlCrear::Invalido(_)
+        ));
+
+        let mut n = nueva();
+        n.tipo_anestesia = Some("EPIDURAL".into());
+        assert!(matches!(
+            crear(&pool, UNO, &n).await.unwrap().unwrap_err(),
+            FalloAlCrear::Invalido(_)
+        ));
+
+        // Y ninguno dejó fila.
+        let filas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM programacion_quirurgica")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(filas, 0);
+        assert!(crear(&pool, UNO, &nueva()).await.unwrap().is_ok(), "y la buena entra");
+    }
+
+    /// **Ni el superadmin puede mezclar instituciones en una programación.**
+    ///
+    /// Todo se comprueba contra la institución DEL PACIENTE. Antes se
+    /// comprobaba contra la de quien llama, y `puede_ver` le dice que sí a todo
+    /// al superadmin: podía dejar una fila con paciente de una institución y
+    /// sala de otra, que ningún filtro alcanza después.
+    #[tokio::test]
+    async fn el_superadmin_tampoco_mezcla_instituciones() {
+        let pool = base().await;
+        let mut n = nueva();
+        n.quirofano_id = 2; // sala de la institución 2, paciente de la 1
+        assert_eq!(
+            crear(&pool, Ambito::Superadmin, &n).await.unwrap().unwrap_err(),
+            FalloAlCrear::NoVisible("sala de quirófano")
+        );
+
+        let mut n = nueva();
+        n.cirujano_id = 7; // cirujano de la institución 2
+        assert_eq!(
+            crear(&pool, Ambito::Superadmin, &n).await.unwrap().unwrap_err(),
+            FalloAlCrear::NoVisible("cirujano")
+        );
+
+        // La pareja: coherente, el superadmin sí puede.
+        assert!(crear(&pool, Ambito::Superadmin, &nueva()).await.unwrap().is_ok());
     }
 
     #[tokio::test]
@@ -965,6 +1151,25 @@ mod pruebas {
         let p = obtener(&pool, UNO, id).await.unwrap().unwrap();
         assert!(p.ayuno_verificado, "el ayuno sigue marcado");
         assert_eq!(p.hemoclasificacion.as_deref(), Some("O+"));
+
+        // **Y se puede BORRAR**, que es distinto de sustituir. Un grupo
+        // sanguíneo mal capturado tiene que poder volver a «no lo sé».
+        let c = ChecklistCambio { hemoclasificacion: Some("  ".into()), ..Default::default() };
+        actualizar_checklist(&pool, UNO, id, &c).await.unwrap();
+        let p = obtener(&pool, UNO, id).await.unwrap().unwrap();
+        assert_eq!(p.hemoclasificacion, None, "no se pudo vaciar el grupo sanguíneo");
+        assert!(p.ayuno_verificado, "y borrar uno no tocó los demás");
+
+        // La pareja: NO mandar el campo lo deja como estaba.
+        actualizar_checklist(&pool, UNO, id, &ChecklistCambio {
+            hemoclasificacion: Some("A-".into()), ..Default::default()
+        }).await.unwrap();
+        actualizar_checklist(&pool, UNO, id, &ChecklistCambio::default()).await.unwrap();
+        assert_eq!(
+            obtener(&pool, UNO, id).await.unwrap().unwrap().hemoclasificacion.as_deref(),
+            Some("A-"),
+            "el campo ausente no debe borrar nada"
+        );
     }
 
     /// La preparación de una cirugía que ya ocurrió no se retoca.

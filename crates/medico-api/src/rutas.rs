@@ -4558,7 +4558,19 @@ async fn quir_listar(
     Query(f): Query<FiltroQuirofano>,
 ) -> Response {
     match quirofano::listar_programaciones(&e.pool, u.ambito(), f.estado.as_deref()).await {
-        Ok(v) => Json(v).into_response(),
+        Ok(v) => {
+            // ESTE LISTADO ATRAVIESA PACIENTES, así que entra en la bitácora de
+            // la Ley 1581 como colección. Devuelve nombre, DOCUMENTO y qué
+            // cirugía se le practica a cada uno: de los listados que cruzan
+            // titulares es el de carga más sensible, y salió del port sin
+            // registrar nada. Lo señaló la revisión de esta rama.
+            //
+            // Sin la lista de ids: eso significaría que el dato SALIÓ del
+            // sistema, y aquí solo se consultó.
+            registrar_coleccion(&e, &u, "listar", "quirofano", f.estado.clone(), v.len(), vec![])
+                .await;
+            Json(v).into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -4587,7 +4599,9 @@ async fn quir_crear(
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
         // 404 y no 400 cuando el id no es visible: un 400 confirmaría que el id
-        // existe en otra institución, y con eso se enumera su padrón.
+        // existe en otra institución, y con eso se enumera su padrón. Lo demás
+        // —fecha mal escrita, duración de cero, sala en mantenimiento— sí es 400:
+        // es el cuerpo de la petición y quien la manda puede corregirlo.
         Ok(Err(f @ quirofano::FalloAlCrear::NoVisible(_))) => {
             (StatusCode::NOT_FOUND, f.mensaje()).into_response()
         }

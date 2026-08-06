@@ -158,8 +158,17 @@ pub fn transicion(desde: EstadoCirugia, accion: Accion) -> Result<Transicion, Re
         // **UNA SUSPENDIDA VUELVE A LA VIDA.** En el lado Python no: `iniciar`
         // exige exactamente `PROGRAMADA` y `cancelar` no nombra `SUSPENDIDA`, así
         // que una cirugía suspendida se quedaba sin salida —ni se reanuda ni se
-        // cierra— y ese estado no aparecía en ninguna lista de trabajo. Se
-        // reprograma (vuelve a PROGRAMADA al iniciar) o se cancela.
+        // cierra— y ese estado no aparecía en ninguna lista de trabajo.
+        //
+        // AVISO: hoy `SUSPENDIDA` **no se puede alcanzar por HTTP**. No hay ruta
+        // `suspender`, ni en este binario ni en el Python, así que estas dos
+        // transiciones y `Accion::Suspender` son correctas y no las ejecuta
+        // ninguna petición. Se conservan porque el modelo es el bueno y el
+        // frontal ya ofrece «Suspendidas» como filtro; lo que falta es el verbo,
+        // y va en su propia tarea. Lo contó la revisión de esta rama, que además
+        // avisó de que al reanudar se pisaría `hora_inicio_real` sin dejar
+        // rastro: eso hay que resolverlo ANTES de añadir la ruta, separando la
+        // hora nominal del primer inicio de la del reinicio (directiva 32).
         (Suspendida, Iniciar) => t(EnCurso, Ocupar),
         (Suspendida, Cancelar) => t(Cancelada, Ninguno),
 
@@ -287,6 +296,10 @@ mod pruebas {
     /// El recuento: de 20 pares (5 estados × 4 acciones) exactamente 8 valen.
     /// Es el control de que la tabla ni se abrió ni se cerró sin querer — un
     /// cambio que mueva ese número tiene que ser deliberado.
+    ///
+    /// **Dos de los 8 son inalcanzables hoy** —las que salen de `SUSPENDIDA`—
+    /// porque no hay ruta `suspender`. Se dice aquí para que el número no se lea
+    /// como «ocho caminos que el producto ofrece».
     #[test]
     fn de_veinte_pares_valen_ocho() {
         let todos = [Programada, EnCurso, Completada, Cancelada, Suspendida];
