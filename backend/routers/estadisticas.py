@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func
 from sqlalchemy import extract, and_, cast, Date
 from models import (
     Cita, Paciente, Historia, Usuario, AtencionUrgencias,
-    Factura, Cama, Hospitalizacion, EstadoCita, TipoTriage,
+    Factura, Cama, Hospitalizacion, EstadoCita, TipoTriage, RolUsuario,
 )
 from models import ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
@@ -22,10 +22,37 @@ router = APIRouter(prefix="/estadisticas", tags=["estadisticas"],
 
 
 def _pac_sub(db: Session, user: Usuario):
-    """Subquery of paciente IDs scoped to user's institution (None = no filter)."""
-    if user.institucion_id:
-        return select(Paciente.id).where(Paciente.institucion_id == user.institucion_id).subquery()
-    return None
+    """Los pacientes que este usuario puede ver. `None` significa «sin filtro».
+
+    === POR QUÉ NO ES `if user.institucion_id` A SECAS ===
+
+    Lo era, y ese `if` mete DOS casos distintos en la misma rama: el SUPERADMIN,
+    que no tiene institución porque es el dueño del sistema, y un usuario normal
+    al que le falta el dato. A los dos les devolvía `None`, y las cinco consultas
+    que usan esta función hacen `if sub is not None` — o sea que al segundo le
+    dejaban ver los pacientes de TODAS las instituciones.
+
+    Es el patrón «filtro opcional» que ya causó la fuga de `rips_completo.py`, y
+    la directiva 20 en su forma canónica: ante la ausencia de un dato se falla
+    ruidosamente, no se sustituye por un defecto permisivo. `filtrar_por_institucion`
+    lo cerró con un `raise` el 2026-08-05; esta capa se quedó sin cerrar, y las
+    dos tienen que decir lo mismo.
+
+    Hoy no es alcanzable por una cuenta normal —haría falta un no-superadmin con
+    `institucion_id = NULL`— pero eso es una premisa sobre los datos, no una
+    garantía del código: `obtener()` YA niega esas filas (`SIN_DUENIO`), así que
+    el sistema tiene dos capas discrepando sobre el mismo caso.
+    """
+    if user.rol == RolUsuario.SUPERADMIN:
+        return None  # el dueño del sistema ve todo, y es una decisión escrita
+    if not user.institucion_id:
+        raise RuntimeError(
+            f"el usuario {user.id} tiene rol {user.rol} y NINGUNA institución. No se "
+            "sirve una consulta sin acotar: sería enseñarle los pacientes de todos "
+            "los prestadores. Un usuario que no es superadmin tiene que tener "
+            "institución; si esta cuenta existe, está mal creada."
+        )
+    return select(Paciente.id).where(Paciente.institucion_id == user.institucion_id).subquery()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -215,7 +242,14 @@ def get_pacientes(
     fechas = db.exec(_w(select(Paciente.fecha_nacimiento))).all()
     hoy = date.today()
     grupos = {"0-10": 0, "11-17": 0, "18-29": 0, "30-44": 0, "45-59": 0, "60+": 0}
-    for (fn,) in fechas:
+    # `db.exec()` sobre un `select` de UNA sola columna devuelve ESCALARES, no
+    # tuplas, así que el desempaquetado daba `TypeError: cannot unpack
+    # non-iterable datetime.date` y este panel respondía 500 siempre que hubiera
+    # un paciente con fecha de nacimiento. Es la MISMA clase que el
+    # `TipoTriage.ROJO` de `/urgencias` y vivía en el mismo archivo; entra aquí
+    # porque el banco nuevo abre diciendo «y ninguno revienta», y sin esto esa
+    # frase era falsa.
+    for fn in fechas:
         if not fn:
             continue
         edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
@@ -485,18 +519,38 @@ def get_urgencias(
     sub = _pac_sub(db, current_user)
 
     def _w(q):
+        # SIN `cast(..., Date)`, y no es estilo. En SQLite ese cast NO es un cast
+        # de fecha: aplica afinidad numérica y `CAST('2026-08-01 10:00:00' AS
+        # DATE)` devuelve **2026**, así que la comparación es siempre falsa y este
+        # panel contaba CERO. Medido, y con su positivo de control: quitando el
+        # cast, `total` pasa de 0 a 1 y `by_triage` deja de venir vacío.
+        #
+        # Comparar el instante contra los límites es portable —no usa función
+        # ninguna— y además más correcto: no trunca. El límite superior es
+        # `< fin + 1 día` para que el último día entre entero, que es lo que
+        # `<= fin` sobre una fecha pretendía decir.
+        #
+        # Solo se arregla AQUÍ, en el endpoint que este PR ya tocaba. Los otros
+        # 11 `cast(..., Date)` del archivo tienen la misma ceguera y van en su
+        # propia tarea: reescribirlos todos sería llevarse más de lo que esta
+        # corrida reescribe (directiva 22).
         q = q.where(
-            cast(AtencionUrgencias.fecha_ingreso, Date) >= fecha_inicio,
-            cast(AtencionUrgencias.fecha_ingreso, Date) <= fecha_fin,
+            AtencionUrgencias.fecha_ingreso >= fecha_inicio,
+            AtencionUrgencias.fecha_ingreso < fecha_fin + timedelta(days=1),
         )
         if sub is not None:
             q = q.where(AtencionUrgencias.paciente_id.in_(sub))
         return q
 
+    # LOS MIEMBROS SON `TRIAGE_1`..`TRIAGE_5`, NO LOS COLORES. Esto decía
+    # `TipoTriage.ROJO` y compañía, que no existen en el enum: el endpoint
+    # respondía 500 con `AttributeError` a cualquiera que lo llamara, y llevaba
+    # así sin que nadie lo notara porque NINGUNA prueba lo invocaba. El color va
+    # en el VALOR («Rojo - Resucitación»), no en el nombre del miembro.
     triage_labels = {
-        TipoTriage.ROJO: "Rojo (I)", TipoTriage.NARANJA: "Naranja (II)",
-        TipoTriage.AMARILLO: "Amarillo (III)", TipoTriage.VERDE: "Verde (IV)",
-        TipoTriage.AZUL: "Azul (V)",
+        TipoTriage.TRIAGE_1: "Rojo (I)", TipoTriage.TRIAGE_2: "Naranja (II)",
+        TipoTriage.TRIAGE_3: "Amarillo (III)", TipoTriage.TRIAGE_4: "Verde (IV)",
+        TipoTriage.TRIAGE_5: "Azul (V)",
     }
     q_triage = _w(select(AtencionUrgencias.triage, func.count(AtencionUrgencias.id)).group_by(AtencionUrgencias.triage))
     by_triage = {triage_labels.get(r[0], str(r[0])): r[1] for r in db.exec(q_triage).all()}
