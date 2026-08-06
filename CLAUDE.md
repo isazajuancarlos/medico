@@ -314,9 +314,9 @@ binario sirva de verdad, que es justo lo que la demostración debe enseñar.
   correcto: el entorno declara `MEDICO_TRAS_PROXY=true` y ahí no llega
   `X-Real-IP`. El freno al ensayo de contraseñas prefiere negarse antes que
   meter a todos en el mismo cubo. Por nginx llega y responde 200.
-- El **panel de inicio sale vacío**: pide `/api/estadisticas/kpis`, que es uno
-  de los cinco prefijos que el port a Rust todavía no cubre (404). No es un
-  fallo de la demo; es el hueco conocido, y se ve más aquí que en ningún sitio.
+- El **panel de inicio salía vacío** porque `/api/estadisticas/kpis` daba 404.
+  **Portado el 2026-08-06**, con los otros siete paneles: ya responde. Lo que
+  sigue en 404 desde la demo son `admin` y `quirofano`, y esos sí se ven.
 
 ## El workspace Rust
 
@@ -327,7 +327,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 493 pruebas (~2 min 30 s)
+cargo test  --workspace --all-targets                   # 679 pruebas (~2 min 30 s)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -403,37 +403,55 @@ relativa a su directorio de trabajo: arrancarlo desde otro sitio crea una base
 vacía y el acceso responde «credenciales incorrectas», que es indistinguible de
 «esta base no tiene a nadie». Ya costó una tarde.
 
-**Lo que el port todavía NO cubre**, para no confundir avance con paridad. La
-lista se saca comparando los prefijos que registra `crates/medico-api/src/rutas.rs`
-(112 rutas, 154 pares ruta×método) contra los de `backend/routers/*.py` (219
-endpoints en 28 routers); vuelto a medir el 2026-08-04, siguen sin existir en
-Rust —y la lista no se ha movido desde el 03—:
+**Lo que el port todavía NO cubre**, para no confundir avance con paridad.
+
+**Cómo se cuenta, corregido el 2026-08-06.** Hasta esa fecha la lista salía de
+comparar los PREFIJOS de `rutas.rs` contra los de `backend/routers/*.py`, y esa
+cuenta miente en las dos direcciones: suma como trabajo lo que solo cambió de
+nombre (`auth` → `acceso`/`salir`/`yo`, `superadmin` → `/api/instituciones`, los
+cuatro documentos clínicos → `/api/documentos`) y no ve un verbo suelto sin
+servir dentro de un módulo que sí existe. Se cuenta contra lo que la INTERFAZ
+pide, que es el único criterio que es una prueba: se resuelven las llamadas
+`http.<verbo>` de `frontend/src/**/*.ts` contra las constantes `API` de cada
+servicio y se cruzan con las rutas del `Router::new()`.
+
+Los dos extractores llevan control positivo, y hace falta: la primera versión
+leía el `.route(` solo hasta el final de la línea —así que era ciega a
+`get(x).put(y).delete(z)` partido en varias— y cortaba el genérico de TypeScript
+en el primer `;`, con lo que se le escapó `GET /api/admin/auditoria`. Un fallo
+contaba de más y el otro de menos.
 
 ```
-los que el frontend SÍ llama — hoy romperían la pantalla (3):
-  admin (14 llamadas)  estadisticas (8)  quirofano (8)
-  → 30 de las 137 rutas que el frontend llama se quedan sin servidor, y las
-    30 son de esos tres módulos: NINGÚN módulo portado se queda a medias
-    (ni un solo verbo suelto sin servir)
+medido el 2026-08-06:  229/229 llamadas del frontal resueltas (0 sin resolver)
+                       137 llamadas .route() leídas
+                       el frontal pide 197 endpoints distintos
+                       el binario Rust sirve  184
+                       FALTAN 35, todos en dos módulos:
 
-  PORTADO el 2026-08-05 y ya fuera de esta lista:
-    facturacion (13 llamadas, 17 endpoints) — con el aislamiento entre
-      instituciones, que en el Python vivo fallaba ABIERTO en CINCO sitios:
-      los cuatro de `routers/facturacion.py` y `estadisticas/financiero`,
-      que sumaba el dinero de todos los prestadores y vive en otro router
+  admin      26 endpoints — usuarios, institución, configuración, política de
+                            seguridad, entidades, especialidades, campos
+                            dinámicos, capacidades y auditoría
+  quirofano   9 endpoints — salas y programación quirúrgica
 
-los que no llama nadie desde Angular — no rompen nada, pero son Python
-que sigue vivo (5):
-  superadmin  epicrisis  evoluciones  interconsultas  nota-operatoria
-  → y sus PANTALLAS sí funcionan contra el binario, por otra ruta: las
-    cuatro clínicas hablan con `/api/documentos` (la espina genérica) y
-    superadmin con `/api/instituciones` y `/api/usuarios`. O sea que estos
-    cinco routers de Python son código vivo SIN CLIENTE, no huecos
+  PORTADOS y ya fuera de la lista:
+    facturacion   (17)  2026-08-05
+    consentimiento (5)  2026-08-05
+    estadisticas   (8)  2026-08-06 — los ocho paneles, con el aislamiento que
+                        en el Python vivo fallaba ABIERTO: `/financiero` sumaba
+                        el dinero de TODOS los prestadores
 
 a medias (1):
   rips — LOS CINCO desde el 2026-08-04. Falta el FEV-RIPS, que es
          la fusión de los cinco en un documento único, no un sexto
 ```
+
+**Ya no hay «routers de Python sin cliente» que apuntar como huecos**:
+`superadmin`, `epicrisis`, `evoluciones`, `interconsultas` y `nota-operatoria`
+tienen su pantalla funcionando contra el binario por otra ruta —las cuatro
+clínicas hablan con `/api/documentos` y superadmin con `/api/instituciones`— y
+desde el 2026-08-06 el catálogo de módulos lo DICE: los cinco declaran su
+`prefijo`, así que dejan de anunciarse como pendientes a un cliente que los tiene
+comprados. Lo vigila `ningun_modulo_construido_se_anuncia_como_pendiente`.
 
 **`/api/rips` ya no se niega, y esa es la novedad.** Emite **los cinco**
 documentos —AC, AP, AM, AU y AH—, así que `sin_portar` va vacío y **el 409 se

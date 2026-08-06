@@ -183,6 +183,43 @@ mod pruebas {
         );
     }
 
+    /// **La otra dirección: construido y declarado PENDIENTE.**
+    ///
+    /// La prueba de arriba solo caza «declara una ruta que no existe». Su pareja
+    /// —un módulo sin prefijo cuya ruta el router SÍ sirve— no se queja nunca, y
+    /// llevaba tiempo pasando: `RIPS` estaba servido y anunciado como pendiente,
+    /// así que un cliente que lo licenció leía «aún no está» sobre un módulo que
+    /// el binario le estaba sirviendo. Lo mismo iba a repetirse con
+    /// `ESTADISTICAS` al portarlo, que es cuando salió (directiva 23: al arreglar
+    /// el lado ruidoso, busca el falso negativo que comparte causa).
+    ///
+    /// La regla mira la CONVENCIÓN del proyecto —`NUTRICION` → `/api/nutricion`,
+    /// con guiones o sin ellos— y no una lista a mano. No alcanza a los módulos
+    /// cuya ruta no se deduce del nombre (los cuatro documentos clínicos viven
+    /// bajo `/api/documentos`), y eso se dice aquí en vez de fingir cobertura
+    /// total: lo que este guardián promete es que **nadie que siga la convención
+    /// se quede sin declarar**.
+    #[test]
+    fn ningun_modulo_construido_se_anuncia_como_pendiente() {
+        let mudos: Vec<String> = modulo::CATALOGO
+            .iter()
+            .filter(|m| m.prefijo.is_none())
+            .filter_map(|m| {
+                let bajo = m.nombre.to_lowercase();
+                [format!("/api/{}", bajo.replace('_', "-")), format!("/api/{bajo}")]
+                    .into_iter()
+                    .find(|r| sirve(r))
+                    .map(|r| format!("{} sirve {r}", m.nombre))
+            })
+            .collect();
+        assert!(
+            mudos.is_empty(),
+            "estos módulos están CONSTRUIDOS y el catálogo los anuncia como pendientes, \
+             así que el cliente que los compró lee «aún no está»: {mudos:?}. \
+             Declárales su `prefijo` en `medico_dominio::modulo::CATALOGO`."
+        );
+    }
+
     /// Y que `sirve` de verdad discrimine: si devolviera `true` siempre, la
     /// prueba de arriba pasaría con el catálogo entero inventado.
     #[test]

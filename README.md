@@ -47,25 +47,35 @@ está el CI y `construir.sh`.
 El port a Rust **no reemplaza** al Python todavía, y este README no va a decir lo
 contrario para que parezca más avanzado: **FEV-RIPS no existe en Rust** —solo el
 recolector de datos faltantes—, y sin él no hay facturación electrónica, que es
-por lo que le pagan al prestador. Comparados los prefijos de `rutas.rs` contra los
-de `backend/routers/` el 2026-08-01, siguen sin backend en Rust diez prefijos y
-uno va a medias. Cinco los llama la interfaz, así que hoy romperían una pantalla:
-`/api/facturacion`, `/api/estadisticas`, `/api/admin`, `/api/quirofano` y
-`/api/consentimiento`. `/api/rips` ya existe pero **solo emite el AC**, y se
-niega a hacerlo sin un `parcial=true` explícito: un archivo sin los
-procedimientos ni los medicamentos parece completo y no lo está. Los otros cinco
-no los llama nadie desde Angular, pero son
-Python que sigue vivo: `/api/superadmin`, `/api/epicrisis`, `/api/evoluciones`,
-`/api/interconsultas` y `/api/nota-operatoria`. El ADR
-no autoriza apagar Python hasta que la generación del RIPS sea byte a byte
-idéntica.
+por lo que le pagan al prestador. `/api/rips` ya existe pero **solo emite el AC**,
+y se niega a hacerlo sin un `parcial=true` explícito: un archivo sin los
+procedimientos ni los medicamentos parece completo y no lo está. El ADR no
+autoriza apagar Python hasta que la generación del RIPS sea byte a byte idéntica.
+
+**Cuánto falta, medido el 2026-08-06.** No se cuenta comparando prefijos de
+`rutas.rs` contra `backend/routers/`, que es como se contaba antes: esa cuenta
+suma como trabajo lo que solo cambió de nombre —`auth` es `acceso`/`salir`/`yo`,
+`superadmin` es `/api/instituciones`, y epicrisis, evoluciones, interconsultas y
+notas operatorias son un solo `/api/documentos`—. Se cuenta contra lo que la
+interfaz PIDE: resueltas las 229 llamadas HTTP de los 82 `.ts` del frontal contra
+las 137 rutas del router, **el binario Rust sirve 184 de los 197 endpoints
+distintos que Angular llama**. Faltan **35, en dos módulos**:
+
+| Módulo | Endpoints | Estado |
+|---|---|---|
+| `/api/admin` | 26 | pendiente — usuarios, entidades, campos dinámicos, política de seguridad, auditoría |
+| `/api/quirofano` | 9 | pendiente — salas y programación quirúrgica |
+
+Mientras tanto esas dos pantallas las sirve el backend Python.
 
 Lo que el port **sí** cubre: pacientes, historia clínica con firma, urgencias,
 hospitalización, nutrición, rehabilitación, remisiones y contrarreferencia,
 incapacidades, citas y **agenda médica** (franjas, bloqueos, turnos libres e
 indicadores), catálogo de módulos por licencia, farmacia e inventario,
-proveedores, laboratorio, imágenes diagnósticas y ambulancias. Los cuatro
-maestros —CIE-10, CUPS, CUM y DIVIPOLA— van empotrados en el binario.
+proveedores, laboratorio, imágenes diagnósticas, ambulancias, facturación,
+consentimiento informado, los cuatro documentos clínicos bajo `/api/documentos`
+y **los ocho paneles de estadística**. Los cuatro maestros —CIE-10, CUPS, CUM y
+DIVIPOLA— van empotrados en el binario.
 
 ## Arrancar
 

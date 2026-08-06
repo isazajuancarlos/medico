@@ -11,6 +11,7 @@ pub mod consentimiento;
 pub mod diagnostico;
 pub mod divipola;
 pub mod documento;
+pub mod estadisticas;
 pub mod facturacion;
 pub mod formula;
 pub mod freno;
