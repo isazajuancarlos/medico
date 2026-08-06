@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
-from jose import jwt, JWTError
+from jose import jwt
+from jose.exceptions import JOSEError
 from fastapi import HTTPException, status
 from core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 
@@ -22,7 +23,14 @@ def decode_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         return payload
-    except JWTError:
+    # JOSEError y no JWTError, y la diferencia se midió: `JWKError` **no** es
+    # subclase de `JWTError`, así que se escapaba de aquí y salía como 500. Hoy
+    # ese camino es inalcanzable —los once tokens forjados que probó la revisión
+    # dan los once 401—, pero deja de serlo en cuanto alguien toque la lista de
+    # `algorithms`: con `RS256` dentro, un token RS256 produce `JWKError` y el
+    # servidor responde 500 a una credencial inválida. `JOSEError` es la raíz de
+    # la familia y cierra las tres ramas (JWT, JWS, JWK) de una vez.
+    except JOSEError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",
