@@ -7946,6 +7946,75 @@ mod pruebas {
             assert_eq!(sa["configurable"], false);
         }
 
+        /// **UN `admin` SIN INSTITUCIÓN NO REESCRIBE LA MATRIZ DE OTRA.**
+        ///
+        /// Lo cazó la revisión del delta: yo arreglé `institucion_objetivo` en las
+        /// rutas de admin y dejé viva su pareja aquí, en `capacidades::institucion_de`
+        /// —el mismo `match u.institucion_id` que trata «sin institución» como
+        /// «superadmin»— (directiva 23).
+        ///
+        /// La fila `admin` con `institucion_id = NULL` la crea el producto: un
+        /// superadmin hace `POST /api/usuarios` con `rol:"admin"` sin institución.
+        /// Esa cuenta no ve un dato (`Ambito::Ninguno`), pero podía elegir la
+        /// institución 2 con `?institucion_id=2` y concederle `GestionarUsuarios`
+        /// a su laboratorista — una sesión con privilegio dentro de un inquilino
+        /// cuyos datos no podía leer.
+        #[tokio::test]
+        async fn un_admin_sin_institucion_no_toca_la_matriz_de_otra() {
+            let e = con_admin_y_lab().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (2,'Dos','901')")
+                .execute(&e.pool).await.unwrap();
+            // La fila que el hallazgo describe: admin, activo, SIN institución.
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (99,'Suelto','suelto@x.co',?,'admin',NULL,1)",
+            ).bind(&h).execute(&e.pool).await.unwrap();
+
+            let r = enviar(
+                &e, "PUT", "/api/capacidades", 99,
+                r#"{"institucion_id":2,"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            ).await;
+            assert_eq!(
+                r.status(), StatusCode::FORBIDDEN,
+                "un admin sin institución reescribió la matriz de la institución 2: {}",
+                cuerpo_de(r).await
+            );
+            // Y no se escribió NADA en ninguna institución.
+            let filas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM capacidad_rol")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(filas, 0, "se guardó la excepción pese al 403");
+
+            // GET por la misma cuenta también se niega: ni leer la ajena.
+            let r = enviar(&e, "GET", "/api/capacidades?institucion_id=2", 99, "").await;
+            assert_eq!(r.status(), StatusCode::FORBIDDEN);
+        }
+
+        /// LA PAREJA: el admin CON institución sigue administrando la SUYA, y el
+        /// `?institucion_id=` de otra se ignora —no da error, escribe en la
+        /// propia—. Sin esto, un `institucion_de` que negara a todos pasaría la
+        /// prueba de arriba.
+        #[tokio::test]
+        async fn el_admin_con_institucion_administra_la_suya_e_ignora_el_parametro() {
+            let e = con_admin_y_lab().await;
+            sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (2,'Dos','901')")
+                .execute(&e.pool).await.unwrap();
+
+            // El admin de la 1 manda `?institucion_id=2`: el parámetro se ignora.
+            let r = enviar(
+                &e, "PUT", "/api/capacidades", ADMIN,
+                r#"{"institucion_id":2,"cambios":[{"capacidad":"escribir_clinico","rol":"laboratorista","permitido":true}]}"#,
+            ).await;
+            assert_eq!(r.status(), StatusCode::OK, "{}", cuerpo_de(r).await);
+
+            // El cambio cayó en la institución 1 (la del admin), NO en la 2.
+            let en1: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM capacidad_rol WHERE institucion_id = 1").fetch_one(&e.pool).await.unwrap();
+            let en2: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM capacidad_rol WHERE institucion_id = 2").fetch_one(&e.pool).await.unwrap();
+            assert_eq!((en1, en2), (1, 0), "el parámetro mandó sobre la institución propia");
+        }
+
         /// Punto 7 de la ficha: el cambio queda en la bitácora encadenada, y la
         /// cadena sigue verificando después.
         #[tokio::test]

@@ -80,11 +80,31 @@ fn institucion_de(
     u: &medico_datos::usuario::Usuario,
     pedida: Option<i64>,
 ) -> Result<i64, (StatusCode, &'static str)> {
-    match u.institucion_id {
-        Some(propia) => Ok(propia),
-        None => pedida.ok_or((
+    // Decide sobre el ÁMBITO, no sobre la columna `institucion_id`.
+    //
+    // La primera versión hacía `match u.institucion_id`, y eso trata «sin
+    // institución» como «superadmin» — un `admin` con `institucion_id = NULL`
+    // (que un superadmin puede crear por `POST /api/usuarios` sin dar
+    // institución) tiene `Ambito::Ninguno` y no ve un dato, pero podía elegir
+    // institución con `institucion_id` (en el cuerpo del PUT, o el query del GET) y
+    // **reescribir la matriz de
+    // capacidades de cualquier IPS**: concederle `GestionarUsuarios` a un
+    // laboratorista ajeno, que es una sesión con privilegio dentro de un
+    // inquilino cuyos datos no podía leer.
+    //
+    // Es la misma forma que `rutas.rs::institucion_objetivo` ya arregló; la
+    // revisión de este delta encontró que la pareja seguía viva aquí (directiva
+    // 23: al arreglar el caso ruidoso, busca el falso negativo que comparte
+    // causa — y este no se quejaba nunca).
+    match u.ambito() {
+        medico_dominio::Ambito::Institucion(propia) => Ok(propia),
+        medico_dominio::Ambito::Superadmin => pedida.ok_or((
             StatusCode::BAD_REQUEST,
             "sin institución propia: indique institucion_id",
+        )),
+        medico_dominio::Ambito::Ninguno => Err((
+            StatusCode::FORBIDDEN,
+            "su cuenta no pertenece a ninguna institución: no hay matriz que administrar",
         )),
     }
 }

@@ -105,17 +105,28 @@ fn construir(institucion_id: i64, habilitados: &[String]) -> Catalogo {
     Catalogo { institucion_id, habilitados: hab, grupos }
 }
 
-/// De qué institución habla. Igual que en la matriz de capacidades: quien
-/// pertenece a una usa la suya y el parámetro se ignora; el superadmin dice cuál.
+/// De qué institución habla. Quien pertenece a una usa la suya y el parámetro se
+/// ignora; el superadmin dice cuál; quien no tiene ninguna no administra nada.
+///
+/// Decide sobre el ÁMBITO y no sobre la columna `institucion_id`, por la misma
+/// razón que `capacidades::institucion_de` y `rutas::institucion_objetivo`:
+/// tratar «sin institución» como «superadmin» deja a un `admin` con
+/// `institucion_id = NULL` elegir la ajena. Hoy `listar` solo llama con `None`
+/// —así que el bug era inerte aquí, no explotable—, pero el patrón se unifica
+/// para que no reviva el día que alguien le pase un id del cliente (directiva 1).
 fn institucion_de(
     u: &medico_datos::usuario::Usuario,
     pedida: Option<i64>,
 ) -> Result<i64, (StatusCode, &'static str)> {
-    match u.institucion_id {
-        Some(propia) => Ok(propia),
-        None => pedida.ok_or((
+    match u.ambito() {
+        medico_dominio::Ambito::Institucion(propia) => Ok(propia),
+        medico_dominio::Ambito::Superadmin => pedida.ok_or((
             StatusCode::BAD_REQUEST,
             "sin institución propia: indique cuál",
+        )),
+        medico_dominio::Ambito::Ninguno => Err((
+            StatusCode::FORBIDDEN,
+            "su cuenta no pertenece a ninguna institución",
         )),
     }
 }
