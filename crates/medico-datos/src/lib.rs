@@ -7,6 +7,7 @@ pub mod capacidad;
 pub mod catalogo;
 pub mod cita;
 pub mod clinico;
+pub mod consentimiento;
 pub mod diagnostico;
 pub mod divipola;
 pub mod documento;
@@ -59,6 +60,24 @@ pub type Pool = sqlx::SqlitePool;
 /// la zona del prestador. Lo que no se puede es derivar una FECHA de él.
 pub fn hoy() -> String {
     medico_dominio::zona::hoy().to_string()
+}
+
+/// El instante en que ocurre algo, en UTC y con segundos: `2026-08-05T21:04:00Z`.
+///
+/// Es el otro lado de [`hoy`], y por eso está justo aquí: un **instante** que se
+/// guarda va en UTC a propósito —es un punto en la línea del tiempo, no un día
+/// del calendario— y se lee después en la zona del prestador con
+/// [`medico_dominio::zona::desde_utc`]. Lo que no se puede es derivar una FECHA
+/// de él, que es el error que costó la tarde del 2026-08-03.
+///
+/// Vive en `lib.rs` desde que hicieron falta tres copias: `diagnostico.rs` y
+/// `ambulancia.rs` la tenían idéntica en privado, y una tercera en
+/// `consentimiento.rs` era el momento en que dos de ellas empiezan a divergir
+/// —basta que alguien cambie `Secs` por `Millis` en una— y las fechas de dos
+/// módulos dejan de poder compararse (directiva 9).
+pub fn ahora() -> String {
+    use chrono::{SecondsFormat, Utc};
+    Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)
 }
 
 /// El trozo de `WHERE` que acota una consulta al ámbito de quien pregunta, y el
