@@ -7976,6 +7976,72 @@ mod pruebas {
                 StatusCode::BAD_REQUEST,
                 "un id inexistente tiene que responder LO MISMO que uno ajeno"
             );
+
+            // === LA OTRA MITAD: `historia_id` ===
+            //
+            // Sin esto, la comprobación de la historia no la medía NADIE: la
+            // revisión lo cazó borrando esa rama de `insertar_detalle` y viendo
+            // que las 163 pruebas de Rust seguían verdes. Y no es la misma
+            // comprobación con otro nombre: `historia` NO lleva `institucion_id`
+            // —cuelga de su paciente—, así que su consulta va por un JOIN y puede
+            // romperse sola.
+            //
+            // Una historia por paciente, con el mismo id que su dueño.
+            for (pac, marca) in [(701i64, "PROPIA"), (702, "AJENA")] {
+                sqlx::query(
+                    "INSERT INTO historia (id,codigo_historia,paciente_id,medico_id,creado_por,
+                                           motivo_consulta,enfermedad_actual,
+                                           diagnostico_principal,plan_tratamiento)
+                     VALUES (?,?,?,50,50,'dolor','desde ayer','J00','reposo')",
+                )
+                .bind(pac)
+                .bind(format!("H-{marca}"))
+                .bind(pac)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            }
+
+            // CONTROL: la historia propia sí entra.
+            let r = enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/detalles"),
+                50,
+                r#"{"servicio":"Con historia","cantidad":1,"valor_unitario":50,"historia_id":701}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::CREATED, "control: la historia propia sí entra");
+
+            // LA AGUJA: la historia del vecino, no.
+            let r = enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/detalles"),
+                50,
+                r#"{"servicio":"Ajena","cantidad":1,"valor_unitario":50,"historia_id":702}"#,
+            )
+            .await;
+            assert_eq!(
+                r.status(),
+                StatusCode::BAD_REQUEST,
+                "FUGA: se aceptó una línea que nombra la historia clínica del vecino"
+            );
+
+            // Y tampoco distingue la ajena de la que no existe.
+            let r = enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/detalles"),
+                50,
+                r#"{"servicio":"Fantasma","cantidad":1,"valor_unitario":50,"historia_id":888888}"#,
+            )
+            .await;
+            assert_eq!(
+                r.status(),
+                StatusCode::BAD_REQUEST,
+                "una historia inexistente tiene que responder LO MISMO que una ajena"
+            );
         }
 
         /// El catálogo de EPS SÍ es común, y eso es la decisión de la 0044: una

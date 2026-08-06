@@ -428,3 +428,94 @@ def test_una_factura_no_puede_colgar_del_contrato_del_vecino(motor):
     r = c.put(f"/api/facturacion/facturas/{fid}", json={"contrato_id": 2})
     assert r.status_code == 404, "FUGA por la vía del PUT"
     assert "CapitaciónDOS" not in r.text
+
+
+# =========================================================================
+# EL ESQUEMA TIENE QUE SOSTENER TODO LO DE ARRIBA, O EL SERVIDOR NO ARRANCA
+# =========================================================================
+#
+# Todo lo anterior se apoya en dos cosas del esquema: la columna
+# `institucion_id` en `factura` y `contrato`, y el índice único POR institución
+# sobre el número. Hasta el 2026-08-05 el bucle de `_run_migrations` envolvía las
+# 52 sentencias en un `except` que las daba por «ya aplicadas» en DEBUG, y a
+# continuación registraba «Migraciones de esquema aplicadas». O sea: si el índice
+# único no entraba —porque la base ya tenía números repetidos entre
+# instituciones—, el servidor arrancaba igual, la numeración volvía a ser global
+# de hecho, y el registro afirmaba lo contrario. Directiva 20: el relleno no se
+# cae, y por eso no se nota.
+#
+# `_exigir_el_aislamiento_de_facturacion` mira el ESQUEMA y no las sentencias, y
+# el porqué está escrito en su docstring: son dos motores que llegan por caminos
+# distintos, y exigir el camino deja sin arrancar a uno de los dos.
+
+import database as _database  # noqa: E402
+from sqlalchemy import create_engine as _create_engine, text as _text  # noqa: E402
+from sqlmodel import SQLModel as _SQLModel  # noqa: E402
+
+
+def _base_con_el_esquema_real(tmp_path):
+    """Una base de verdad, construida como la construye el producto."""
+    motor = _create_engine(f"sqlite:///{tmp_path}/aislamiento.db")
+    _SQLModel.metadata.create_all(motor)
+    with motor.begin() as cx:
+        for tabla in ("factura", "contrato"):
+            cx.execute(_text(
+                f"CREATE UNIQUE INDEX IF NOT EXISTS ux_{tabla}_institucion_numero "
+                f"ON {tabla}(institucion_id, numero_{tabla})"
+            ))
+    return motor
+
+
+def test_con_el_esquema_completo_el_arranque_pasa(tmp_path):
+    """CONTROL. Sin esta mitad, una comprobación que dijera «falta» a todo
+    pasaría por buena y el caso rojo de abajo no probaría nada (directiva 33)."""
+    motor = _base_con_el_esquema_real(tmp_path)
+    _database._exigir_el_aislamiento_de_facturacion(motor)  # no levanta
+
+
+@pytest.mark.parametrize("tabla,indice", _database._GARANTIAS_DE_AISLAMIENTO)
+def test_sin_el_indice_unico_por_institucion_el_servidor_no_arranca(
+    tmp_path, tabla, indice
+):
+    """LA AGUJA. Se rompe la salvaguarda EN EL ESQUEMA, que es por donde se
+    rompería de verdad —una base con duplicados rechaza el índice—, no en el
+    arnés."""
+    motor = _base_con_el_esquema_real(tmp_path)
+    with motor.begin() as cx:
+        cx.execute(_text(f"DROP INDEX {indice}"))
+
+    with pytest.raises(RuntimeError, match="NO sostiene el aislamiento"):
+        _database._exigir_el_aislamiento_de_facturacion(motor)
+
+
+def test_sin_la_columna_institucion_id_tampoco(tmp_path):
+    """La otra mitad de la garantía: sin la columna, `filtrar_por_institucion`
+    devuelve la consulta SIN ACOTAR — que es el defecto original de esta rama.
+
+    Se reconstruye `factura` sin ella, porque SQLite no sabe quitar columnas.
+    """
+    motor = _base_con_el_esquema_real(tmp_path)
+    with motor.begin() as cx:
+        cx.execute(_text("DROP TABLE factura"))
+        cx.execute(_text(
+            "CREATE TABLE factura (id INTEGER PRIMARY KEY, numero_factura VARCHAR)"
+        ))
+
+    with pytest.raises(RuntimeError, match="columna factura.institucion_id"):
+        _database._exigir_el_aislamiento_de_facturacion(motor)
+
+
+def test_un_indice_que_existe_pero_NO_es_unico_no_cuenta(tmp_path):
+    """El caso que un `name in [...]` daría por bueno. Un índice con el mismo
+    nombre y sin UNIQUE acelera la consulta y no impide un solo duplicado: es
+    exactamente la forma de fallo silencioso que esto existe para ver."""
+    motor = _base_con_el_esquema_real(tmp_path)
+    with motor.begin() as cx:
+        cx.execute(_text("DROP INDEX ux_factura_institucion_numero"))
+        cx.execute(_text(
+            "CREATE INDEX ux_factura_institucion_numero "
+            "ON factura(institucion_id, numero_factura)"
+        ))
+
+    with pytest.raises(RuntimeError, match="índice único ux_factura"):
+        _database._exigir_el_aislamiento_de_facturacion(motor)

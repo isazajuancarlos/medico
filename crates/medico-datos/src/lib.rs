@@ -191,10 +191,21 @@ pub async fn abrir(url: &str) -> Result<Pool, sqlx::Error> {
 
     sqlx::migrate!("./migrations").run(&migrador).await?;
 
-    let huerfanos: Vec<(String,)> = sqlx::query_as("PRAGMA foreign_key_check")
+    // El `?` NO es cosmético y sustituye a un `.unwrap_or_default()`: con él, una
+    // consulta que FALLA devolvía el vector vacío, o sea el mismo valor que «no
+    // hay huérfanas». La comprobación se saltaba sola y la base se abría dando el
+    // veredicto bueno sin haberlo medido (directiva 30: un negativo solo vale si
+    // el camino que lo produciría llegó a ejecutarse). Costaba un carácter.
+    let huerfanos: Vec<(String,)> = match sqlx::query_as("PRAGMA foreign_key_check")
         .fetch_all(&migrador)
         .await
-        .unwrap_or_default();
+    {
+        Ok(filas) => filas,
+        Err(e) => {
+            migrador.close().await;
+            return Err(e);
+        }
+    };
     if !huerfanos.is_empty() {
         let tablas: Vec<&str> = huerfanos.iter().map(|(t,)| t.as_str()).collect();
         migrador.close().await;

@@ -221,10 +221,75 @@ def _run_migrations():
                 session.commit()
             except Exception as e:
                 session.rollback()
-                logger.debug(f"Migración omitida (ya aplicada): {str(e)[:80]}")
+                # Se tolera —hay sentencias que PostgreSQL acepta y SQLite
+                # rechaza, y al revés— pero se dice en WARNING y no en DEBUG:
+                # con DEBUG no lo veía nadie, y el «Migraciones de esquema
+                # aplicadas» de abajo afirmaba que se aplicaron TODAS.
+                logger.warning(
+                    "migración NO aplicada (se continúa): %s | causa: %s",
+                    sql[:100], str(e)[:120],
+                )
 
     _asignar_duenio_a_facturacion()
+    _exigir_el_aislamiento_de_facturacion()
     logger.info("Migraciones de esquema aplicadas")
+
+
+#: `(tabla, índice único por institución)` — la garantía, no el camino.
+_GARANTIAS_DE_AISLAMIENTO = (
+    ("factura", "ux_factura_institucion_numero"),
+    ("contrato", "ux_contrato_institucion_numero"),
+)
+
+
+def _exigir_el_aislamiento_de_facturacion(motor=None) -> None:
+    """Tras migrar, el aislamiento de facturación TIENE que estar en el esquema.
+
+    === POR QUÉ MIRA EL RESULTADO Y NO LAS SENTENCIAS ===
+
+    El primer intento hacía fatal el FALLO de cuatro sentencias concretas, y era
+    el sesgo a cerrar de la directiva 21 en su forma pura: dejó sin arrancar a
+    una instalación sana. `ALTER TABLE … ADD COLUMN IF NOT EXISTS` no es sintaxis
+    de SQLite, así que ahí falla SIEMPRE — y da igual, porque en SQLite el
+    esquema lo construye `create_all` desde el modelo, que ya trae la columna.
+    Medido: 74 pruebas en ERROR, todas por esa regla y ninguna por un defecto
+    real.
+
+    La sentencia es un MEDIO, y hay dos motores que llegan por caminos distintos:
+    PostgreSQL por el `ALTER`, SQLite por el modelo. Exigir el camino rompe uno
+    de los dos; exigir el DESTINO vale para los dos (directiva 1: se quita el
+    mecanismo en vez de añadir otro que lo contenga).
+
+    Y además es estrictamente más fuerte, que es lo que decide: caza el caso en
+    que la sentencia «funcionó» sin hacer lo que creíamos. No es hipotético — en
+    esta misma rama, el `DROP CONSTRAINT IF EXISTS` sobre `factura` no fallaba y
+    no hacía NADA, porque aquello era un ÍNDICE y no una restricción. Un bucle
+    que mira sentencias habría dado esa por buena; mirar el esquema no.
+    """
+    from sqlalchemy import inspect
+
+    inspector = inspect(motor if motor is not None else engine)
+    faltan = []
+    for tabla, indice in _GARANTIAS_DE_AISLAMIENTO:
+        if not any(c["name"] == "institucion_id" for c in inspector.get_columns(tabla)):
+            faltan.append(f"columna {tabla}.institucion_id")
+        if not any(
+            x["name"] == indice and x["unique"] for x in inspector.get_indexes(tabla)
+        ):
+            faltan.append(f"índice único {indice}")
+
+    if faltan:
+        raise RuntimeError(
+            "el esquema NO sostiene el aislamiento de facturación y el servidor "
+            "no arranca. Falta: " + ", ".join(faltan) + ".\n\n"
+            "No se degrada a propósito. Sin la columna, `filtrar_por_institucion` "
+            "devuelve la consulta SIN ACOTAR y cada prestador ve las facturas de "
+            "todos. Sin el índice único POR institución, la numeración vuelve a "
+            "ser global: el segundo prestador choca con los números del primero, "
+            "y ese choque es un canal lateral sobre lo que el vecino ya emitió. "
+            "Si el índice no entró, la base YA tiene duplicados entre "
+            "instituciones; hay que resolverlos antes de servirla."
+        )
 
 
 def _asignar_duenio_a_facturacion() -> None:
