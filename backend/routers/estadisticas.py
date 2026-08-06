@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func
@@ -242,7 +242,14 @@ def get_pacientes(
     fechas = db.exec(_w(select(Paciente.fecha_nacimiento))).all()
     hoy = date.today()
     grupos = {"0-10": 0, "11-17": 0, "18-29": 0, "30-44": 0, "45-59": 0, "60+": 0}
-    for (fn,) in fechas:
+    # `db.exec()` sobre un `select` de UNA sola columna devuelve ESCALARES, no
+    # tuplas, así que el desempaquetado daba `TypeError: cannot unpack
+    # non-iterable datetime.date` y este panel respondía 500 siempre que hubiera
+    # un paciente con fecha de nacimiento. Es la MISMA clase que el
+    # `TipoTriage.ROJO` de `/urgencias` y vivía en el mismo archivo; entra aquí
+    # porque el banco nuevo abre diciendo «y ninguno revienta», y sin esto esa
+    # frase era falsa.
+    for fn in fechas:
         if not fn:
             continue
         edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
@@ -512,9 +519,24 @@ def get_urgencias(
     sub = _pac_sub(db, current_user)
 
     def _w(q):
+        # SIN `cast(..., Date)`, y no es estilo. En SQLite ese cast NO es un cast
+        # de fecha: aplica afinidad numérica y `CAST('2026-08-01 10:00:00' AS
+        # DATE)` devuelve **2026**, así que la comparación es siempre falsa y este
+        # panel contaba CERO. Medido, y con su positivo de control: quitando el
+        # cast, `total` pasa de 0 a 1 y `by_triage` deja de venir vacío.
+        #
+        # Comparar el instante contra los límites es portable —no usa función
+        # ninguna— y además más correcto: no trunca. El límite superior es
+        # `< fin + 1 día` para que el último día entre entero, que es lo que
+        # `<= fin` sobre una fecha pretendía decir.
+        #
+        # Solo se arregla AQUÍ, en el endpoint que este PR ya tocaba. Los otros
+        # 11 `cast(..., Date)` del archivo tienen la misma ceguera y van en su
+        # propia tarea: reescribirlos todos sería llevarse más de lo que esta
+        # corrida reescribe (directiva 22).
         q = q.where(
-            cast(AtencionUrgencias.fecha_ingreso, Date) >= fecha_inicio,
-            cast(AtencionUrgencias.fecha_ingreso, Date) <= fecha_fin,
+            AtencionUrgencias.fecha_ingreso >= fecha_inicio,
+            AtencionUrgencias.fecha_ingreso < fecha_fin + timedelta(days=1),
         )
         if sub is not None:
             q = q.where(AtencionUrgencias.paciente_id.in_(sub))

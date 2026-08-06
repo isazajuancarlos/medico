@@ -118,42 +118,68 @@ def motor():
 # 1. EL PANEL DE URGENCIAS EXISTE Y RESPONDE
 # =========================================================================
 
-@pytest.mark.parametrize("mio", [1, 2])
-def test_el_panel_de_urgencias_responde_en_vez_de_reventar(motor, mio):
-    """Respondía **500** y nadie lo sabía porque ninguna prueba lo llamaba.
+@pytest.mark.parametrize("mio, ajeno", [(1, 2), (2, 1)])
+def test_el_panel_de_urgencias_no_cuenta_lo_del_vecino(motor, mio, ajeno):
+    """Respondía **500**, y cuando dejó de responderlo contaba CERO.
 
-    `AttributeError: type object 'TipoTriage' has no attribute 'ROJO'` — los
-    miembros son `TRIAGE_1`..`TRIAGE_5` y el color va en el valor.
+    Dos defectos encadenados, y el segundo tapaba al primero:
 
-    === LO QUE ESTA PRUEBA NO PUEDE MEDIR, Y POR QUÉ SE DICE ===
+    1. `TipoTriage.ROJO` no existe —los miembros son `TRIAGE_1..TRIAGE_5`— así
+       que la ruta daba `AttributeError` a quien la llamara.
+    2. Y con eso arreglado seguía contando cero, porque en SQLite
+       `CAST(datetime AS DATE)` NO es un cast de fecha: aplica afinidad numérica
+       y devuelve `2026`, así que la comparación es siempre falsa.
 
-    Los conteos, no. En SQLite `CAST(datetime AS DATE)` NO es un cast de fecha:
-    aplica afinidad numérica y devuelve `2026`, así que la comparación contra
-    `'2026-08-01'` es siempre falsa y **todos los paneles de este router cuentan
-    cero** cuando la base es SQLite. Medido:
+    LA PRIMERA VERSIÓN DE ESTA PRUEBA NO MEDÍA NADA, y conviene que quede
+    escrito. Afirmaba las etiquetas con `for x in d["by_triage"]: x["triage"]`,
+    y `by_triage` es un **diccionario**, no una lista: iterar da claves `str` y
+    `"Rojo (I)"["triage"]` sería `TypeError`. No reventaba solo porque el
+    diccionario **siempre llegaba vacío**, y `all(...)` sobre vacío es `True`.
+    Lo midió la revisión con un mutante: cambiando una etiqueta a basura, las
+    cinco pruebas seguían verdes. Una aserción que no puede ponerse roja dentro
+    de un banco de aislamiento es justo lo que enseña a no leerlos.
 
-        SELECT CAST('2026-08-01 10:00:00.000000' AS DATE);          -> 2026
-        SELECT CAST('2026-08-01 10:00:00.000000' AS DATE) >= '2026-08-01'; -> 0
-
-    En producción no muerde —el sistema vivo corre PostgreSQL, donde el cast es
-    real— pero rompe la MEDICIÓN: sobre SQLite, cualquier aserción de conteo
-    saldría verde diga lo que diga el filtro. Es la directiva 30 aplicada a un
-    router entero, y afirmar aquí «el vecino no aparece» sería exactamente el
-    negativo que nadie produjo.
-
-    Así que esto afirma lo que SÍ mide: que responde, y que la forma es la que
-    la pantalla espera. El aislamiento se mide donde sí se puede, contra
-    `_pac_sub` directamente. Los 12 `cast(..., Date)` van en su propia tarea.
+    Con el `cast` fuera, el panel cuenta de verdad y esto puede afirmar las DOS
+    mitades: lo propio se ve y lo ajeno no.
     """
-    r = _cliente(motor, _admin(mio)).get("/api/estadisticas/urgencias")
-    assert r.status_code == 200, f"el panel de urgencias sigue reventando: {r.text[:300]}"
+    d = _cliente(motor, _admin(mio)).get("/api/estadisticas/urgencias").json()
+
+    assert d["total"] == 1, (
+        f"FUGA o ceguera: el prestador {mio} tiene 1 atención y el panel dice "
+        f"{d['total']}. Si dice 2, ve la del vecino; si dice 0, no ve nada."
+    )
+    # `by_triage` es `{etiqueta: conteo}` — así lo tipa el frontal
+    # (`estadisticas.service.ts:71`, `Record<string, number>`).
+    assert d["by_triage"] == {"Amarillo (III)": 1}, (
+        f"el reparto por triage no es el esperado: {d['by_triage']}. Las claves "
+        "son las etiquetas legibles; si salen `TRIAGE_3` o `TipoTriage.TRIAGE_3`, "
+        "la pantalla enseña el identificador interno."
+    )
+    # Y el motivo del vecino no aparece por ningún lado de la respuesta.
+    texto = str(d)
+    assert f"Motivo{ajeno}" not in texto, f"FUGA: apareció algo del prestador {ajeno}"
+
+
+def test_el_panel_de_pacientes_no_revienta(motor):
+    """El tercer 500 del mismo archivo, y la MISMA clase que el de `/urgencias`.
+
+    `db.exec()` sobre un `select` de una sola columna devuelve escalares, no
+    tuplas, así que `for (fn,) in fechas:` daba `TypeError`. Respondía 500
+    siempre que hubiera un paciente con fecha de nacimiento — o sea, siempre.
+
+    Entra aquí porque el docstring de este archivo abre diciendo «y ninguno
+    revienta», y sin esto esa frase era falsa. Lo levantó la revisión de
+    seguridad; es preexistente, no lo introduce este PR.
+    """
+    r = _cliente(motor, _admin(1)).get("/api/estadisticas/pacientes")
+    assert r.status_code == 200, f"el panel de pacientes revienta: {r.text[:300]}"
     d = r.json()
-    for clave in ("total", "by_triage", "by_destino", "tiempo_espera_promedio_min"):
-        assert clave in d, f"falta «{clave}» en la respuesta: {d}"
-    # Las etiquetas legibles, que es lo que rompía: si volviera `TipoTriage.ROJO`
-    # esto sería un 500 y no llegaríamos aquí.
-    assert all(x["triage"] in {"Rojo (I)", "Naranja (II)", "Amarillo (III)",
-                               "Verde (IV)", "Azul (V)"} for x in d["by_triage"]), d["by_triage"]
+    # Y de paso su aislamiento, que sí se puede medir aquí: este panel NO usa
+    # `cast(..., Date)` para acotar por institución, así que cuenta de verdad.
+    assert d["total"] == 1, (
+        f"FUGA: el prestador 1 tiene 1 paciente y el panel cuenta {d['total']}"
+    )
+    assert d["by_grupo_edad"]["30-44"] == 1, d["by_grupo_edad"]
 
 
 # =========================================================================
