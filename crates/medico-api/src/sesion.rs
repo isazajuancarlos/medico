@@ -141,6 +141,48 @@ mod pruebas {
 
     const SECRETO: &[u8] = b"un secreto de al menos treinta y dos bytes";
 
+    /// Una cookie REAL emitida el 2026-08-06, con caducidad puesta a doscientos
+    /// años para que el vector no se pudra: caduca en 2226.
+    const COOKIE_2026: &str = "42|7|8093198475|_4aj7wo1SU9EWZrGsSzmLrvqfZLoH8jSGHi2JRjgMfk";
+
+    /// **EL VECTOR FIJO**, y la razón por la que hace falta está medida.
+    ///
+    /// Las otras cinco pruebas de este módulo emiten Y verifican con el MISMO
+    /// binario, así que miden el códec contra sí mismo: pasarían igual si
+    /// cambiara el separador, el orden de los campos, el motor de base64 o la
+    /// generación de `hmac`/`sha2` — **y con ello se cerraría la sesión de todo
+    /// el mundo a la vez, en silencio y sin un solo error en rojo**.
+    ///
+    /// Lo levantó la revisión de seguridad del bump de base64 (2026-08-06):
+    /// `guaca::sesion`, de donde salió el diseño de esta cookie, SÍ lleva su
+    /// vector (`TOKEN_2026`) con este mismo comentario; medico no lo heredó.
+    ///
+    /// Si se pone roja, **NO se regenera el literal sin pensarlo**: significa
+    /// que las cookies vivas dejan de valer, y eso se decide y se comunica.
+    #[test]
+    fn una_cookie_de_2026_sigue_verificando() {
+        let s = verificar(SECRETO, COOKIE_2026)
+            .expect("la cookie del 2026-08-06 dejó de verificar: cambió el formato");
+        assert_eq!(s.usuario_id, 42);
+        assert_eq!(s.token_version, 7, "el orden de los campos se movió");
+    }
+
+    /// Un vector con fecha caduca EN SILENCIO: el día que pase 2226 —o que
+    /// alguien ponga el reloj adelante— la prueba de arriba fallaría por
+    /// caducidad y no por formato, y se leería como una rotura que no es. Esto
+    /// avisa antes, con diez años de margen, y dice qué hacer.
+    #[test]
+    fn el_vector_de_la_cookie_no_esta_a_punto_de_caducar() {
+        let s = verificar(SECRETO, COOKIE_2026).unwrap();
+        let diez_anios = 10 * 365 * 24 * 3600;
+        assert!(
+            s.caduca_en - ahora() > diez_anios,
+            "al vector de la cookie le quedan menos de diez años: regenerarlo con \
+             `emitir(SECRETO, 42, 7, 105_120_000)` y pegar el resultado, NO relajar \
+             esta comprobación"
+        );
+    }
+
     #[test]
     fn una_sesion_emitida_se_verifica() {
         let v = emitir(SECRETO, 42, 7, 60);
@@ -217,3 +259,4 @@ mod pruebas {
         }
     }
 }
+
