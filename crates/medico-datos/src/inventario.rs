@@ -273,18 +273,8 @@ pub struct FormulaPendiente {
 
 // --- Consultas ---------------------------------------------------------------
 
-fn filtro_ambito(ambito: Ambito, col: &str) -> Option<(String, Option<i64>)> {
-    match ambito {
-        Ambito::Superadmin => Some(("1 = 1".into(), None)),
-        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
-        Ambito::Ninguno => None,
-    }
-}
+use crate::{filtro_ambito, hoy};
 
-/// La fecha de hoy en `YYYY-MM-DD`, que es como se guardan los vencimientos.
-pub fn hoy() -> String {
-    Utc::now().date_naive().to_string()
-}
 
 /// `hoy` + [`DIAS_AVISO_VENCIMIENTO`]. Si `hoy` no es una fecha, devuelve `hoy`:
 /// el efecto es que no se marca nada como «por vencer», que es lo prudente

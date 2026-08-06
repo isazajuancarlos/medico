@@ -133,13 +133,7 @@ pub struct PlanEditar {
     pub activo: Option<bool>,
 }
 
-fn filtro_ambito(ambito: Ambito, col: &str) -> Option<(String, Option<i64>)> {
-    match ambito {
-        Ambito::Superadmin => Some(("1 = 1".into(), None)),
-        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
-        Ambito::Ninguno => None,
-    }
-}
+use crate::filtro_ambito;
 
 /// Valoraciones del ámbito, opcionalmente de un paciente, de la más reciente a la
 /// más antigua.

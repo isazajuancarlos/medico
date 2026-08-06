@@ -410,12 +410,17 @@ endpoints en 28 routers); vuelto a medir el 2026-08-04, siguen sin existir en
 Rust —y la lista no se ha movido desde el 03—:
 
 ```
-los que el frontend SÍ llama — hoy romperían la pantalla (5):
-  admin (14 llamadas)  facturacion (13)  estadisticas (8)  quirofano (8)
-  consentimiento (2)
-  → 45 de las 137 rutas que el frontend llama se quedan sin servidor, y las
-    45 son de esos cinco módulos: NINGÚN módulo portado se queda a medias
+los que el frontend SÍ llama — hoy romperían la pantalla (4):
+  admin (14 llamadas)  estadisticas (8)  quirofano (8)  consentimiento (2)
+  → 32 de las 137 rutas que el frontend llama se quedan sin servidor, y las
+    32 son de esos cuatro módulos: NINGÚN módulo portado se queda a medias
     (ni un solo verbo suelto sin servir)
+
+  PORTADO el 2026-08-05 y ya fuera de esta lista:
+    facturacion (13 llamadas, 17 endpoints) — con el aislamiento entre
+      instituciones, que en el Python vivo fallaba ABIERTO en CINCO sitios:
+      los cuatro de `routers/facturacion.py` y `estadisticas/financiero`,
+      que sumaba el dinero de todos los prestadores y vive en otro router
 
 los que no llama nadie desde Angular — no rompen nada, pero son Python
 que sigue vivo (5):

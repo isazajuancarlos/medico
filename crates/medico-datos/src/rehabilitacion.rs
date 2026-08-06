@@ -10,13 +10,7 @@ use chrono::{SecondsFormat, Utc};
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 
-fn filtro_ambito(ambito: Ambito, col: &str) -> Option<(String, Option<i64>)> {
-    match ambito {
-        Ambito::Superadmin => Some(("1 = 1".into(), None)),
-        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
-        Ambito::Ninguno => None,
-    }
-}
+use crate::filtro_ambito;
 
 const PLAN_COLS: &str = "pl.id, pl.paciente_id, pl.terapeuta_id, pl.fecha_creacion, \
     pl.diagnostico_funcional, pl.objetivos, pl.sesiones_autorizadas, pl.sesiones_realizadas, \

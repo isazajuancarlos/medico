@@ -2,8 +2,9 @@ from typing import Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-from models import Factura, DetalleFactura, Glosa, Contrato, Entidad, Paciente, Usuario, ModuloSistema
+from models import Factura, DetalleFactura, Glosa, Contrato, Entidad, Historia, Paciente, Usuario, ModuloSistema
 from core.deps import get_db, get_current_active_user, filtrar_por_institucion, requiere_modulo
+from models import RolUsuario
 from core.aislamiento import obtener
 from schemas.facturacion import (
     FacturaRead, FacturaCreate, FacturaUpdate, DetalleRead, DetalleCreate,
@@ -26,12 +27,76 @@ _TRANSICIONES = {
 }
 
 
-def _gen_numero_factura(db: Session) -> str:
+def _exigir_propios(db: Session, user: Usuario, det) -> None:
+    """El paciente y la historia que nombra una LÍNEA tienen que ser de esta institución.
+
+    Sin esto, un facturador de A creaba una factura PROPIA con una línea que
+    nombraba al `paciente_id` de un paciente de B — la clave foránea es global y
+    la acepta— y `_enrich_factura` devolvía su NOMBRE COMPLETO. Enumerando
+    identificadores se sacaba el censo de pacientes del vecino, y «ser paciente
+    de X» es dato de salud: es el mismo argumento con el que `core/aislamiento.py`
+    justifica responder 404 y nunca 403.
+
+    El comentario que había —«# aislamiento: ya autorizado por el padre»— era
+    falso justo aquí: el padre autorizado es la FACTURA, no el paciente que el
+    cliente eligió en el cuerpo de la petición.
+
+    Se usa `obtener`, que ya es el camino seguro del proyecto y responde 404 sin
+    distinguir «no existe» de «es de otro». La comprobación va en UNA función que
+    comparten el alta y el añadido de líneas: dos copias es lo que ya dejó dos
+    pantallas muertas con `orden.estado`.
+    """
+    if getattr(det, "paciente_id", None) is not None:
+        obtener(db, Paciente, det.paciente_id, user, que="paciente")
+    if getattr(det, "historia_id", None) is not None:
+        obtener(db, Historia, det.historia_id, user, que="historia")
+
+
+def _exigir_contrato_propio(db: Session, user: Usuario, contrato_id) -> None:
+    """El contrato que nombra una factura tiene que ser de esta institución.
+
+    Esta fuga la CREÓ el cambio del 2026-08-05: hasta entonces `Contrato` estaba
+    declarado en `COMPARTIDOS`, así que leer su nombre era legítimo por
+    declaración escrita. Al darle dueño —porque un contrato es el acuerdo entre
+    UN prestador y UNA entidad con SUS tarifas— se cerró `/contratos` y
+    `obtener`, y quedó abierto este camino: `_enrich_factura` hacía
+    `db.get(Contrato, f.contrato_id)` y devolvía `contrato_nombre`, con el id
+    puesto por el cliente. Además dejaba una factura de A apuntando a un contrato
+    de B, que es una referencia cruzada entre inquilinos que persiste.
+    """
+    if contrato_id is not None:
+        obtener(db, Contrato, contrato_id, user, que="contrato")
+
+
+def _de_mi_institucion(user: Usuario):
+    """La condición del JOIN que acota una glosa por la institución de su factura.
+
+    Una glosa no lleva institución propia y no debe llevarla: cuelga de una
+    factura con `factura_id` obligatorio, así que su dueño es demostrable en un
+    salto. Darle columna crearía la posibilidad de que dijera una institución y
+    su factura otra — dos verdades para un hecho.
+    """
+    if user.rol == RolUsuario.SUPERADMIN:
+        return True
+    return Factura.institucion_id == user.institucion_id
+
+
+def _gen_numero_factura(db: Session, institucion_id: Optional[int]) -> str:
+    """El siguiente `FAC-{año}-{n}` DE ESTA INSTITUCIÓN.
+
+    Hasta el 2026-08-05 la secuencia era global —el `WHERE` no llevaba
+    institución— y eso hacía tres cosas malas a la vez con dos prestadores en la
+    misma base: los números saltaban sin explicación (el 00007 después del 00004
+    porque los tres de en medio son del vecino), **el propio número revelaba
+    cuántas facturas había emitido el otro**, y dos prestadores no podían
+    numerar en paralelo sin pisarse.
+    """
     anio = date.today().year
     prefix = f"FAC-{anio}-"
     last = db.exec(
         select(Factura)
         .where(Factura.numero_factura.like(f"{prefix}%"))
+        .where(Factura.institucion_id == institucion_id)
         .order_by(Factura.numero_factura.desc())
     ).first()
     if last:
@@ -50,7 +115,7 @@ def _enrich_factura(f: Factura, db: Session, include_detalles: bool = True) -> F
     if e:
         data.entidad_nombre = e.nombre
     if f.contrato_id:
-        c = db.get(Contrato, f.contrato_id)  # aislamiento: ya autorizado por el padre
+        c = db.get(Contrato, f.contrato_id)  # aislamiento: el contrato se valida al ESCRIBIR (_exigir_contrato_propio), así que el id guardado ya es de esta institución
         if c:
             data.contrato_nombre = c.nombre
     if include_detalles:
@@ -59,7 +124,7 @@ def _enrich_factura(f: Factura, db: Session, include_detalles: bool = True) -> F
         for d in detalles:
             dr = DetalleRead.model_validate(d)
             if d.paciente_id:
-                p = db.get(Paciente, d.paciente_id)  # aislamiento: ya autorizado por el padre
+                p = db.get(Paciente, d.paciente_id)  # aislamiento: el paciente se valida al ESCRIBIR la línea (_exigir_propios), no basta con que la factura esté autorizada
                 if p:
                     dr.paciente_nombre = p.nombre_completo.strip()
             enriched_det.append(dr)
@@ -91,8 +156,15 @@ def get_stats(
     query = select(Factura)
     query = filtrar_por_institucion(query, Factura, current_user)
     facturas = db.exec(query).all()
+    # Las glosas se acotan POR SU FACTURA. Esta consulta no llevaba filtro
+    # NINGUNO —ni siquiera pasaba por `filtrar_por_institucion`—, así que el
+    # panel de un prestador contaba y SUMABA EN DINERO las glosas de todos los
+    # demás. Es la fuga que menos se veía, porque un contador no parece un dato.
     glosas = db.exec(
-        select(Glosa).where(Glosa.estado == "PENDIENTE")
+        select(Glosa)
+        .join(Factura, Glosa.factura_id == Factura.id)
+        .where(Glosa.estado == "PENDIENTE")
+        .where(_de_mi_institucion(current_user))
     ).all()
     return StatsFacturacion(
         total_facturas=len(facturas),
@@ -150,11 +222,18 @@ def crear_factura(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    if not db.get(Entidad, payload.entidad_id):  # aislamiento: ya autorizado por el padre
+    if not db.get(Entidad, payload.entidad_id):  # aislamiento: Entidad es catálogo nacional, declarado en COMPARTIDOS
         raise HTTPException(status_code=404, detail="Entidad no encontrada")
 
-    numero = _gen_numero_factura(db)
+    _exigir_contrato_propio(db, current_user, payload.contrato_id)
+    for det in payload.detalles:
+        _exigir_propios(db, current_user, det)
+
+    numero = _gen_numero_factura(db, current_user.institucion_id)
     factura = Factura(
+        # La factura NACE con dueño. Sin esto la fila queda en NULL y no la ve
+        # nadie —ni quien la acaba de crear—, que es fallar cerrado pero inútil.
+        institucion_id=current_user.institucion_id,
         numero_factura=numero,
         entidad_id=payload.entidad_id,
         contrato_id=payload.contrato_id,
@@ -199,6 +278,8 @@ def actualizar_factura(
     if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden editar facturas en estado BORRADOR")
     data = payload.model_dump(exclude_unset=True)
+    if "contrato_id" in data:
+        _exigir_contrato_propio(db, current_user, data["contrato_id"])
     for k, v in data.items():
         setattr(f, k, v)
     _recalcular_totales(f.id, f.descuentos, db)
@@ -279,6 +360,7 @@ def agregar_detalle(
     f = obtener(db, Factura, factura_id, current_user, que="factura")
     if f.estado != "BORRADOR":
         raise HTTPException(status_code=400, detail="Solo se pueden agregar detalles a facturas en BORRADOR")
+    _exigir_propios(db, current_user, payload)
     det = DetalleFactura(
         factura_id=factura_id,
         servicio=payload.servicio,
@@ -326,7 +408,13 @@ def list_glosas(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = select(Glosa)
+    # `select(Glosa)` a secas devolvía las glosas de TODAS las instituciones, y
+    # encima el bucle de abajo las enriquecía con el `numero_factura` ajeno.
+    query = (
+        select(Glosa)
+        .join(Factura, Glosa.factura_id == Factura.id)
+        .where(_de_mi_institucion(current_user))
+    )
     if estado:
         query = query.where(Glosa.estado == estado)
     query = query.order_by(Glosa.fecha_glosa.desc())
@@ -398,7 +486,7 @@ def list_contratos(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = select(Contrato)
+    query = filtrar_por_institucion(select(Contrato), Contrato, current_user)
     if activo is not None:
         query = query.where(Contrato.activo == activo)
     query = query.order_by(Contrato.nombre)
@@ -419,10 +507,17 @@ def crear_contrato(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    existing = db.exec(select(Contrato).where(Contrato.numero_contrato == payload.numero_contrato)).first()
+    # La unicidad se mira DENTRO de la institución. Era global, así que el
+    # segundo prestador que numerara sus contratos «001» recibía un 400 — y con
+    # él, la confirmación de que el vecino ya tiene ese número.
+    existing = db.exec(
+        select(Contrato)
+        .where(Contrato.numero_contrato == payload.numero_contrato)
+        .where(Contrato.institucion_id == current_user.institucion_id)
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Ya existe un contrato con ese número")
-    c = Contrato(**payload.model_dump())
+    c = Contrato(**payload.model_dump(), institucion_id=current_user.institucion_id)
     db.add(c)
     db.commit()
     db.refresh(c)

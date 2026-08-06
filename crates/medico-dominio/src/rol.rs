@@ -168,6 +168,25 @@ pub enum Capacidad {
     /// Leer el inventario es cosa aparte y NO exige esta capacidad: enfermería
     /// necesita saber si queda adrenalina antes de pedirla.
     GestionarFarmacia,
+    /// Facturar: contratos, facturas, sus líneas y las glosas.
+    ///
+    /// Es capacidad ADMINISTRATIVA y no clínica, y por eso la lista es corta.
+    /// No entra ningún rol clínico: el médico que atiende no radica ante la EPS,
+    /// y darle la capacidad «porque total, ya ve al paciente» mezcla dos cosas
+    /// que en una IPS hacen personas distintas y responden ante auditorías
+    /// distintas.
+    ///
+    /// **No hay rol `Facturador` en el producto**, así que el defecto nacional
+    /// es `Admin` (y `Superadmin`, que lo es todo). En el consultorio de un solo
+    /// médico eso es el propio dueño con su cuenta de administrador, que es como
+    /// funciona hoy en el sistema vivo. Vale el mismo límite que el resto de
+    /// esta enumeración: es un DEFECTO, no la planta de una institución
+    /// concreta.
+    ///
+    /// LEER no exige esta capacidad, igual que en farmacia: quien consulta el
+    /// estado de una factura para responder al paciente en ventanilla no tiene
+    /// por qué poder radicarla.
+    GestionarFacturacion,
     /// Parque de ambulancias y despacho de traslados asistenciales.
     ///
     /// Une dos cosas que en un hospital grande hacen personas distintas —dar de
@@ -230,6 +249,7 @@ impl Capacidad {
         Capacidad::EscribirLaboratorio,
         Capacidad::EscribirImagenologia,
         Capacidad::GestionarFarmacia,
+        Capacidad::GestionarFacturacion,
         Capacidad::GestionarAmbulancias,
         Capacidad::GestionarAgenda,
         Capacidad::GenerarRips,
@@ -266,6 +286,7 @@ impl Capacidad {
             Capacidad::EscribirLaboratorio => "escribir_laboratorio",
             Capacidad::EscribirImagenologia => "escribir_imagenologia",
             Capacidad::GestionarFarmacia => "gestionar_farmacia",
+            Capacidad::GestionarFacturacion => "gestionar_facturacion",
             Capacidad::GestionarAmbulancias => "gestionar_ambulancias",
             Capacidad::GestionarAgenda => "gestionar_agenda",
             Capacidad::GenerarRips => "generar_rips",
@@ -370,6 +391,7 @@ impl RolUsuario {
             ),
             EscribirImagenologia => matches!(self, Superadmin | Admin | Medico | Radiologo),
             GestionarFarmacia => matches!(self, Superadmin | Admin | RegenteFarmacia),
+            GestionarFacturacion => matches!(self, Superadmin | Admin),
             GestionarAmbulancias => matches!(
                 self,
                 Superadmin | Admin | Medico | Enfermeria | AuxiliarEnfermeria
@@ -479,6 +501,7 @@ mod pruebas {
                 | Capacidad::EscribirLaboratorio
                 | Capacidad::EscribirImagenologia
                 | Capacidad::GestionarFarmacia
+                | Capacidad::GestionarFacturacion
                 | Capacidad::GestionarAmbulancias
                 | Capacidad::GestionarAgenda
                 | Capacidad::GenerarRips
@@ -486,7 +509,7 @@ mod pruebas {
                 | Capacidad::GestionarInstituciones => (),
             };
         }
-        assert_eq!(Capacidad::TODAS.len(), 16, "¿se añadió una capacidad?");
+        assert_eq!(Capacidad::TODAS.len(), 17, "¿se añadió una capacidad?");
         let unicas: std::collections::HashSet<_> = Capacidad::TODAS.iter().collect();
         assert_eq!(unicas.len(), Capacidad::TODAS.len(), "hay una repetida");
     }

@@ -2,7 +2,7 @@ from typing import Optional, List, Dict
 from datetime import date, datetime
 import maestros_muv
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, UniqueConstraint
 from enum import Enum
 
 # --- ENUMS RIPS ---
@@ -931,16 +931,37 @@ class ResultadoImagen(SQLModel, table=True):
 # ==============================================================================
 
 class Contrato(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("institucion_id", "numero_contrato",
+                         name="ux_contrato_institucion_numero"),
+    )
     """
     Contratos con entidades (EPS, ARL, seguros) para prestación de servicios.
     Define las tarifas aplicables.
+
+    **Tiene dueño desde el 2026-08-05, y salió de COMPARTIDOS.** Estaba declarado
+    junto a `Cie10` y `Cups` como si fuera un catálogo nacional, y no lo es: un
+    contrato es el acuerdo entre UN prestador y UNA entidad, con SUS tarifas.
+    Esa declaración era además la causa de que una factura acabara siendo «de
+    todos», porque la cadena de enlaces terminaba aquí.
+
+    Una EPS sí es catálogo nacional —su NIT no cambia según quién la mire— y por
+    eso `Entidad` se queda en COMPARTIDOS. Las dos decisiones son opuestas a
+    propósito.
     """
     id: Optional[int] = Field(default=None, primary_key=True)
+    institucion_id: Optional[int] = Field(default=None, foreign_key="institucion.id", index=True)
     entidad_id: int = Field(foreign_key="entidad.id")
     entidad: Entidad = Relationship()
 
     nombre: str  # "Contrato SURA 2025"
-    numero_contrato: str = Field(unique=True)
+    # ÚNICO POR INSTITUCIÓN, no globalmente (2026-08-05). Con `unique=True` a
+    # secas, el segundo prestador que numerara sus contratos «001» no podía
+    # guardarlo: un choque entre dos clientes que no se conocen, y de paso la
+    # confirmación de que el vecino ya usó ese número. Lo cazó la prueba de dos
+    # instituciones, no la lectura del código — la restricción vivía en el
+    # ESQUEMA, así que arreglar solo la consulta no habría bastado.
+    numero_contrato: str
 
     # Vigencia
     fecha_inicio: date
@@ -1008,13 +1029,27 @@ class TarifaInstitucion(SQLModel, table=True):
 
 
 class Factura(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("institucion_id", "numero_factura",
+                         name="ux_factura_institucion_numero"),
+    )
     """
     Factura para radicación a entidades.
     Agrupa servicios prestados en un período.
     Decreto 4747/2007 y Resolución 3047/2008 - mecanismos de pago.
+
+    **Lleva `institucion_id` desde el 2026-08-05, y sin él esta tabla no sabía
+    de quién era.** Su única cadena de enlaces acababa en `Contrato`, que estaba
+    declarado en COMPARTIDOS, así que `institucion_de` respondía «de TODOS» y el
+    filtro de los listados devolvía la consulta sin acotar. Es opcional en el
+    tipo porque las filas anteriores a la migración pueden no tenerlo: en ese
+    estado NO se ven —`institucion_id = ?` no casa con NULL—, que es fallar
+    cerrado. Ver `database._asignar_duenio_a_facturacion`.
     """
     id: Optional[int] = Field(default=None, primary_key=True)
-    numero_factura: str = Field(unique=True, index=True)
+    institucion_id: Optional[int] = Field(default=None, foreign_key="institucion.id", index=True)
+    # Mismo caso que `Contrato.numero_contrato`: único POR INSTITUCIÓN.
+    numero_factura: str = Field(index=True)
     entidad_id: int = Field(foreign_key="entidad.id")
     entidad: Entidad = Relationship()
 

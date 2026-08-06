@@ -84,13 +84,7 @@ pub enum ResultadoBorrado {
     TieneEntradas { entradas: i64 },
 }
 
-fn filtro_ambito(ambito: Ambito, col: &str) -> Option<(String, Option<i64>)> {
-    match ambito {
-        Ambito::Superadmin => Some(("1 = 1".into(), None)),
-        Ambito::Institucion(i) => Some((format!("{col} = ?"), Some(i))),
-        Ambito::Ninguno => None,
-    }
-}
+use crate::filtro_ambito;
 
 const COLUMNAS: &str = "p.id, p.razon_social, p.nit, p.contacto, p.telefono, p.email, \
     p.direccion, p.ciudad, p.suministra, p.observaciones, p.activo, \
