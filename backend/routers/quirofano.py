@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from models import Quirofano, ProgramacionQuirurgica, Paciente, Usuario, RolUsuario, ModuloSistema
-from core.deps import get_db, get_current_active_user, requiere_modulo
+from core.deps import get_db, get_current_active_user, requiere_modulo, filtrar_por_institucion
 from core.aislamiento import obtener
 from schemas.quirofano import (
     QuirofanoRead, ProgramacionRead, ProgramacionCreate,
@@ -14,6 +14,66 @@ from schemas.quirofano import (
 router = APIRouter(prefix="/quirofano", tags=["quirofano"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.QUIROFANO))],
 )
+
+
+def _sala_del_ambito(db: Session, quirofano_id: int, actual: Usuario) -> Quirofano:
+    """La sala tiene que ser de esta institución **o de ninguna**.
+
+    === POR QUÉ «O DE NINGUNA», Y NO `obtener()` A SECAS ===
+
+    La primera versión de este PR usaba `obtener()`, que lee una sala con
+    `institucion_id IS NULL` como `SIN_DUENIO` y la NIEGA. Suena bien y rompía el
+    producto: `seed.py:706` crea las seis salas SIN institución, así que en toda
+    instalación sembrada —la demo incluida— **ninguna** programación de cirugía
+    se podía crear. Medido por la revisión de seguridad de esta rama:
+
+        [salas/inst1]  200 -> ['SalaHUERFANA', 'SalaUNO']
+        [crear, sala huérfana]  404 «Sala de quirófano no encontrado»
+
+    Falla cerrado, así que no era una fuga — era el sesgo a cerrar de la
+    directiva 21: una regla que se prueba contra el atacante y no contra la
+    operación normal del cliente.
+
+    Lo que se hace aquí es que las DOS capas digan lo mismo. `list_salas` (l. 60)
+    ya enseña las huérfanas a todo el mundo desde antes de este PR: esa era la
+    decisión del producto, y crear contra lo que se enseña tiene que funcionar.
+    Una sala sin dueño **no es la sala de otro prestador**: es de nadie, y
+    `Quirofano` no lleva dato clínico —nombre, tipo, estado—, así que aceptarla
+    no abre nada.
+
+    Lo que NO se hace: dejar pasar la sala de OTRA institución, que es lo que
+    este PR vino a cerrar.
+
+    La limpieza de fondo —darle dueño a las salas en `seed.py` y adoptar las
+    existentes con una migración— es una decisión aparte y está anotada como
+    tarea. Hasta entonces, esta función es la única verdad y `list_salas` su
+    pareja.
+    """
+    sala = db.get(Quirofano, quirofano_id)  # aislamiento: la comprobación es la línea de abajo
+    ajena = (
+        sala is not None
+        and sala.institucion_id is not None
+        and actual.rol != RolUsuario.SUPERADMIN
+        and sala.institucion_id != actual.institucion_id
+    )
+    if sala is None or ajena:
+        # 404 y nunca 403: la sala ajena y la inexistente son indistinguibles.
+        raise HTTPException(status_code=404, detail="Sala de quirófano no encontrada")
+    return sala
+
+
+def _exigir_del_ambito(db: Session, usuario_id: int, actual: Usuario, que: str) -> None:
+    """El profesional que se nombra tiene que ser de la institución de quien captura.
+
+    No usa `obtener()` porque `Usuario` no es un registro clínico y su mensaje
+    debe hablar del ROL, no del modelo. Lo que sí comparte es la regla dura: 404
+    y nunca 403, para que un id ajeno y uno inexistente sean indistinguibles.
+    """
+    u = db.get(Usuario, usuario_id)   # aislamiento: la comprobación es la línea de abajo
+    if u is None or (
+        actual.rol != RolUsuario.SUPERADMIN and u.institucion_id != actual.institucion_id
+    ):
+        raise HTTPException(status_code=404, detail=f"{que.capitalize()} no encontrado")
 
 
 def _enrich(prog: ProgramacionQuirurgica, db: Session) -> ProgramacionRead:
@@ -58,7 +118,18 @@ def list_programaciones(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = select(ProgramacionQuirurgica)
+    # ESTE LISTADO NO ACOTABA NADA, y `_enrich` le añade el nombre completo y el
+    # DOCUMENTO DE IDENTIDAD del paciente. Medido el 2026-08-06 con dos
+    # instituciones: cada admin veía las cirugías de la otra con
+    # `paciente='PacienteDOS Secreto' doc='doc2'`. Expone más que la fuga de
+    # facturación —allí eran importes y nombres; aquí es qué cirugía se le va a
+    # practicar a quién— y es categoría especial de la Ley 1581.
+    #
+    # `ProgramacionQuirurgica` no lleva `institucion_id` y no debe llevarla:
+    # cuelga del paciente, igual que la historia. `filtrar_por_institucion` ya
+    # sabe seguir esa cadena (`paciente_id` está en `ENLACES`), así que el
+    # arreglo es usar la capa que existe y no escribir un filtro nuevo.
+    query = filtrar_por_institucion(select(ProgramacionQuirurgica), ProgramacionQuirurgica, current_user)
     if estado:
         query = query.where(ProgramacionQuirurgica.estado == estado)
     query = query.order_by(ProgramacionQuirurgica.fecha_programada.desc())
@@ -93,9 +164,19 @@ def crear_programacion(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    sala = db.get(Quirofano, payload.quirofano_id)  # aislamiento: ya autorizado por el padre
-    if not sala:
-        raise HTTPException(status_code=404, detail="Sala de quirófano no encontrada")
+    # LOS CUATRO ID DEL CUERPO SE COMPRUEBAN, y es el mismo agujero que se cazó
+    # en `insertar_detalle` de facturación: sin esto se programa una cirugía
+    # propia nombrando al PACIENTE del vecino, y `_enrich` devuelve su nombre y
+    # su documento en la respuesta. La clave foránea no protege — es global.
+    #
+    # `obtener()` da 404 y nunca 403, que es la regla dura: un 403 confirmaría
+    # que el id existe y con eso se enumera el padrón de al lado.
+    obtener(db, Paciente, payload.paciente_id, current_user, que="paciente")
+    _exigir_del_ambito(db, payload.cirujano_id, current_user, "cirujano")
+    if payload.anestesiologo_id is not None:
+        _exigir_del_ambito(db, payload.anestesiologo_id, current_user, "anestesiólogo")
+
+    sala = _sala_del_ambito(db, payload.quirofano_id, current_user)
     if sala.estado in ("MANTENIMIENTO", "BLOQUEADO"):
         raise HTTPException(
             status_code=400,
