@@ -89,9 +89,21 @@ def get_resumen(
     tasa_ocupacion = round((camas_ocupadas / total_camas * 100) if total_camas else 0, 1)
 
     # Facturación pendiente
+    #
+    # LA CUARTA CONSULTA SOBRE `Factura` DE ESTE ARCHIVO, y se quedó sin acotar
+    # cuando se arreglaron las tres de `/financiero`. La cazó la revisión del
+    # delta, midiéndola: los dos prestadores leían `valor_pendiente = 3000.0`
+    # habiendo facturado 1000 y 2000.
+    #
+    # Que el frontal solo llame a `/kpis` —que delega aquí y devuelve cuatro
+    # campos no financieros— no la salva: `/resumen` es una ruta registrada y
+    # responde 200 a quien la pida. Y la asimetría del propio archivo prueba que
+    # era descuido y no decisión: TODAS las demás consultas de esta función
+    # acotan (`Paciente.institucion_id`, `_pac_sub`), y `Cama` va sin acotar
+    # porque está declarada en `core.aislamiento.COMPARTIDOS`. `Factura` no.
     q_fact = select(func.count(Factura.id), func.sum(Factura.valor_neto)).where(
         Factura.estado.in_(["BORRADOR", "RADICADA"])
-    )
+    ).where(_de_mi_institucion(current_user))
     fact_row = db.exec(q_fact).one()
 
     return {
@@ -423,12 +435,22 @@ def get_financiero(
     from models import Glosa
     # La glosa NO lleva institución propia a propósito —cuelga de una factura con
     # `factura_id` obligatorio, así que su dueño es demostrable en un salto—, de
-    # modo que acotarla exige el JOIN. Esta consulta además no filtraba ni por
-    # fecha, así que sumaba el histórico entero de todos los prestadores.
+    # modo que acotarla exige el JOIN.
+    #
+    # Y SOLO EL JOIN: aquí hubo un filtro de fecha que duró un commit y era una
+    # regresión. Acotaba las glosas por `Factura.fecha_factura`, no por la fecha
+    # de la glosa, y en el flujo real —las glosas llegan meses después de
+    # radicar— una glosa VIVA sobre una factura del año anterior desaparecía del
+    # panel sin avisar. Medido por la revisión del delta: 100 aquí frente a 877
+    # en `/api/facturacion/stats`, con los mismos datos y la misma sesión; dos
+    # paneles del mismo producto contradiciéndose.
+    #
+    # Lo que exigía la seguridad era el JOIN y el `_de_mi_institucion`. El filtro
+    # de fecha no lo pedía nadie: es la directiva 22 —una limpieza que se lleva
+    # más de lo que la corrida reescribe— aplicada a una consulta.
     q_glosas = (
         select(Glosa.estado, func.count(Glosa.id), func.sum(Glosa.valor_glosado))
         .join(Factura, Glosa.factura_id == Factura.id)
-        .where(Factura.fecha_factura >= fecha_inicio, Factura.fecha_factura <= fecha_fin)
         .where(_de_mi_institucion(current_user))
         .group_by(Glosa.estado)
     )

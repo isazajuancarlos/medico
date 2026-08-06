@@ -607,7 +607,10 @@ def test_un_indice_con_el_nombre_bueno_sobre_otras_columnas_no_cuenta(
         # Único de verdad, con el nombre correcto, y sobre la columna equivocada.
         cx.execute(_text(f"CREATE UNIQUE INDEX {indice} ON {tabla}(id)"))
 
-    with pytest.raises(RuntimeError, match="sobre"):
+    # `match` que fija el MOTIVO y no solo que levante: «sobre» era subcadena de
+    # «sobrevive», así que esta prueba habría pasado también con el error de la
+    # otra rama. Lo señaló la revisión del delta.
+    with pytest.raises(RuntimeError, match="índice único ux_"):
         _database._exigir_el_aislamiento_de_facturacion(motor)
 
 
@@ -627,3 +630,66 @@ def test_si_sobrevive_el_unico_GLOBAL_tampoco_arranca(tmp_path, tabla, indice, c
 
     with pytest.raises(RuntimeError, match="único GLOBAL"):
         _database._exigir_el_aislamiento_de_facturacion(motor)
+
+
+@pytest.mark.parametrize("mio", [1, 2])
+def test_el_resumen_tampoco_suma_la_facturacion_del_vecino(motor, mio):
+    """La CUARTA consulta sobre `Factura` del mismo archivo.
+
+    Se quedó sin acotar cuando se arreglaron las tres de `/financiero`, y la
+    encontró la revisión del delta midiéndola: los dos prestadores leían
+    `valor_pendiente = 3000.0` habiendo facturado 1000 y 2000.
+
+    Que el frontal solo llame a `/kpis` no la salvaba: `/resumen` responde 200 a
+    quien la pida.
+    """
+    c = _cliente(motor, mio)
+    r = c.get("/api/estadisticas/resumen")
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["valor_pendiente"] == 1000 * mio, (
+        f"FUGA: el prestador {mio} tiene {1000 * mio} pendiente y /resumen dice "
+        f"{d['valor_pendiente']}."
+    )
+    assert d["facturas_pendientes"] == 1, d["facturas_pendientes"]
+
+
+def test_una_glosa_viva_de_una_factura_vieja_sigue_contando(motor):
+    """La pareja del arreglo, y mide una REGRESIÓN, no una fuga.
+
+    Al acotar las glosas por institución se les puso además un filtro por
+    `Factura.fecha_factura`, y eso hacía desaparecer del panel toda glosa cuya
+    factura quedara fuera del rango — que en el flujo real es lo normal: las
+    glosas llegan meses después de radicar. Los dos paneles del mismo producto
+    se contradecían: 100 aquí y 877 en `/api/facturacion/stats`.
+
+    Sin esta prueba, el arreglo de seguridad se lleva por delante un dato del
+    usuario legítimo y nadie se entera (directiva 22).
+    """
+    from models import Factura as _F, Glosa as _G
+
+    with Session(motor) as db:
+        db.add(_F(
+            id=99, institucion_id=1, numero_factura="FAC-2025-00099",
+            entidad_id=1, fecha_factura=date(2025, 11, 30),
+            periodo_inicio=date(2025, 11, 1), periodo_fin=date(2025, 11, 30),
+            valor_bruto=5000, valor_neto=5000, estado="RADICADA",
+        ))
+        db.add(_G(
+            factura_id=99, item_glosado="Vieja", motivo="tarifa",
+            valor_glosado=777, fecha_glosa=date(2026, 3, 1), estado="PENDIENTE",
+        ))
+        db.commit()
+
+    d = _cliente(motor, 1).get("/api/estadisticas/financiero").json()
+    assert d["valor_glosado_pendiente"] == 877, (
+        "la glosa de 777 sobre una factura de 2025 desapareció del panel: "
+        f"suma {d['valor_glosado_pendiente']} y debería sumar 877. Es la "
+        "regresión del filtro de fecha, no un problema de aislamiento."
+    )
+
+    # Y la mitad de aislamiento sigue en pie: el vecino no la ve.
+    d2 = _cliente(motor, 2).get("/api/estadisticas/financiero").json()
+    assert d2["valor_glosado_pendiente"] == 200, (
+        f"FUGA: el prestador 2 ve {d2['valor_glosado_pendiente']} y solo tiene 200."
+    )
