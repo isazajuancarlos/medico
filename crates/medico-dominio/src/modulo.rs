@@ -82,7 +82,7 @@ pub const CATALOGO: &[Modulo] = &[
     m("FARMACIA", "Soporte clínico", Some("/api/farmacia")),
     m("ENFERMERIA", "Soporte clínico", None),
     m("EVOLUCIONES", "Soporte clínico", None),
-    m("CONSENTIMIENTO", "Soporte clínico", None),
+    m("CONSENTIMIENTO", "Soporte clínico", Some("/api/consentimiento")),
     m("BANCO_SANGRE", "Soporte clínico", None),
     // --- Especialidades -----------------------------------------------------
     m("NUTRICION", "Especialidades", Some("/api/nutricion")),

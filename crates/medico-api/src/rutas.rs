@@ -23,6 +23,7 @@ use medico_datos::ambulancia;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
 use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::diagnostico;
+use medico_datos::consentimiento;
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
 use medico_datos::facturacion;
 use medico_datos::formula::{self, Formula, FormulaNueva};
@@ -172,6 +173,21 @@ pub fn router(estado: Estado) -> Router {
             get(rehab_sesiones).post(rehab_crear_sesion),
         )
         .route("/api/rehabilitacion/sesiones/{id}", put(rehab_actualizar_sesion))
+        // LAS DOS FORMAS, CON BARRA FINAL Y SIN ELLA, y no es adorno: axum 0.8
+        // quitó la redirección automática, y `consentimiento.component.ts:242`
+        // pide `/api/consentimiento/` — la ÚNICA llamada del frontal que la lleva
+        // (comprobado con grep sobre `frontend/src`). Registrando solo la forma
+        // sin barra, la pantalla habría dado 404 contra el binario mientras
+        // seguía funcionando contra el Python, que sí redirige. Es el fallo que
+        // ninguna prueba de módulo ve y que solo aparece abriendo la aplicación
+        // (directiva 28).
+        .route("/api/consentimiento", get(consent_listar).post(consent_crear))
+        .route("/api/consentimiento/", get(consent_listar).post(consent_crear))
+        .route(
+            "/api/consentimiento/{id}",
+            get(consent_detalle).put(consent_actualizar),
+        )
+        .route("/api/consentimiento/{id}/revocar", post(consent_revocar))
         .route("/api/incapacidades", get(incap_listar))
         .route("/api/incapacidades/resumen", get(incap_resumen))
         .route("/api/incapacidades/{historia_id}", get(incap_detalle))
@@ -1637,6 +1653,170 @@ async fn incap_detalle(State(e): State<Estado>, Autenticado(u): Autenticado, Pat
     match incapacidad::detalle(&e.pool, u.ambito(), id).await {
         Ok(Some(d)) => Json(d).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// --- Consentimiento informado ------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct FiltroConsent {
+    paciente_id: Option<i64>,
+    #[serde(default)]
+    solo_validos: bool,
+}
+
+/// El código de cada estorbo, en UN sitio.
+///
+/// `NoExiste` es 404 y cubre también «es de otra institución» — la regla dura de
+/// este repositorio: un 403 confirmaría que el registro existe, y con eso se
+/// enumera el padrón del vecino probando identificadores.
+fn consent_fallo(x: consentimiento::Estorbo) -> Response {
+    use consentimiento::Estorbo::*;
+    match x {
+        NoExiste => StatusCode::NOT_FOUND.into_response(),
+        PacienteAjeno => detalle(
+            StatusCode::BAD_REQUEST,
+            "ese paciente no existe en esta institución".into(),
+        ),
+        HistoriaAjena => detalle(
+            StatusCode::BAD_REQUEST,
+            "esa historia clínica no es de ese paciente".into(),
+        ),
+        Revocado => detalle(
+            StatusCode::CONFLICT,
+            "el paciente revocó este consentimiento y no se puede modificar. Si volvió \
+             a consentir, registre uno nuevo: así queda constancia de que hubo una \
+             revocación en medio."
+                .into(),
+        ),
+    }
+}
+
+async fn consent_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroConsent>,
+) -> Response {
+    match consentimiento::listar(&e.pool, u.ambito(), f.paciente_id, f.solo_validos).await {
+        Ok(v) => {
+            // El rastro de la Ley 1581 distingue DOS formas, y aquí se ven las dos
+            // en la misma ruta: con `paciente_id` es el expediente de UN titular y
+            // tiene que aparecer en SU rastro; sin él atraviesa titulares y es una
+            // colección. Es la misma regla que ya aplica `/api/documentos`, y se
+            // decide por la REGLA y no por el caso (directiva 23).
+            let filtro = f.solo_validos.then(|| "solo_validos".to_string());
+            match f.paciente_id {
+                Some(p) => {
+                    registrar_coleccion_de_un_titular(
+                        &e,
+                        &u,
+                        "LISTAR",
+                        "consentimiento",
+                        p,
+                        filtro,
+                        v.len(),
+                    )
+                    .await
+                }
+                None => {
+                    registrar_coleccion(&e, &u, "LISTAR", "consentimiento", filtro, v.len(), Vec::new())
+                        .await
+                }
+            }
+            Json(v).into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn consent_detalle(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    match consentimiento::detalle(&e.pool, u.ambito(), id).await {
+        Ok(Some(l)) => {
+            // Se registra DENTRO del `Some`: uno de otra institución da 404 y no
+            // deja rastro, porque el 404 es anterior al acceso.
+            registrar_acceso(&e, &u, "VER", "consentimiento", l.fila.id, l.fila.paciente_id).await;
+            Json(l).into_response()
+        }
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn consent_crear(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(n): Json<consentimiento::Nuevo>,
+) -> Response {
+    // `medico_id` sale de la SESIÓN y no del cuerpo: quien firma es quien está
+    // autenticado. Si viniera del JSON, cualquiera consentiría en nombre de otro
+    // profesional — y este documento es justamente la constancia de quién explicó
+    // el procedimiento.
+    match consentimiento::crear(&e.pool, u.ambito(), u.id, &n).await {
+        Ok(Ok(l)) => {
+            registrar_acceso(&e, &u, "CREAR", "consentimiento", l.fila.id, l.fila.paciente_id).await;
+            (StatusCode::CREATED, Json(l)).into_response()
+        }
+        Ok(Err(x)) => consent_fallo(x),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn consent_actualizar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(c): Json<consentimiento::Cambios>,
+) -> Response {
+    match consentimiento::actualizar(&e.pool, u.ambito(), id, &c).await {
+        Ok(Ok(l)) => {
+            registrar_acceso(&e, &u, "EDITAR", "consentimiento", l.fila.id, l.fila.paciente_id).await;
+            Json(l).into_response()
+        }
+        Ok(Err(x)) => consent_fallo(x),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct Revocacion {
+    motivo: String,
+}
+
+/// Registra que el paciente retiró su consentimiento.
+///
+/// **No mira el estado previo, y eso es el diseño.** El derecho a revocar no
+/// depende de en qué punto vaya el trámite: ni de que el consentimiento esté
+/// completo, ni de que sea válido, ni de que ya se hubiera revocado antes. Lo
+/// único que puede impedirlo es que no haya motivo — y ese requisito no protege
+/// al sistema, protege la constancia: una revocación sin motivo no dice nada el
+/// día que alguien pregunte por qué no se hizo el procedimiento.
+async fn consent_revocar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+    Json(r): Json<Revocacion>,
+) -> Response {
+    let motivo = match medico_dominio::consentimiento::motivo_de_revocacion(&r.motivo) {
+        Ok(m) => m.to_string(),
+        Err(_) => {
+            return detalle(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "la revocación necesita un motivo: es lo que queda como constancia".into(),
+            );
+        }
+    };
+    match consentimiento::revocar(&e.pool, u.ambito(), id, &motivo).await {
+        Ok(Ok(l)) => {
+            registrar_acceso(&e, &u, "REVOCAR", "consentimiento", l.fila.id, l.fila.paciente_id)
+                .await;
+            Json(l).into_response()
+        }
+        Ok(Err(x)) => consent_fallo(x),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -8237,6 +8417,27 @@ mod pruebas {
                 .execute(&e.pool)
                 .await
                 .unwrap();
+
+                // 7. consentimiento — tampoco tiene columna propia: cuelga del
+                //    paciente, igual que diagnóstico. Y lo que se fuga aquí es de
+                //    lo más sensible del sistema: qué procedimiento se le iba a
+                //    practicar a quién, con nombre y apellidos.
+                sqlx::query(
+                    "INSERT INTO consentimiento_informado
+                       (paciente_id,historia_id,medico_id,tipo_procedimiento,
+                        descripcion_procedimiento,riesgos_explicados,beneficios_esperados,
+                        alternativas_explicadas,paciente_comprende,acepta_procedimiento,
+                        firma_paciente_path,firma_medico_path)
+                     VALUES (?,?,?,?,?,'sangrado','curación','no operar',1,1,'/f/p.png','/f/m.png')",
+                )
+                .bind(pac)
+                .bind(pac)
+                .bind(admin)
+                .bind(format!("Cirugia{marca}"))
+                .bind(format!("Apendicectomia{marca}"))
+                .execute(&e.pool)
+                .await
+                .unwrap();
             }
             e
         }
@@ -8258,6 +8459,7 @@ mod pruebas {
                 ("nutricion", "/api/nutricion/valoraciones", "Riesgo"),
                 ("rehabilitacion", "/api/rehabilitacion/planes", "Funcional"),
                 ("diagnostico", "/api/laboratorio/ordenes", "Hemograma"),
+                ("consentimiento", "/api/consentimiento", "Apendicectomia"),
             ];
 
             // Se ACUMULAN los fallos en vez de cortar en el primero, y no es
@@ -8332,6 +8534,7 @@ mod pruebas {
             // completo (17 pruebas); los otros seis están en éste.
             let cubiertos: std::collections::BTreeSet<&str> = [
                 "ambulancia",
+                "consentimiento",
                 "diagnostico",
                 "facturacion",
                 "inventario",
@@ -8354,7 +8557,7 @@ mod pruebas {
                  exactamente el hueco que este archivo existe para cerrar."
             );
             assert!(
-                usan.len() >= 7,
+                usan.len() >= 8,
                 "solo se encontraron {} módulos usando `filtro_ambito` ({usan:?}): \
                  el recuento no está mirando el árbol que cree",
                 usan.len()
