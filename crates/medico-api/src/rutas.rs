@@ -4743,18 +4743,31 @@ async fn mover(
 /// De qué institución hablamos. Quien pertenece a una usa la SUYA y el parámetro
 /// se ignora; el superadmin tiene que decir cuál.
 ///
-/// Es la misma regla que el catálogo de módulos, y la razón es la misma: dejar
-/// que el parámetro mande sobre la institución propia convertiría cada ruta de
-/// administración en una forma de administrar la del vecino.
+/// # Decide sobre el ÁMBITO, no sobre la columna
+///
+/// La primera versión hacía `match u.institucion_id`, y eso trata «sin
+/// institución» como «superadmin» — que es exactamente lo que `Ambito` existe
+/// para impedir. Un usuario con rol `admin` e `institucion_id = NULL` tiene
+/// `Ambito::Ninguno` (no ve nada) y sin embargo podía elegir institución con
+/// `?institucion_id=N` y administrar la ficha, la política de seguridad y **dar
+/// de alta usuarios** en cualquiera. Asimetría dentro del mismo archivo:
+/// `adm_campos` usaba `ambito()` y fallaba cerrado; `adm_crear_campo` usaba esto
+/// y fallaba abierto. Lo cazó la revisión de esta rama.
 fn institucion_objetivo(
     u: &usuario::Usuario,
     pedida: Option<i64>,
 ) -> Result<i64, (StatusCode, &'static str)> {
-    match u.institucion_id {
-        Some(propia) => Ok(propia),
-        None => pedida.ok_or((
+    match u.ambito() {
+        Ambito::Institucion(propia) => Ok(propia),
+        Ambito::Superadmin => pedida.ok_or((
             StatusCode::BAD_REQUEST,
             "sin institución propia: indique cuál con ?institucion_id=",
+        )),
+        // Ni superadmin ni adscrito: no ve nada, y por tanto no administra nada.
+        // Antes caía en la rama del superadmin.
+        Ambito::Ninguno => Err((
+            StatusCode::FORBIDDEN,
+            "su cuenta no pertenece a ninguna institución: no hay nada que administrar",
         )),
     }
 }
@@ -5068,7 +5081,7 @@ async fn adm_auditoria(
     // `max(1)` y no `unwrap_or(1)`: un `page=0` o negativo daría desplazamiento
     // negativo, y SQLite lo trata como cero — o sea que la primera página se
     // serviría en silencio bajo el nombre de otra.
-    let desplazamiento = (p.page.unwrap_or(1).max(1) - 1) * size;
+    let desplazamiento = p.page.unwrap_or(1).max(1).saturating_sub(1).saturating_mul(size);
     match administracion::auditoria(&e.pool, u.ambito(), size, desplazamiento).await {
         Ok(v) => Json(v).into_response(),
         Err(_) => fallo_db(),
@@ -5083,7 +5096,7 @@ async fn adm_usuarios(
     Query(f): Query<administracion::FiltroUsuarios>,
 ) -> Response {
     let u = autorizado.0;
-    let frenados = match administracion::correos_frenados(&e.pool).await {
+    let frenados = match administracion::correos_frenados(&e.pool, chrono::Utc::now()).await {
         Ok(v) => v,
         Err(_) => return fallo_db(),
     };
@@ -5457,6 +5470,28 @@ mod pruebas {
                 .status()
         }
 
+        /// Como `pedir_con`, pero devuelve la respuesta entera para poder mirar
+        /// el cuerpo.
+        async fn pedir_resp(e: &Estado, metodo: &str, uri: &str, cookie: &str, json: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie)
+                        .header("content-type", "application/json")
+                        .body(Body::from(json.to_owned()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn cuerpo_json(r: Response) -> serde_json::Value {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 22).await.unwrap();
+            serde_json::from_slice(&b).unwrap()
+        }
+
         /// Con cuerpo, para las escrituras.
         async fn pedir_con(e: &Estado, metodo: &str, uri: &str, cookie: &str, json: &str) -> StatusCode {
             router(e.clone())
@@ -5472,6 +5507,142 @@ mod pruebas {
                 .await
                 .unwrap()
                 .status()
+        }
+
+        /// **EL ADMIN DE UNA IPS NO ADMINISTRA LA DE AL LADO.**
+        ///
+        /// Esta prueba existe porque no existía, y su ausencia era la forma
+        /// exacta del fallo que este módulo dice haber corregido: las pruebas
+        /// montaban UNA sola institución, así que el aislamiento de
+        /// `/api/admin/*` no se cruzaba nunca por HTTP — solo en la capa de
+        /// datos. El alcance de las pruebas era el de la mitigación, no el de la
+        /// amenaza. Lo señaló la revisión de esta rama.
+        #[tokio::test]
+        async fn un_admin_no_administra_la_institucion_de_al_lado() {
+            let e = con_tres_roles().await;
+            let admin1 = con_admin(&e).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (2,'Dos','901')")
+                .execute(&e.pool).await.unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (20,'Admin Dos','a2@x.co',?,'admin',2,1),
+                        (21,'Medica Dos','m2@x.co',?,'medico',2,1)",
+            ).bind(&h).bind(&h).execute(&e.pool).await.unwrap();
+
+            // 1. El parámetro `?institucion_id=` NO manda sobre la institución
+            //    propia: quien tiene una usa la suya y punto.
+            let v = cuerpo_json(pedir_resp(&e, "GET", "/api/admin/institucion?institucion_id=2", &admin1, "").await).await;
+            assert_eq!(v["id"], 1, "el parámetro le dio la ficha de la institución 2");
+
+            // 2. Ni escribe la ficha ajena.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/institucion?institucion_id=2", &admin1,
+                          r#"{"razon_social":"Mía ahora"}"#).await,
+                StatusCode::OK,
+                "responde 200 porque escribe LA SUYA"
+            );
+            let dos: Option<String> =
+                sqlx::query_scalar("SELECT razon_social FROM institucion WHERE id = 2")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(dos, None, "le cambió la razón social a la institución 2");
+
+            // 3. Ni toca a su personal, por ninguna de las cuatro vías.
+            for (metodo, uri, cuerpo) in [
+                ("PUT", "/api/admin/usuarios/21", r#"{"email":"robado@x.co"}"#),
+                ("DELETE", "/api/admin/usuarios/21", ""),
+                ("POST", "/api/admin/usuarios/21/reset-password", r#"{"nueva_password":"Clave-larga-12345"}"#),
+                ("POST", "/api/admin/usuarios/21/desbloquear", ""),
+            ] {
+                assert_eq!(
+                    pedir_con(&e, metodo, uri, &admin1, cuerpo).await,
+                    StatusCode::NOT_FOUND,
+                    "{metodo} {uri} alcanzó a la institución 2"
+                );
+            }
+            let (correo, hash, activo): (String, String, bool) = sqlx::query_as(
+                "SELECT email, password_hash, activo FROM usuario WHERE id = 21",
+            ).fetch_one(&e.pool).await.unwrap();
+            assert_eq!(correo, "m2@x.co");
+            assert_eq!(hash, h, "le restableció la contraseña a la médica del vecino");
+            assert!(activo);
+
+            // 4. Ni la ve en su listado.
+            let v = cuerpo_json(pedir_resp(&e, "GET", "/api/admin/usuarios", &admin1, "").await).await;
+            let texto = serde_json::to_string(&v).unwrap();
+            assert!(!texto.contains("m2@x.co"), "vio al personal de la otra: {texto}");
+
+            // LA PAREJA, que es lo que hace que esto no cierre por cerrar: el
+            // admin de la 2 SÍ administra a la suya.
+            let admin2 = cookie_de(20);
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios/21/reset-password", &admin2,
+                          r#"{"nueva_password":"Clave-larga-12345"}"#).await,
+                StatusCode::NO_CONTENT
+            );
+        }
+
+        /// **Un superadmin CON institución no lo administra ese admin.**
+        ///
+        /// La fila es creable —la columna no tiene `CHECK`— y quedaba invisible
+        /// en el listado pero escribible: cambiarle el correo, restablecerle la
+        /// contraseña y entrar como dueño del sistema.
+        #[tokio::test]
+        async fn un_superadmin_con_institucion_no_se_administra_por_http() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (30,'Infiltrado','inf@x.co',?,'superadmin',1,1)",
+            ).bind(&h).execute(&e.pool).await.unwrap();
+
+            for (metodo, uri, cuerpo) in [
+                ("PUT", "/api/admin/usuarios/30", r#"{"email":"mio@atacante.co"}"#),
+                ("POST", "/api/admin/usuarios/30/reset-password", r#"{"nueva_password":"Clave-larga-12345"}"#),
+                ("DELETE", "/api/admin/usuarios/30", ""),
+                ("POST", "/api/admin/usuarios/30/desbloquear", ""),
+            ] {
+                assert_eq!(
+                    pedir_con(&e, metodo, uri, &admin, cuerpo).await,
+                    StatusCode::NOT_FOUND,
+                    "{metodo} {uri} alcanzó al superadmin"
+                );
+            }
+            let (correo, hash): (String, String) =
+                sqlx::query_as("SELECT email, password_hash FROM usuario WHERE id = 30")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(correo, "inf@x.co");
+            assert_eq!(hash, h);
+
+            // Y esa fila no se puede crear por esta ruta, que es la raíz.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin,
+                    r#"{"username":"otro@x.co","password":"Clave-larga-12345",
+                        "nombre_completo":"Otro","rol":"superadmin"}"#).await,
+                StatusCode::FORBIDDEN
+            );
+        }
+
+        /// Restablecer una contraseña **echa a quien estuviera dentro**: sube
+        /// `token_version`, así que la cookie anterior deja de valer.
+        #[tokio::test]
+        async fn restablecer_la_contrasena_revoca_la_sesion_abierta() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            let victima = cookie_de(5);
+            assert_eq!(pedir(&e, "GET", "/api/yo", &victima).await, StatusCode::OK);
+
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios/5/reset-password", &admin,
+                          r#"{"nueva_password":"Clave-larga-12345"}"#).await,
+                StatusCode::NO_CONTENT
+            );
+            assert_eq!(
+                pedir(&e, "GET", "/api/yo", &victima).await,
+                StatusCode::UNAUTHORIZED,
+                "la cookie anterior sigue valiendo tras restablecer la contraseña"
+            );
         }
 
         /// **ADMINISTRACIÓN: NADIE QUE NO SEA ADMIN ENTRA, NI SIQUIERA A LEER.**

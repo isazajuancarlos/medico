@@ -225,7 +225,6 @@ pub enum Capacidad {
     /// su matriz. Por eso el defecto puede ser estrecho sin dejar a nadie fuera:
     /// hay camino, y lo abre quien conoce su planta.
     GenerarRips,
-    /// Crear y listar usuarios de la institución.
     /// Administrar la institución: su ficha, su configuración de operación, su
     /// política de seguridad, los campos dinámicos de la historia y los maestros
     /// que el prestador edita.
@@ -237,6 +236,7 @@ pub enum Capacidad {
     /// coordinador toque los horarios sin poder crear cuentas, la separación ya
     /// está hecha.
     AdministrarInstitucion,
+    /// Crear y listar usuarios de la institución.
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
     GestionarInstituciones,

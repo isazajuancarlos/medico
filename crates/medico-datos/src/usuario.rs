@@ -108,13 +108,21 @@ pub async fn es_del_ambito(
     // exactamente el mecanismo que la directiva 20 prohíbe: el dato ausente
     // sustituido por un valor. Basta una institución con `id = 0` para que
     // conceda. Aquí el NULL se llama por su nombre y se niega a propósito.
-    let fila: Option<(Option<i64>,)> =
-        sqlx::query_as("SELECT institucion_id FROM usuario WHERE id = ? AND activo = 1")
+    let fila: Option<(Option<i64>, String)> =
+        sqlx::query_as("SELECT institucion_id, rol FROM usuario WHERE id = ? AND activo = 1")
             .bind(usuario_id)
             .fetch_optional(pool)
             .await?;
-    Ok(match fila {
-        // No existe, o está inactivo.
+    // **EL ROL TAMBIÉN, y no solo la columna** (2026-08-06). Nada garantiza que
+    // un superadmin tenga la institución nula —no hay `CHECK`—, así que decidir
+    // solo por la columna deja al dueño del sistema administrable por el admin
+    // de la institución que le hubieran puesto. Lo cazó una revisión
+    // independiente sobre `feat/admin-en-rust`.
+    let fila = fila.filter(|(_, rol)| {
+        RolUsuario::desde_str(rol) != Some(RolUsuario::Superadmin)
+    });
+    Ok(match fila.map(|(i, _)| (i,)) {
+        // No existe, está inactivo, o es el superadmin.
         None => false,
         // Existe pero no pertenece a ninguna institución: es el superadmin. No
         // es «de todas» a estos efectos — no se le agenda una cita ni se le hace

@@ -854,7 +854,13 @@ pub async fn usuarios(
          WHERE {filtro} AND u.rol <> 'superadmin'"
     );
     if f.q.is_some() {
-        sql.push_str(" AND (u.nombre LIKE ? OR u.email LIKE ?)");
+        // `ESCAPE '\\'` NO ES DECORACIÓN: sin la cláusula, SQLite no reconoce
+        // ningún carácter de escape y el escapado de abajo es inerte. No había
+        // riesgo —el patrón va enlazado, así que el `%` del cliente nunca amplía
+        // el conjunto— pero buscar un `%` o un `_` literal no encontraba nunca
+        // nada, y la prueba que lo vigilaba salía verde por el motivo
+        // equivocado. Lo cazó la revisión de esta rama.
+        sql.push_str(" AND (u.nombre LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\')");
     }
     if f.rol.is_some() {
         sql.push_str(" AND u.rol = ?");
@@ -902,24 +908,89 @@ pub async fn usuarios(
 }
 
 /// Los correos con el freno activo ahora mismo, para derivar `cuenta_bloqueada`.
-pub async fn correos_frenados(pool: &crate::Pool) -> Result<Vec<String>, sqlx::Error> {
-    let corte = (chrono::Utc::now() - chrono::Duration::hours(crate::freno::RETENCION_HORAS))
-        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-    sqlx::query_scalar(
-        "SELECT email FROM intento_acceso WHERE exito = 0 AND momento >= ? \
-         GROUP BY email HAVING COUNT(*) >= ?",
-    )
-    .bind(corte)
-    .bind(crate::freno::UMBRAL)
-    .fetch_all(pool)
-    .await
+///
+/// # Usa la REGLA, no una consulta que se le parece
+///
+/// La primera versión contaba `exito = 0` de las últimas 24 h agrupando por
+/// correo, y eso NO es el freno. La regla —`guaca::freno::evaluar`, que es la
+/// que decide de verdad en el inicio de sesión— difiere en tres cosas, y las
+/// tres decían «bloqueada» de más:
+///
+/// | | la regla | la consulta que había |
+/// |---|---|---|
+/// | clave | **(correo, origen)** | solo correo |
+/// | ventana | fallos **posteriores al último acierto** | todos los de 24 h |
+/// | vigencia | la espera caduca (15 s … 5 min) | la marca duraba 24 h |
+///
+/// La segunda es la demoledora: `anotar` no borra los fallos al acertar, así que
+/// **quien se equivocaba cinco veces y a la sexta entraba bien aparecía
+/// bloqueado 24 horas**. No hace falta atacante: es el uso normal. Y esa falsa
+/// alarma es lo que empuja a pulsar «desbloquear», que es el botón que borra el
+/// rastro (ver [`quitar_freno`]). Directiva 23 aplicada a la propia salvaguarda.
+///
+/// Lo cazó la revisión de esta rama. Ahora se traen las filas y decide la misma
+/// función que decide en el login, por cada par (correo, origen).
+pub async fn correos_frenados(
+    pool: &crate::Pool,
+    ahora: chrono::DateTime<chrono::Utc>,
+) -> Result<Vec<String>, sqlx::Error> {
+    let filas: Vec<(String, String, String, i64)> =
+        sqlx::query_as("SELECT email, origen, momento, exito FROM intento_acceso")
+            .fetch_all(pool)
+            .await?;
+
+    let mut por_par: std::collections::BTreeMap<(String, String), Vec<(String, bool)>> =
+        std::collections::BTreeMap::new();
+    for (email, origen, momento, exito) in filas {
+        por_par
+            .entry((email, origen))
+            .or_default()
+            .push((momento, exito != 0));
+    }
+
+    let mut frenados: Vec<String> = por_par
+        .into_iter()
+        .filter(|((_, _), intentos)| {
+            let v: Vec<guaca::freno::Intento<'_>> = intentos
+                .iter()
+                .map(|(momento, exito)| guaca::freno::Intento {
+                    momento: momento.as_str(),
+                    exito: *exito,
+                })
+                .collect();
+            // Frenado = la regla impone espera AHORA. Un par que ya cumplió su
+            // castigo deja de contar solo, sin que nadie pulse nada.
+            guaca::freno::evaluar(&v, ahora).frenado()
+        })
+        .map(|((email, _), _)| email)
+        .collect();
+    frenados.sort();
+    frenados.dedup();
+    Ok(frenados)
 }
 
-/// Borra los intentos fallidos de ese correo: es lo mismo que hace un acierto, y
-/// quita la espera ahora. **No hay ninguna cuenta que «desbloquear»** — ver la
-/// cabecera del módulo.
+/// Borra los intentos FALLIDOS de ese correo, que es lo que quita la espera.
+///
+/// **No hay ninguna cuenta que «desbloquear»** — ver la cabecera del módulo: el
+/// freno es una espera que se dobla, no un bloqueo.
+///
+/// # Lo que este endpoint cuesta, dicho en voz alta
+///
+/// La espera se agota sola en cinco minutos como mucho, así que lo que compra es
+/// poco. Lo que cuesta sí es real y lo señaló la revisión de esta rama: el freno
+/// es por (correo, ORIGEN), y esto borra todos los orígenes — incluido el de un
+/// atacante que estuviera ensayando contra ese correo, al que le reinicia el
+/// contador. Y `intento_acceso` es el ÚNICO registro que existe de un ensayo de
+/// contraseñas: la bitácora `acceso` solo anota lo que ocurrió, no lo que se
+/// intentó.
+///
+/// Se acota a `exito = 0` para no borrar los aciertos, que son los que anclan la
+/// ventana de la regla. Lo que falta —un marcador de reposición administrativa
+/// que limpie la espera SIN borrar la evidencia— necesita una columna y va en su
+/// propia tarea; el arreglo de [`correos_frenados`] quita, mientras tanto, casi
+/// todas las razones para pulsarlo.
 pub async fn quitar_freno(pool: &crate::Pool, email: &str) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM intento_acceso WHERE email = ?")
+    sqlx::query("DELETE FROM intento_acceso WHERE email = ? AND exito = 0")
         .bind(email)
         .execute(pool)
         .await?;
@@ -1002,7 +1073,25 @@ pub fn ascenso_permitido(rol_destino: Option<&str>, quien: &crate::usuario::Usua
     !sube_a_superadmin || quien.rol() == Some(RolUsuario::Superadmin)
 }
 
-/// ¿Ese usuario es del ámbito de quien pregunta? `None` si no existe o es ajeno.
+/// ¿Ese usuario es del ámbito de quien pregunta? `None` si no existe, es ajeno
+/// **o es un superadmin**.
+///
+/// # El rol se mira, y la primera versión no lo miraba
+///
+/// Decidía solo con `puede_ver(institucion_id)`, o sea con la COLUMNA, mientras
+/// el listado excluía al superadmin por su ROL. Dos definiciones distintas de
+/// «superadmin» en el mismo archivo, y la de escritura era la débil.
+///
+/// Lo encontró la revisión de esta rama, y el camino que describe es real: nada
+/// impide que exista un superadmin CON institución —la columna no tiene `CHECK`—
+/// y esta misma rama lo hacía creable, porque `adm_crear_usuario` exige una
+/// institución. Esa fila quedaba invisible en el listado y **escribible** por el
+/// admin de esa institución: cambiarle el correo, restablecerle la contraseña y
+/// entrar como dueño del sistema.
+///
+/// Es la razón de ser de `Ambito` (`aislamiento.rs`): que «sin institución» no
+/// se confunda con «superadmin». Aquí se volvía a confundir leyendo la columna
+/// en lugar del enum.
 async fn del_ambito(
     pool: &crate::Pool,
     ambito: Ambito,
@@ -1014,6 +1103,12 @@ async fn del_ambito(
             .fetch_optional(pool)
             .await?;
     Ok(fila.and_then(|(inst, email, rol, activo)| {
+        // El superadmin no se administra desde aquí, lo pida quien lo pida.
+        // Tampoco un superadmin a otro: para eso está la ruta de superadmin, que
+        // es donde esa decisión tiene su sitio y su rastro.
+        if RolUsuario::desde_str(&rol) == Some(RolUsuario::Superadmin) {
+            return None;
+        }
         (ambito.puede_ver(inst) == Visibilidad::Si).then_some((email, rol, activo))
     }))
 }
@@ -1029,8 +1124,19 @@ pub async fn crear_usuario(
             "el usuario necesita un correo de inicio de sesión".into(),
         )));
     };
-    if RolUsuario::desde_str(&n.rol).is_none() {
-        return Ok(Err(FalloUsuario::RolDesconocido(n.rol.clone())));
+    match RolUsuario::desde_str(&n.rol) {
+        None => return Ok(Err(FalloUsuario::RolDesconocido(n.rol.clone()))),
+        // **Esta ruta NO fabrica superadmins, ni siquiera para un superadmin.**
+        //
+        // No es una restricción de más: `crear_usuario` recibe una institución
+        // obligatoria, y un superadmin CON institución es exactamente la fila
+        // que rompe el aislamiento —invisible en el listado y escribible por el
+        // admin de esa institución—. Dar de alta al dueño del sistema es otra
+        // cosa y tiene su propia ruta.
+        Some(RolUsuario::Superadmin) => {
+            return Ok(Err(FalloUsuario::AscensoProhibido));
+        }
+        Some(_) => {}
     }
     if n.nombre_completo.trim().is_empty() {
         return Ok(Err(FalloUsuario::Invalido("el usuario necesita un nombre".into())));
@@ -1158,11 +1264,27 @@ pub async fn desactivar_usuario(
     Ok(true)
 }
 
-/// Restablece la contraseña y **obliga a cambiarla al entrar**: quien la fijó la
-/// conoce, y una contraseña que conoce el administrador no identifica a nadie.
+/// Restablece la contraseña, revoca las sesiones abiertas y **marca** que el
+/// usuario debería cambiarla.
 ///
-/// Revoca también las sesiones abiertas. Sin eso, restablecer la contraseña de
-/// una cuenta comprometida no echa a quien está dentro.
+/// # `requiere_cambio_password` se escribe y HOY NO LA LEE NADIE
+///
+/// La primera versión de este doc decía que «obliga a cambiarla al entrar», y es
+/// falso: la columna no aparece en el camino de autenticación, y **no existe
+/// ningún endpoint para que el usuario cambie su propia contraseña** — así que
+/// la bandera no se podría satisfacer aunque se comprobara. El propio admin
+/// puede además apagarla por `PUT /api/admin/usuarios/{id}`. Lo cazó la revisión
+/// de esta rama.
+///
+/// Es paridad con el Python, que hace exactamente lo mismo, no una regresión.
+/// Pero la consecuencia hay que decirla: la contraseña que fijó el administrador
+/// sigue valiendo indefinidamente sobre cuentas cuyos actos clínicos van
+/// firmados y atribuidos. Se escribe la marca porque es el dato que hará falta
+/// el día que entren el cambio propio y su comprobación, y va en su tarea.
+///
+/// Lo que sí ocurre hoy y sí protege: **se revocan las sesiones**. Sin eso,
+/// restablecer la contraseña de una cuenta comprometida no echa a quien está
+/// dentro.
 pub async fn restablecer_password(
     pool: &crate::Pool,
     ambito: Ambito,
@@ -1465,17 +1587,40 @@ mod pruebas {
 
     /// El `%` de una búsqueda es un DATO, no un comodín del atacante: el patrón
     /// se enlaza y los metacaracteres se escapan.
+    /// El `%` de una búsqueda es un DATO, y **buscarlo encuentra a quien lo
+    /// lleva en el nombre**.
+    ///
+    /// La versión anterior solo comprobaba que `%` no devolviera a todo el
+    /// mundo, y eso salía verde con el escape borrado —el patrón va enlazado, así
+    /// que el comodín nunca amplía el conjunto—. Sin `ESCAPE '\'` el escapado
+    /// era inerte y buscar un literal no encontraba nada: es esa mitad la que
+    /// discrimina.
     #[tokio::test]
-    async fn el_comodin_de_la_busqueda_no_es_del_usuario() {
+    async fn el_comodin_de_la_busqueda_es_un_dato_y_se_puede_buscar() {
         let pool = base().await;
-        let f = FiltroUsuarios { q: Some("%".into()), ..Default::default() };
-        assert!(
-            usuarios(&pool, UNO, &f, &[]).await.unwrap().is_empty(),
-            "el `%` se trató como comodín: nadie se llama literalmente «%»"
-        );
-        // La pareja: una búsqueda de verdad sí encuentra.
-        let f = FiltroUsuarios { q: Some("Medica".into()), ..Default::default() };
-        assert_eq!(usuarios(&pool, UNO, &f, &[]).await.unwrap().len(), 1);
+        sqlx::query(
+            "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+             VALUES (7,'Cien %','pct@x.co','h','medico',1,1),
+                    (8,'Guion_bajo','gb@x.co','h','medico',1,1)",
+        ).execute(&pool).await.unwrap();
+
+        let buscar = |q: &str| {
+            let f = FiltroUsuarios { q: Some(q.into()), ..Default::default() };
+            let pool = pool.clone();
+            async move { usuarios(&pool, UNO, &f, &[]).await.unwrap() }
+        };
+        // Buscar el literal encuentra SOLO a quien lo lleva.
+        let r = buscar("%").await;
+        assert_eq!(r.len(), 1, "buscar «%» tiene que encontrar a «Cien %»: {:?}",
+                   r.iter().map(|u| &u.nombre_completo).collect::<Vec<_>>());
+        assert_eq!(r[0].nombre_completo, "Cien %");
+        let r = buscar("_").await;
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].nombre_completo, "Guion_bajo");
+
+        // Y la pareja: una búsqueda normal sigue funcionando.
+        assert_eq!(buscar("Medica").await.len(), 1);
+        assert_eq!(buscar("nadie").await.len(), 0);
     }
 
     #[tokio::test]
@@ -1502,6 +1647,150 @@ mod pruebas {
         let medica = con.iter().find(|u| u.username == "m1@x.co").unwrap();
         assert!(medica.cuenta_bloqueada);
         assert!(con.iter().filter(|u| u.cuenta_bloqueada).count() == 1, "solo esa");
+    }
+
+    /// **La derivación usa la REGLA, no una consulta parecida.**
+    ///
+    /// Los tres casos que la versión anterior fallaba, y el que sí tiene que
+    /// salir. Con la consulta vieja —`COUNT(*) >= 5` de las últimas 24 h por
+    /// correo— los tres primeros salían «bloqueados».
+    #[tokio::test]
+    async fn el_freno_derivado_es_el_freno_de_verdad() {
+        let pool = base().await;
+        let ahora = chrono::Utc::now();
+        let hace = |m: i64| (ahora - chrono::Duration::minutes(m))
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let anotar = |email: &'static str, origen: &'static str, cuando: String, exito: i64| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query(
+                    "INSERT INTO intento_acceso (email,origen,momento,exito) VALUES (?,?,?,?)",
+                ).bind(email).bind(origen).bind(cuando).bind(exito)
+                .execute(&pool).await.unwrap();
+            }
+        };
+
+        // 1. Se equivocó cinco veces y a la sexta ENTRÓ. No está frenado, y es
+        //    el caso normal: `anotar` no borra los fallos al acertar.
+        for m in [50, 49, 48, 47, 46] { anotar("a1@x.co", "1.1.1.1", hace(m), 0).await; }
+        anotar("a1@x.co", "1.1.1.1", hace(45), 1).await;
+
+        // 2. Cinco fallos, pero de hace rato: la espera ya caducó.
+        for m in [400, 399, 398, 397, 396] { anotar("m1@x.co", "2.2.2.2", hace(m), 0).await; }
+
+        // 3. Cinco fallos repartidos entre CINCO orígenes: la regla es por par,
+        //    así que ninguno llega al umbral.
+        for (i, o) in ["3.3.3.1", "3.3.3.2", "3.3.3.3", "3.3.3.4", "3.3.3.5"].iter().enumerate() {
+            sqlx::query("INSERT INTO intento_acceso (email,origen,momento,exito) VALUES (?,?,?,0)")
+                .bind("r1@x.co").bind(*o).bind(hace(i as i64 + 1))
+                .execute(&pool).await.unwrap();
+        }
+
+        let frenados = correos_frenados(&pool, ahora).await.unwrap();
+        assert!(
+            frenados.is_empty(),
+            "ninguno de los tres está frenado de verdad, y salieron: {frenados:?}"
+        );
+
+        // 4. LA PAREJA: cinco fallos seguidos, mismo origen, ahora mismo. Ese sí.
+        for s in 1..=5 {
+            sqlx::query("INSERT INTO intento_acceso (email,origen,momento,exito) VALUES (?,?,?,0)")
+                .bind("a2@x.co").bind("4.4.4.4")
+                .bind((ahora - chrono::Duration::seconds(s)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+                .execute(&pool).await.unwrap();
+        }
+        assert_eq!(correos_frenados(&pool, ahora).await.unwrap(), vec!["a2@x.co".to_string()]);
+    }
+
+    /// `quitar_freno` borra los FALLOS y conserva los aciertos, que son los que
+    /// anclan la ventana de la regla.
+    #[tokio::test]
+    async fn quitar_el_freno_no_borra_los_aciertos() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO intento_acceso (email,origen,momento,exito)
+             VALUES ('m1@x.co','1.1.1.1','2026-08-06T10:00:00Z',0),
+                    ('m1@x.co','1.1.1.1','2026-08-06T10:01:00Z',1),
+                    ('otro@x.co','1.1.1.1','2026-08-06T10:00:00Z',0)",
+        ).execute(&pool).await.unwrap();
+        quitar_freno(&pool, "m1@x.co").await.unwrap();
+
+        let quedan: Vec<(String, i64)> =
+            sqlx::query_as("SELECT email, exito FROM intento_acceso ORDER BY email")
+                .fetch_all(&pool).await.unwrap();
+        assert_eq!(quedan, vec![("m1@x.co".into(), 1), ("otro@x.co".into(), 0)]);
+    }
+
+    // ── El superadmin no se administra desde aquí ────────────────────────────
+
+    /// **UN SUPERADMIN CON INSTITUCIÓN NO ES ADMINISTRABLE POR ESE ADMIN.**
+    ///
+    /// Nada en el esquema impide esa fila —`institucion_id` no tiene `CHECK`— y
+    /// la primera versión de este módulo decidía con la COLUMNA mientras el
+    /// listado lo excluía por el ROL: quedaba invisible en la lista y escribible
+    /// por el admin de su institución, que podía cambiarle el correo,
+    /// restablecerle la contraseña y entrar como dueño del sistema. Lo cazó la
+    /// revisión de esta rama.
+    #[tokio::test]
+    async fn un_superadmin_con_institucion_no_se_administra() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+             VALUES (10,'Infiltrado','inf@x.co','h','superadmin',1,1)",
+        ).execute(&pool).await.unwrap();
+
+        // No sale en el listado (ya lo hacía) …
+        let f = FiltroUsuarios::default();
+        assert!(!usuarios(&pool, UNO, &f, &[]).await.unwrap().iter().any(|u| u.id == 10));
+
+        // … y AHORA tampoco se escribe.
+        let c = UsuarioCambioAdmin { email: Some("mio@atacante.co".into()), ..Default::default() };
+        assert_eq!(
+            actualizar_usuario(&pool, UNO, 10, &c).await.unwrap(),
+            Err(FalloUsuario::NoExiste)
+        );
+        assert!(!restablecer_password(&pool, UNO, 10, "hash-atacante").await.unwrap());
+        assert!(!desactivar_usuario(&pool, UNO, 10).await.unwrap());
+        assert_eq!(consumo_de(&pool, UNO, 10, &UsuarioCambioAdmin::default()).await.unwrap(), None);
+
+        let (email, hash): (String, String) =
+            sqlx::query_as("SELECT email, password_hash FROM usuario WHERE id = 10")
+                .fetch_one(&pool).await.unwrap();
+        assert_eq!(email, "inf@x.co", "le cambiaron el correo al superadmin");
+        assert_eq!(hash, "h", "le cambiaron la contraseña al superadmin");
+
+        // Y ni siquiera OTRO superadmin lo administra por aquí: esa decisión
+        // tiene su propia ruta.
+        assert!(!restablecer_password(&pool, Ambito::Superadmin, 10, "x").await.unwrap());
+
+        // LA PAREJA: un usuario normal de la misma institución SÍ se administra.
+        assert!(restablecer_password(&pool, UNO, 2, "hash-nuevo").await.unwrap());
+    }
+
+    /// El alta por la ruta de administración **no fabrica superadmins**, ni para
+    /// un superadmin: recibe una institución obligatoria, y un superadmin CON
+    /// institución es exactamente la fila que rompe el aislamiento.
+    #[tokio::test]
+    async fn la_ruta_de_admin_no_da_de_alta_superadmins() {
+        let pool = base().await;
+        let n = UsuarioAltaAdmin {
+            username: Some("nuevo@x.co".into()),
+            email: None,
+            password: "x".into(),
+            nombre_completo: "Nuevo".into(),
+            rol: "superadmin".into(),
+            especialidad_id: None,
+            registro_medico: None,
+            registro_rethus: None,
+        };
+        assert_eq!(
+            crear_usuario(&pool, 1, &n, "h").await.unwrap(),
+            Err(FalloUsuario::AscensoProhibido)
+        );
+        let n_super: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM usuario WHERE rol = 'superadmin'")
+                .fetch_one(&pool).await.unwrap();
+        assert_eq!(n_super, 1, "solo el que ya había");
     }
 
     // ── Las dos escrituras que echan a alguien ───────────────────────────────
