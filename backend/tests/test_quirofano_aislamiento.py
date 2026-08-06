@@ -72,6 +72,14 @@ def _sembrar(motor):
                 institucion_id=i, activo=True,
             ))
             db.add(Quirofano(id=i, nombre=f"Sala{marca}", institucion_id=i))
+            db.add(Usuario(
+                id=70 + i, username=f"anes{i}", nombre_completo=f"Anestesiologo{marca}",
+                email=f"an{i}@x.co", hashed_password="x", rol=RolUsuario.ANESTESIOLOGO,
+                institucion_id=i, activo=True,
+            ))
+        # Y una sala SIN DUEÑO, que es lo que crea `seed.py` en toda instalación
+        # real: `list_salas` la enseña a todo el mundo desde siempre.
+        db.add(Quirofano(id=9, nombre="SalaHuerfana", institucion_id=None))
         db.commit()
         for i in (1, 2):
             db.add(ProgramacionQuirurgica(
@@ -225,3 +233,65 @@ def test_el_superadmin_sigue_viendo_las_dos(motor):
     assert procedimientos == ["CirugiaDOS", "CirugiaUNO"], (
         f"el superadmin es el dueño del sistema y debe ver las dos: {procedimientos}"
     )
+
+
+@pytest.mark.parametrize("mio", [1, 2])
+def test_se_puede_programar_en_una_sala_SIN_DUENO(motor, mio):
+    """La regresión que introdujo la primera versión de este arreglo.
+
+    Usar `obtener()` para la sala la leía como `SIN_DUENIO` y la negaba. Suena
+    bien y rompía el producto: `seed.py:706` crea las seis salas sin institución,
+    así que en toda instalación sembrada —la demo incluida— NINGUNA programación
+    de cirugía se podía crear. Falla cerrado, así que no era una fuga: era el
+    sesgo a cerrar de la directiva 21, una regla probada contra el atacante y no
+    contra la operación normal del cliente.
+
+    `list_salas` enseña las huérfanas a todo el mundo desde antes de este PR.
+    Crear contra lo que se enseña tiene que funcionar, y esta prueba es lo que
+    ata las dos capas.
+    """
+    c = _cliente(motor, mio)
+    # Primero, el control: la sala huérfana SÍ sale en el listado.
+    salas = [s["nombre"] for s in c.get("/api/quirofano/salas").json()]
+    assert "SalaHuerfana" in salas, f"el listado dejó de enseñarla: {salas}"
+
+    r = c.post("/api/quirofano/programaciones", json={
+        "quirofano_id": 9,
+        "paciente_id": 100 * mio,
+        "cirujano_id": 50 + mio,
+        "fecha_programada": "2026-05-01T08:00:00",
+        "procedimiento": "EnSalaSinDueno",
+    })
+    assert r.status_code == 201, (
+        "no se puede programar en la sala que el propio listado enseña: "
+        f"{r.status_code} {r.text[:200]}. Es la regresión de `seed.py`."
+    )
+
+
+@pytest.mark.parametrize("mio, ajeno", [(1, 2), (2, 1)])
+def test_no_se_programa_con_el_anestesiologo_del_vecino(motor, mio, ajeno):
+    """La rama que ninguna prueba cubría.
+
+    La revisión lo midió: borrando `_exigir_del_ambito(... anestesiologo_id ...)`
+    las nueve pruebas seguían verdes. La comprobación estaba bien puesta y
+    funcionaba; lo que faltaba era que algo impidiera al próximo refactor
+    llevársela.
+    """
+    c = _cliente(motor, mio)
+    base = {
+        "quirofano_id": mio,
+        "paciente_id": 100 * mio,
+        "cirujano_id": 50 + mio,
+        "fecha_programada": "2026-05-02T08:00:00",
+        "procedimiento": "ConAnestesiologo",
+    }
+
+    r = c.post("/api/quirofano/programaciones", json=dict(base, anestesiologo_id=70 + ajeno))
+    assert r.status_code == 404, (
+        f"FUGA: se programó con el anestesiólogo del prestador {ajeno}: "
+        f"{r.status_code} {r.text[:200]}"
+    )
+
+    # CONTROL: el propio sí entra. Sin esto, negar todo anestesiólogo pasaría.
+    r = c.post("/api/quirofano/programaciones", json=dict(base, anestesiologo_id=70 + mio))
+    assert r.status_code == 201, f"control: el anestesiólogo propio sí debe entrar: {r.text[:200]}"
