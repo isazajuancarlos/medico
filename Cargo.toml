@@ -53,3 +53,24 @@ guaca = { git = "https://github.com/isazajuancarlos/guaca", rev = "23395f3587e0c
 lto = true
 codegen-units = 1
 strip = true
+
+# AQUÍ NO VA `[profile.dev.package."*"] opt-level = 3`, y está medido.
+#
+# El estándar de nacimiento lo trae, y en quipu vale 9,8x — pero ese es un repo
+# con Argon2id, donde la EJECUCIÓN de las pruebas son 598 s. El perfil compra
+# ejecución rápida pagando compilación lenta, así que rinde en proporción a lo
+# que pese la ejecución, y aquí pesa **34 s**. Medido en este repositorio el
+# 2026-08-06, job `rust (test + clippy)`:
+#
+#   main, 6 corridas ....................... 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1 min
+#   con el perfil, en frío ................. 9,2 min
+#   con el perfil, EN CALIENTE (relanzado) . 9,0 min
+#
+# El caliente es el dato: no es el peaje de invalidar la caché una vez, es el
+# coste permanente. ~60 % más de minutos en un repositorio PRIVADO, que los
+# factura, a cambio de nada. La directiva 16 dice justo esto: no se le atribuye
+# una mejora sin medirla en ESE repo.
+#
+# Lo que sí rinde aquí es lo otro que trae esta rama —el grupo de concurrencia
+# por commit y los techos—, y eso se queda. Si algún día entra un KDF, se vuelve
+# a medir y se decide otra vez.
