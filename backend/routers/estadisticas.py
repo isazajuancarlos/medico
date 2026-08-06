@@ -5,7 +5,7 @@ from sqlmodel import Session, select, func
 from sqlalchemy import extract, and_, cast, Date
 from models import (
     Cita, Paciente, Historia, Usuario, AtencionUrgencias,
-    Factura, Cama, Hospitalizacion, EstadoCita, TipoTriage,
+    Factura, Cama, Hospitalizacion, EstadoCita, TipoTriage, RolUsuario,
 )
 from models import ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
@@ -22,10 +22,37 @@ router = APIRouter(prefix="/estadisticas", tags=["estadisticas"],
 
 
 def _pac_sub(db: Session, user: Usuario):
-    """Subquery of paciente IDs scoped to user's institution (None = no filter)."""
-    if user.institucion_id:
-        return select(Paciente.id).where(Paciente.institucion_id == user.institucion_id).subquery()
-    return None
+    """Los pacientes que este usuario puede ver. `None` significa «sin filtro».
+
+    === POR QUÉ NO ES `if user.institucion_id` A SECAS ===
+
+    Lo era, y ese `if` mete DOS casos distintos en la misma rama: el SUPERADMIN,
+    que no tiene institución porque es el dueño del sistema, y un usuario normal
+    al que le falta el dato. A los dos les devolvía `None`, y las cinco consultas
+    que usan esta función hacen `if sub is not None` — o sea que al segundo le
+    dejaban ver los pacientes de TODAS las instituciones.
+
+    Es el patrón «filtro opcional» que ya causó la fuga de `rips_completo.py`, y
+    la directiva 20 en su forma canónica: ante la ausencia de un dato se falla
+    ruidosamente, no se sustituye por un defecto permisivo. `filtrar_por_institucion`
+    lo cerró con un `raise` el 2026-08-05; esta capa se quedó sin cerrar, y las
+    dos tienen que decir lo mismo.
+
+    Hoy no es alcanzable por una cuenta normal —haría falta un no-superadmin con
+    `institucion_id = NULL`— pero eso es una premisa sobre los datos, no una
+    garantía del código: `obtener()` YA niega esas filas (`SIN_DUENIO`), así que
+    el sistema tiene dos capas discrepando sobre el mismo caso.
+    """
+    if user.rol == RolUsuario.SUPERADMIN:
+        return None  # el dueño del sistema ve todo, y es una decisión escrita
+    if not user.institucion_id:
+        raise RuntimeError(
+            f"el usuario {user.id} tiene rol {user.rol} y NINGUNA institución. No se "
+            "sirve una consulta sin acotar: sería enseñarle los pacientes de todos "
+            "los prestadores. Un usuario que no es superadmin tiene que tener "
+            "institución; si esta cuenta existe, está mal creada."
+        )
+    return select(Paciente.id).where(Paciente.institucion_id == user.institucion_id).subquery()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -493,10 +520,15 @@ def get_urgencias(
             q = q.where(AtencionUrgencias.paciente_id.in_(sub))
         return q
 
+    # LOS MIEMBROS SON `TRIAGE_1`..`TRIAGE_5`, NO LOS COLORES. Esto decía
+    # `TipoTriage.ROJO` y compañía, que no existen en el enum: el endpoint
+    # respondía 500 con `AttributeError` a cualquiera que lo llamara, y llevaba
+    # así sin que nadie lo notara porque NINGUNA prueba lo invocaba. El color va
+    # en el VALOR («Rojo - Resucitación»), no en el nombre del miembro.
     triage_labels = {
-        TipoTriage.ROJO: "Rojo (I)", TipoTriage.NARANJA: "Naranja (II)",
-        TipoTriage.AMARILLO: "Amarillo (III)", TipoTriage.VERDE: "Verde (IV)",
-        TipoTriage.AZUL: "Azul (V)",
+        TipoTriage.TRIAGE_1: "Rojo (I)", TipoTriage.TRIAGE_2: "Naranja (II)",
+        TipoTriage.TRIAGE_3: "Amarillo (III)", TipoTriage.TRIAGE_4: "Verde (IV)",
+        TipoTriage.TRIAGE_5: "Azul (V)",
     }
     q_triage = _w(select(AtencionUrgencias.triage, func.count(AtencionUrgencias.id)).group_by(AtencionUrgencias.triage))
     by_triage = {triage_labels.get(r[0], str(r[0])): r[1] for r in db.exec(q_triage).all()}
