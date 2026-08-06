@@ -43,7 +43,8 @@ from models import (  # noqa: E402
 
 RUTA_BD = "./test_facturacion_aislamiento.db"
 
-MODULOS = ["PACIENTES", "CITAS", "HISTORIA", "FACTURACION", "HOSPITALIZACION"]
+MODULOS = ["PACIENTES", "CITAS", "HISTORIA", "FACTURACION", "HOSPITALIZACION",
+           "ESTADISTICAS"]
 
 
 def _sembrar(motor):
@@ -473,9 +474,9 @@ def test_con_el_esquema_completo_el_arranque_pasa(tmp_path):
     _database._exigir_el_aislamiento_de_facturacion(motor)  # no levanta
 
 
-@pytest.mark.parametrize("tabla,indice", _database._GARANTIAS_DE_AISLAMIENTO)
+@pytest.mark.parametrize("tabla,indice,columna", _database._GARANTIAS_DE_AISLAMIENTO)
 def test_sin_el_indice_unico_por_institucion_el_servidor_no_arranca(
-    tmp_path, tabla, indice
+    tmp_path, tabla, indice, columna
 ):
     """LA AGUJA. Se rompe la salvaguarda EN EL ESQUEMA, que es por donde se
     rompería de verdad —una base con duplicados rechaza el índice—, no en el
@@ -518,4 +519,111 @@ def test_un_indice_que_existe_pero_NO_es_unico_no_cuenta(tmp_path):
         ))
 
     with pytest.raises(RuntimeError, match="índice único ux_factura"):
+        _database._exigir_el_aislamiento_de_facturacion(motor)
+
+
+# =========================================================================
+# EL QUINTO SITIO: EL PANEL DE ESTADÍSTICAS
+# =========================================================================
+#
+# `GET /api/estadisticas/financiero` sumaba la facturación de TODAS las
+# instituciones: el valor total, el reparto por estado, la tendencia mensual y
+# las glosas —éstas sin filtrar ni por fecha—. Lo encontró la QUINTA revisión de
+# seguridad de esta rama, después de que las cuatro anteriores arreglaran los
+# otros cuatro sitios; vive en otro router, así que ninguna de las pruebas de
+# facturación lo miraba.
+#
+# No se pudo arreglar antes de esta rama, y por eso entra aquí: `Factura` no
+# tenía `institucion_id` hasta ahora, así que no había con qué acotar.
+
+@pytest.mark.parametrize("mio", [1, 2])
+def test_el_panel_financiero_no_suma_lo_del_vecino(motor, mio):
+    """La mitad que mide: cada prestador ve SU dinero y no el del otro.
+
+    La siembra da 1000 al prestador 1 y 2000 al 2, con glosas de 100 y 200. Si
+    la consulta no acota, los dos leen 3000 y 300 — que es exactamente lo que
+    respondía, medido.
+    """
+    c = _cliente(motor, mio)
+    r = c.get("/api/estadisticas/financiero")
+    assert r.status_code == 200, r.text
+    d = r.json()
+
+    assert d["total_valor"] == 1000 * mio, (
+        f"FUGA: el prestador {mio} facturó {1000 * mio} y el panel dice "
+        f"{d['total_valor']}. Está sumando la facturación del vecino."
+    )
+    assert sum(x["cantidad"] for x in d["by_estado"]) == 1, d["by_estado"]
+    assert sum(x["cantidad"] for x in d["tendencia_mensual"]) == 1, d["tendencia_mensual"]
+    assert sum(x["valor"] for x in d["glosas"]) == 100 * mio, (
+        f"FUGA por las glosas: el prestador {mio} tiene {100 * mio} glosado y el "
+        f"panel dice {sum(x['valor'] for x in d['glosas'])}."
+    )
+
+
+def test_el_superadmin_si_ve_el_panel_completo(motor):
+    """El CONTROL, y sin él lo de arriba no probaría nada: una consulta que
+    devolviera SIEMPRE lo del propio prestador —o cero— pasaría igual.
+
+    El superadmin es el dueño del sistema, no un cliente: tiene que ver la suma
+    de los dos, 3000, que es justo el número que delataba la fuga.
+    """
+    from core.deps import get_current_active_user
+    from main import app
+    from models import RolUsuario
+
+    dueno = Usuario(
+        id=99, nombre_completo="Dueño", email="s@x.co", hashed_password="x",
+        rol=RolUsuario.SUPERADMIN, institucion_id=None, activo=True,
+    )
+    app.dependency_overrides[get_current_active_user] = lambda: dueno
+    try:
+        c = _cliente(motor, 1)
+        app.dependency_overrides[get_current_active_user] = lambda: dueno
+        d = c.get("/api/estadisticas/financiero").json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert d["total_valor"] == 3000, (
+        f"el superadmin debería ver los 3000 de los dos prestadores y ve "
+        f"{d['total_valor']}: el filtro nuevo lo está acotando a él también."
+    )
+
+
+@pytest.mark.parametrize("tabla,indice,columna", _database._GARANTIAS_DE_AISLAMIENTO)
+def test_un_indice_con_el_nombre_bueno_sobre_otras_columnas_no_cuenta(
+    tmp_path, tabla, indice, columna
+):
+    """La comprobación miraba el NOMBRE y no las columnas.
+
+    Lo levantó la quinta revisión: un índice único llamado
+    `ux_factura_institucion_numero` construido sobre cualquier otra cosa pasaba
+    por bueno. Es la misma clase de fallo que el `DROP CONSTRAINT` de esta rama,
+    que no fallaba y no hacía nada — un enunciado que PARECE la garantía.
+    """
+    motor = _base_con_el_esquema_real(tmp_path)
+    with motor.begin() as cx:
+        cx.execute(_text(f"DROP INDEX {indice}"))
+        # Único de verdad, con el nombre correcto, y sobre la columna equivocada.
+        cx.execute(_text(f"CREATE UNIQUE INDEX {indice} ON {tabla}(id)"))
+
+    with pytest.raises(RuntimeError, match="sobre"):
+        _database._exigir_el_aislamiento_de_facturacion(motor)
+
+
+@pytest.mark.parametrize("tabla,indice,columna", _database._GARANTIAS_DE_AISLAMIENTO)
+def test_si_sobrevive_el_unico_GLOBAL_tampoco_arranca(tmp_path, tabla, indice, columna):
+    """La otra mitad, y la que nadie comprobaba.
+
+    Si el `DROP` del único global viejo no llegó a correr, están LOS DOS índices
+    —el global y el nuevo por institución— y manda el más estricto: el segundo
+    prestador sigue chocando con los números del primero. La garantía por
+    institución existe y no sirve de nada, que es peor que si faltara, porque el
+    esquema parece correcto.
+    """
+    motor = _base_con_el_esquema_real(tmp_path)
+    with motor.begin() as cx:
+        cx.execute(_text(f"CREATE UNIQUE INDEX ix_viejo_global ON {tabla}({columna})"))
+
+    with pytest.raises(RuntimeError, match="único GLOBAL"):
         _database._exigir_el_aislamiento_de_facturacion(motor)

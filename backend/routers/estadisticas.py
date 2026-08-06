@@ -9,6 +9,12 @@ from models import (
 )
 from models import ModuloSistema
 from core.deps import get_db, get_current_active_user, requiere_modulo
+# La condición de institución de una factura y de una glosa vive en UN sitio
+# (`routers/facturacion.py`), y se importa en vez de copiarse: dos escrituras
+# de la misma regla de aislamiento es una que se arregla en un sitio y se
+# olvida en el otro — que es exactamente cómo este endpoint acabó sin filtro
+# mientras el de al lado sí lo tenía (directiva 1).
+from routers.facturacion import _de_mi_institucion
 
 router = APIRouter(prefix="/estadisticas", tags=["estadisticas"],
     dependencies=[Depends(requiere_modulo(ModuloSistema.ESTADISTICAS))],
@@ -371,9 +377,24 @@ def get_financiero(
     if not fecha_fin:
         fecha_fin = date.today()
 
+    # EL `_de_mi_institucion` DE LAS TRES CONSULTAS NO ES ADORNO. Hasta el
+    # 2026-08-06 este endpoint devolvía el valor facturado, el reparto por estado,
+    # la tendencia mensual y las glosas de TODAS las instituciones — medido con
+    # dos prestadores: los dos veían `total_valor = 3000` cuando cada uno había
+    # facturado 1000 y 2000, mientras `/api/facturacion/stats`, con los mismos
+    # datos y la misma sesión, respondía bien.
+    #
+    # Es el QUINTO sitio de la misma fuga, y no se pudo arreglar antes porque
+    # `Factura` no tenía `institucion_id`: lo trae esta rama. Lo cazó la quinta
+    # revisión de seguridad, después de que las cuatro anteriores arreglaran los
+    # otros cuatro. Que sean agregados no lo salva: este proyecto ya decidió lo
+    # contrario al arreglar el contador de glosas de `/stats` —«es la fuga que
+    # menos se veía, porque un contador no parece un dato»—, y aquí además va el
+    # dinero.
     q_estado = (
         select(Factura.estado, func.count(Factura.id), func.sum(Factura.valor_neto))
         .where(Factura.fecha_factura >= fecha_inicio, Factura.fecha_factura <= fecha_fin)
+        .where(_de_mi_institucion(current_user))
         .group_by(Factura.estado)
     )
     by_estado = []
@@ -391,6 +412,7 @@ def get_financiero(
             func.sum(Factura.valor_neto),
         )
         .where(Factura.fecha_factura >= fecha_inicio, Factura.fecha_factura <= fecha_fin)
+        .where(_de_mi_institucion(current_user))
         .group_by("y", "m").order_by("y", "m")
     )
     trend = [
@@ -399,7 +421,17 @@ def get_financiero(
     ]
 
     from models import Glosa
-    q_glosas = select(Glosa.estado, func.count(Glosa.id), func.sum(Glosa.valor_glosado)).group_by(Glosa.estado)
+    # La glosa NO lleva institución propia a propósito —cuelga de una factura con
+    # `factura_id` obligatorio, así que su dueño es demostrable en un salto—, de
+    # modo que acotarla exige el JOIN. Esta consulta además no filtraba ni por
+    # fecha, así que sumaba el histórico entero de todos los prestadores.
+    q_glosas = (
+        select(Glosa.estado, func.count(Glosa.id), func.sum(Glosa.valor_glosado))
+        .join(Factura, Glosa.factura_id == Factura.id)
+        .where(Factura.fecha_factura >= fecha_inicio, Factura.fecha_factura <= fecha_fin)
+        .where(_de_mi_institucion(current_user))
+        .group_by(Glosa.estado)
+    )
     glosas = [{"estado": r[0], "cantidad": r[1], "valor": float(r[2] or 0)} for r in db.exec(q_glosas).all()]
 
     return {

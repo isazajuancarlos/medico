@@ -235,10 +235,12 @@ def _run_migrations():
     logger.info("Migraciones de esquema aplicadas")
 
 
-#: `(tabla, índice único por institución)` — la garantía, no el camino.
+#: `(tabla, índice único por institución, columna del número)` — la garantía,
+#: no el camino. La tercera pieza es lo que permite comprobar SOBRE QUÉ está
+#: hecho el índice y que no sobreviva ningún único global sobre esa columna.
 _GARANTIAS_DE_AISLAMIENTO = (
-    ("factura", "ux_factura_institucion_numero"),
-    ("contrato", "ux_contrato_institucion_numero"),
+    ("factura", "ux_factura_institucion_numero", "numero_factura"),
+    ("contrato", "ux_contrato_institucion_numero", "numero_contrato"),
 )
 
 
@@ -270,13 +272,44 @@ def _exigir_el_aislamiento_de_facturacion(motor=None) -> None:
 
     inspector = inspect(motor if motor is not None else engine)
     faltan = []
-    for tabla, indice in _GARANTIAS_DE_AISLAMIENTO:
+    for tabla, indice, columna in _GARANTIAS_DE_AISLAMIENTO:
         if not any(c["name"] == "institucion_id" for c in inspector.get_columns(tabla)):
             faltan.append(f"columna {tabla}.institucion_id")
+
+        # SE MIRAN LAS COLUMNAS Y NO SOLO EL NOMBRE. Un índice llamado
+        # `ux_factura_institucion_numero` sobre otras columnas cumplía la versión
+        # anterior de esta comprobación y no garantizaba nada — lo levantó la
+        # quinta revisión, y es la misma clase de fallo que el `DROP CONSTRAINT`
+        # que no fallaba y no hacía nada.
+        esperadas = ["institucion_id", columna]
+        indices = inspector.get_indexes(tabla)
         if not any(
-            x["name"] == indice and x["unique"] for x in inspector.get_indexes(tabla)
+            x["name"] == indice
+            and x["unique"]
+            and sorted(x["column_names"]) == sorted(esperadas)
+            for x in indices
         ):
-            faltan.append(f"índice único {indice}")
+            faltan.append(f"índice único {indice} sobre {esperadas}")
+
+        # Y QUE NO SOBREVIVA EL ÚNICO GLOBAL, que es la otra mitad y la que
+        # nadie comprobaba: si el `DROP` viejo no llegó a correr, el único sobre
+        # `numero_factura` a solas sigue ahí, el segundo prestador choca con los
+        # números del primero, y el índice nuevo por institución no lo impide —
+        # están los dos, y manda el más estricto. Se mira también en las
+        # restricciones únicas: PostgreSQL nombra `contrato_numero_contrato_key`
+        # como CONSTRAINT y no aparece entre los índices.
+        global_indices = [
+            x["name"] for x in indices if x["unique"] and x["column_names"] == [columna]
+        ]
+        global_constraints = [
+            u["name"]
+            for u in inspector.get_unique_constraints(tabla)
+            if list(u["column_names"]) == [columna]
+        ]
+        for sobrante in global_indices + global_constraints:
+            faltan.append(
+                f"sobrevive el único GLOBAL «{sobrante}» sobre {tabla}.{columna}"
+            )
 
     if faltan:
         raise RuntimeError(
