@@ -71,6 +71,21 @@ impl Fila {
 }
 
 /// Lo que sale por la API: la fila, los dos nombres y el veredicto.
+///
+/// # El veredicto NO se aplana entero, y la razón se midió
+///
+/// `Fila` y `Validez` traen las dos `revocado`, así que dos `#[serde(flatten)]`
+/// escribían esa clave DOS VECES en el mismo objeto. JSON lo admite y los
+/// parsers se quedan con la última, de modo que hoy no rompía nada —los dos
+/// valores salen del mismo sitio y coinciden— pero era una respuesta ambigua
+/// saliendo por la API: el día que uno de los dos se calculara distinto, lo que
+/// leyera el cliente dependería de su parser.
+///
+/// No son dos campos con dos sentidos (directiva 32): son el MISMO hecho dicho
+/// dos veces. Así que se aplana el veredicto campo a campo y `revocado` lo pone
+/// la fila, que es donde está almacenado. `Validez` se queda intacta para quien
+/// la use suelta —el dominio la devuelve completa— y lo que cambia es solo cómo
+/// viaja aquí dentro.
 #[derive(Debug, Clone, Serialize)]
 pub struct Lectura {
     #[serde(flatten)]
@@ -78,7 +93,21 @@ pub struct Lectura {
     pub paciente: Option<String>,
     pub medico: Option<String>,
     #[serde(flatten)]
-    pub validez: Validez,
+    pub validez: SinRevocado,
+}
+
+/// El veredicto tal y como viaja dentro de [`Lectura`]: sin `revocado`.
+#[derive(Debug, Clone, Serialize)]
+pub struct SinRevocado {
+    pub valido: bool,
+    pub faltantes: Vec<medico_dominio::consentimiento::Faltante>,
+    pub resumen: String,
+}
+
+impl From<Validez> for SinRevocado {
+    fn from(v: Validez) -> Self {
+        Self { valido: v.valido, faltantes: v.faltantes, resumen: v.resumen }
+    }
 }
 
 /// Un consentimiento nuevo.
@@ -255,7 +284,7 @@ async fn a_lectura(pool: &crate::Pool, fila: Fila) -> Result<Lectura, sqlx::Erro
         fila,
         paciente: paciente.map(|(n,)| n),
         medico: medico.map(|(n,)| n),
-        validez,
+        validez: validez.into(),
     })
 }
 
@@ -513,4 +542,102 @@ pub async fn revocar(
         .await?
         .expect("estaba visible hace una línea");
     Ok(Ok(a_lectura(pool, f).await?))
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    fn fila_de_prueba(revocado: bool) -> Fila {
+        Fila {
+            id: 1,
+            paciente_id: 2,
+            historia_id: None,
+            medico_id: 3,
+            fecha_firma: "2026-01-01T00:00:00Z".into(),
+            tipo_procedimiento: "Cirugía".into(),
+            codigo_cups: None,
+            descripcion_procedimiento: "apendicectomía".into(),
+            riesgos_explicados: "sangrado".into(),
+            beneficios_esperados: "curación".into(),
+            alternativas_explicadas: "no operar".into(),
+            consecuencias_no_realizarlo: None,
+            paciente_comprende: true,
+            acepta_procedimiento: true,
+            firma_paciente_path: Some("/f/p.png".into()),
+            firma_medico_path: Some("/f/m.png".into()),
+            testigo_nombre: None,
+            testigo_documento: None,
+            testigo_firma_path: None,
+            revocado,
+            fecha_revocacion: None,
+            motivo_revocacion: None,
+        }
+    }
+
+    fn lectura_de(revocado: bool) -> Lectura {
+        let fila = fila_de_prueba(revocado);
+        let validez = evaluar(fila.a_juzgar());
+        Lectura {
+            fila,
+            paciente: Some("Ana Pérez".into()),
+            medico: Some("Dr. X".into()),
+            validez: validez.into(),
+        }
+    }
+
+    /// `Lectura` aplana DOS estructuras y las dos traen `revocado`.
+    ///
+    /// Con dos `#[serde(flatten)]` que comparten una clave, serde la escribe DOS
+    /// VECES en el objeto. JSON lo admite y los parsers se quedan con la última,
+    /// así que hoy no rompe nada —los dos valores salen del mismo sitio y
+    /// coinciden— pero es un objeto ambiguo saliendo por la API, y el día que
+    /// uno de los dos se calcule distinto la respuesta dependería del parser del
+    /// cliente. Esto lo fija: si vuelve a duplicarse, se ve aquí y no en casa de
+    /// nadie.
+    #[test]
+    fn la_respuesta_no_lleva_ninguna_clave_dos_veces() {
+        for revocado in [false, true] {
+            let texto = serde_json::to_string(&lectura_de(revocado)).unwrap();
+            let valor: serde_json::Value = serde_json::from_str(&texto).unwrap();
+            let claves = valor.as_object().unwrap().len();
+            // El objeto parseado colapsa duplicados; el texto no. Si el texto
+            // trae más pares que claves tiene el objeto, había repetidas.
+            let pares = texto.matches("\":").count();
+            assert_eq!(
+                pares, claves,
+                "la respuesta escribe {pares} pares para {claves} claves \
+                 (revocado={revocado}): hay al menos una duplicada.\n{texto}"
+            );
+        }
+    }
+
+    /// Las claves que `consentimiento.component.ts:32` declara están TODAS, con
+    /// ese nombre exacto. Un `rename` las deja en `undefined` sin que falle nada.
+    #[test]
+    fn estan_las_claves_que_declara_la_pantalla() {
+        let v = serde_json::to_value(lectura_de(false)).unwrap();
+        for clave in [
+            "id", "fecha_firma", "tipo_procedimiento", "descripcion_procedimiento",
+            "paciente", "medico", "paciente_comprende", "acepta_procedimiento",
+            "revocado", "fecha_revocacion", "motivo_revocacion",
+            "valido", "faltantes", "resumen",
+        ] {
+            assert!(
+                v.get(clave).is_some(),
+                "falta «{clave}», que la pantalla declara en su interfaz"
+            );
+        }
+        assert_eq!(v["paciente"], "Ana Pérez", "el nombre se sirve ya compuesto");
+        assert_eq!(v["valido"], true);
+    }
+
+    /// Un revocado sale como tal por las dos vías, y con el texto del Python.
+    #[test]
+    fn el_revocado_se_ve_en_el_veredicto_y_en_la_fila() {
+        let v = serde_json::to_value(lectura_de(true)).unwrap();
+        assert_eq!(v["revocado"], true);
+        assert_eq!(v["valido"], false);
+        assert_eq!(v["resumen"], "Revocado por el paciente. No autoriza el procedimiento.");
+    }
 }

@@ -26,15 +26,23 @@
 //! —tres escrituras del mismo valor conviviendo hasta que una pantalla deja de
 //! encontrar sus filas— aplicada antes de que ocurra.
 
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Serializer};
 
 /// Lo que puede faltarle a un consentimiento para serlo.
 ///
 /// El orden de las variantes es el de la evaluación, y la pantalla lo respeta:
 /// primero lo que hay que haber explicado, después lo que el paciente afirmó,
 /// al final las firmas.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+/// **Sale a la API como su ETIQUETA, no como el nombre de la variante**, y esa
+/// es la paridad con el sistema vivo: el Python emite «la firma del paciente» y
+/// un cliente que pintara `firma_del_paciente` estaría enseñando el identificador
+/// interno al médico. La lista de etiquetas es la misma palabra por palabra que
+/// `EXPLICACIONES` de `backend/consentimientos.py`, comprobado al portarlo.
+///
+/// Deriva `Serialize` a mano por eso, y NO deriva `Deserialize`: nadie manda
+/// faltantes al servidor —los calcula él— y una lectura desde la etiqueta sería
+/// un segundo sentido para el mismo dato (directiva 32).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Faltante {
     /// En qué consiste el procedimiento.
     Descripcion,
@@ -57,6 +65,12 @@ pub enum Faltante {
     /// El paciente lo revocó. No es una falta de captura: es una decisión suya,
     /// y por eso es la única que llega sola y sin las demás.
     Revocado,
+}
+
+impl Serialize for Faltante {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.etiqueta())
+    }
 }
 
 impl Faltante {
@@ -95,7 +109,10 @@ pub struct AJuzgar<'a> {
 }
 
 /// El veredicto: si sirve para lo que tiene que servir, y qué le falta.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Solo `Serialize`: este veredicto lo CALCULA el servidor y nadie se lo manda.
+/// Deserializarlo exigiría leer `Faltante` desde su etiqueta en español, que es
+/// darle un segundo sentido al mismo dato (directiva 32).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Validez {
     pub valido: bool,
     pub faltantes: Vec<Faltante>,
@@ -250,10 +267,13 @@ mod pruebas {
         assert_eq!(evaluar(c).faltantes, vec![Faltante::Aceptacion]);
     }
 
+    /// Cómo se rompe un caso completo, y qué falta debe salir de ello.
+    type Romper = (fn(&mut AJuzgar<'static>), Faltante);
+
     /// Barrido de los cuatro textos: cada uno, por separado, invalida.
     #[test]
     fn cada_explicacion_que_falta_se_nombra() {
-        let casos: [(fn(&mut AJuzgar<'static>), Faltante); 4] = [
+        let casos: [Romper; 4] = [
             (|c| c.descripcion_procedimiento = "", Faltante::Descripcion),
             (|c| c.riesgos_explicados = "", Faltante::Riesgos),
             (|c| c.beneficios_esperados = "", Faltante::Beneficios),
@@ -396,5 +416,80 @@ mod pruebas {
         let antes = vistas.len();
         vistas.dedup();
         assert_eq!(vistas.len(), antes, "hay etiquetas repetidas");
+    }
+}
+
+#[cfg(test)]
+mod cruza_la_frontera {
+    use super::*;
+
+    /// Lo que sale por el socket, comparado con lo que el Python emite y con lo
+    /// que el navegador declara.
+    ///
+    /// No es una prueba de estilo. `consentimiento.component.ts:32` declara
+    /// `faltantes: string[]`, y el Python vivo pone ahí ETIQUETAS en español
+    /// —«la firma del paciente»—. Un `#[serde(rename_all = "snake_case")]` sobre
+    /// el enum, que es lo que había, emitía `"firma_del_paciente"`: mismo tipo
+    /// para TypeScript, otra cosa para el médico que lo lee. Eso no lo ve el
+    /// compilador, no lo ve `ng build` y no lo ve ninguna prueba de módulo — solo
+    /// se ve mirando el JSON (directiva 28).
+    #[test]
+    fn los_faltantes_salen_como_los_lee_un_humano() {
+        let v = evaluar(AJuzgar {
+            descripcion_procedimiento: "",
+            riesgos_explicados: "sangrado",
+            beneficios_esperados: "curación",
+            alternativas_explicadas: "no operar",
+            paciente_comprende: true,
+            acepta_procedimiento: true,
+            firma_paciente_path: None,
+            firma_medico_path: Some("/f/m.png"),
+            revocado: false,
+        });
+        let json = serde_json::to_value(&v).unwrap();
+
+        assert_eq!(
+            json["faltantes"],
+            serde_json::json!(["en qué consiste el procedimiento", "la firma del paciente"]),
+            "los faltantes tienen que salir como los emite el Python vivo; si salen \
+             como `descripcion` o `firma_del_paciente`, la pantalla enseña el \
+             identificador interno al médico"
+        );
+
+        // Y la pareja: el resumen es la MISMA frase que arma `Validez.__str__`
+        // del Python, palabra por palabra. Sin esto, lo de arriba podría pasar
+        // con una lista bien redactada y una frase distinta al lado.
+        assert_eq!(
+            json["resumen"],
+            "No es un consentimiento válido: falta en qué consiste el procedimiento, \
+             la firma del paciente."
+        );
+    }
+
+    /// Los cuatro campos del veredicto están, y con el nombre que el navegador
+    /// espera. Un `rename` accidental los deja en `undefined` sin que nada falle.
+    #[test]
+    fn el_veredicto_trae_las_cuatro_claves_que_pinta_la_pantalla() {
+        let v = evaluar(AJuzgar {
+            descripcion_procedimiento: "apendicectomía",
+            riesgos_explicados: "sangrado",
+            beneficios_esperados: "curación",
+            alternativas_explicadas: "no operar",
+            paciente_comprende: true,
+            acepta_procedimiento: true,
+            firma_paciente_path: Some("/f/p.png"),
+            firma_medico_path: Some("/f/m.png"),
+            revocado: false,
+        });
+        let json = serde_json::to_value(&v).unwrap();
+        for clave in ["valido", "faltantes", "revocado", "resumen"] {
+            assert!(
+                json.get(clave).is_some(),
+                "falta la clave «{clave}», que `consentimiento.component.ts:32` \
+                 declara y la pantalla pinta"
+            );
+        }
+        assert_eq!(json["valido"], true);
+        assert_eq!(json["resumen"], "Consentimiento informado completo.");
     }
 }

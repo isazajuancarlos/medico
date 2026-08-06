@@ -410,10 +410,10 @@ endpoints en 28 routers); vuelto a medir el 2026-08-04, siguen sin existir en
 Rust —y la lista no se ha movido desde el 03—:
 
 ```
-los que el frontend SÍ llama — hoy romperían la pantalla (4):
-  admin (14 llamadas)  estadisticas (8)  quirofano (8)  consentimiento (2)
-  → 32 de las 137 rutas que el frontend llama se quedan sin servidor, y las
-    32 son de esos cuatro módulos: NINGÚN módulo portado se queda a medias
+los que el frontend SÍ llama — hoy romperían la pantalla (3):
+  admin (14 llamadas)  estadisticas (8)  quirofano (8)
+  → 30 de las 137 rutas que el frontend llama se quedan sin servidor, y las
+    30 son de esos tres módulos: NINGÚN módulo portado se queda a medias
     (ni un solo verbo suelto sin servir)
 
   PORTADO el 2026-08-05 y ya fuera de esta lista:
@@ -1155,8 +1155,8 @@ falta.
     `database.py:_run_migrations()` (hoy 52 entradas, todas `ALTER TABLE`), con
     `ADD COLUMN IF NOT EXISTS`. Corren en cada arranque y son idempotentes.
   - **Rust, con `sqlx::migrate!`**: un archivo nuevo y numerado en
-    `crates/medico-datos/migrations/` (hoy 43, de `0001_fundacion.sql` a
-    `0043_los_campos_del_rips_en_hospitalizacion.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
+    `crates/medico-datos/migrations/` (hoy 46, de `0001_fundacion.sql` a
+    `0046_consentimiento_informado.sql`). Las aplica `medico-datos/src/lib.rs:74` al abrir
     la base. Son **inmutables**: `sqlx` guarda el hash de cada una, así que editar
     una ya aplicada rompe el arranque contra una base existente — se añade otra.
 - **Enums**: todos heredan `str, Enum`. Comparar por miembro (`estado ==
