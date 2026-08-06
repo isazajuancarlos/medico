@@ -159,6 +159,27 @@ mod pruebas {
     ///
     /// Si se pone roja, **NO se regenera el literal sin pensarlo**: significa
     /// que las cookies vivas dejan de valer, y eso se decide y se comunica.
+    /// **El NOMBRE de la cookie también es formato**, y el vector no lo mira.
+    ///
+    /// Lo midió la revisión de seguridad de esta rama con un mutante:
+    /// renombrando `NOMBRE_COOKIE` a `medico_sess`, las diez pruebas siguieron
+    /// VERDES. Y el daño es exactamente el mismo que el vector existe para
+    /// impedir —«se cierra la sesión de todo el mundo a la vez, en silencio»—
+    /// solo que por una vía que el vector no recorre: él solo ejercita
+    /// `verificar` sobre la CARGA, y las pruebas de cabecera interpolan
+    /// `{NOMBRE_COOKIE}` en vez de fijarlo, así que se mueven con él.
+    ///
+    /// Es la directiva 23 aplicada a la propia salvaguarda: se arregló el lado
+    /// ruidoso y quedaba el ciego, que no se queja nunca.
+    ///
+    /// Si se pone roja, NO se cambia el literal: los navegadores de todos los
+    /// usuarios llevan la cookie con el nombre viejo, y renombrarla los deja
+    /// fuera. Eso se decide y se comunica.
+    #[test]
+    fn el_nombre_de_la_cookie_no_se_renombra_a_la_ligera() {
+        assert_eq!(NOMBRE_COOKIE, "medico_sesion");
+    }
+
     #[test]
     fn una_cookie_de_2026_sigue_verificando() {
         let s = verificar(SECRETO, COOKIE_2026)
