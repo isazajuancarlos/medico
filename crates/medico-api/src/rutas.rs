@@ -4581,7 +4581,14 @@ async fn quir_obtener(
     Path(id): Path<i64>,
 ) -> Response {
     match quirofano::obtener(&e.pool, u.ambito(), id).await {
-        Ok(Some(p)) => Json(p).into_response(),
+        Ok(Some(p)) => {
+            // El detalle de una cirugía trae nombre, DOCUMENTO, procedimiento,
+            // hemoclasificación y notas de UN titular: entra en su rastro de la
+            // Ley 1581 como los demás módulos clínicos. El listado se registra
+            // como colección; esto, por titular, con su `paciente_id` en la mano.
+            registrar_acceso(&e, &u, "VER", "quirofano", id, p.paciente_id).await;
+            Json(p).into_response()
+        }
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -4595,7 +4602,10 @@ async fn quir_crear(
     let u = autorizado.0;
     match quirofano::crear(&e.pool, u.ambito(), &n).await {
         Ok(Ok(id)) => match quirofano::obtener(&e.pool, u.ambito(), id).await {
-            Ok(Some(p)) => (StatusCode::CREATED, Json(p)).into_response(),
+            Ok(Some(p)) => {
+                registrar_acceso(&e, &u, "CREAR", "quirofano", id, p.paciente_id).await;
+                (StatusCode::CREATED, Json(p)).into_response()
+            }
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
         // 404 y no 400 cuando el id no es visible: un 400 confirmaría que el id
@@ -4612,10 +4622,25 @@ async fn quir_crear(
 
 /// Traduce el resultado y devuelve la fila ya actualizada, que es lo que el
 /// frontal pinta sin volver a pedirla.
-async fn quir_respuesta(e: &Estado, u: &usuario::Usuario, id: i64, r: quirofano::Resultado) -> Response {
+///
+/// `accion` es el verbo que va a la bitácora de la Ley 1581 —`CHECKLIST`,
+/// `INICIAR`, `COMPLETAR`, `CANCELAR`—: cada transición escribe en el expediente
+/// de un titular (la nota quirúrgica, los hallazgos), así que se registra por
+/// titular, igual que consentimiento registra CREAR/EDITAR/REVOCAR. Solo cuando
+/// la transición SÍ ocurrió; un rechazo o un 404 no tocaron dato de nadie.
+async fn quir_respuesta(
+    e: &Estado,
+    u: &usuario::Usuario,
+    id: i64,
+    accion: &str,
+    r: quirofano::Resultado,
+) -> Response {
     match r {
         quirofano::Resultado::Hecho => match quirofano::obtener(&e.pool, u.ambito(), id).await {
-            Ok(Some(p)) => Json(p).into_response(),
+            Ok(Some(p)) => {
+                registrar_acceso(e, u, accion, "quirofano", id, p.paciente_id).await;
+                Json(p).into_response()
+            }
             _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
         quirofano::Resultado::NoExiste => StatusCode::NOT_FOUND.into_response(),
@@ -4634,7 +4659,7 @@ async fn quir_checklist(
 ) -> Response {
     let u = autorizado.0;
     match quirofano::actualizar_checklist(&e.pool, u.ambito(), id, &c).await {
-        Ok(r) => quir_respuesta(&e, &u, id, r).await,
+        Ok(r) => quir_respuesta(&e, &u, id, "CHECKLIST", r).await,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -4677,8 +4702,11 @@ async fn mover(
     accion: medico_dominio::quirofano::Accion,
     d: quirofano::CierreCirugia,
 ) -> Response {
+    // El verbo de la bitácora sale del MISMO enum que decide la transición, en
+    // mayúsculas: si mañana se añade `suspender`, su registro entra solo.
+    let verbo = accion.verbo().to_uppercase();
     match quirofano::mover(&e.pool, u.ambito(), id, accion, &d).await {
-        Ok(r) => quir_respuesta(&e, &u, id, r).await,
+        Ok(r) => quir_respuesta(&e, &u, id, &verbo, r).await,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
@@ -4969,6 +4997,84 @@ mod pruebas {
                     "leer {uri} no debería exigir capacidad"
                 );
             }
+        }
+
+        /// **Cada acceso al expediente en quirófano deja rastro por titular.**
+        ///
+        /// Era el hueco que la revisión de esta rama encontró: el listado se
+        /// registraba como colección y los SEIS extremos por paciente —ver,
+        /// crear, checklist, iniciar, completar, cancelar— no dejaban nada,
+        /// cuando devuelven documento y procedimiento de UN titular. Quirófano
+        /// era el único de los módulos clínicos sin traza por paciente.
+        ///
+        /// Se comprueba leyendo la MISMA bitácora que consulta el titular, y con
+        /// su pareja: un acceso que NO ocurrió —404 sobre una cirugía ajena— no
+        /// deja eslabón.
+        #[tokio::test]
+        async fn cada_acceso_a_una_cirugia_deja_rastro_del_titular() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (9,'Cirujana','cir@x.co',?,'medico',1,1)",
+            ).bind(&h).execute(&e.pool).await.unwrap();
+            sqlx::query("INSERT INTO quirofano (id,institucion_id,nombre) VALUES (1,1,'Sala 1')")
+                .execute(&e.pool).await.unwrap();
+            let med = cookie_de(9);
+
+            // Cuenta los eslabones del paciente 1 en la bitácora.
+            let eslabones = || {
+                let pool = e.pool.clone();
+                async move {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT COUNT(*) FROM acceso                          WHERE json_extract(contenido, '$.recurso') = 'quirofano'                            AND json_extract(contenido, '$.paciente_id') = 1",
+                    ).fetch_one(&pool).await.unwrap()
+                }
+            };
+            assert_eq!(eslabones().await, 0, "de partida, ninguno");
+
+            // CREAR deja uno.
+            const NUEVA: &str = r#"{"quirofano_id":1,"paciente_id":1,"cirujano_id":9,
+                "fecha_programada":"2026-09-01T13:00:00Z","duracion_estimada_min":60,
+                "procedimiento":"Apendicectomía"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/quirofano/programaciones", &med, NUEVA).await,
+                StatusCode::CREATED
+            );
+            assert_eq!(eslabones().await, 1, "CREAR");
+
+            // VER deja otro.
+            assert_eq!(pedir(&e, "GET", "/api/quirofano/programaciones/1", &med).await, StatusCode::OK);
+            assert_eq!(eslabones().await, 2, "VER");
+
+            // Las tres transiciones, cada una el suyo.
+            for (uri, cuerpo) in [
+                ("/api/quirofano/programaciones/1/checklist", r#"{"ayuno_verificado":true}"#),
+                ("/api/quirofano/programaciones/1/iniciar", "{}"),
+                ("/api/quirofano/programaciones/1/completar", "{}"),
+            ] {
+                assert_eq!(pedir_con(&e, "PUT", uri, &med, cuerpo).await, StatusCode::OK, "{uri}");
+            }
+            assert_eq!(eslabones().await, 5, "checklist + iniciar + completar");
+
+            // Y cada eslabón lleva SU verbo: el rastro distingue quién miró de
+            // quién operó. Sin esto, cinco «acceso» iguales no le dirían al
+            // titular qué le hicieron.
+            let verbos: Vec<String> = sqlx::query_scalar(
+                "SELECT json_extract(contenido, '$.accion') FROM acceso                  WHERE json_extract(contenido, '$.recurso') = 'quirofano'                    AND json_extract(contenido, '$.paciente_id') = 1                  ORDER BY secuencia",
+            ).fetch_all(&e.pool).await.unwrap();
+            assert_eq!(verbos, ["CREAR", "VER", "CHECKLIST", "INICIAR", "COMPLETAR"]);
+
+            // LA PAREJA: un 404 sobre una cirugía que no existe no deja eslabón.
+            let antes = eslabones().await;
+            assert_eq!(pedir(&e, "GET", "/api/quirofano/programaciones/999", &med).await, StatusCode::NOT_FOUND);
+            assert_eq!(eslabones().await, antes, "un acceso fallido dejó rastro");
+
+            // Y la cadena firmada sigue intacta tras cinco escrituras.
+            assert_eq!(
+                medico_datos::acceso::verificar(&e.pool, None).await.unwrap(),
+                guaca::auditoria::Auditoria::Intacta
+            );
         }
 
         /// La máquina de estados llega hasta el HTTP: una transición imposible es
