@@ -1826,11 +1826,22 @@ struct Revocacion {
 /// el sesgo a cerrar de la directiva 21, probado contra el atacante y no contra
 /// el paciente que cambia de opinión un sábado.
 ///
-/// `EscribirPaciente` cubre enfermería, auxiliar y psicología además de médico y
-/// admin: quien esté en contacto con el paciente puede dejar constancia. Lo que
-/// NO se hace es dejarla abierta a cualquier sesión: destruir la validez de un
-/// consentimiento quirúrgico es una escritura destructiva, y un laboratorista no
-/// tiene por qué poder hacerla.
+/// `EscribirPaciente` son SEIS roles y no más: superadmin, admin, médico,
+/// enfermería, auxiliar de enfermería y psicología. La frase «quien esté en
+/// contacto con el paciente» era más ancha que la capacidad y se corrigió al
+/// medirla — **`anestesiologo`, `terapeuta`, `nutricionista` y `trabajo_social`
+/// reciben 403**, y el primero es el caso que más duele: el consentimiento de
+/// anestesia es un documento aparte y lo obtiene él, en la puerta del quirófano.
+///
+/// Falla CERRADO y tiene camino: `EscribirPaciente` es
+/// `configurable_por_institucion`, así que un cliente con quirófano se lo
+/// concede en su matriz. Se deja así en vez de ensanchar la capacidad porque
+/// ensancharla se lo daría también a los demás módulos que la usan, y esa es una
+/// decisión de otro alcance.
+///
+/// Lo que NO se hace es dejarla abierta a cualquier sesión: destruir la validez
+/// de un consentimiento quirúrgico es una escritura destructiva, y un
+/// laboratorista no tiene por qué poder hacerla.
 async fn consent_revocar(
     State(e): State<Estado>,
     autorizado: Autorizado<EscribirPaciente>,
@@ -5731,12 +5742,30 @@ mod pruebas {
             ("subir_imagen", "el radiólogo no está en ninguna lista de capacidades; ver `subir_imagen_sigue_sin_exigir_rol_a_proposito`"),
         ];
 
+        // SOLO LA CADENA DEL ROUTER, no el archivo entero. Buscar en todo el
+        // fuente hace que una mención en PROSA ponga la prueba roja: un
+        // comentario que diga `post(listar_citas)` sobre un manejador de solo
+        // `GET` la tumba, comprobado. Falla cerrado, así que no es un agujero —
+        // el peligro es el ARREGLO: quien la silencie metiendo ese nombre en
+        // `ABIERTAS_A_PROPOSITO` deja esa ruta ciega para siempre, y el día que
+        // de verdad se registre con `post(` no se enterará nadie. Es la
+        // directiva 23 apuntando a la propia salvaguarda, y no es hipotético:
+        // los docstrings de este archivo ya contienen `post(`, `put(` y
+        // `delete(` en prosa, y hoy salvan la prueba por SUERTE —lo que sigue al
+        // paréntesis no es alfanumérico—, no por diseño.
+        let inicio = fuente.find("Router::new()").expect("no se encontró la cadena del router");
+        let fin = fuente[inicio..]
+            .find(".fallback(")
+            .map(|x| inicio + x)
+            .expect("no se encontró el final de la cadena del router");
+        let cadena = &fuente[inicio..fin];
+
         // Los nombres de manejador que aparecen dentro de un `delete(...)`,
         // `post(...)` o `put(...)`.
         let mut escritores: Vec<&str> = Vec::new();
         for verbo in ["delete(", "post(", "put("] {
-            for (i, _) in fuente.match_indices(verbo) {
-                let resto = &fuente[i + verbo.len()..];
+            for (i, _) in cadena.match_indices(verbo) {
+                let resto = &cadena[i + verbo.len()..];
                 if let Some(fin) = resto.find(')') {
                     let nombre = resto[..fin].trim();
                     // Con una expresión dentro (rutas de otro módulo, o un
@@ -5751,9 +5780,13 @@ mod pruebas {
                 }
             }
         }
+        // 85 y no 60: hay 91, así que la holgura es de seis y no de treinta y
+        // uno. Un umbral con un tercio de margen toleraría que desapareciera un
+        // tercio de las rutas sin decir nada — es un número que envejece hacia
+        // la ceguera (directiva 30).
         assert!(
-            escritores.len() >= 60,
-            "se esperaban al menos 60 escritores y se encontraron {}: ¿cambió la \
+            escritores.len() >= 85,
+            "se esperaban al menos 85 escritores y se encontraron {}: ¿cambió la \
              forma de registrar rutas y esta prueba dejó de mirar nada?",
             escritores.len()
         );
