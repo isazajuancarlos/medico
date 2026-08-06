@@ -1747,11 +1747,29 @@ async fn consent_detalle(
     }
 }
 
+/// Registrar un consentimiento es un ACTO CLÍNICO, y por eso pide capacidad.
+///
+/// La primera versión de esta ruta iba con `Autenticado` pelado, y lo midió la
+/// revisión de seguridad: un **laboratorista** de la institución creaba, editaba
+/// y revocaba consentimientos, mientras el MISMO usuario recibía 403 en
+/// `POST /api/historias`. O sea que el mecanismo estaba y estas tres rutas se
+/// quedaron fuera.
+///
+/// El daño no era teórico: `medico_id` sale de la sesión —lo que se escribió
+/// como garantía—, así que con la ruta abierta ese laboratorista quedaba
+/// inscrito como **el profesional que explicó el procedimiento** en el documento
+/// con el que la institución se defiende.
+///
+/// `EscribirClinico` y no otra: la documentación de esa capacidad ya dice
+/// «crearla, modificarla, añadirle documentos», y un consentimiento informado es
+/// un documento del expediente — salió de `documento_clinico` por la revocación,
+/// no por dejar de ser clínico.
 async fn consent_crear(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Json(n): Json<consentimiento::Nuevo>,
 ) -> Response {
+    let u = autorizado.0;
     // `medico_id` sale de la SESIÓN y no del cuerpo: quien firma es quien está
     // autenticado. Si viniera del JSON, cualquiera consentiría en nombre de otro
     // profesional — y este documento es justamente la constancia de quién explicó
@@ -1766,12 +1784,14 @@ async fn consent_crear(
     }
 }
 
+/// Corregir la captura es el mismo acto clínico que crearla: `EscribirClinico`.
 async fn consent_actualizar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirClinico>,
     Path(id): Path<i64>,
     Json(c): Json<consentimiento::Cambios>,
 ) -> Response {
+    let u = autorizado.0;
     match consentimiento::actualizar(&e.pool, u.ambito(), id, &c).await {
         Ok(Ok(l)) => {
             registrar_acceso(&e, &u, "EDITAR", "consentimiento", l.fila.id, l.fila.paciente_id).await;
@@ -1795,12 +1815,29 @@ struct Revocacion {
 /// único que puede impedirlo es que no haya motivo — y ese requisito no protege
 /// al sistema, protege la constancia: una revocación sin motivo no dice nada el
 /// día que alguien pregunte por qué no se hizo el procedimiento.
+///
+/// # Por qué `EscribirPaciente` y no `EscribirClinico`
+///
+/// Es DELIBERADAMENTE la capacidad más ancha que existe, y la asimetría con las
+/// otras dos rutas es la decisión. Crear el consentimiento es un acto del
+/// profesional que explica; **revocar es un acto del PACIENTE**, y el sistema
+/// solo lo anota. Exigir `EscribirClinico` haría que el derecho a revocar
+/// dependiera de que haya un médico en el mostrador cuando el paciente llama —
+/// el sesgo a cerrar de la directiva 21, probado contra el atacante y no contra
+/// el paciente que cambia de opinión un sábado.
+///
+/// `EscribirPaciente` cubre enfermería, auxiliar y psicología además de médico y
+/// admin: quien esté en contacto con el paciente puede dejar constancia. Lo que
+/// NO se hace es dejarla abierta a cualquier sesión: destruir la validez de un
+/// consentimiento quirúrgico es una escritura destructiva, y un laboratorista no
+/// tiene por qué poder hacerla.
 async fn consent_revocar(
     State(e): State<Estado>,
-    Autenticado(u): Autenticado,
+    autorizado: Autorizado<EscribirPaciente>,
     Path(id): Path<i64>,
     Json(r): Json<Revocacion>,
 ) -> Response {
+    let u = autorizado.0;
     let motivo = match medico_dominio::consentimiento::motivo_de_revocacion(&r.motivo) {
         Ok(m) => m.to_string(),
         Err(_) => {
@@ -5015,6 +5052,140 @@ mod pruebas {
             );
         }
 
+        /// Como `pedir`, pero con cuerpo JSON y devolviendo la respuesta entera.
+        async fn enviar(e: &Estado, metodo: &str, uri: &str, quien: i64, cuerpo: &str) -> Response {
+            router(e.clone())
+                .oneshot(
+                    Request::builder()
+                        .method(metodo)
+                        .uri(uri)
+                        .header(header::COOKIE, cookie_de(quien))
+                        .header("content-type", "application/json")
+                        .body(Body::from(cuerpo.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        }
+
+        async fn json(r: Response) -> serde_json::Value {
+            let b = axum::body::to_bytes(r.into_body(), 1 << 22).await.unwrap();
+            serde_json::from_slice(&b).unwrap()
+        }
+
+        /// El consentimiento informado tampoco lo escribe cualquiera.
+        ///
+        /// Lo midió la revisión de seguridad de esta rama, y era un hallazgo
+        /// real: las tres rutas de escritura iban con `Autenticado` pelado, así
+        /// que un **laboratorista** creaba, editaba y revocaba consentimientos
+        /// mientras el MISMO usuario recibía 403 en `POST /api/historias`.
+        ///
+        /// El daño no es abstracto: `consent_crear` fija `medico_id` desde la
+        /// sesión —lo que se escribió como garantía—, así que ese laboratorista
+        /// quedaba inscrito como el profesional que EXPLICÓ el procedimiento, en
+        /// el documento con el que la institución se defiende.
+        ///
+        /// Y la asimetría de la revocación va probada aparte, abajo: es
+        /// deliberada.
+        #[tokio::test]
+        async fn un_laboratorista_no_escribe_un_consentimiento() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+            let cuerpo = r#"{"paciente_id":1,"tipo_procedimiento":"Cirugia"}"#;
+
+            assert_eq!(
+                enviar(&e, "POST", "/api/consentimiento", 5, cuerpo).await.status(),
+                StatusCode::FORBIDDEN,
+                "un laboratorista registró un consentimiento informado, y queda \
+                 inscrito como quien explicó el procedimiento"
+            );
+            assert_eq!(
+                enviar(&e, "PUT", "/api/consentimiento/1", 5, r#"{"riesgos_explicados":"nada"}"#)
+                    .await
+                    .status(),
+                StatusCode::FORBIDDEN,
+                "un laboratorista editó un consentimiento informado"
+            );
+            let _ = lab;
+
+            // Y no se creó nada: un 403 que llegara DESPUÉS de escribir no
+            // serviría de nada.
+            let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM consentimiento_informado")
+                .fetch_one(&e.pool)
+                .await
+                .unwrap();
+            assert_eq!(n, 0, "se escribió el consentimiento pese al 403");
+        }
+
+        /// El CONTROL de la anterior, y sin él no probaría nada: una ruta que
+        /// respondiera 403 a todo la pasaría igual.
+        ///
+        /// El médico (id 2, sembrado por `estado_de_prueba`) SÍ registra.
+        #[tokio::test]
+        async fn el_medico_si_registra_el_consentimiento() {
+            let e = con_tres_roles().await;
+            let cuerpo = r#"{"paciente_id":1,"tipo_procedimiento":"Cirugia",
+                             "descripcion_procedimiento":"apendicectomia",
+                             "riesgos_explicados":"sangrado",
+                             "beneficios_esperados":"curacion",
+                             "alternativas_explicadas":"no operar"}"#;
+            let r = enviar(&e, "POST", "/api/consentimiento", 2, cuerpo).await;
+            assert_eq!(
+                r.status(),
+                StatusCode::CREATED,
+                "al médico no se le puede cerrar el consentimiento informado"
+            );
+        }
+
+        /// **La revocación es MÁS ancha que el registro, y es deliberado.**
+        ///
+        /// Crear el consentimiento es un acto del profesional que explica;
+        /// revocar es un acto del PACIENTE, y el sistema solo lo anota. Exigir
+        /// `EscribirClinico` haría que el derecho a revocar dependiera de que
+        /// haya un médico en el mostrador cuando el paciente llama — el sesgo a
+        /// cerrar de la directiva 21.
+        ///
+        /// Enfermería SÍ revoca; el laboratorista NO. Las dos mitades, porque
+        /// con una sola esto no diría nada: solo con la primera pasaría una ruta
+        /// abierta a cualquiera, y solo con la segunda, una cerrada al médico.
+        #[tokio::test]
+        async fn enfermeria_si_puede_anotar_la_revocacion_y_el_laboratorista_no() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (8,'Enf','enf@x.co',?,'enfermeria',1,1)",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+
+            // Un consentimiento del médico, para revocarlo.
+            let cuerpo = r#"{"paciente_id":1,"tipo_procedimiento":"Cirugia"}"#;
+            let r = enviar(&e, "POST", "/api/consentimiento", 2, cuerpo).await;
+            assert_eq!(r.status(), StatusCode::CREATED, "no se pudo sembrar");
+            let id = json(r).await["id"].as_i64().unwrap();
+
+            let motivo = r#"{"motivo":"el paciente cambió de opinión"}"#;
+            assert_eq!(
+                enviar(&e, "POST", &format!("/api/consentimiento/{id}/revocar"), 5, motivo)
+                    .await
+                    .status(),
+                StatusCode::FORBIDDEN,
+                "un laboratorista destruyó la validez de un consentimiento quirúrgico"
+            );
+            assert_eq!(
+                enviar(&e, "POST", &format!("/api/consentimiento/{id}/revocar"), 8, motivo)
+                    .await
+                    .status(),
+                StatusCode::OK,
+                "a enfermería no se le puede cerrar la constancia de que el \
+                 paciente revocó: el derecho no depende de quién esté en el \
+                 mostrador"
+            );
+        }
+
         /// El laboratorista está autenticado y es de la institución: el
         /// aislamiento lo deja pasar. Lo que lo detiene es el ROL, que es lo que
         /// no existía.
@@ -5513,38 +5684,91 @@ mod pruebas {
     /// vio. Ésta falla sola con el borrado número once (directiva 23: se
     /// corrige la regla, no el caso).
     ///
-    /// Qué exige exactamente: que todo manejador registrado con `delete(...)`
-    /// tome un `Autorizado<…>`. No dice CUÁL capacidad —eso es criterio de cada
-    /// recurso— sino que haya alguna.
+    /// Qué exige exactamente: que todo manejador registrado con `delete(...)`,
+    /// `post(...)` o `put(...)` tome un `Autorizado<…>`. No dice CUÁL capacidad
+    /// —eso es criterio de cada recurso— sino que haya alguna.
+    ///
+    /// # Por qué mira los TRES verbos desde el 2026-08-06
+    ///
+    /// Miraba solo `delete(`, y eso es el falso negativo que comparte causa con
+    /// el caso que sí cubría (directiva 23). Lo destapó la revisión de seguridad
+    /// del consentimiento informado: **revocar es un `post(` que destruye la
+    /// validez del documento**, así que pasaba por el lado ciego. Medido: un
+    /// laboratorista creaba, editaba y revocaba consentimientos mientras el
+    /// mismo usuario recibía 403 en `POST /api/historias`.
+    ///
+    /// Y no era un caso: de 76 manejadores con `post(`/`put(`, **once** iban con
+    /// `Autenticado` pelado. Ocho tienen motivo y están en la lista blanca de
+    /// abajo; tres eran los del consentimiento.
+    ///
+    /// La lista blanca enumera lo **provablemente abierto a propósito** y manda
+    /// todo lo demás a exigir capacidad, que es la dirección segura (directiva
+    /// 20). Al revés —enumerar lo que sí dispara— se cuela lo que no se te
+    /// ocurrió, que es exactamente cómo llegaron aquí estas tres rutas.
     #[test]
-    fn ningun_borrado_se_conforma_con_estar_autenticado() {
+    fn ninguna_escritura_se_conforma_con_estar_autenticado() {
         let fuente = include_str!("rutas.rs");
 
-        // Los nombres de manejador que aparecen dentro de un `delete(...)`.
-        let mut borradores: Vec<&str> = Vec::new();
-        for (i, _) in fuente.match_indices("delete(") {
-            let resto = &fuente[i + "delete(".len()..];
-            if let Some(fin) = resto.find(')') {
-                let nombre = resto[..fin].trim();
-                // `delete(...)` con una expresión dentro (rutas de otro módulo)
-                // se salta: aquí solo se comprueban los de este archivo.
-                if !nombre.is_empty() && nombre.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                    borradores.push(nombre);
+        /// Lo que está abierto A PROPÓSITO, con su motivo. Cada entrada es una
+        /// decisión escrita; quitar una de aquí y no ponerle capacidad pone la
+        /// prueba en rojo, que es lo que se quiere.
+        const ABIERTAS_A_PROPOSITO: &[(&str, &str)] = &[
+            ("acceso", "es el propio inicio de sesión: todavía no hay usuario"),
+            ("salir", "cerrar la sesión propia no necesita permiso"),
+            ("salir_todo", "cerrar TODAS las sesiones propias, idem"),
+            ("crear_cita", "agendar no es una acción de gestión (decisión del producto)"),
+            ("cambiar_estado_cita", "confirmar o cancelar la cita propia, idem"),
+            ("crear_institucion", "comprueba el rol POR DENTRO y devuelve 403"),
+            ("fijar_licencia", "comprueba Superadmin POR DENTRO"),
+            // `subir_imagen` entra aquí porque YA es una decisión escrita, no un
+            // olvido — comprobado antes de darlo por hueco:
+            // `subir_imagen_sigue_sin_exigir_rol_a_proposito` lo fija desde antes
+            // de este cambio, con su motivo: el radiólogo, que es quien sube las
+            // imágenes, no está en ninguna lista de capacidades, así que cerrarlo
+            // a ojo lo dejaría sin trabajar. Esa prueba se pone ROJA el día que
+            // se le ponga capacidad, y entonces hay que borrarla a conciencia y
+            // quitar esta línea. Las dos dicen lo mismo a propósito.
+            ("subir_imagen", "el radiólogo no está en ninguna lista de capacidades; ver `subir_imagen_sigue_sin_exigir_rol_a_proposito`"),
+        ];
+
+        // Los nombres de manejador que aparecen dentro de un `delete(...)`,
+        // `post(...)` o `put(...)`.
+        let mut escritores: Vec<&str> = Vec::new();
+        for verbo in ["delete(", "post(", "put("] {
+            for (i, _) in fuente.match_indices(verbo) {
+                let resto = &fuente[i + verbo.len()..];
+                if let Some(fin) = resto.find(')') {
+                    let nombre = resto[..fin].trim();
+                    // Con una expresión dentro (rutas de otro módulo, o un
+                    // `.layer(...)` encadenado) se salta: aquí solo se
+                    // comprueban los manejadores de este archivo.
+                    if !nombre.is_empty()
+                        && nombre.chars().all(|c| c.is_alphanumeric() || c == '_')
+                        && !escritores.contains(&nombre)
+                    {
+                        escritores.push(nombre);
+                    }
                 }
             }
         }
         assert!(
-            borradores.len() >= 10,
-            "se esperaban al menos 10 borradores y se encontraron {}: ¿cambió la \
+            escritores.len() >= 60,
+            "se esperaban al menos 60 escritores y se encontraron {}: ¿cambió la \
              forma de registrar rutas y esta prueba dejó de mirar nada?",
-            borradores.len()
+            escritores.len()
         );
+        let borradores = escritores;
 
         let mut pelados = Vec::new();
         for nombre in &borradores {
+            if ABIERTAS_A_PROPOSITO.iter().any(|(n, _)| n == nombre) {
+                continue;
+            }
             let firma = format!("async fn {nombre}(");
             let Some(i) = fuente.find(&firma) else {
-                panic!("no se encontró el manejador `{nombre}` que registra un delete(...)");
+                // Puede ser un manejador de otro módulo (`rips::…`); no es de
+                // este archivo y no se juzga aquí.
+                continue;
             };
             // El cuerpo empieza en el primer `{` tras la lista de parámetros;
             // basta con mirar hasta ahí.
@@ -5558,9 +5782,13 @@ mod pruebas {
 
         assert!(
             pelados.is_empty(),
-            "estos borradores no exigen ninguna capacidad, solo estar autenticado: {pelados:?}.\n\
-             Un usuario cualquiera de la institución puede destruir el recurso. \
-             Ponles el `Autorizado<…>` que corresponda a SU recurso.",
+            "estas ESCRITURAS no exigen ninguna capacidad, solo estar autenticado: \
+             {pelados:?}.\n\
+             Un usuario cualquiera de la institución —un laboratorista, un \
+             auxiliar— puede crear, modificar o destruir el recurso. Ponles el \
+             `Autorizado<…>` que corresponda a SU recurso, o añádelas a \
+             `ABIERTAS_A_PROPOSITO` con el motivo escrito si de verdad deben \
+             estarlo.",
         );
     }
 
