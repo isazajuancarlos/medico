@@ -7891,6 +7891,93 @@ mod pruebas {
 
         // ── Entidades ───────────────────────────────────────────────────────
 
+        /// LA LÍNEA NO PUEDE NOMBRAR AL PACIENTE DEL VECINO.
+        ///
+        /// Lo cazó la revisión de seguridad de esta rama, y era una fuga de
+        /// verdad: la clave foránea de la 0044 es global
+        /// (`REFERENCES paciente(id)`), así que aceptaba cualquier paciente de
+        /// la base — y `COLS_DETALLE` hace `LEFT JOIN paciente` para devolver
+        /// `paciente_nombre`. Un admin creaba una factura PROPIA con una línea
+        /// que nombraba al paciente de otra institución, y la respuesta le
+        /// traía su nombre completo. Repitiendo con `paciente_id = 1..N` se
+        /// volcaba el padrón entero de todos los prestadores.
+        ///
+        /// Las dos mitades, y la segunda es la que mide: con el paciente PROPIO
+        /// la línea entra y el nombre sale (si no, esto pasaría con un módulo
+        /// que rechazara todo); con el AJENO se rechaza y el nombre NO aparece.
+        #[tokio::test]
+        async fn una_linea_no_puede_nombrar_al_paciente_del_vecino() {
+            let e = dos_prestadores().await;
+            // Un paciente en cada institución, con nombre reconocible.
+            for (id, inst, marca) in [(701i64, 1i64, "PROPIO"), (702, 2, "AJENO")] {
+                sqlx::query(
+                    "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,
+                                           fecha_nacimiento,sexo,institucion_id)
+                     VALUES (?,'CC',?,?,'Apellido','1990-01-01','M',?)",
+                )
+                .bind(id)
+                .bind(format!("doc{id}"))
+                .bind(format!("Paciente{marca}"))
+                .bind(inst)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+            }
+
+            // CONTROL: con el paciente propio, la línea entra y el nombre sale.
+            let cuerpo = r#"{"entidad_id":1,"periodo_inicio":"2026-01-01","periodo_fin":"2026-01-31",
+                             "detalles":[{"servicio":"Consulta","cantidad":1,"valor_unitario":100,
+                                          "paciente_id":701}]}"#;
+            let r = enviar(&e, "POST", "/api/facturacion/facturas", 50, cuerpo).await;
+            assert_eq!(r.status(), StatusCode::CREATED, "control: el paciente propio sí entra");
+            let v = json(r).await;
+            assert!(
+                serde_json::to_string(&v).unwrap().contains("PacientePROPIO"),
+                "control: el nombre del paciente propio sí sale"
+            );
+
+            // LA AGUJA: con el paciente ajeno, se rechaza y el nombre no sale.
+            let cuerpo = r#"{"entidad_id":1,"periodo_inicio":"2026-01-01","periodo_fin":"2026-01-31",
+                             "detalles":[{"servicio":"Consulta","cantidad":1,"valor_unitario":100,
+                                          "paciente_id":702}]}"#;
+            let r = enviar(&e, "POST", "/api/facturacion/facturas", 50, cuerpo).await;
+            assert_eq!(
+                r.status(),
+                StatusCode::BAD_REQUEST,
+                "FUGA: se aceptó una línea con el paciente de la otra institución"
+            );
+            let texto = serde_json::to_string(&json(r).await).unwrap();
+            assert!(!texto.contains("PacienteAJENO"), "FUGA: salió el nombre ajeno");
+
+            // Y por la OTRA vía: añadiendo la línea a una factura ya creada.
+            let id = factura_de(&e, 50, "Base", 100.0).await;
+            let r = enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/detalles"),
+                50,
+                r#"{"servicio":"Otra","cantidad":1,"valor_unitario":50,"paciente_id":702}"#,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST, "FUGA por la vía de /detalles");
+
+            // Y no distingue «no existe» de «es de otro»: si lo hiciera, se
+            // enumeraría el padrón del vecino probando identificadores.
+            let r_inexistente = enviar(
+                &e,
+                "POST",
+                &format!("/api/facturacion/facturas/{id}/detalles"),
+                50,
+                r#"{"servicio":"Otra","cantidad":1,"valor_unitario":50,"paciente_id":999999}"#,
+            )
+            .await;
+            assert_eq!(
+                r_inexistente.status(),
+                StatusCode::BAD_REQUEST,
+                "un id inexistente tiene que responder LO MISMO que uno ajeno"
+            );
+        }
+
         /// El catálogo de EPS SÍ es común, y eso es la decisión de la 0044: una
         /// aseguradora es la misma persona jurídica para todos los prestadores.
         /// Va aquí para que la asimetría con contratos quede escrita en una

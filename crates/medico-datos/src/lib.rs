@@ -129,12 +129,91 @@ pub async fn abrir(url: &str) -> Result<Pool, sqlx::Error> {
         .foreign_keys(true)
         .journal_mode(SqliteJournalMode::Wal);
 
+    // LAS MIGRACIONES CORREN CON LAS CLAVES FORÁNEAS APAGADAS, Y DESPUÉS SE
+    // COMPRUEBA QUE NO SE ROMPIÓ NADA.
+    //
+    // Es lo que exige el procedimiento de 12 pasos que SQLite documenta para
+    // reconstruir una tabla, y hasta el 2026-08-05 este proyecto creía tenerlo
+    // porque la migración 0045 empieza con `PRAGMA foreign_keys = OFF`. **Esa
+    // línea es INERTE**: `sqlx` envuelve CADA migración en su propia transacción
+    // (`sqlx-sqlite-0.8.6/src/migrate.rs:136`), y SQLite documenta que ese
+    // pragma es un no-op dentro de una transacción.
+    //
+    // La consecuencia se midió con el migrador real y su control, no se dedujo:
+    // el `DROP TABLE factura` de la 0045 dispara el `ON DELETE CASCADE` de
+    // `detalle_factura` y `glosa`, y las vacía —6→0 y 3→0—. Con las foráneas
+    // apagadas de verdad, las filas sobreviven. Y la migración se registra como
+    // aplicada CON ÉXITO: ni un error, y `PRAGMA foreign_key_check` sale limpio
+    // después, así que nada delata la pérdida.
+    //
+    // Hoy no se perdió una sola fila —esas tablas nacieron en la misma rama y no
+    // hay binario Rust desplegado— pero la migración es inmutable y se queda en
+    // el repositorio como la receta que alguien copiará para la próxima tabla
+    // poblada. Se arregla aquí, que es donde se puede.
+    //
+    // `-- no-transaction` NO sirve: `sqlx-postgres` lo respeta, `sqlx-sqlite`
+    // 0.8.6 no lo menciona. `PRAGMA defer_foreign_keys` TAMPOCO: difiere las
+    // violaciones, no las acciones `CASCADE` (medido: 6→0 igual).
+    //
+    // Y apagarlas no se queda gratis: `foreign_key_check` después es lo que
+    // convierte «confío en que las migraciones estén bien» en una comprobación.
+    // Si una dejó huérfanos, el arranque FALLA en vez de servir una base rota.
+    // EN MEMORIA NO SE SEPARA EL MIGRADOR, y esto no es un caso especial gratuito:
+    // con `sqlite::memory:` **cada conexión es una base distinta**, así que un
+    // pool aparte migraría una base y el pool real abriría otra vacía. Lo aprendí
+    // rompiendo 121 pruebas de golpe con la primera versión de este arreglo.
+    //
+    // Y no pierde nada: una base en memoria nace vacía en cada corrida, así que
+    // la reconstrucción de tabla no tiene filas hijas que llevarse. El peligro
+    // que esto ataja es el de una base EN DISCO con datos.
+    let en_memoria = url.contains(":memory:") || url.contains("mode=memory");
+
+    let migrador = if en_memoria {
+        // Las MISMAS 8 conexiones que el pool real: este pool ES el que se
+        // devuelve, así que estrecharlo a una cambiaba la concurrencia de todas
+        // las pruebas — y una se cayó con 500 por esperar un turno que no
+        // llegaba. El arreglo de un problema no puede traer otro de regalo.
+        SqlitePoolOptions::new()
+            .max_connections(8)
+            .connect_with(opciones.clone())
+            .await?
+    } else {
+        SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(
+                SqliteConnectOptions::from_str(url)?
+                    .create_if_missing(true)
+                    .foreign_keys(false)
+                    .journal_mode(SqliteJournalMode::Wal),
+            )
+            .await?
+    };
+
+    sqlx::migrate!("./migrations").run(&migrador).await?;
+
+    let huerfanos: Vec<(String,)> = sqlx::query_as("PRAGMA foreign_key_check")
+        .fetch_all(&migrador)
+        .await
+        .unwrap_or_default();
+    if !huerfanos.is_empty() {
+        let tablas: Vec<&str> = huerfanos.iter().map(|(t,)| t.as_str()).collect();
+        migrador.close().await;
+        return Err(sqlx::Error::Protocol(format!(
+            "las migraciones dejaron filas huérfanas en {tablas:?}. La base NO se abre: \
+             servirla así entrega registros que no puede alcanzar ningún filtro."
+        )));
+    }
+    if en_memoria {
+        // Se devuelve el MISMO pool: abrir otro daría una base vacía.
+        return Ok(migrador);
+    }
+    migrador.close().await;
+
     let pool = SqlitePoolOptions::new()
         .max_connections(8)
         .connect_with(opciones)
         .await?;
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
     Ok(pool)
 }
 
@@ -217,5 +296,148 @@ mod pruebas {
              que respeta la zona del prestador. Guardar un instante con \
              `Utc::now().to_rfc3339_opts(…)` sí es correcto y no lo caza esto."
         );
+    }
+}
+
+#[cfg(test)]
+mod pruebas_migracion {
+    /// LAS MIGRACIONES NO SE LLEVAN POR DELANTE LAS FILAS HIJAS.
+    ///
+    /// Es la prueba de la reconstrucción de tabla de la 0045. Se siembra
+    /// `factura` con sus `detalle_factura` y `glosa` ANTES de que la 0045 corra,
+    /// y se comprueba que siguen ahí después.
+    ///
+    /// Con el código anterior —que confiaba en el `PRAGMA foreign_keys = OFF`
+    /// escrito DENTRO de la migración, inerte porque sqlx la envuelve en una
+    /// transacción— esta prueba se pone roja: el `DROP TABLE factura` dispara el
+    /// `ON DELETE CASCADE` y las dos tablas quedan en cero, con la migración
+    /// registrada como aplicada con éxito y sin un solo error.
+    ///
+    /// La siembra va con SQL crudo y no por la API a propósito: hay que escribir
+    /// en el estado INTERMEDIO, entre la 0044 y la 0045, y eso solo se alcanza
+    /// aplicando las migraciones a mano hasta ahí.
+    #[tokio::test]
+    async fn una_reconstruccion_de_tabla_no_borra_las_filas_hijas() {
+        use sqlx::sqlite::SqliteConnectOptions;
+        use sqlx::ConnectOptions;
+        use std::str::FromStr;
+
+        let dir = std::env::temp_dir().join(format!("medico-mig-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let ruta = dir.join("m.db");
+        let url = format!("sqlite://{}", ruta.display());
+
+        // 1. Todas las migraciones MENOS la última, con las foráneas ACTIVAS,
+        //    que es como estaba una base antes de este corte.
+        {
+            let mut c = SqliteConnectOptions::from_str(&url)
+                .unwrap()
+                .create_if_missing(true)
+                .foreign_keys(true)
+                .connect()
+                .await
+                .unwrap();
+            let m = sqlx::migrate!("./migrations");
+            let hasta_0044: Vec<_> = m
+                .iter()
+                .filter(|mi| mi.version <= 44)
+                .cloned()
+                .collect();
+            for mi in &hasta_0044 {
+                sqlx::query(&mi.sql).execute(&mut c).await.unwrap();
+            }
+            // El registro de sqlx, para que `abrir` continúe desde aquí.
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS _sqlx_migrations (
+                   version BIGINT PRIMARY KEY, description TEXT NOT NULL,
+                   installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                   success BOOLEAN NOT NULL, checksum BLOB NOT NULL,
+                   execution_time BIGINT NOT NULL)",
+            )
+            .execute(&mut c)
+            .await
+            .unwrap();
+            for mi in &hasta_0044 {
+                sqlx::query(
+                    "INSERT INTO _sqlx_migrations
+                     (version, description, success, checksum, execution_time)
+                     VALUES (?,?,1,?,0)",
+                )
+                .bind(mi.version)
+                .bind(mi.description.as_ref())
+                .bind(mi.checksum.as_ref())
+                .execute(&mut c)
+                .await
+                .unwrap();
+            }
+
+            // 2. Datos: una factura con su línea y su glosa.
+            sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (1,'Uno','900')")
+                .execute(&mut c)
+                .await
+                .unwrap();
+            sqlx::query("INSERT INTO entidad (id,nit,nombre,codigo_eps) VALUES (1,'800','EPS','E1')")
+                .execute(&mut c)
+                .await
+                .unwrap();
+            sqlx::query(
+                "INSERT INTO factura (id,institucion_id,numero_factura,entidad_id,fecha_factura,
+                                      periodo_inicio,periodo_fin)
+                 VALUES (1,1,'F-1',1,'2026-01-31','2026-01-01','2026-01-31')",
+            )
+            .execute(&mut c)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO detalle_factura (factura_id,servicio) VALUES (1,'Consulta'),(1,'Otra')",
+            )
+            .execute(&mut c)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO glosa (factura_id,item_glosado,motivo,valor_glosado,fecha_glosa)
+                 VALUES (1,'x','y',10,'2026-02-01')",
+            )
+            .execute(&mut c)
+            .await
+            .unwrap();
+        }
+
+        // 3. `abrir` aplica la 0045, que reconstruye `factura`.
+        let pool = crate::abrir(&url).await.expect("la base tiene que abrir");
+
+        let detalles: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM detalle_factura")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let glosas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM glosa")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let facturas: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM factura")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(facturas, 1, "la factura se perdió");
+        assert_eq!(
+            detalles, 2,
+            "SE PERDIERON LAS LÍNEAS: el DROP TABLE de la reconstrucción disparó el \
+             ON DELETE CASCADE. El `PRAGMA foreign_keys = OFF` escrito DENTRO de la \
+             migración es inerte — sqlx la envuelve en una transacción."
+        );
+        assert_eq!(glosas, 1, "se perdieron las glosas, por lo mismo");
+
+        // Y las foráneas quedan ACTIVAS en el pool que se devuelve: apagarlas es
+        // solo para migrar. Sin esto, el arreglo habría cambiado una pérdida de
+        // datos por una base sin integridad referencial.
+        let fk: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(fk, 1, "el pool devuelto tiene que traer las foráneas activas");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

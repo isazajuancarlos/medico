@@ -179,8 +179,35 @@ def _run_migrations():
         # (`<tabla>_<columna>_key`). En SQLite el DROP falla y lo traga el
         # `except` de abajo, que es correcto: allí el esquema se construye desde
         # el modelo, que ya lleva el `UniqueConstraint` del par.
+        # `contrato` sí llevaba CONSTRAINT: `numero_contrato: str = Field(unique=True)`
+        # emite `UNIQUE (numero_contrato)` dentro del CREATE TABLE, y PostgreSQL la
+        # nombra `<tabla>_<columna>_key`. Este DROP acierta.
         "ALTER TABLE contrato DROP CONSTRAINT IF EXISTS contrato_numero_contrato_key",
-        "ALTER TABLE factura DROP CONSTRAINT IF EXISTS factura_numero_factura_key",
+
+        # `factura` NO, y esta es la trampa — cazada por la revisión de seguridad
+        # de este mismo cambio. Su campo era
+        #
+        #     numero_factura: str = Field(unique=True, index=True)
+        #
+        # y con `unique` E `index` juntos SQLAlchemy NO emite una constraint:
+        # emite un ÍNDICE ÚNICO, `ix_factura_numero_factura`. Compilado contra el
+        # dialecto PostgreSQL sobre el modelo de `50b396e`:
+        #
+        #     contrato -> CONSTRAINT UNIQUE (numero_contrato)   <- el DROP servía
+        #     factura  -> CREATE UNIQUE INDEX ix_factura_numero_factura
+        #
+        # Un `DROP CONSTRAINT IF EXISTS` sobre algo que es un índice **no falla y
+        # no dice nada**. Así que en toda base PostgreSQL ya desplegada el único
+        # GLOBAL de `factura` sobrevivía, y con la numeración ya por institución
+        # el segundo prestador chocaba contra la factura del primero: 500 al
+        # facturar, y un canal lateral sobre los números que el vecino ya emitió.
+        #
+        # NINGUNA PRUEBA PODÍA VERLO, y conviene saber por qué: en SQLite el
+        # esquema se construye del modelo NUEVO, donde esa restricción ya no
+        # existe. Verde en el banco y roto en producción — el modo de fallo que
+        # nombra la directiva 30.
+        "DROP INDEX IF EXISTS ix_factura_numero_factura",
+        "CREATE INDEX IF NOT EXISTS ix_factura_numero_factura ON factura(numero_factura)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_contrato_institucion_numero "
         "ON contrato(institucion_id, numero_contrato)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_factura_institucion_numero "
@@ -275,7 +302,15 @@ def _asignar_duenio_a_facturacion() -> None:
                     )
             except Exception as e:
                 session.rollback()
-                logger.debug(f"Asignación omitida en {tabla}: {str(e)[:80]}")
+                # WARNING y no debug: si el relleno no ocurre, el resultado
+                # —facturas invisibles para todos— es indistinguible de «no
+                # había nada que rellenar», y a nivel debug no lo vería nadie.
+                # La otra rama de esta función ya grita; ésta merece lo mismo.
+                logger.warning(
+                    "%s: NO se pudo asignar la institución (%s). Las filas sin dueño "
+                    "quedan invisibles para todos: SELECT id FROM %s WHERE institucion_id IS NULL",
+                    tabla, str(e)[:120], tabla,
+                )
 
 
 def init_db():

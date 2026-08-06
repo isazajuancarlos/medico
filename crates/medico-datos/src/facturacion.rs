@@ -666,18 +666,89 @@ pub async fn crear_factura(
     .await?;
 
     for d in &n.detalles {
-        insertar_detalle(&mut tx, id, d).await?;
+        if let Some(que) = insertar_detalle(&mut tx, institucion_id, id, d).await? {
+            // Sale sin commit: la transacción revierte al soltarse, así que la
+            // factura entera no llega a existir. Una factura a medias sería peor
+            // que ninguna.
+            return Ok(ResultadoAlta::Fallo(Resultado::ReferenciaInvalida { que }));
+        }
     }
     recalcular(&mut tx, id).await?;
     tx.commit().await?;
     Ok(ResultadoAlta::Creado(id))
 }
 
+/// Inserta una línea, comprobando ANTES que el paciente y la historia que nombra
+/// sean de esta institución.
+///
+/// # La fuga que esto cierra, y que estuvo aquí
+///
+/// Sin esta comprobación, un admin de la institución A podía crear una factura
+/// PROPIA y ponerle una línea con el `paciente_id` de un paciente de la B. La
+/// clave foránea de la 0044 es global (`REFERENCES paciente(id)`), así que la
+/// acepta; y `COLS_DETALLE` hace `LEFT JOIN paciente` para devolver
+/// `paciente_nombre`. Resultado: **la respuesta traía el nombre completo del
+/// paciente ajeno**, y repitiendo con `paciente_id = 1..N` se volcaba el padrón
+/// entero de todos los prestadores de la base. Era además un oráculo de
+/// existencia: id que existe → 201, id que no → 500 por violación de FK.
+///
+/// Lo cazó la revisión de seguridad de esta misma rama, midiéndolo por la
+/// frontera del programa y con su pareja: el `GET /api/pacientes/{id}` legítimo
+/// del mismo paciente respondía 404 a esa misma cookie. O sea que la vía buena
+/// negaba y esta la regalaba.
+///
+/// # Por qué va aquí y no en cada ruta
+///
+/// `insertar_detalle` es el ÚNICO embudo por el que entra una línea: lo llaman
+/// `crear_factura` (con la lista del alta) y `agregar_detalle`. Poner la
+/// comprobación en las dos rutas habría sido arreglar los dos casos y dejar
+/// abierta la tercera que se escriba mañana.
+///
+/// # El patrón ya existía en el repositorio
+///
+/// `paciente_es_del_ambito` vive en `historia.rs`, `urgencias.rs`, `documento.rs`
+/// y `acceso.rs`, y comprobaciones equivalentes en `nutricion`, `rehabilitacion`,
+/// `hospitalizacion`, `cita`, `ambulancia` y `referencia`. Facturación era el
+/// único módulo con `paciente_id` que no tenía ninguna. Aquí se hace **dentro de
+/// la transacción** —de ahí que no se reutilice la de `acceso`, que toma el
+/// pool—: comprobar fuera dejaría una ventana entre la comprobación y el INSERT.
 async fn insertar_detalle(
     tx: &mut sqlx::SqliteConnection,
+    institucion_id: i64,
     factura_id: i64,
     d: &DetalleNuevo,
-) -> Result<(), sqlx::Error> {
+) -> Result<Option<&'static str>, sqlx::Error> {
+    // El paciente, si se nombra, tiene que ser de esta institución.
+    if let Some(p) = d.paciente_id {
+        let suyo: Option<i64> =
+            sqlx::query_scalar("SELECT id FROM paciente WHERE id = ? AND institucion_id = ?")
+                .bind(p)
+                .bind(institucion_id)
+                .fetch_optional(&mut *tx)
+                .await?;
+        if suyo.is_none() {
+            // Mismo mensaje para «no existe» y «es de otro», por lo mismo que
+            // `Visibilidad` no tiene variante `Prohibido`: distinguirlos deja
+            // enumerar el padrón del vecino probando identificadores.
+            return Ok(Some("paciente"));
+        }
+    }
+    // La historia no lleva institución: cuelga de su paciente, igual que en el
+    // resto del sistema.
+    if let Some(h) = d.historia_id {
+        let suya: Option<i64> = sqlx::query_scalar(
+            "SELECT h.id FROM historia h JOIN paciente p ON p.id = h.paciente_id \
+             WHERE h.id = ? AND p.institucion_id = ?",
+        )
+        .bind(h)
+        .bind(institucion_id)
+        .fetch_optional(&mut *tx)
+        .await?;
+        if suya.is_none() {
+            return Ok(Some("historia"));
+        }
+    }
+
     sqlx::query(
         "INSERT INTO detalle_factura \
          (factura_id, servicio, codigo_cups, cantidad, valor_unitario, valor_total, \
@@ -693,7 +764,7 @@ async fn insertar_detalle(
     .bind(d.historia_id)
     .execute(&mut *tx)
     .await?;
-    Ok(())
+    Ok(None)
 }
 
 pub async fn actualizar_factura(
@@ -867,7 +938,16 @@ pub async fn agregar_detalle(
             estado: estado.como_texto().into(),
         });
     }
-    insertar_detalle(&mut tx, factura_id, d).await?;
+    // La institución sale de la FACTURA, no del token: así la línea no puede
+    // apuntar a un paciente de otra ni aunque el llamante mintiera.
+    let institucion_id: i64 =
+        sqlx::query_scalar("SELECT institucion_id FROM factura WHERE id = ?")
+            .bind(factura_id)
+            .fetch_one(&mut *tx)
+            .await?;
+    if let Some(que) = insertar_detalle(&mut tx, institucion_id, factura_id, d).await? {
+        return Ok(Resultado::ReferenciaInvalida { que });
+    }
     recalcular(&mut tx, factura_id).await?;
     tx.commit().await?;
     Ok(Resultado::Hecho)

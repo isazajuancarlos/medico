@@ -23,12 +23,20 @@ RUTA_ROUTERS = os.path.join(
 PENDIENTES_DE_MIGRAR: set[str] = set()
 
 #: Modelos sin dueño: traerlos por id no expone nada de nadie.
-#: Se mantiene alineado con `core.aislamiento.COMPARTIDOS`.
-SIN_DUENNO = {
-    "Cie10", "Cups", "Medicamento", "Especialidad", "Entidad", "ConfigCampo",
-    "BloqueHorario", "Cama", "ItemInventario", "Contrato", "TarifaContrato",
-    "Institucion", "AuditoriaSuperAdmin", "HistorialPassword", "Token2FA",
-}
+#:
+#: SE IMPORTA, NO SE COPIA, y esto tiene fecha: hasta el 2026-08-05 era una copia
+#: a mano con el comentario «se mantiene alineado con
+#: `core.aislamiento.COMPARTIDOS`». No se mantuvo. Ese día `Contrato` SALIÓ de
+#: COMPARTIDOS —dejó de ser catálogo nacional y pasó a ser el acuerdo privado de
+#: un prestador— y esta lista siguió listándolo, así que el guardián dio por
+#: legítimo un `db.get(Contrato, …)` sobre un id del cuerpo de la petición. El
+#: resultado fue una fuga real (el nombre del contrato del vecino) que este banco
+#: existía para cazar y no cazó.
+#:
+#: Una directiva en prosa —«se mantiene alineado»— es una que se puede
+#: desalinear. Importándola, deja de ser posible (directiva 1: no se añade un
+#: mecanismo para sostener lo que hace otro; se quita el primero).
+from core.aislamiento import COMPARTIDOS as SIN_DUENNO  # noqa: E402
 
 PATRON = re.compile(r"db\.get\(\s*([A-Z]\w*)")
 
@@ -52,8 +60,35 @@ def _infracciones(archivo: str) -> list[tuple[int, str]]:
     ruta = os.path.join(RUTA_ROUTERS, archivo)
     with open(ruta, encoding="utf-8") as f:
         lineas = f.readlines()
+
+    # Las líneas que están DENTRO de un docstring no se miran, y esto tiene
+    # fecha: el 2026-08-05 este guardián señaló un `db.get(Contrato, …)` que
+    # estaba escrito en PROSA, dentro del docstring que explicaba precisamente
+    # la fuga que ese `db.get` había causado. Un guardián que caza la
+    # documentación de sí mismo enseña a silenciarlo, que es como deja de
+    # vigilar (directiva 23: el falso positivo se arregla en la REGLA).
+    #
+    # Se localizan con `tokenize`, no con una regex sobre las comillas: una
+    # línea de Python es código estructurado (directiva 17). Los comentarios
+    # `#` NO se excluyen aquí porque la MARCA vive en uno, y el bucle de abajo
+    # los trata aparte.
+    en_texto = set()
+    try:
+        import io
+        import tokenize as _tk
+
+        for tok in _tk.generate_tokens(io.StringIO("".join(lineas)).readline):
+            if tok.type == _tk.STRING:
+                en_texto.update(range(tok.start[0], tok.end[0] + 1))
+    except (_tk.TokenError, IndentationError, SyntaxError):
+        # Si el archivo no se deja tokenizar se mira ENTERO: la dirección segura
+        # es avisar de más, nunca callarse.
+        en_texto = set()
+
     fuera = []
     for n, linea in enumerate(lineas, 1):
+        if n in en_texto and MARCA not in linea:
+            continue
         if MARCA in linea:
             razon = linea.split(MARCA, 1)[1].strip()
             if len(razon) < RAZON_MINIMA:

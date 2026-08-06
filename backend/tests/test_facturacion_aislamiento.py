@@ -343,3 +343,88 @@ def test_el_superadmin_sigue_viendo_todo(motor):
     r = c.get("/api/facturacion/facturas")
     assert r.status_code == 200, r.text
     assert len(r.json()) == 2, "el superadmin tiene que ver las de las dos"
+
+
+# --- Lo que el cliente NOMBRA en el cuerpo, no solo lo que lee -----------------
+#
+# Las pruebas de arriba miden la LECTURA. Estas miden la ESCRITURA, que es por
+# donde quedaba abierto: `filtrar_por_institucion` no toca un `db.get` sobre un
+# id que viene en el payload, y `_enrich_factura` devolvía el nombre de lo que
+# ese id apuntara. Las dos las cazó la revisión de seguridad de la rama.
+
+def test_una_linea_no_puede_nombrar_al_paciente_del_vecino(motor):
+    """Con el `paciente_id` ajeno, `_enrich_factura` devolvía su NOMBRE COMPLETO.
+
+    Enumerando identificadores se sacaba el censo de pacientes de la clínica de
+    al lado, y «ser paciente de X» es dato de salud — el mismo argumento con el
+    que este proyecto responde 404 y nunca 403.
+
+    El comentario que había en esa línea decía «ya autorizado por el padre», y
+    era falso justo ahí: el padre autorizado es la FACTURA, no el paciente que
+    eligió el cliente en el cuerpo de la petición.
+    """
+    from models import Paciente
+
+    with Session(motor) as db:
+        for pid, inst, marca in ((701, 1, "PROPIO"), (702, 2, "AJENO")):
+            db.add(Paciente(
+                id=pid, institucion_id=inst, identificacion=f"doc{pid}",
+                nombre1=f"Paciente{marca}", apellido1="Apellido",
+                fecha_nacimiento=date(1990, 1, 1), sexo="M", celular="300",
+            ))
+        db.commit()
+
+    c = _cliente(motor, 1)
+    base = {"entidad_id": 1, "periodo_inicio": "2026-03-01", "periodo_fin": "2026-03-31"}
+
+    # CONTROL: el paciente propio entra, y su nombre sale.
+    r = c.post("/api/facturacion/facturas", json={
+        **base, "detalles": [{"servicio": "X", "cantidad": 1, "valor_unitario": 10,
+                              "paciente_id": 701}]})
+    assert r.status_code == 201, r.text
+    assert "PacientePROPIO" in r.text, "control: el propio sí sale"
+
+    # LA AGUJA: el paciente ajeno se rechaza, y su nombre NO sale.
+    r = c.post("/api/facturacion/facturas", json={
+        **base, "detalles": [{"servicio": "X", "cantidad": 1, "valor_unitario": 10,
+                              "paciente_id": 702}]})
+    assert r.status_code == 404, f"FUGA: se aceptó el paciente ajeno ({r.status_code})"
+    assert "PacienteAJENO" not in r.text, "FUGA: salió el nombre ajeno"
+
+    # Y por la otra vía, añadiendo la línea después.
+    fid = c.post("/api/facturacion/facturas", json={**base, "detalles": []}).json()["id"]
+    r = c.post(f"/api/facturacion/facturas/{fid}/detalles",
+               json={"servicio": "X", "cantidad": 1, "valor_unitario": 10,
+                     "paciente_id": 702})
+    assert r.status_code == 404, "FUGA por la vía de /detalles"
+
+
+def test_una_factura_no_puede_colgar_del_contrato_del_vecino(motor):
+    """Esta fuga la CREÓ el propio cambio que le dio dueño a `Contrato`.
+
+    Hasta entonces estaba en `COMPARTIDOS`, así que leer su nombre era legítimo
+    por declaración escrita. Al hacerlo privado se cerraron `/contratos` y
+    `obtener`, y quedó abierto este camino: el `contrato_id` del cuerpo llegaba a
+    `_enrich_factura`, que devolvía `contrato_nombre`. Además dejaba una factura
+    de un prestador apuntando al contrato de otro — una referencia cruzada entre
+    inquilinos que se queda escrita.
+    """
+    c = _cliente(motor, 1)
+    base = {"entidad_id": 1, "periodo_inicio": "2026-04-01",
+            "periodo_fin": "2026-04-30", "detalles": []}
+
+    # CONTROL: el contrato propio (id 1) entra y su nombre sale.
+    r = c.post("/api/facturacion/facturas", json={**base, "contrato_id": 1})
+    assert r.status_code == 201, r.text
+    assert "CapitaciónUNO" in r.text, "control: el contrato propio sí sale"
+
+    # LA AGUJA: el contrato de la institución 2.
+    r = c.post("/api/facturacion/facturas", json={**base, "contrato_id": 2})
+    assert r.status_code == 404, f"FUGA: se aceptó el contrato ajeno ({r.status_code})"
+    assert "CapitaciónDOS" not in r.text, "FUGA: salió el nombre del contrato ajeno"
+
+    # Y por el PUT, que es el otro camino que la revisión midió.
+    fid = c.post("/api/facturacion/facturas", json=base).json()["id"]
+    r = c.put(f"/api/facturacion/facturas/{fid}", json={"contrato_id": 2})
+    assert r.status_code == 404, "FUGA por la vía del PUT"
+    assert "CapitaciónDOS" not in r.text
