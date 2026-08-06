@@ -26,7 +26,7 @@ argon2 = "0.5"
 password-hash = { version = "0.5", features = ["std"] }
 # Firma de la cookie de sesión: HMAC-SHA256, como en informes.
 hmac = "0.12"
-sha2 = "0.10"
+sha2 = "0.11"
 base64 = "0.23"
 # La interfaz Angular viaja dentro del binario (como informes).
 rust-embed = { version = "8", features = ["mime-guess"] }
