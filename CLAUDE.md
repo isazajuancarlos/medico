@@ -327,7 +327,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 679 pruebas (~2 min 30 s)
+cargo test  --workspace --all-targets                   # 715 pruebas (~2 min 30 s)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -423,15 +423,14 @@ contaba de más y el otro de menos.
 
 ```
 medido el 2026-08-06:  229/229 llamadas del frontal resueltas (0 sin resolver)
-                       137 llamadas .route() leídas
+                       145 llamadas .route() leídas
                        el frontal pide 197 endpoints distintos
-                       el binario Rust sirve  184
-                       FALTAN 35, todos en dos módulos:
+                       el binario Rust sirve  193
+                       FALTA UN SOLO MÓDULO:
 
   admin      26 endpoints — usuarios, institución, configuración, política de
                             seguridad, entidades, especialidades, campos
                             dinámicos, capacidades y auditoría
-  quirofano   9 endpoints — salas y programación quirúrgica
 
   PORTADOS y ya fuera de la lista:
     facturacion   (17)  2026-08-05
@@ -439,6 +438,9 @@ medido el 2026-08-06:  229/229 llamadas del frontal resueltas (0 sin resolver)
     estadisticas   (8)  2026-08-06 — los ocho paneles, con el aislamiento que
                         en el Python vivo fallaba ABIERTO: `/financiero` sumaba
                         el dinero de TODOS los prestadores
+    quirofano      (9)  2026-08-06 — con la máquina de estados en el dominio y
+                        el aislamiento que el Python no tenía: su listado
+                        cruzaba instituciones con el DOCUMENTO del paciente
 
 a medias (1):
   rips — LOS CINCO desde el 2026-08-04. Falta el FEV-RIPS, que es

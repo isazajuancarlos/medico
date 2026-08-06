@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export interface Sala {
   id: number;
@@ -121,7 +121,22 @@ export class QuirofanoService {
     return this.http.put<Programacion>(`${this.API}/programaciones/${id}/cancelar`, { motivo });
   }
 
+  /**
+   * El binario Rust sirve el paciente en crudo (`nombre1`, `numero_documento`),
+   * y el selector pinta `nombre_completo` e `identificacion`. Sin este `map` la
+   * lista sale con « — » en cada fila: no falla, no avisa, y no se puede elegir
+   * a nadie.
+   *
+   * Es el mismo derivado que ya hacen epicrisis, evoluciones, interconsultas y
+   * nota operatoria; este servicio se había quedado sin él.
+   */
   searchPacientes(q: string): Observable<any[]> {
-    return this.http.get<any[]>('/api/pacientes', { params: { search: q } });
+    return this.http.get<any[]>('/api/pacientes', { params: { search: q } }).pipe(
+      map(ps => ps.map(p => ({
+        ...p,
+        nombre_completo: [p.nombre1, p.nombre2, p.apellido1, p.apellido2].filter(Boolean).join(' '),
+        identificacion: p.numero_documento,
+      }))),
+    );
   }
 }

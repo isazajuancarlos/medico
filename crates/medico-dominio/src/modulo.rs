@@ -71,7 +71,7 @@ pub const CATALOGO: &[Modulo] = &[
     m("PLAN_CUIDADO", "Hospitalario", None),
     m("CONTRARREFERENCIA", "Hospitalario", Some("/api/contrarreferencia")),
     // --- Quirúrgico ---------------------------------------------------------
-    m("QUIROFANO", "Quirúrgico", None),
+    m("QUIROFANO", "Quirúrgico", Some("/api/quirofano")),
     m("NOTA_OPERATORIA", "Quirúrgico", Some("/api/documentos")),
     m("PREANESTESIA", "Quirúrgico", None),
     m("RECUPERACION", "Quirúrgico", None),

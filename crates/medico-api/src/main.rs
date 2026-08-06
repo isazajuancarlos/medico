@@ -287,10 +287,43 @@ async fn sembrar_demo() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    // LAS SALAS DE QUIRÓFANO, porque sin ellas el módulo no se puede usar.
+    //
+    // Nada las crea: no hay endpoint de alta ni en Python ni en Rust, y en el
+    // producto vivo salen de `seed.py`. Sin una sala, `POST
+    // /api/quirofano/programaciones` responde 404 a todo y la pantalla queda
+    // muerta — o sea que portar el módulo sin esto sería entregar algo que no
+    // funciona en una instalación nueva.
+    //
+    // Administrar salas —darlas de alta, renombrarlas, ponerlas en
+    // mantenimiento— no tiene pantalla en NINGUNA de las dos pilas. Es un hueco
+    // real del producto y su sitio natural es el módulo de administración.
+    let salas = [
+        ("Quirófano 1", "GENERAL"),
+        ("Quirófano 2", "GENERAL"),
+        ("Sala de partos", "PARTOS"),
+        ("Cirugía ambulatoria", "AMBULATORIA"),
+    ];
+    for (nombre, tipo) in salas {
+        let r = sqlx::query(
+            "INSERT INTO quirofano (institucion_id, nombre, tipo) VALUES (1, ?, ?)
+             ON CONFLICT(institucion_id, nombre) DO NOTHING",
+        )
+        .bind(nombre)
+        .bind(tipo)
+        .execute(&pool)
+        .await;
+        if let Err(e) = r {
+            eprintln!("no se pudo crear la sala «{nombre}»: {e}");
+            return ExitCode::FAILURE;
+        }
+    }
+
     println!(
-        "demostración sembrada: institución 1 con {} módulos licenciados y el usuario «{}».",
+        "demostración sembrada: institución 1 con {} módulos licenciados, el usuario «{}» y {} salas de quirófano.",
         modulos.len(),
-        demo.correo
+        demo.correo,
+        salas.len()
     );
     ExitCode::SUCCESS
 }

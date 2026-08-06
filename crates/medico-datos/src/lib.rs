@@ -26,6 +26,7 @@ pub mod nutricion;
 pub mod orden;
 pub mod paciente;
 pub mod proveedor;
+pub mod quirofano;
 pub mod referencia;
 pub mod rehabilitacion;
 pub mod rips;

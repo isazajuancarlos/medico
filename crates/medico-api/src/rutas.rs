@@ -42,6 +42,7 @@ use medico_datos::licencia;
 use medico_datos::orden::{self, Orden, OrdenNueva};
 use medico_datos::paciente::{self, Antecedentes, InfoPaciente, Paciente, PacienteNuevo};
 use medico_datos::proveedor;
+use medico_datos::quirofano;
 use medico_datos::usuario::{self, ResumenUsuario, Usuario, UsuarioNuevo};
 
 /// Tope de una subida de imagen. Una radiografía o un PDF de laboratorio caben
@@ -303,6 +304,20 @@ pub fn router(estado: Estado) -> Router {
             "/api/agenda/{id}/bloques/{bloque_id}",
             put(agenda_activar_bloque).delete(agenda_borrar_bloque),
         )
+        // Quirófano. El orden importa: `/medicos` y `/salas` son literales y van
+        // ANTES que cualquier `{id}`; hoy no chocan porque la programación
+        // cuelga de `/programaciones`, y así se queda.
+        .route("/api/quirofano/salas", get(quir_salas))
+        .route("/api/quirofano/medicos", get(quir_medicos))
+        .route(
+            "/api/quirofano/programaciones",
+            get(quir_listar).post(quir_crear),
+        )
+        .route("/api/quirofano/programaciones/{id}", get(quir_obtener))
+        .route("/api/quirofano/programaciones/{id}/checklist", put(quir_checklist))
+        .route("/api/quirofano/programaciones/{id}/iniciar", put(quir_iniciar))
+        .route("/api/quirofano/programaciones/{id}/completar", put(quir_completar))
+        .route("/api/quirofano/programaciones/{id}/cancelar", put(quir_cancelar))
         // Estadísticas. Ocho GET y ni un solo verbo de escritura: es un módulo
         // de lectura entero, y por eso ninguna de estas rutas aparece en la
         // lista de excepciones de `ninguna_escritura_se_conforma_con_estar_autenticado`.
@@ -4483,6 +4498,177 @@ async fn est_urgencias(
     panel(estadisticas::urgencias(&e.pool, u.ambito(), &i, &f).await)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Quirófano
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// # Quién puede qué, y de dónde sale la respuesta
+//
+// El frontal NO declara matriz de roles para esta pantalla: `app.routes.ts:107`
+// la protege solo con `moduloGuard('QUIROFANO')`. O sea que el producto no tiene
+// una respuesta escrita, y la norma de este proyecto es no inventarse
+// capacidades nuevas cuando el producto no las ha decidido.
+//
+// Pero dejarlas con `Autenticado` pelado tampoco vale, y ya se midió por qué: el
+// consentimiento informado salió así del port y la revisión encontró que un
+// **laboratorista** creaba, editaba y revocaba consentimientos mientras el mismo
+// usuario recibía 403 en `POST /api/historias`. Aquí lo que se escribe es la
+// NOTA OPERATORIA.
+//
+// Se reutilizan dos capacidades que ya existen, repartidas por lo que cada
+// endpoint ESCRIBE:
+//
+// | endpoint | capacidad | por qué |
+// |---|---|---|
+// | crear | `EscribirClinico` | programar nombra procedimiento y CUPS para un paciente |
+// | cancelar | `EscribirClinico` | se cancela lo que se programa: misma decisión, mismo conjunto |
+// | completar | `EscribirClinico` | escribe la nota operatoria y los hallazgos |
+// | checklist | `AtenderUrgencias` | lo rellenan enfermería y el anestesiólogo, junto al paciente |
+// | iniciar | `AtenderUrgencias` | lo registra el equipo que está en la sala |
+//
+// **`AtenderUrgencias` se llama así y aquí cubre el quirófano**, que es una
+// discordancia de nombre y conviene decirla: su matriz es «quien atiende al
+// paciente en la camilla» —médico, enfermería, auxiliar y anestesiólogo—, que es
+// exactamente el equipo de una sala de cirugía. Renombrarla toca seis archivos y
+// es una decisión aparte; inventar `AtenderQuirofano` sería una capacidad que el
+// producto no ha decidido. Queda apuntado.
+
+async fn quir_salas(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match quirofano::listar_salas(&e.pool, u.ambito()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn quir_medicos(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    match quirofano::listar_medicos(&e.pool, u.ambito()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct FiltroQuirofano {
+    estado: Option<String>,
+}
+
+async fn quir_listar(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(f): Query<FiltroQuirofano>,
+) -> Response {
+    match quirofano::listar_programaciones(&e.pool, u.ambito(), f.estado.as_deref()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn quir_obtener(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Path(id): Path<i64>,
+) -> Response {
+    match quirofano::obtener(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => Json(p).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn quir_crear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirClinico>,
+    Json(n): Json<quirofano::ProgramacionNueva>,
+) -> Response {
+    let u = autorizado.0;
+    match quirofano::crear(&e.pool, u.ambito(), &n).await {
+        Ok(Ok(id)) => match quirofano::obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(p)) => (StatusCode::CREATED, Json(p)).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        // 404 y no 400 cuando el id no es visible: un 400 confirmaría que el id
+        // existe en otra institución, y con eso se enumera su padrón.
+        Ok(Err(f @ quirofano::FalloAlCrear::NoVisible(_))) => {
+            (StatusCode::NOT_FOUND, f.mensaje()).into_response()
+        }
+        Ok(Err(f)) => (StatusCode::BAD_REQUEST, f.mensaje()).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Traduce el resultado y devuelve la fila ya actualizada, que es lo que el
+/// frontal pinta sin volver a pedirla.
+async fn quir_respuesta(e: &Estado, u: &usuario::Usuario, id: i64, r: quirofano::Resultado) -> Response {
+    match r {
+        quirofano::Resultado::Hecho => match quirofano::obtener(&e.pool, u.ambito(), id).await {
+            Ok(Some(p)) => Json(p).into_response(),
+            _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        quirofano::Resultado::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        quirofano::Resultado::Rechazado(m) => (StatusCode::BAD_REQUEST, m).into_response(),
+        // Una fila con el estado corrupto NO se trata como programada: se
+        // responde 500, que es lo que es — un dato que el dominio no reconoce.
+        quirofano::Resultado::EstadoCorrupto(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn quir_checklist(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AtenderUrgencias>,
+    Path(id): Path<i64>,
+    Json(c): Json<quirofano::ChecklistCambio>,
+) -> Response {
+    let u = autorizado.0;
+    match quirofano::actualizar_checklist(&e.pool, u.ambito(), id, &c).await {
+        Ok(r) => quir_respuesta(&e, &u, id, r).await,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn quir_iniciar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AtenderUrgencias>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    mover(e, u, id, medico_dominio::quirofano::Accion::Iniciar, Default::default()).await
+}
+
+async fn quir_completar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirClinico>,
+    Path(id): Path<i64>,
+    cuerpo: Option<Json<quirofano::CierreCirugia>>,
+) -> Response {
+    let u = autorizado.0;
+    let d = cuerpo.map(|Json(d)| d).unwrap_or_default();
+    mover(e, u, id, medico_dominio::quirofano::Accion::Completar, d).await
+}
+
+async fn quir_cancelar(
+    State(e): State<Estado>,
+    autorizado: Autorizado<EscribirClinico>,
+    Path(id): Path<i64>,
+    cuerpo: Option<Json<quirofano::CierreCirugia>>,
+) -> Response {
+    let u = autorizado.0;
+    let d = cuerpo.map(|Json(d)| d).unwrap_or_default();
+    mover(e, u, id, medico_dominio::quirofano::Accion::Cancelar, d).await
+}
+
+async fn mover(
+    e: Estado,
+    u: usuario::Usuario,
+    id: i64,
+    accion: medico_dominio::quirofano::Accion,
+    d: quirofano::CierreCirugia,
+) -> Response {
+    match quirofano::mover(&e.pool, u.ambito(), id, accion, &d).await {
+        Ok(r) => quir_respuesta(&e, &u, id, r).await,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -4658,6 +4844,168 @@ mod pruebas {
                 .await
                 .unwrap()
                 .status()
+        }
+
+        /// **Quirófano: quien no opera no escribe la nota operatoria.**
+        ///
+        /// Es la prueba que al consentimiento le faltó y la revisión encontró:
+        /// sus tres rutas de escritura salieron del port con `Autenticado`
+        /// pelado, así que un laboratorista creaba, editaba y revocaba
+        /// consentimientos mientras el MISMO usuario recibía 403 en
+        /// `POST /api/historias`.
+        ///
+        /// Aquí se prueba el reparto entero, con sus dos mitades: el
+        /// laboratorista no puede NADA de quirófano, y enfermería —que no
+        /// escribe la nota— SÍ rellena la lista de verificación, que es su
+        /// trabajo. Una regla que le cerrara eso a enfermería estaría mal por
+        /// bien argumentada que estuviera.
+        #[tokio::test]
+        async fn en_quirofano_cada_rol_escribe_lo_suyo() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (8,'Enfermera','enf@x.co',?,'enfermeria',1,1),
+                        (9,'Cirujana','cir@x.co',?,'medico',1,1)",
+            )
+            .bind(&h).bind(&h).execute(&e.pool).await.unwrap();
+            sqlx::query("INSERT INTO quirofano (id,institucion_id,nombre) VALUES (1,1,'Sala 1')")
+                .execute(&e.pool).await.unwrap();
+            sqlx::query(
+                "INSERT INTO programacion_quirurgica
+                   (id,quirofano_id,paciente_id,cirujano_id,fecha_programada,procedimiento)
+                 VALUES (1,1,1,9,'2026-09-01T13:00:00Z','Apendicectomía')",
+            ).execute(&e.pool).await.unwrap();
+
+            const NUEVA: &str = r#"{"quirofano_id":1,"paciente_id":1,"cirujano_id":9,
+                "fecha_programada":"2026-09-02T13:00:00Z","duracion_estimada_min":60,
+                "procedimiento":"Colecistectomía"}"#;
+            const CHECK: &str = r#"{"ayuno_verificado":true}"#;
+
+            // ── El laboratorista: nada. Ni programar, ni checklist, ni iniciar.
+            let lab = cookie_de(5);
+            for (metodo, uri, cuerpo) in [
+                ("POST", "/api/quirofano/programaciones", NUEVA),
+                ("PUT", "/api/quirofano/programaciones/1/checklist", CHECK),
+                ("PUT", "/api/quirofano/programaciones/1/iniciar", "{}"),
+                ("PUT", "/api/quirofano/programaciones/1/completar", "{}"),
+                ("PUT", "/api/quirofano/programaciones/1/cancelar", "{}"),
+            ] {
+                assert_eq!(
+                    pedir_con(&e, metodo, uri, &lab, cuerpo).await,
+                    StatusCode::FORBIDDEN,
+                    "el laboratorista pudo {metodo} {uri}"
+                );
+            }
+            // Y no basta el 403: nada tuvo que escribirse.
+            let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM programacion_quirurgica")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(n, 1, "se programó una cirugía pese al 403");
+            let estado: String =
+                sqlx::query_scalar("SELECT estado FROM programacion_quirurgica WHERE id = 1")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(estado, "PROGRAMADA", "la cirugía se movió pese al 403");
+
+            // ── Enfermería: la lista de verificación SÍ, la nota operatoria NO.
+            let enf = cookie_de(8);
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/checklist", &enf, CHECK).await,
+                StatusCode::OK,
+                "enfermería tiene que poder rellenar el checklist: es su trabajo"
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/iniciar", &enf, "{}").await,
+                StatusCode::OK,
+                "y registrar el inicio, que lo anota quien está en la sala"
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/completar", &enf, "{}").await,
+                StatusCode::FORBIDDEN,
+                "pero NO cerrarla: completar escribe la nota operatoria"
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/quirofano/programaciones", &enf, NUEVA).await,
+                StatusCode::FORBIDDEN,
+                "ni programar"
+            );
+
+            // ── La médica: todo.
+            let med = cookie_de(9);
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/completar", &med, "{}").await,
+                StatusCode::OK
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/quirofano/programaciones", &med, NUEVA).await,
+                StatusCode::CREATED
+            );
+
+            // ── Y LEER lo puede cualquiera con sesión, también el laboratorista.
+            // Sin esta mitad, una regla que negara todo pasaría los assertos de
+            // arriba (directiva 21: probar contra la operación normal).
+            for uri in [
+                "/api/quirofano/salas",
+                "/api/quirofano/medicos",
+                "/api/quirofano/programaciones",
+                "/api/quirofano/programaciones/1",
+            ] {
+                assert_eq!(
+                    pedir(&e, "GET", uri, &lab).await,
+                    StatusCode::OK,
+                    "leer {uri} no debería exigir capacidad"
+                );
+            }
+        }
+
+        /// La máquina de estados llega hasta el HTTP: una transición imposible es
+        /// un 400 con su motivo, no un 500 ni un 200 silencioso.
+        #[tokio::test]
+        async fn una_transicion_imposible_es_400_desde_el_http() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (9,'Cirujana','cir@x.co',?,'medico',1,1)",
+            ).bind(&h).execute(&e.pool).await.unwrap();
+            sqlx::query("INSERT INTO quirofano (id,institucion_id,nombre) VALUES (1,1,'Sala 1')")
+                .execute(&e.pool).await.unwrap();
+            sqlx::query(
+                "INSERT INTO programacion_quirurgica
+                   (id,quirofano_id,paciente_id,cirujano_id,fecha_programada,procedimiento)
+                 VALUES (1,1,1,9,'2026-09-01T13:00:00Z','Apendicectomía')",
+            ).execute(&e.pool).await.unwrap();
+            let med = cookie_de(9);
+
+            // Completar sin haber empezado.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/completar", &med, "{}").await,
+                StatusCode::BAD_REQUEST
+            );
+            // El camino bueno, que es la pareja.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/iniciar", &med, "{}").await,
+                StatusCode::OK
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/iniciar", &med, "{}").await,
+                StatusCode::BAD_REQUEST,
+                "iniciar dos veces pisaría la hora de inicio"
+            );
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/completar", &med, "{}").await,
+                StatusCode::OK
+            );
+            // Y de un estado final no se sale.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/1/cancelar", &med, "{}").await,
+                StatusCode::BAD_REQUEST
+            );
+
+            // Una que no existe es 404, no 400: el estado no se llega a mirar.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/quirofano/programaciones/999/iniciar", &med, "{}").await,
+                StatusCode::NOT_FOUND
+            );
         }
 
         /// EL PEOR DE TODOS: un laboratorista RECETANDO.
@@ -8864,6 +9212,32 @@ mod pruebas {
                 .await
                 .unwrap();
 
+                // 9. quirófano — la fuga que se midió el 2026-08-06 en el
+                //    Python: el listado NO acotaba y su enriquecido añade el
+                //    nombre y el DOCUMENTO del paciente, así que cada admin veía
+                //    qué cirugía se le iba a practicar a quién en la otra
+                //    institución. La marca va en el PROCEDIMIENTO, que es el
+                //    campo clínico que se fuga.
+                sqlx::query("INSERT INTO quirofano (id,institucion_id,nombre) VALUES (?,?,?)")
+                    .bind(inst)
+                    .bind(inst)
+                    .bind(format!("Sala{marca}"))
+                    .execute(&e.pool)
+                    .await
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO programacion_quirurgica
+                       (quirofano_id,paciente_id,cirujano_id,fecha_programada,procedimiento)
+                     VALUES (?,?,?,'2026-09-01T13:00:00Z',?)",
+                )
+                .bind(inst)
+                .bind(pac)
+                .bind(admin)
+                .bind(format!("Apendicectomia{marca}"))
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
                 // 8. estadísticas — un módulo entero de AGREGADOS, y por eso
                 //    hace falta un nombre que se pueda buscar en la respuesta:
                 //    un panel fugado devuelve números, y un número de más no se
@@ -8922,6 +9296,7 @@ mod pruebas {
                 // —el mes en curso— esta fila dependería de la fecha del reloj,
                 // y una prueba que solo falla el día 1 a las 20:00 es una prueba
                 // que no dice nada 364 días al año.
+                ("quirofano", "/api/quirofano/programaciones", "Apendicectomia"),
                 (
                     "estadisticas",
                     "/api/estadisticas/produccion?fecha_inicio=2000-01-01&fecha_fin=2100-01-01",
@@ -9157,6 +9532,7 @@ mod pruebas {
                 "inventario",
                 "nutricion",
                 "proveedor",
+                "quirofano",
                 "rehabilitacion",
             ]
             .into_iter()

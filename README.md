@@ -58,23 +58,23 @@ suma como trabajo lo que solo cambió de nombre —`auth` es `acceso`/`salir`/`y
 `superadmin` es `/api/instituciones`, y epicrisis, evoluciones, interconsultas y
 notas operatorias son un solo `/api/documentos`—. Se cuenta contra lo que la
 interfaz PIDE: resueltas las 229 llamadas HTTP de los 82 `.ts` del frontal contra
-las 137 rutas del router, **el binario Rust sirve 184 de los 197 endpoints
-distintos que Angular llama**. Faltan **35, en dos módulos**:
+las 145 rutas del router, **el binario Rust sirve 193 de los 197 endpoints
+distintos que Angular llama**. Falta **un solo módulo**:
 
 | Módulo | Endpoints | Estado |
 |---|---|---|
 | `/api/admin` | 26 | pendiente — usuarios, entidades, campos dinámicos, política de seguridad, auditoría |
-| `/api/quirofano` | 9 | pendiente — salas y programación quirúrgica |
 
-Mientras tanto esas dos pantallas las sirve el backend Python.
+Mientras tanto esa pantalla la sirve el backend Python.
 
 Lo que el port **sí** cubre: pacientes, historia clínica con firma, urgencias,
 hospitalización, nutrición, rehabilitación, remisiones y contrarreferencia,
 incapacidades, citas y **agenda médica** (franjas, bloqueos, turnos libres e
 indicadores), catálogo de módulos por licencia, farmacia e inventario,
 proveedores, laboratorio, imágenes diagnósticas, ambulancias, facturación,
-consentimiento informado, los cuatro documentos clínicos bajo `/api/documentos`
-y **los ocho paneles de estadística**. Los cuatro maestros —CIE-10, CUPS, CUM y
+consentimiento informado, los cuatro documentos clínicos bajo `/api/documentos`,
+los ocho paneles de estadística y **quirófano** (salas y programación
+quirúrgica, con su máquina de estados). Los cuatro maestros —CIE-10, CUPS, CUM y
 DIVIPOLA— van empotrados en el binario.
 
 ## Arrancar
@@ -88,7 +88,7 @@ uvicorn main:app --reload --port 8000  # Swagger en /docs
 
 # --- Rust (el port) ---
 ./construir.sh                         # interfaz → empotrado → binario. EL comando.
-cargo test  --workspace --all-targets  # 493 pruebas
+cargo test  --workspace --all-targets  # 715 pruebas
 cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---

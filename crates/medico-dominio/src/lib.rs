@@ -12,6 +12,7 @@ pub mod cum;
 pub mod facturacion;
 pub mod modulo;
 pub mod muv;
+pub mod quirofano;
 pub mod rips;
 pub mod rol;
 pub mod zona;
