@@ -1,6 +1,7 @@
 //! Acceso a la base. Nadie de aquí para arriba escribe SQL.
 
 pub mod acceso;
+pub mod administracion;
 pub mod agenda;
 pub mod ambulancia;
 pub mod capacidad;

@@ -167,6 +167,14 @@ impl Exige for EscribirPaciente {
     const QUE: medico_dominio::rol::Capacidad = medico_dominio::rol::Capacidad::EscribirPaciente;
 }
 
+/// Administrar la institución: ficha, configuración, política de seguridad,
+/// campos dinámicos y maestros.
+pub struct AdministrarInstitucion;
+impl Exige for AdministrarInstitucion {
+    const QUE: medico_dominio::rol::Capacidad =
+        medico_dominio::rol::Capacidad::AdministrarInstitucion;
+}
+
 /// Atender en urgencias y hospitalización: triage, ingreso, egreso.
 pub struct AtenderUrgencias;
 impl Exige for AtenderUrgencias {

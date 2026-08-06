@@ -11,13 +11,15 @@ use medico_dominio::{Ambito, RolUsuario};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{
-    autenticar, AtenderUrgencias, Autenticado, Autorizado, Borrar, EscribirClinico,
+    autenticar, AdministrarInstitucion, AtenderUrgencias, Autenticado, Autorizado, Borrar,
+    EscribirClinico,
     EscribirImagenologia, EscribirLaboratorio, EscribirNutricion, EscribirPaciente,
     EscribirRehabilitacion, Estado, Firmar, GestionarAgenda, GestionarAmbulancias,
     GestionarFacturacion, GestionarFarmacia, GestionarRemision, GestionarUsuarios,
 };
 use crate::{claves, sesion};
 use medico_datos::acceso;
+use medico_datos::administracion;
 use medico_datos::agenda::{self, AgendaNueva, BloqueNuevo, BloqueoNuevo};
 use medico_datos::ambulancia;
 use medico_datos::catalogo::{self, Especialidad, Medicamento, UnidadDispensacion};
@@ -304,6 +306,43 @@ pub fn router(estado: Estado) -> Router {
             "/api/agenda/{id}/bloques/{bloque_id}",
             put(agenda_activar_bloque).delete(agenda_borrar_bloque),
         )
+        // Administración. Ni un GET con `Autenticado` pelado: la política de
+        // seguridad y el rastro de accesos no son el menú de nadie.
+        .route(
+            "/api/admin/institucion",
+            get(adm_institucion).put(adm_actualizar_institucion),
+        )
+        .route(
+            "/api/admin/configuracion",
+            get(adm_configuracion).put(adm_actualizar_configuracion),
+        )
+        .route(
+            "/api/admin/politica-seguridad",
+            get(adm_politica).put(adm_actualizar_politica),
+        )
+        .route("/api/admin/campos-dinamicos", get(adm_campos).post(adm_crear_campo))
+        .route(
+            "/api/admin/campos-dinamicos/{id}",
+            put(adm_actualizar_campo).delete(adm_borrar_campo),
+        )
+        .route(
+            "/api/admin/especialidades",
+            get(adm_especialidades).post(adm_crear_especialidad),
+        )
+        .route("/api/admin/especialidades/{id}", delete(adm_borrar_especialidad))
+        .route("/api/admin/entidades", get(adm_entidades).post(adm_crear_entidad))
+        .route(
+            "/api/admin/entidades/{id}",
+            put(adm_actualizar_entidad).delete(adm_borrar_entidad),
+        )
+        .route("/api/admin/auditoria", get(adm_auditoria))
+        .route("/api/admin/usuarios", get(adm_usuarios).post(adm_crear_usuario))
+        .route(
+            "/api/admin/usuarios/{id}",
+            put(adm_actualizar_usuario).delete(adm_borrar_usuario),
+        )
+        .route("/api/admin/usuarios/{id}/reset-password", post(adm_reset_password))
+        .route("/api/admin/usuarios/{id}/desbloquear", post(adm_desbloquear))
         // Quirófano. El orden importa: `/medicos` y `/salas` son literales y van
         // ANTES que cualquier `{id}`; hoy no chocan porque la programación
         // cuelga de `/programaciones`, y así se queda.
@@ -4683,6 +4722,566 @@ async fn mover(
     }
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Administración
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// El último módulo del port, y el de más privilegio: aquí se crea gente, se le
+// cambia el rol y se le restablece la contraseña.
+//
+// **Todo pide capacidad, y son dos.** `AdministrarInstitucion` para la ficha, la
+// configuración, la política, los campos y los maestros; `GestionarUsuarios` para
+// las seis rutas de personal. Las dos tienen HOY la misma matriz —admin y
+// superadmin, que es la que el producto declara en `app.routes.ts:80`— y van
+// separadas porque son dos permisos: el día que una IPS quiera que su coordinador
+// toque los horarios sin poder crear cuentas, la separación ya está hecha.
+//
+// **Ni un solo GET va con `Autenticado` pelado**, tampoco los de lectura. La
+// política de seguridad y el rastro de accesos no son el menú de nadie.
+
+/// De qué institución hablamos. Quien pertenece a una usa la SUYA y el parámetro
+/// se ignora; el superadmin tiene que decir cuál.
+///
+/// Es la misma regla que el catálogo de módulos, y la razón es la misma: dejar
+/// que el parámetro mande sobre la institución propia convertiría cada ruta de
+/// administración en una forma de administrar la del vecino.
+fn institucion_objetivo(
+    u: &usuario::Usuario,
+    pedida: Option<i64>,
+) -> Result<i64, (StatusCode, &'static str)> {
+    match u.institucion_id {
+        Some(propia) => Ok(propia),
+        None => pedida.ok_or((
+            StatusCode::BAD_REQUEST,
+            "sin institución propia: indique cuál con ?institucion_id=",
+        )),
+    }
+}
+
+#[derive(Deserialize)]
+struct DeQuien {
+    institucion_id: Option<i64>,
+}
+
+fn ok<T: Serialize>(v: Option<T>) -> Response {
+    match v {
+        Some(v) => Json(v).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+fn fallo_db() -> Response {
+    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+}
+
+// ── Ficha, configuración y política ──────────────────────────────────────────
+
+async fn adm_institucion(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::institucion(&e.pool, id).await {
+        Ok(v) => ok(v),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_actualizar_institucion(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+    Json(c): Json<administracion::InstitucionCambio>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::actualizar_institucion(&e.pool, id, &c).await {
+        Ok(true) => match administracion::institucion(&e.pool, id).await {
+            Ok(v) => ok(v),
+            Err(_) => fallo_db(),
+        },
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_configuracion(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::configuracion(&e.pool, id).await {
+        Ok(v) => ok(v),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_actualizar_configuracion(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+    Json(c): Json<administracion::ConfiguracionCambio>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::actualizar_configuracion(&e.pool, id, &c).await {
+        Ok(Ok(())) => match administracion::configuracion(&e.pool, id).await {
+            Ok(v) => ok(v),
+            Err(_) => fallo_db(),
+        },
+        Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
+        // Un `CHECK` reventado es entrada del cliente —un rango al revés, un
+        // puerto imposible—, no una avería: 400 y no 500.
+        Err(_) => (
+            StatusCode::BAD_REQUEST,
+            "algún valor está fuera de lo que admite la configuración".to_string(),
+        )
+            .into_response(),
+    }
+}
+
+async fn adm_politica(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::politica(&e.pool, id).await {
+        Ok(v) => ok(v),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_actualizar_politica(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+    Json(c): Json<administracion::PoliticaCambio>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::actualizar_politica(&e.pool, id, &c).await {
+        Ok(Ok(())) => match administracion::politica(&e.pool, id).await {
+            Ok(v) => ok(v),
+            Err(_) => fallo_db(),
+        },
+        Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
+        Err(_) => (
+            StatusCode::BAD_REQUEST,
+            "algún valor está fuera de lo que admite la política".to_string(),
+        )
+            .into_response(),
+    }
+}
+
+// ── Campos dinámicos ─────────────────────────────────────────────────────────
+
+async fn adm_campos(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+) -> Response {
+    match administracion::campos(&e.pool, autorizado.0.ambito()).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_crear_campo(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(q): Query<DeQuien>,
+    Json(n): Json<administracion::CampoNuevo>,
+) -> Response {
+    let u = autorizado.0;
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    match administracion::crear_campo(&e.pool, id, &n).await {
+        Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_actualizar_campo(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Path(id): Path<i64>,
+    Json(c): Json<administracion::CampoCambio>,
+) -> Response {
+    match administracion::actualizar_campo(&e.pool, autorizado.0.ambito(), id, &c).await {
+        Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Ok(false)) => StatusCode::NOT_FOUND.into_response(),
+        Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_borrar_campo(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Path(id): Path<i64>,
+) -> Response {
+    match administracion::borrar_campo(&e.pool, autorizado.0.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+// ── Maestros ─────────────────────────────────────────────────────────────────
+
+async fn adm_especialidades(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+) -> Response {
+    match administracion::especialidades(&e.pool).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+#[derive(Deserialize)]
+struct NombreSolo {
+    nombre: String,
+}
+
+async fn adm_crear_especialidad(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+    Json(n): Json<NombreSolo>,
+) -> Response {
+    match administracion::crear_especialidad(&e.pool, &n.nombre).await {
+        Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_borrar_especialidad(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+    Path(id): Path<i64>,
+) -> Response {
+    match administracion::borrar_especialidad(&e.pool, id).await {
+        Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Ok(false)) => StatusCode::NOT_FOUND.into_response(),
+        // 409: existe y es suya, pero está en uso. No es «no encontrada» ni
+        // «petición mal formada».
+        Ok(Err(i)) => (StatusCode::CONFLICT, i.mensaje()).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_entidades(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+) -> Response {
+    match administracion::entidades(&e.pool).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_crear_entidad(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+    Json(n): Json<administracion::EntidadNueva>,
+) -> Response {
+    match administracion::crear_entidad(&e.pool, &n).await {
+        Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_actualizar_entidad(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+    Path(id): Path<i64>,
+    Json(c): Json<administracion::EntidadCambio>,
+) -> Response {
+    match administracion::actualizar_entidad(&e.pool, id, &c).await {
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_borrar_entidad(
+    State(e): State<Estado>,
+    _a: Autorizado<AdministrarInstitucion>,
+    Path(id): Path<i64>,
+) -> Response {
+    match administracion::borrar_entidad(&e.pool, id).await {
+        Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Ok(false)) => StatusCode::NOT_FOUND.into_response(),
+        Ok(Err(i)) => (StatusCode::CONFLICT, i.mensaje()).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+// ── Auditoría ────────────────────────────────────────────────────────────────
+
+/// Los nombres y la base los pone el FRONTAL, no yo: manda `page` y `size`, y
+/// `page` empieza en **1** (`admin.component.ts:1167`). Llamarlos `limite` y
+/// `desplazamiento` habría sido más bonito y habría dejado la pantalla pidiendo
+/// siempre la primera página sin que nada fallara.
+#[derive(Deserialize)]
+struct PaginaAdmin {
+    page: Option<i64>,
+    size: Option<i64>,
+}
+
+async fn adm_auditoria(
+    State(e): State<Estado>,
+    autorizado: Autorizado<AdministrarInstitucion>,
+    Query(p): Query<PaginaAdmin>,
+) -> Response {
+    let u = autorizado.0;
+    let size = p.size.unwrap_or(50).clamp(1, 200);
+    // `max(1)` y no `unwrap_or(1)`: un `page=0` o negativo daría desplazamiento
+    // negativo, y SQLite lo trata como cero — o sea que la primera página se
+    // serviría en silencio bajo el nombre de otra.
+    let desplazamiento = (p.page.unwrap_or(1).max(1) - 1) * size;
+    match administracion::auditoria(&e.pool, u.ambito(), size, desplazamiento).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+// ── Usuarios: las seis con más privilegio del producto ───────────────────────
+
+async fn adm_usuarios(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Query(f): Query<administracion::FiltroUsuarios>,
+) -> Response {
+    let u = autorizado.0;
+    let frenados = match administracion::correos_frenados(&e.pool).await {
+        Ok(v) => v,
+        Err(_) => return fallo_db(),
+    };
+    match administracion::usuarios(&e.pool, u.ambito(), &f, &frenados).await {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+/// Alta de personal. **Tres puertas antes de escribir**, y las tres tienen
+/// cicatriz en el lado Python:
+///
+/// 1. El ascenso: solo un superadmin fabrica otro superadmin.
+/// 2. La licencia: esta ruta creaba usuarios SIN mirarla mientras `POST
+///    /api/usuarios` sí lo hacía. Una puerta de atrás completa.
+/// 3. La contraseña: se exige mínimo, y el hash lo calcula el servidor.
+async fn adm_crear_usuario(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Query(q): Query<DeQuien>,
+    Json(n): Json<administracion::UsuarioAltaAdmin>,
+) -> Response {
+    let u = autorizado.0;
+    if !administracion::ascenso_permitido(Some(n.rol.as_str()), &u) {
+        return (
+            StatusCode::FORBIDDEN,
+            "solo un superadministrador puede conceder el rol de superadministrador",
+        )
+            .into_response();
+    }
+    let id = match institucion_objetivo(&u, q.institucion_id) {
+        Ok(v) => v,
+        Err(r) => return r.into_response(),
+    };
+    if let Some(r) = puerta_de_licencia(&e, &u, id).await {
+        return r;
+    }
+    let Some(hash) = claves::hashear(&n.password) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            "la contraseña no cumple el mínimo exigido",
+        )
+            .into_response();
+    };
+    match administracion::crear_usuario(&e.pool, id, &n, &hash).await {
+        Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
+        Ok(Err(f)) => fallo_de_usuario(f),
+        Err(_) => fallo_db(),
+    }
+}
+
+/// La licencia limita la EXPANSIÓN y nada más. El superadmin queda exento: no
+/// pertenece a ninguna institución y es quien da de alta a los clientes.
+async fn puerta_de_licencia(e: &Estado, u: &usuario::Usuario, institucion_id: i64) -> Option<Response> {
+    if u.rol() == Some(RolUsuario::Superadmin) {
+        return None;
+    }
+    let hoy = medico_dominio::zona::hoy().to_string();
+    match licencia::puerta_para_usuario(&e.pool, institucion_id, &hoy).await {
+        Ok(licencia::Puerta::Abierta) => None,
+        Ok(bloqueo) => Some(
+            (StatusCode::PAYMENT_REQUIRED, Json(Bloqueo { motivo: motivo(bloqueo) })).into_response(),
+        ),
+        Err(_) => Some(fallo_db()),
+    }
+}
+
+fn fallo_de_usuario(f: administracion::FalloUsuario) -> Response {
+    use administracion::FalloUsuario as F;
+    match f {
+        F::NoExiste => StatusCode::NOT_FOUND.into_response(),
+        F::AscensoProhibido => (
+            StatusCode::FORBIDDEN,
+            "solo un superadministrador puede conceder el rol de superadministrador".to_string(),
+        )
+            .into_response(),
+        F::RolDesconocido(r) => {
+            (StatusCode::BAD_REQUEST, format!("«{r}» no es un rol del sistema")).into_response()
+        }
+        F::Licencia(m) => (StatusCode::PAYMENT_REQUIRED, m).into_response(),
+        F::Invalido(m) => (StatusCode::BAD_REQUEST, m).into_response(),
+    }
+}
+
+async fn adm_actualizar_usuario(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Path(id): Path<i64>,
+    Json(c): Json<administracion::UsuarioCambioAdmin>,
+) -> Response {
+    let u = autorizado.0;
+    // El ascenso PRIMERO: ocurre dentro de la institución y su efecto ocurre
+    // fuera, así que el límite de institución no lo frena.
+    if !administracion::ascenso_permitido(c.rol.as_deref(), &u) {
+        return (
+            StatusCode::FORBIDDEN,
+            "solo un superadministrador puede conceder el rol de superadministrador",
+        )
+            .into_response();
+    }
+    // EL CUPO SE CONSUME SIN CREAR A NADIE: reactivar a quien se fue ocupa un
+    // asiento igual que un alta. Comprobarlo solo al crear deja crecer sin
+    // límite a una institución con el tope lleno.
+    match administracion::consumo_de(&e.pool, u.ambito(), id, &c).await {
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Ok(Some(consumo)) if consumo.reactiva => {
+            if let Some(inst) = u.institucion_id
+                && let Some(r) = puerta_de_licencia(&e, &u, inst).await
+            {
+                return r;
+            }
+        }
+        Ok(Some(_)) => {}
+        Err(_) => return fallo_db(),
+    }
+    match administracion::actualizar_usuario(&e.pool, u.ambito(), id, &c).await {
+        Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Err(f)) => fallo_de_usuario(f),
+        Err(_) => fallo_db(),
+    }
+}
+
+async fn adm_borrar_usuario(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    // **Nadie se da de baja a sí mismo.** No es paternalismo: si el único
+    // administrador de una IPS se desactiva, no queda nadie que pueda volver a
+    // activarlo y la institución se queda sin administración.
+    if id == u.id {
+        return (StatusCode::BAD_REQUEST, "no puede darse de baja a sí mismo").into_response();
+    }
+    match administracion::desactivar_usuario(&e.pool, u.ambito(), id).await {
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+#[derive(Deserialize)]
+struct ClaveNueva {
+    nueva_password: String,
+}
+
+async fn adm_reset_password(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Path(id): Path<i64>,
+    Json(p): Json<ClaveNueva>,
+) -> Response {
+    let u = autorizado.0;
+    let Some(hash) = claves::hashear(&p.nueva_password) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            "la contraseña no cumple el mínimo exigido",
+        )
+            .into_response();
+    };
+    match administracion::restablecer_password(&e.pool, u.ambito(), id, &hash).await {
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
+/// «Desbloquear» **borra los intentos fallidos de ese correo**, que es lo mismo
+/// que hace un acierto: quita la espera ahora.
+///
+/// Aquí no hay ninguna cuenta bloqueada que abrir — este binario decidió que el
+/// freno fuera una espera y no un bloqueo, porque «un bloqueo que exige a alguien
+/// desbloquear convierte cinco peticiones de un desconocido en una historia
+/// clínica inaccesible a las tres de la mañana».
+async fn adm_desbloquear(
+    State(e): State<Estado>,
+    autorizado: Autorizado<GestionarUsuarios>,
+    Path(id): Path<i64>,
+) -> Response {
+    let u = autorizado.0;
+    // El correo se saca del usuario ACOTADO al ámbito: si viniera del cuerpo,
+    // esta ruta serviría para quitarle el freno a cualquier cuenta del sistema.
+    match usuario::es_del_ambito(&e.pool, u.ambito(), id).await {
+        Ok(true) => {}
+        Ok(false) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return fallo_db(),
+    }
+    let objetivo = match usuario::por_id(&e.pool, id).await {
+        Ok(Some(v)) => v,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return fallo_db(),
+    };
+    match administracion::quitar_freno(&e.pool, &objetivo.email).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(_) => fallo_db(),
+    }
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -4823,6 +5422,21 @@ mod pruebas {
             e
         }
 
+        /// Añade un ADMIN (id 7) a la institución 1. `con_tres_roles` trae un
+        /// médico, un laboratorista y un paciente: ninguno administra.
+        async fn con_admin(e: &Estado) -> String {
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+                 VALUES (7,'Admin','adm@x.co',?,'admin',1,1)",
+            )
+            .bind(&h)
+            .execute(&e.pool)
+            .await
+            .unwrap();
+            cookie_de(7)
+        }
+
         /// La cookie de un usuario, sin pasar por el login (que aquí no se prueba).
         fn cookie_de(id: i64) -> String {
             format!("medico_sesion={}", sesion::emitir(SECRETO, id, 0, 60))
@@ -4858,6 +5472,170 @@ mod pruebas {
                 .await
                 .unwrap()
                 .status()
+        }
+
+        /// **ADMINISTRACIÓN: NADIE QUE NO SEA ADMIN ENTRA, NI SIQUIERA A LEER.**
+        ///
+        /// La política de seguridad y el rastro de accesos no son el menú de
+        /// nadie: enseñarle a un laboratorista cuántos intentos de contraseña se
+        /// toleran y quién consultó qué historia es reconocimiento gratis.
+        #[tokio::test]
+        async fn el_modulo_de_administracion_no_se_lee_sin_ser_admin() {
+            let e = con_tres_roles().await;
+            let lab = cookie_de(5);
+            for uri in [
+                "/api/admin/institucion",
+                "/api/admin/configuracion",
+                "/api/admin/politica-seguridad",
+                "/api/admin/campos-dinamicos",
+                "/api/admin/especialidades",
+                "/api/admin/entidades",
+                "/api/admin/auditoria",
+                "/api/admin/usuarios",
+            ] {
+                assert_eq!(
+                    pedir(&e, "GET", uri, &lab).await,
+                    StatusCode::FORBIDDEN,
+                    "el laboratorista leyó {uri}"
+                );
+            }
+            // Y la pareja: un admin de verdad sí entra.
+            let admin = con_admin(&e).await;
+            for uri in ["/api/admin/institucion", "/api/admin/politica-seguridad"] {
+                assert_eq!(pedir(&e, "GET", uri, &admin).await, StatusCode::OK, "{uri}");
+            }
+        }
+
+        /// **Un admin NO se asciende a superadmin**, ni creando una cuenta ni
+        /// editando una.
+        ///
+        /// Son los dos caminos que el lado Python tuvo abiertos por la mitad: se
+        /// cerraron los `PUT` y quedaron las ALTAS, que son el camino fácil
+        /// —quien crea la cuenta elige además la contraseña—, y las pruebas
+        /// salieron verdes porque recorrían solo los `PUT`. Aquí van los dos.
+        #[tokio::test]
+        async fn un_admin_no_se_fabrica_un_superadmin_por_ningun_camino() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            medico_datos::licencia::fijar(&e.pool, 1, 50, None).await.unwrap();
+
+            // 1. El ALTA.
+            const ALTA: &str = r#"{"username":"nuevo@x.co","password":"Clave-larga-12345",
+                "nombre_completo":"Nuevo","rol":"superadmin"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, ALTA).await,
+                StatusCode::FORBIDDEN,
+                "un admin creó un superadmin"
+            );
+            let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM usuario WHERE rol = 'superadmin'")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(n, 0, "se escribió pese al 403");
+
+            // 2. La EDICIÓN.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/usuarios/5", &admin, r#"{"rol":"superadmin"}"#).await,
+                StatusCode::FORBIDDEN,
+                "un admin ascendió a alguien a superadmin"
+            );
+            let rol: String = sqlx::query_scalar("SELECT rol FROM usuario WHERE id = 5")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(rol, "laboratorista", "el rol cambió pese al 403");
+
+            // 3. LA PAREJA, que es la que hace que esto no cierre por cerrar: el
+            //    admin SÍ puede cambiar de rol a los suyos, y sí puede crear.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/usuarios/5", &admin, r#"{"rol":"enfermeria"}"#).await,
+                StatusCode::NO_CONTENT
+            );
+            const NORMAL: &str = r#"{"username":"otra@x.co","password":"Clave-larga-12345",
+                "nombre_completo":"Otra","rol":"medico"}"#;
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, NORMAL).await,
+                StatusCode::CREATED
+            );
+        }
+
+        /// **El cupo de la licencia se comprueba también al REACTIVAR.**
+        ///
+        /// Con `hay_cupo` solo al crear, una institución con el tope lleno crece
+        /// sin límite: desactivar, crear, reactivar.
+        #[tokio::test]
+        async fn reactivar_a_alguien_pasa_por_la_licencia() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            // Tres usuarios activos (2, 5 y 7) + uno inactivo, y el tope en 3.
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (9,'Retirada','ret@x.co','h','medico',1,0)",
+            ).execute(&e.pool).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 3, None).await.unwrap();
+
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/usuarios/9", &admin, r#"{"activo":true}"#).await,
+                StatusCode::PAYMENT_REQUIRED,
+                "se reactivó por encima del cupo"
+            );
+            let activo: bool = sqlx::query_scalar("SELECT activo FROM usuario WHERE id = 9")
+                .fetch_one(&e.pool).await.unwrap();
+            assert!(!activo, "se escribió pese al 402");
+
+            // La pareja: con cupo, entra. Y guardar SIN tocar `activo` nunca
+            // pasa por la licencia, porque no es crecer.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/usuarios/9", &admin, r#"{"nombre_completo":"R"}"#).await,
+                StatusCode::NO_CONTENT,
+                "guardar el nombre de un inactivo no consume cupo"
+            );
+            medico_datos::licencia::fijar(&e.pool, 1, 5, None).await.unwrap();
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/usuarios/9", &admin, r#"{"activo":true}"#).await,
+                StatusCode::NO_CONTENT
+            );
+        }
+
+        /// El alta pasa por la licencia, igual que `POST /api/usuarios`. En el
+        /// Python esta ruta NO la miraba: era una puerta de atrás completa.
+        #[tokio::test]
+        async fn el_alta_de_admin_tambien_pasa_por_la_licencia() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            const ALTA: &str = r#"{"username":"n@x.co","password":"Clave-larga-12345",
+                "nombre_completo":"N","rol":"medico"}"#;
+
+            // Sin licencia no se crece.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, ALTA).await,
+                StatusCode::PAYMENT_REQUIRED
+            );
+            // Con el cupo lleno, tampoco.
+            medico_datos::licencia::fijar(&e.pool, 1, 3, None).await.unwrap();
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, ALTA).await,
+                StatusCode::PAYMENT_REQUIRED
+            );
+            // Con cupo, sí.
+            medico_datos::licencia::fijar(&e.pool, 1, 10, None).await.unwrap();
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, ALTA).await,
+                StatusCode::CREATED
+            );
+        }
+
+        /// Nadie se da de baja a sí mismo: si el único administrador de una IPS
+        /// se desactiva, no queda nadie que pueda volver a activarlo.
+        #[tokio::test]
+        async fn el_admin_no_se_da_de_baja_a_si_mismo() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            assert_eq!(
+                pedir(&e, "DELETE", "/api/admin/usuarios/7", &admin).await,
+                StatusCode::BAD_REQUEST
+            );
+            // A otro sí.
+            assert_eq!(
+                pedir(&e, "DELETE", "/api/admin/usuarios/5", &admin).await,
+                StatusCode::NO_CONTENT
+            );
         }
 
         /// **Quirófano: quien no opera no escribe la nota operatoria.**
@@ -9226,6 +10004,19 @@ mod pruebas {
                 .await
                 .unwrap();
 
+                // 10. administración — los campos dinámicos son lo único de
+                //     este módulo que se acota por ámbito y sale en un listado.
+                //     La ficha, la configuración y la política se piden por
+                //     institución explícita y tienen sus propias pruebas.
+                sqlx::query(
+                    "INSERT INTO config_campo (institucion_id, etiqueta, tipo) VALUES (?,?,'TEXTO')",
+                )
+                .bind(inst)
+                .bind(format!("Campo{marca}"))
+                .execute(&e.pool)
+                .await
+                .unwrap();
+
                 // 9. quirófano — la fuga que se midió el 2026-08-06 en el
                 //    Python: el listado NO acotaba y su enriquecido añade el
                 //    nombre y el DOCUMENTO del paciente, así que cada admin veía
@@ -9311,6 +10102,7 @@ mod pruebas {
                 // y una prueba que solo falla el día 1 a las 20:00 es una prueba
                 // que no dice nada 364 días al año.
                 ("quirofano", "/api/quirofano/programaciones", "Apendicectomia"),
+                ("administracion", "/api/admin/campos-dinamicos", "Campo"),
                 (
                     "estadisticas",
                     "/api/estadisticas/produccion?fecha_inicio=2000-01-01&fecha_fin=2100-01-01",
@@ -9538,6 +10330,7 @@ mod pruebas {
             // `facturacion` tiene su propio banco de dos instituciones, más
             // completo (17 pruebas); los otros seis están en éste.
             let cubiertos: std::collections::BTreeSet<&str> = [
+                "administracion",
                 "ambulancia",
                 "consentimiento",
                 "diagnostico",

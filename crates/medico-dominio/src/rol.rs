@@ -226,6 +226,17 @@ pub enum Capacidad {
     /// hay camino, y lo abre quien conoce su planta.
     GenerarRips,
     /// Crear y listar usuarios de la institución.
+    /// Administrar la institución: su ficha, su configuración de operación, su
+    /// política de seguridad, los campos dinámicos de la historia y los maestros
+    /// que el prestador edita.
+    ///
+    /// **No se inventa**: es la matriz que el producto ya declara para `/admin`
+    /// en `app.routes.ts:80` — `['admin','superadmin']`. Va como capacidad
+    /// propia y no reutilizando `GestionarUsuarios` porque son dos permisos
+    /// distintos con el mismo conjunto HOY: el día que una IPS quiera que su
+    /// coordinador toque los horarios sin poder crear cuentas, la separación ya
+    /// está hecha.
+    AdministrarInstitucion,
     GestionarUsuarios,
     /// Crear instituciones y fijarles licencia.
     GestionarInstituciones,
@@ -253,6 +264,7 @@ impl Capacidad {
         Capacidad::GestionarAmbulancias,
         Capacidad::GestionarAgenda,
         Capacidad::GenerarRips,
+        Capacidad::AdministrarInstitucion,
         Capacidad::GestionarUsuarios,
         Capacidad::GestionarInstituciones,
     ];
@@ -290,6 +302,7 @@ impl Capacidad {
             Capacidad::GestionarAmbulancias => "gestionar_ambulancias",
             Capacidad::GestionarAgenda => "gestionar_agenda",
             Capacidad::GenerarRips => "generar_rips",
+            Capacidad::AdministrarInstitucion => "administrar_institucion",
             Capacidad::GestionarUsuarios => "gestionar_usuarios",
             Capacidad::GestionarInstituciones => "gestionar_instituciones",
         }
@@ -402,6 +415,7 @@ impl RolUsuario {
             GestionarAgenda => matches!(self, Superadmin | Admin | Medico),
             // Ya se comprobaba a mano en las rutas; aquí queda dicho una vez.
             GenerarRips => matches!(self, Superadmin | Admin),
+            AdministrarInstitucion => matches!(self, Superadmin | Admin),
             GestionarUsuarios => matches!(self, Superadmin | Admin),
             GestionarInstituciones => matches!(self, Superadmin),
         }
@@ -505,11 +519,12 @@ mod pruebas {
                 | Capacidad::GestionarAmbulancias
                 | Capacidad::GestionarAgenda
                 | Capacidad::GenerarRips
+                | Capacidad::AdministrarInstitucion
                 | Capacidad::GestionarUsuarios
                 | Capacidad::GestionarInstituciones => (),
             };
         }
-        assert_eq!(Capacidad::TODAS.len(), 17, "¿se añadió una capacidad?");
+        assert_eq!(Capacidad::TODAS.len(), 18, "¿se añadió una capacidad?");
         let unicas: std::collections::HashSet<_> = Capacidad::TODAS.iter().collect();
         assert_eq!(unicas.len(), Capacidad::TODAS.len(), "hay una repetida");
     }
@@ -630,6 +645,21 @@ mod pruebas {
         assert!(RolUsuario::Superadmin.puede(Capacidad::GestionarUsuarios));
         assert!(RolUsuario::Admin.puede(Capacidad::GestionarUsuarios));
         assert!(!RolUsuario::Medico.puede(Capacidad::GestionarUsuarios));
+        // Administrar la institución: la matriz que el producto ya declara para
+        // `/admin` (`app.routes.ts:80`). Los dos mismos, y NADIE más — un médico
+        // cambiando la política de contraseñas de la clínica no es un caso
+        // inusual, es uno que no existe.
+        assert!(RolUsuario::Superadmin.puede(Capacidad::AdministrarInstitucion));
+        assert!(RolUsuario::Admin.puede(Capacidad::AdministrarInstitucion));
+        for r in [
+            RolUsuario::Medico,
+            RolUsuario::Enfermeria,
+            RolUsuario::Laboratorista,
+            RolUsuario::Anestesiologo,
+            RolUsuario::TrabajoSocial,
+        ] {
+            assert!(!r.puede(Capacidad::AdministrarInstitucion), "{r:?} administraba la IPS");
+        }
 
         assert!(RolUsuario::Superadmin.puede(Capacidad::GestionarInstituciones));
         // Un admin manda en SU institución, no crea otras ni se fija licencia.

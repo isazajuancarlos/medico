@@ -243,12 +243,23 @@ export class AdminService {
     return this.http.delete(`${this.API}/entidades/${id}`);
   }
 
-  // Matriz de capacidades por institución (#235)
+  /**
+   * Matriz de capacidades por institución (#235).
+   *
+   * **No cuelga de `/api/admin`**, y esto se corrigió el 2026-08-06: pedía la
+   * ruta bajo el prefijo de admin, y esa NO la
+   * sirve ninguno de los dos backends — ni el Python (no existe en
+   * `routers/admin.py`) ni el binario, que la tiene en `/api/capacidades` con su
+   * banco de pruebas desde #235. La pantalla llevaba pidiendo un 404.
+   *
+   * Se arregla el cliente y no se duplica la ruta: una segunda implementación de
+   * quién puede qué es la que se arregla en un sitio y se olvida en el otro.
+   */
   getCapacidades(): Observable<MatrizCapacidades> {
-    return this.http.get<MatrizCapacidades>(`${this.API}/capacidades`);
+    return this.http.get<MatrizCapacidades>('/api/capacidades');
   }
   updateCapacidades(cambios: CambioCapacidad[]): Observable<MatrizCapacidades> {
-    return this.http.put<MatrizCapacidades>(`${this.API}/capacidades`, { cambios });
+    return this.http.put<MatrizCapacidades>('/api/capacidades', { cambios });
   }
 }
 

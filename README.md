@@ -58,14 +58,11 @@ suma como trabajo lo que solo cambió de nombre —`auth` es `acceso`/`salir`/`y
 `superadmin` es `/api/instituciones`, y epicrisis, evoluciones, interconsultas y
 notas operatorias son un solo `/api/documentos`—. Se cuenta contra lo que la
 interfaz PIDE: resueltas las 229 llamadas HTTP de los 82 `.ts` del frontal contra
-las 145 rutas del router, **el binario Rust sirve 193 de los 197 endpoints
-distintos que Angular llama**. Falta **un solo módulo**:
+las 159 rutas del router, **el binario Rust sirve los 197 endpoints distintos que
+Angular llama. Ninguno falta.**
 
-| Módulo | Endpoints | Estado |
-|---|---|---|
-| `/api/admin` | 26 | pendiente — usuarios, entidades, campos dinámicos, política de seguridad, auditoría |
-
-Mientras tanto esa pantalla la sirve el backend Python.
+Eso NO significa que Python se pueda apagar —falta FEV-RIPS, y el ADR manda—,
+pero sí que ya no hay pantalla que dependa del backend Python para existir.
 
 Lo que el port **sí** cubre: pacientes, historia clínica con firma, urgencias,
 hospitalización, nutrición, rehabilitación, remisiones y contrarreferencia,
@@ -73,8 +70,10 @@ incapacidades, citas y **agenda médica** (franjas, bloqueos, turnos libres e
 indicadores), catálogo de módulos por licencia, farmacia e inventario,
 proveedores, laboratorio, imágenes diagnósticas, ambulancias, facturación,
 consentimiento informado, los cuatro documentos clínicos bajo `/api/documentos`,
-los ocho paneles de estadística y **quirófano** (salas y programación
-quirúrgica, con su máquina de estados). Los cuatro maestros —CIE-10, CUPS, CUM y
+los ocho paneles de estadística, **quirófano** (salas y programación quirúrgica,
+con su máquina de estados) y **administración** (ficha de la institución,
+configuración de operación, política de seguridad, campos dinámicos de la
+historia, maestros y gestión de personal). Los cuatro maestros —CIE-10, CUPS, CUM y
 DIVIPOLA— van empotrados en el binario.
 
 ## Arrancar
@@ -88,7 +87,7 @@ uvicorn main:app --reload --port 8000  # Swagger en /docs
 
 # --- Rust (el port) ---
 ./construir.sh                         # interfaz → empotrado → binario. EL comando.
-cargo test  --workspace --all-targets  # 715 pruebas
+cargo test  --workspace --all-targets  # 750 pruebas
 cargo clippy --workspace --all-targets -- -D warnings
 
 # --- Interfaz ---

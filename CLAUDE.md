@@ -327,7 +327,7 @@ mismo modelo que informes: se entrega **un archivo**.
 ```bash
 ./construir.sh                    # interfaz → empotrado → binario. EL comando.
 cargo clippy --workspace --all-targets -- -D warnings   # lo que corre el CI
-cargo test  --workspace --all-targets                   # 715 pruebas (~2 min 30 s)
+cargo test  --workspace --all-targets                   # 750 pruebas (~2 min 30 s)
 ```
 
 **`cargo build --release` a secas NO construye la interfaz.** `rust-embed`
@@ -441,11 +441,29 @@ medido el 2026-08-06:  229/229 llamadas del frontal resueltas (0 sin resolver)
     quirofano      (9)  2026-08-06 — con la máquina de estados en el dominio y
                         el aislamiento que el Python no tenía: su listado
                         cruzaba instituciones con el DOCUMENTO del paciente
+    admin         (26)  2026-08-06 — el de más privilegio: crea gente, le cambia
+                        el rol y le restablece la contraseña. Con las tres
+                        reglas que el Python tuvo abiertas por la mitad —solo un
+                        superadmin fabrica otro superadmin, el cupo se consume
+                        también al REACTIVAR, y el alta pasa por la licencia—,
+                        cada una con su prueba HTTP por los DOS caminos
 
 a medias (1):
   rips — LOS CINCO desde el 2026-08-04. Falta el FEV-RIPS, que es
          la fusión de los cinco en un documento único, no un sexto
 ```
+
+**`/api/admin/capacidades` no existía en NINGUNA de las dos pilas** y el frontal
+la llamaba: la matriz de capacidades vive en `/api/capacidades` desde #235, con
+su banco de pruebas. Se corrigió el cliente, no se duplicó la ruta.
+
+**Lo que NO se portó, y es una decisión escrita**: `cuenta_bloqueada` y su
+endpoint de desbloqueo. Este binario decidió que el freno al ensayo de
+contraseñas fuera una ESPERA que se dobla y no un bloqueo —«un bloqueo que exige
+a alguien desbloquear convierte cinco peticiones de un desconocido en una
+historia clínica inaccesible a las tres de la mañana»—, así que la columna sería
+un segundo mecanismo para lo mismo. `cuenta_bloqueada` se **deriva** del freno y
+«desbloquear» borra los intentos de ese correo, que es lo que hace un acierto.
 
 **Ya no hay «routers de Python sin cliente» que apuntar como huecos**:
 `superadmin`, `epicrisis`, `evoluciones`, `interconsultas` y `nota-operatoria`
