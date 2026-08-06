@@ -38,28 +38,108 @@ def test_el_algoritmo_del_jwt_es_simetrico():
     )
 
 
-def test_un_token_que_dice_ES256_se_rechaza_sin_tocar_ecdsa():
+ALGORITMOS_QUE_NO_SON_EL_NUESTRO = [
+    "none", "NONE", "nOnE",          # el clásico: firma vacía, y sus disfraces
+    "ES256", "ES384", "ES512",       # curva elíptica: el camino de `ecdsa`
+    "RS256", "PS256", "EdDSA",       # asimétricos: HMAC contra clave pública
+    "HS384", "HS512",                # de la misma familia, pero NO el declarado
+]
+
+
+@pytest.mark.parametrize("alg", ALGORITMOS_QUE_NO_SON_EL_NUESTRO)
+def test_ningun_otro_algoritmo_entra(alg):
     """La pareja del anterior, y la que de verdad mide.
 
-    Sin lista blanca, un atacante manda un token cuya CABECERA dice `ES256` y
-    fuerza el camino de curva elíptica del lado del servidor. `decode_token` pasa
-    `algorithms=[JWT_ALGORITHM]`, así que se rechaza antes de tocar cripto.
+    RECORRE UNA LISTA Y NO UN VALOR, y esa es la corrección del 2026-08-06: la
+    versión anterior fabricaba SOLO un token `ES256`, así que abrir la lista
+    blanca a otra cosa le era invisible. Medido por la revisión de seguridad de
+    esta rama: con `algorithms=["HS256", "RS256"]` el banco seguía **3 en
+    verde**, y el mutante no era inerte —un token RS256 escapaba como `JWKError`,
+    o sea un 500 donde antes había un 401 limpio—.
     """
     from core.security import decode_token
     from fastapi import HTTPException
 
     cabecera = base64.urlsafe_b64encode(
-        json.dumps({"alg": "ES256", "typ": "JWT"}).encode()
+        json.dumps({"alg": alg, "typ": "JWT"}).encode()
     ).rstrip(b"=")
     cuerpo = base64.urlsafe_b64encode(json.dumps({"sub": "1"}).encode()).rstrip(b"=")
-    token = (cabecera + b"." + cuerpo + b"." + b"AAAA").decode()
+    # Sin firma y con firma basura: `none` se ataca de las dos formas.
+    for firma in (b"", b"AAAA"):
+        token = (cabecera + b"." + cuerpo + b"." + firma).decode()
+        with pytest.raises(HTTPException) as e:
+            decode_token(token)
+        assert e.value.status_code == 401, (
+            f"un token que dice «{alg}» no dio 401 sino {e.value.status_code}: "
+            "una credencial inválida tiene que responder 401, no reventar"
+        )
 
-    with pytest.raises(HTTPException):
-        decode_token(token)
 
-    # Y el control que hace que esto signifique algo: `ecdsa` no llegó a cargarse.
-    assert "ecdsa" not in sys.modules, (
-        "se cargó `ecdsa` al procesar el token: el camino vulnerable SÍ se recorre"
+def test_la_lista_blanca_es_EXACTAMENTE_el_algoritmo_declarado():
+    """El guardián del mutante que se escapó, y va a la causa y no al síntoma.
+
+    La prueba de arriba mira la CONDUCTA (todo lo forjado da 401), y eso deja de
+    discriminar en cuanto el manejo de errores mejora: con `except JOSEError`, un
+    token RS256 responde 401 tanto si `RS256` está en la lista blanca como si no.
+    O sea que arreglar el 500 habría vuelto INVISIBLE el ensanchamiento de la
+    lista — el arreglo de un fallo tapando la señal de otro (directiva 23).
+
+    Así que esto no mira la respuesta: captura el argumento `algorithms` con el
+    que `decode_token` llama de verdad a `jose`, y exige que sea la lista de UN
+    elemento. Añadir cualquier algoritmo la pone roja, salga lo que salga por la
+    API.
+    """
+    import core.security as seguridad
+
+    visto = {}
+    original = seguridad.jwt.decode
+
+    def espia(token, key, **kw):
+        visto.update(kw)
+        return original(token, key, **kw)
+
+    seguridad.jwt.decode = espia
+    try:
+        t = seguridad.create_access_token({"sub": "42"})
+        seguridad.decode_token(t)
+    finally:
+        seguridad.jwt.decode = original
+
+    assert visto.get("algorithms") == [JWT_ALGORITHM], (
+        f"`decode_token` acepta {visto.get('algorithms')} y no [{JWT_ALGORITHM!r}]. "
+        "Cada algoritmo de más es un camino de verificación que nadie eligió: "
+        "un ES* enciende `ecdsa` (Minerva, sin parche) y un asimétrico abre la "
+        "confusión de algoritmo clásica —HMAC verificado contra clave pública—."
+    )
+    assert visto, "el espía no llegó a ejecutarse: la prueba no midió nada"
+
+
+def test_el_respaldo_EC_de_python_jose_es_el_de_cryptography():
+    """Lo que la aserción anterior CREÍA medir, medido de verdad.
+
+    Aquí había `assert "ecdsa" not in sys.modules`, presentada como «el control
+    que hace que esto signifique algo». La revisión de seguridad demostró que
+    **no puede fallar**: `jose.backends` toma `CryptographyECKey` y solo cae al
+    respaldo `ecdsa` si el `import cryptography` falla. Se comprobó por la vía
+    fuerte —firmando Y verificando un ES256 real con una clave P-256, o sea el
+    camino de curva elíptica recorrido entero— y `'ecdsa' in sys.modules` seguía
+    siendo False. Una aserción que no puede ponerse roja no es un control: es
+    ruido que da confianza (directiva 33).
+
+    Lo que sí importa es CUÁL respaldo elegiría `python-jose` si algún día se
+    ejecutara una operación EC. Con `cryptography` presente es OpenSSL, que es de
+    tiempo constante; sin ella, el `ecdsa` en Python puro, que es el vulnerable a
+    Minerva y NO tiene parche. Esta línea se pone roja el día que `cryptography`
+    desaparezca del entorno — que es el único camino real hacia esa vulnerabilidad
+    en este repositorio.
+    """
+    from jose.backends import ECKey
+
+    assert ECKey.__module__.endswith("cryptography_backend"), (
+        f"`python-jose` elegiría el respaldo EC de «{ECKey.__module__}». Si es "
+        "`ecdsa_backend`, el sistema pasó a poder ejecutar ECDSA en Python puro, "
+        "que es vulnerable a Minerva (temporización sobre P-256) y no tiene "
+        "parche. Comprueba que `cryptography` sigue instalada."
     )
 
 
