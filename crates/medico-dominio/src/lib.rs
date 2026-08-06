@@ -7,6 +7,7 @@ pub mod agenda;
 pub mod aislamiento;
 pub mod ajustes;
 pub mod cie11;
+pub mod consentimiento;
 pub mod cum;
 pub mod facturacion;
 pub mod modulo;

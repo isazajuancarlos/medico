@@ -18,7 +18,6 @@
 //! el usuario necesita para resolverla: qué traslado la tiene ocupada, en qué
 //! estado está, cuándo venció el SOAT.
 
-use chrono::{SecondsFormat, Utc};
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 
@@ -190,11 +189,8 @@ pub struct FiltrosTraslado {
     pub paciente_id: Option<i64>,
 }
 
-use crate::{filtro_ambito, hoy};
+use crate::{ahora, filtro_ambito, hoy};
 
-fn ahora() -> String {
-    Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)
-}
 
 
 fn limite_aviso(hoy: &str) -> String {

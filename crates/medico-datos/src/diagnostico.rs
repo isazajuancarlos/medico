@@ -18,7 +18,6 @@
 //! deja la decisión apuntando a un dato que ya no existe. Se corrige emitiendo
 //! otro y diciendo que corrige al primero, no borrando el rastro.
 
-use chrono::{SecondsFormat, Utc};
 use medico_dominio::{Ambito, Visibilidad};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -90,11 +89,8 @@ pub enum Escritura<T> {
     EstadoInvalido,
 }
 
-use crate::filtro_ambito;
+use crate::{ahora, filtro_ambito};
 
-fn ahora() -> String {
-    Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)
-}
 
 fn columnas_orden(servicio: Servicio) -> String {
     let tabla = servicio.tabla_resultado();
