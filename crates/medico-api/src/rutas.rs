@@ -9051,7 +9051,7 @@ mod pruebas {
                 ),
                 (
                     "urgencias",
-                    &["periodo", "total", "by_triage", "by_destino", "tiempo_espera_promedio_min"],
+                    &["periodo", "total", "by_triage", "by_destino", "estancia_promedio_min"],
                 ),
             ];
             for (panel, esperados) in campos {

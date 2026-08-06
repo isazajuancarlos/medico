@@ -353,7 +353,7 @@ const TRIAGE_COLORS: Record<string, string> = {
         @if (urgencias()) {
           <div class="stat-header">
             Total atenciones: <strong>{{ urgencias()!.total }}</strong>
-            &nbsp;|&nbsp; Tiempo espera promedio: <strong>{{ urgencias()!.tiempo_espera_promedio_min }} min</strong>
+            &nbsp;|&nbsp; Estancia promedio: <strong>{{ urgencias()!.estancia_promedio_min }} min</strong>
           </div>
           <div class="chart-row">
             <div class="chart-box" style="flex:1">

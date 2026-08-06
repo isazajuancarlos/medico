@@ -57,10 +57,32 @@ pub struct Catalogo {
 /// aparte se desincroniza al primer módulo nuevo — y entonces el producto
 /// promete al cliente algo que no existe. La prueba
 /// `el_catalogo_no_miente_sobre_lo_que_el_binario_sirve` lo comprueba.
+///
+/// # Se lee SOLO el bloque del router, y esa acotación es la pieza
+///
+/// La primera versión buscaba en `rutas.rs` **entero**, que son ~9 000 líneas
+/// con sus pruebas dentro. El día que una prueba escriba `"/api/quirofano/salas"`
+/// para comprobar que devuelve 404, esta función diría que sí y el catálogo
+/// anunciaría como habilitado un módulo que no existe — justo lo que la pieza se
+/// escribió para impedir, y sin un solo error. Lo señaló la revisión de la rama
+/// de estadísticas antes de que ocurriera; `solo_cuenta_lo_que_esta_en_el_router`
+/// lo sujeta.
 fn sirve(prefijo: &str) -> bool {
+    let rutas = bloque_del_router();
+    rutas.contains(&format!("\"{prefijo}\"")) || rutas.contains(&format!("\"{prefijo}/"))
+}
+
+/// Del `Router::new()` al `.fallback(`, que es donde acaban las rutas.
+fn bloque_del_router() -> &'static str {
     const RUTAS: &str = include_str!("rutas.rs");
-    RUTAS.contains(&format!("\"{prefijo}\""))
-        || RUTAS.contains(&format!("\"{prefijo}/"))
+    let inicio = RUTAS
+        .find("Router::new()")
+        .expect("rutas.rs sin `Router::new()`: el catálogo no puede saber qué se sirve");
+    let fin = RUTAS[inicio..]
+        .find(".fallback(")
+        .map(|x| inicio + x)
+        .expect("el router no cierra con `.fallback(`");
+    &RUTAS[inicio..fin]
 }
 
 fn construir(institucion_id: i64, habilitados: &[String]) -> Catalogo {
@@ -194,11 +216,20 @@ mod pruebas {
     /// el lado ruidoso, busca el falso negativo que comparte causa).
     ///
     /// La regla mira la CONVENCIÓN del proyecto —`NUTRICION` → `/api/nutricion`,
-    /// con guiones o sin ellos— y no una lista a mano. No alcanza a los módulos
-    /// cuya ruta no se deduce del nombre (los cuatro documentos clínicos viven
-    /// bajo `/api/documentos`), y eso se dice aquí en vez de fingir cobertura
-    /// total: lo que este guardián promete es que **nadie que siga la convención
-    /// se quede sin declarar**.
+    /// con guiones o sin ellos— y no una lista a mano. Lo que promete es que
+    /// **nadie que siga la convención se quede sin declarar**; los que no la
+    /// siguen quedan fuera de su alcance, y son SEIS, no cuatro:
+    ///
+    /// | módulo | ruta real | por qué se escapa |
+    /// |---|---|---|
+    /// | `EPICRISIS`, `INTERCONSULTAS`, `EVOLUCIONES`, `NOTA_OPERATORIA` | `/api/documentos` | cuatro módulos, una espina genérica |
+    /// | `HISTORIA` | `/api/historias` | el nombre es singular y la ruta plural |
+    /// | `AUDITORIA` | `/api/acceso` | la ruta no se llama como el módulo |
+    ///
+    /// La primera versión de esta nota decía «los cuatro documentos clínicos» y
+    /// se dejaba dos: enumerar de menos en la documentación de un guardián es
+    /// prometer cobertura que no hay. Lo contó la revisión, simulando el mutante
+    /// módulo por módulo — de 23, caza 17.
     #[test]
     fn ningun_modulo_construido_se_anuncia_como_pendiente() {
         let mudos: Vec<String> = modulo::CATALOGO
@@ -218,6 +249,27 @@ mod pruebas {
              así que el cliente que los compró lee «aún no está»: {mudos:?}. \
              Declárales su `prefijo` en `medico_dominio::modulo::CATALOGO`."
         );
+    }
+
+    /// **Solo cuenta lo que está en el `Router::new()`.**
+    ///
+    /// Es la pareja de `sirve`: el archivo entero son ~9 000 líneas y las
+    /// pruebas nombran rutas a montones. El caso rojo usa una ruta que aparece
+    /// LITERALMENTE en este archivo y **no** está registrada — si `sirve` leyera
+    /// el fuente completo diría que sí.
+    #[test]
+    fn solo_cuenta_lo_que_esta_en_el_router() {
+        const SENUELO: &str = "/api/modulo-que-solo-existe-en-esta-prueba";
+        let fuente = include_str!("rutas.rs");
+        assert!(
+            bloque_del_router().len() < fuente.len(),
+            "el bloque del router es el archivo entero: la acotación no está haciendo nada"
+        );
+        assert!(
+            bloque_del_router().contains("/api/pacientes"),
+            "CONTROL EN ROJO: el bloque no contiene ni las rutas reales"
+        );
+        assert!(!sirve(SENUELO), "«{SENUELO}» no está registrada y sirve() dice que sí");
     }
 
     /// Y que `sirve` de verdad discrimine: si devolviera `true` siempre, la

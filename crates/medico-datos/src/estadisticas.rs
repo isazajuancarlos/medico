@@ -148,6 +148,21 @@ fn texto_utc(dia: &str, mas_dias: i64) -> String {
     }
 }
 
+/// El ÚLTIMO día del mes que empieza en `inicio` (`YYYY-MM-01`).
+///
+/// Se calcula saltando al día 1 del mes siguiente y restando uno, en vez de con
+/// una tabla de longitudes: febrero y los bisiestos se resuelven solos.
+fn fin_de_mes(inicio: &str) -> String {
+    use chrono::{Datelike, NaiveDate};
+    let Ok(d) = NaiveDate::parse_from_str(inicio, "%Y-%m-%d") else {
+        return inicio.to_string();
+    };
+    let (anio, mes) = if d.month() == 12 { (d.year() + 1, 1) } else { (d.year(), d.month() + 1) };
+    NaiveDate::from_ymd_opt(anio, mes, 1)
+        .map(|siguiente| (siguiente - chrono::Duration::days(1)).to_string())
+        .unwrap_or_else(|| inicio.to_string())
+}
+
 /// El primer día del mes de `fecha` (`YYYY-MM-DD`).
 fn inicio_de_mes(fecha: &str) -> String {
     format!("{}-01", &fecha[..7.min(fecha.len())])
@@ -304,7 +319,23 @@ pub struct Urgencias {
     pub total: i64,
     pub by_triage: MapaOrdenado,
     pub by_destino: MapaOrdenado,
-    pub tiempo_espera_promedio_min: f64,
+    /// Minutos medios entre el ingreso y el egreso. **Es la ESTANCIA, no la
+    /// espera**, y el nombre lo dice porque son dos magnitudes distintas.
+    ///
+    /// El modelo Python tiene una columna propia `tiempo_espera_minutos`
+    /// —«indicador de calidad»— que mide del triage a la atención. Este esquema
+    /// no la tiene, así que la primera versión de este campo derivaba la
+    /// estancia de las dos marcas que sí existen y la servía bajo la etiqueta
+    /// «Tiempo espera promedio». Lo cazó la revisión de esta rama, y el fallo no
+    /// era el cálculo sino el nombre: **ningún router del Python escribe esa
+    /// columna**, así que allí el panel mostraba 0 siempre. O sea que el cambio
+    /// no iba de 25 a 360, iba de un cero honesto a un número plausible y
+    /// equivocado — la familia del `cod_consulta_cups='890201'`.
+    ///
+    /// La espera de verdad volverá cuando haya de dónde sacarla: hace falta la
+    /// hora del triage y la del primer contacto médico, y ninguna de las dos se
+    /// registra hoy.
+    pub estancia_promedio_min: f64,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -367,11 +398,23 @@ fn en_orden_de(tabla: &[(&str, &str)], mut pares: Vec<(String, i64)>) -> MapaOrd
 // Los cuatro ejecutores
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Toda consulta de este módulo pasa por uno de estos cuatro, y ninguno acepta
-// SQL sin `inst`. Es lo que impide que el `?` del filtro de ámbito y su valor se
-// separen: la firma los pide juntos, así que no hay forma de escribir la
-// consulta acotada y olvidar el `bind`. Los `valores` van SIEMPRE después,
-// porque el filtro se escribe siempre primero en el `WHERE`.
+// Toda consulta de este módulo pasa por uno de estos cinco, y ninguno acepta SQL
+// sin `inst`. Los `valores` van SIEMPRE después del filtro, porque el filtro se
+// escribe siempre primero en el `WHERE`.
+//
+// **LO QUE ESTA FIRMA GARANTIZA ES LA MITAD, Y CONVIENE QUE ESTÉ ESCRITO.** La
+// primera versión de este comentario decía que impide «que el `?` del filtro y
+// su valor se separen», y eso es cierto en UNA dirección: no se puede escribir
+// la consulta acotada y olvidar el `bind`. Al revés no protege — lo midió la
+// revisión de esta rama: una consulta con `1 = 1` y un `inst` enlazado se
+// ejecuta limpiamente, porque SQLite ignora el parámetro sobrante, y devuelve
+// las filas de las dos instituciones sin un solo error.
+//
+// Por eso el filtro NO se fabrica sustituyendo texto: cada tabla llama a
+// `filtro_ambito` con SU columna. Antes había un `filtro_pac.replace("p.", "c.")`
+// que funcionaba y fallaba ruidoso —si el patrón no casaba, SQLite se quejaba de
+// una columna inexistente—, pero era una cadena decidiendo quién ve los datos de
+// quién, y eso vuelve al sistema de tipos.
 
 async fn escalar_i64(
     pool: &crate::Pool,
@@ -422,6 +465,33 @@ async fn agrupado(
     q.fetch_all(pool).await
 }
 
+/// Como [`filas`], pero con un `LIMIT` que se enlaza como NÚMERO.
+///
+/// Existe porque el tope viajaba como cadena —los demás ejecutores toman
+/// `&[&str]`— y `LIMIT '10'` funciona en SQLite por coerción del motor, no
+/// porque el código lo diga. Un motor más estricto lo rechazaría, y una
+/// coerción implícita en la que nadie repara es la clase de cosa que se
+/// descubre el día de la migración.
+async fn filas_con_tope<T>(
+    pool: &crate::Pool,
+    sql: &str,
+    inst: Option<i64>,
+    valores: &[&str],
+    tope: i64,
+) -> Result<Vec<T>, sqlx::Error>
+where
+    T: for<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
+{
+    let mut q = sqlx::query_as::<_, T>(sql);
+    if let Some(i) = inst {
+        q = q.bind(i);
+    }
+    for v in valores {
+        q = q.bind(*v);
+    }
+    q.bind(tope).fetch_all(pool).await
+}
+
 /// Una consulta cuya forma de fila la decide quien llama.
 async fn filas<T>(
     pool: &crate::Pool,
@@ -467,7 +537,21 @@ pub async fn resumen(pool: &crate::Pool, ambito: Ambito) -> Result<Resumen, sqlx
     let hoy = hoy();
     let inicio_mes = inicio_de_mes(&hoy);
 
-    let Some((filtro_pac, inst)) = filtro_ambito(ambito, "p.institucion_id") else {
+    // Un filtro por TABLA, y los cuatro salen de `filtro_ambito`. El `let … else`
+    // sobre la tupla corta los cuatro a la vez: para `Ambito::Ninguno` los cuatro
+    // son `None` y no se consulta nada.
+    let (
+        Some((filtro_pac, inst)),
+        Some((filtro_cita, _)),
+        Some((filtro_fact, _)),
+        Some((filtro_cama, _)),
+    ) = (
+        filtro_ambito(ambito, "p.institucion_id"),
+        filtro_ambito(ambito, "c.institucion_id"),
+        filtro_ambito(ambito, "f.institucion_id"),
+        filtro_ambito(ambito, "m.institucion_id"),
+    )
+    else {
         return Ok(Resumen {
             fecha: hoy,
             total_pacientes: 0,
@@ -487,26 +571,33 @@ pub async fn resumen(pool: &crate::Pool, ambito: Ambito) -> Result<Resumen, sqlx
         });
     };
     let (total_camas, camas_ocupadas, camas_disponibles) =
-        camas(pool, &filtro_pac.replace("p.institucion_id", "m.institucion_id"), inst).await?;
+        camas(pool, &filtro_cama, inst).await?;
     let tasa_ocupacion = porcentaje(camas_ocupadas, total_camas);
-    // `cita` y `factura` llevan institución propia; no hace falta el JOIN.
-    let filtro_cita = filtro_pac.replace("p.institucion_id", "c.institucion_id");
-    let filtro_fact = filtro_pac.replace("p.institucion_id", "f.institucion_id");
-
     let sql = format!("SELECT COUNT(*) FROM paciente p WHERE {filtro_pac}");
     let total_pacientes = escalar_i64(pool, &sql, inst, &[]).await?;
 
     let sql = format!("SELECT COUNT(*) FROM cita c WHERE {filtro_cita} AND c.fecha = ?");
     let citas_hoy = escalar_i64(pool, &sql, inst, &[&hoy]).await?;
 
-    let sql = format!("SELECT COUNT(*) FROM cita c WHERE {filtro_cita} AND c.fecha >= ?");
-    let citas_mes = escalar_i64(pool, &sql, inst, &[&inicio_mes]).await?;
+    // EL MES TIENE DOS EXTREMOS, y aquí el port se separa del original.
+    //
+    // El Python cuenta `fecha >= inicio_mes` y nada más, así que una cita
+    // agendada para diciembre entra en las «Citas Este Mes» de marzo. Como
+    // `citas_atendidas_mes` solo puede ser pasado, la tasa de asistencia
+    // —`atendidas / citas_mes`, la tarjeta de portada— **baja cuanto más se
+    // agende con antelación**: el indicador castiga justo la buena práctica.
+    // Lo cazó la revisión de esta rama.
+    let fin_mes = fin_de_mes(&inicio_mes);
+    let sql = format!(
+        "SELECT COUNT(*) FROM cita c WHERE {filtro_cita} AND c.fecha >= ? AND c.fecha <= ?"
+    );
+    let citas_mes = escalar_i64(pool, &sql, inst, &[&inicio_mes, &fin_mes]).await?;
 
     let sql = format!(
-        "SELECT COUNT(*) FROM cita c WHERE {filtro_cita} AND c.fecha >= ? \
+        "SELECT COUNT(*) FROM cita c WHERE {filtro_cita} AND c.fecha >= ? AND c.fecha <= ? \
          AND c.estado = 'ATENDIDA'"
     );
-    let citas_atendidas_mes = escalar_i64(pool, &sql, inst, &[&inicio_mes]).await?;
+    let citas_atendidas_mes = escalar_i64(pool, &sql, inst, &[&inicio_mes, &fin_mes]).await?;
 
     let desde_mes = texto_utc(&inicio_mes, 0);
     let col_hist = instante("h.fecha");
@@ -775,6 +866,15 @@ fn grupos_de_edad<'a>(nacimientos: impl Iterator<Item = &'a str>) -> MapaOrdenad
             continue;
         };
         let edad = edad_en(nacimiento, hoy);
+        // Una fecha de nacimiento en el FUTURO no es un recién nacido: es un
+        // error de digitación. El lado Python la mete en el tramo «0-10» —su
+        // cadena de `if edad <= 10` acierta con el primero— y ahí queda
+        // indistinguible de un bebé de verdad. Aquí se descarta, igual que una
+        // fecha ilegible: se ve en que el total no cuadra con el censo, que es
+        // exactamente lo que hay que ver.
+        if edad < 0 {
+            continue;
+        }
         let i = TRAMOS.iter().position(|(_, tope)| edad <= *tope).unwrap_or(5);
         cuenta[i] += 1;
     }
@@ -813,7 +913,6 @@ pub async fn diagnosticos(
     };
     let (desde, hasta) = limites_utc(inicio, fin);
     let col = instante("h.fecha");
-    let tope = top.clamp(1, 30).to_string();
 
     let sql = format!(
         "SELECT h.diagnostico_principal, c.descripcion, COUNT(*) AS n \
@@ -824,7 +923,7 @@ pub async fn diagnosticos(
          ORDER BY n DESC, h.diagnostico_principal LIMIT ?"
     );
     let filas: Vec<(String, Option<String>, i64)> =
-        filas(pool, &sql, inst, &[&desde, &hasta, &tope]).await?;
+        filas_con_tope(pool, &sql, inst, &[&desde, &hasta], top.clamp(1, 30)).await?;
 
     Ok(Diagnosticos {
         periodo,
@@ -852,10 +951,12 @@ pub async fn produccion(
     fin: &str,
 ) -> Result<Produccion, sqlx::Error> {
     let periodo = Periodo { inicio: inicio.to_string(), fin: fin.to_string() };
-    let Some((filtro_pac, inst)) = filtro_ambito(ambito, "p.institucion_id") else {
+    let (Some((filtro_pac, inst)), Some((filtro_cita, _))) = (
+        filtro_ambito(ambito, "p.institucion_id"),
+        filtro_ambito(ambito, "c.institucion_id"),
+    ) else {
         return Ok(Produccion { periodo, medicos: Vec::new() });
     };
-    let filtro_cita = filtro_pac.replace("p.institucion_id", "c.institucion_id");
     let (desde, hasta) = limites_utc(inicio, fin);
     let col = instante("h.fecha");
 
@@ -1004,7 +1105,7 @@ pub async fn urgencias(
             total: 0,
             by_triage: MapaOrdenado::default(),
             by_destino: MapaOrdenado::default(),
-            tiempo_espera_promedio_min: 0.0,
+            estancia_promedio_min: 0.0,
         });
     };
     let (desde, hasta) = limites_utc(inicio, fin);
@@ -1036,23 +1137,21 @@ pub async fn urgencias(
     );
     let total = escalar_i64(pool, &sql, inst, &limites).await?;
 
-    // El tiempo de estancia se DERIVA de las dos marcas que la tabla sí tiene
-    // —ingreso y egreso— porque en este esquema no existe la columna
-    // `tiempo_espera_minutos` del modelo Python. Inventarla devolvería siempre
-    // cero, que es indistinguible de «no hubo espera» (directiva 20).
+    // La ESTANCIA: de ingreso a egreso. No es el tiempo de espera y no se llama
+    // así — ver el doc del campo.
     let sql = format!(
         "SELECT AVG((julianday(replace(u.fecha_egreso,'T',' ')) - julianday({col})) * 1440.0) \
          FROM atencion_urgencias u JOIN paciente p ON p.id = u.paciente_id \
          WHERE {rango} AND u.fecha_egreso IS NOT NULL"
     );
-    let espera = escalar_f64_opt(pool, &sql, inst, &limites).await?;
+    let estancia = escalar_f64_opt(pool, &sql, inst, &limites).await?;
 
     Ok(Urgencias {
         periodo,
         total,
         by_triage,
         by_destino,
-        tiempo_espera_promedio_min: espera.map(|m| (m * 10.0).round() / 10.0).unwrap_or(0.0),
+        estancia_promedio_min: estancia.map(|m| (m * 10.0).round() / 10.0).unwrap_or(0.0),
     })
 }
 
@@ -1427,6 +1526,20 @@ mod pruebas {
         assert_eq!(m.total(), 1);
     }
 
+    /// Una fecha de nacimiento FUTURA tampoco. En el Python cae en «0-10» y
+    /// queda indistinguible de un recién nacido.
+    #[test]
+    fn un_nacimiento_en_el_futuro_no_es_un_recien_nacido() {
+        let futuro = (zona::hoy() + chrono::Duration::days(400)).to_string();
+        let m = grupos_de_edad(["1990-01-01", futuro.as_str()].into_iter());
+        assert_eq!(m.get("0-10"), Some(0), "el de 2027 se contó como bebé");
+        assert_eq!(m.total(), 1);
+        // Y la pareja: el de HOY sí es un recién nacido de verdad.
+        let hoy = zona::hoy().to_string();
+        let m = grupos_de_edad([hoy.as_str()].into_iter());
+        assert_eq!(m.get("0-10"), Some(1));
+    }
+
     // ── Aritmética ───────────────────────────────────────────────────────────
 
     #[test]
@@ -1585,6 +1698,91 @@ mod pruebas {
         );
     }
 
+    /// **Una cita de diciembre NO es una cita «de este mes».**
+    ///
+    /// El Python cuenta `fecha >= inicio_mes` sin tope, así que la tarjeta de
+    /// portada mete el futuro entero. Y como las atendidas solo pueden ser
+    /// pasado, la tasa de asistencia BAJA cuanto más se agende con antelación.
+    /// Con el código anterior esta prueba se pone roja: `citas_mes` sale 2 y la
+    /// tasa, 50 %.
+    #[tokio::test]
+    async fn una_cita_del_mes_que_viene_no_cuenta_como_de_este_mes() {
+        let pool = base().await;
+        let hoy = hoy();
+        let mes = &hoy[..7];
+        sqlx::query(
+            "INSERT INTO cita (id,institucion_id,paciente_id,medico_id,fecha,hora,estado)
+             VALUES (300,1,10,5,?,'08:00','ATENDIDA'),
+                    (301,1,10,5,'2099-12-31','09:00','PROGRAMADA')",
+        )
+        .bind(format!("{mes}-01"))
+        .execute(&pool).await.unwrap();
+
+        let r = resumen(&pool, UNO).await.unwrap();
+        assert_eq!(
+            r.citas_mes, 1,
+            "la cita de 2099 se coló en «este mes»: el filtro no tiene tope superior"
+        );
+        assert_eq!(r.citas_atendidas_mes, 1);
+        assert_eq!(r.tasa_asistencia, 100.0, "una de una atendida es el 100 %, no el 50 %");
+    }
+
+    /// El último día del mes se calcula, no se tabula: febrero y los bisiestos.
+    #[test]
+    fn el_fin_de_mes_acierta_en_febrero_y_en_diciembre() {
+        assert_eq!(fin_de_mes("2026-02-01"), "2026-02-28");
+        assert_eq!(fin_de_mes("2024-02-01"), "2024-02-29", "2024 es bisiesto");
+        assert_eq!(fin_de_mes("2026-12-01"), "2026-12-31", "diciembre salta de año");
+        assert_eq!(fin_de_mes("2026-04-01"), "2026-04-30");
+        assert_eq!(fin_de_mes("no-es-fecha"), "no-es-fecha", "no se inventa un mes");
+    }
+
+    /// El tope del top-N se enlaza como NÚMERO y de verdad recorta.
+    #[tokio::test]
+    async fn el_tope_de_diagnosticos_recorta_y_se_acota() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,
+                                   motivo_consulta,enfermedad_actual,diagnostico_principal,
+                                   plan_tratamiento)
+             VALUES (310,'2026-03-12 10:00:00','HC-A',10,5,'m','e','B01','p'),
+                    (311,'2026-03-13 10:00:00','HC-B',10,5,'m','e','C02','p')",
+        ).execute(&pool).await.unwrap();
+
+        let d = diagnosticos(&pool, UNO, MARZO.0, MARZO.1, 1).await.unwrap();
+        assert_eq!(d.diagnosticos.len(), 1, "top=1 devuelve uno");
+        assert_eq!(d.diagnosticos[0].codigo, "A09", "y es el más frecuente");
+        assert_eq!(diagnosticos(&pool, UNO, MARZO.0, MARZO.1, 10).await.unwrap().diagnosticos.len(), 3);
+        // El tope se acota a [1,30]: un cero o un negativo no vacían el panel.
+        assert_eq!(diagnosticos(&pool, UNO, MARZO.0, MARZO.1, 0).await.unwrap().diagnosticos.len(), 1);
+        assert_eq!(diagnosticos(&pool, UNO, MARZO.0, MARZO.1, -5).await.unwrap().diagnosticos.len(), 1);
+    }
+
+    /// **Las tres cifras de camas NO suman, y es correcto.** `total_camas` son
+    /// las camas INSTALADAS —los cinco estados—, mientras que ocupadas y
+    /// disponibles son dos de ellos: una cama en aseo no es ninguna de las dos.
+    /// La tasa de ocupación es sobre las instaladas, que es como se mide en un
+    /// hospital. Se fija con una prueba para que sea una decisión y no una
+    /// casualidad de la base de ejemplo, donde solo había dos estados.
+    #[tokio::test]
+    async fn una_cama_en_aseo_cuenta_en_el_total_y_en_ninguna_de_las_dos() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO cama (id,institucion_id,numero,piso,servicio,estado)
+             VALUES (4,1,'103','1','GENERAL','EN_ASEO'),
+                    (5,1,'104','1','GENERAL','MANTENIMIENTO')",
+        ).execute(&pool).await.unwrap();
+        let r = resumen(&pool, UNO).await.unwrap();
+        assert_eq!(r.total_camas, 4, "las cuatro instaladas de la institución 1");
+        assert_eq!(r.camas_ocupadas, 1);
+        assert_eq!(r.camas_disponibles, 1);
+        assert_eq!(
+            r.camas_ocupadas + r.camas_disponibles, 2,
+            "y NO suman el total: dos camas están en aseo y en mantenimiento"
+        );
+        assert_eq!(r.tasa_ocupacion, 25.0, "1 de 4 instaladas");
+    }
+
     #[tokio::test]
     async fn el_resumen_cuenta_camas_y_ocupacion() {
         let pool = base().await;
@@ -1610,7 +1808,7 @@ mod pruebas {
         let u = urgencias(&pool, UNO, MARZO.0, MARZO.1).await.unwrap();
         assert_eq!(u.total, 3);
         assert_eq!(
-            u.tiempo_espera_promedio_min, 90.0,
+            u.estancia_promedio_min, 90.0,
             "media de 120 y 60 minutos; la tercera no tiene egreso y no entra"
         );
         assert_eq!(u.by_destino.get("DOMICILIO"), Some(1));
@@ -1625,7 +1823,7 @@ mod pruebas {
         let pool = base().await;
         let u = urgencias(&pool, UNO, MARZO.0, MARZO.1).await.unwrap();
         assert_eq!(u.total, 0);
-        assert_eq!(u.tiempo_espera_promedio_min, 0.0);
+        assert_eq!(u.estancia_promedio_min, 0.0);
     }
 
     #[tokio::test]
