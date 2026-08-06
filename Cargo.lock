@@ -1145,7 +1145,7 @@ dependencies = [
  "chrono-tz",
  "csv",
  "guaca",
- "hmac 0.12.1",
+ "hmac 0.13.0",
  "medico-datos",
  "medico-dominio",
  "password-hash",

@@ -25,7 +25,7 @@ chrono-tz = { workspace = true }
 argon2 = "0.5"
 password-hash = { version = "0.5", features = ["std"] }
 # Firma de la cookie de sesión: HMAC-SHA256, como en informes.
-hmac = "0.12"
+hmac = "0.13"
 sha2 = "0.10"
 base64 = "0.23"
 # La interfaz Angular viaja dentro del binario (como informes).
