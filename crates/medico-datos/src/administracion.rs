@@ -978,11 +978,28 @@ pub enum FalloUsuario {
 }
 
 /// Comprueba el ascenso ANTES que nada. Es la regla 1 de la cabecera.
+///
+/// **El rol se PARSEA antes de compararlo**, y no es prolijidad. La primera
+/// versión comparaba la cadena cruda (`rol_destino != Some("superadmin")`)
+/// mientras el escritor la parseaba con `RolUsuario::desde_str`: dos
+/// representaciones del mismo dato, y la guardia mirando la que no manda.
+///
+/// Hoy `"SUPERADMIN"` pasaría la guardia de cadena y luego moriría en
+/// `RolDesconocido` —falla cerrado, comprobado en
+/// `el_ascenso_no_se_cuela_con_otra_caja`—, pero esa seguridad depende de que
+/// `desde_str` siga siendo sensible a la caja, que es una propiedad de OTRO
+/// archivo. Comparando el enum, la guardia no depende de nada.
+///
+/// Un rol ILEGIBLE devuelve `true`: no es un ascenso, es un dato inválido, y
+/// rechazarlo aquí daría 403 donde corresponde 400. Quien escribe lo vuelve a
+/// parsear y lo rechaza con su nombre.
 pub fn ascenso_permitido(rol_destino: Option<&str>, quien: &crate::usuario::Usuario) -> bool {
     // Se mira el DESTINO y no el origen: degradar a un superadmin no crea
     // autoridad nueva, y prohibirlo dejaría al dueño del sistema sin poder
     // retirar la suya.
-    rol_destino != Some("superadmin") || quien.rol() == Some(RolUsuario::Superadmin)
+    let sube_a_superadmin =
+        rol_destino.and_then(RolUsuario::desde_str) == Some(RolUsuario::Superadmin);
+    !sube_a_superadmin || quien.rol() == Some(RolUsuario::Superadmin)
 }
 
 /// ¿Ese usuario es del ámbito de quien pregunta? `None` si no existe o es ajeno.
@@ -1327,6 +1344,44 @@ mod pruebas {
         }
         // Sin cambio de rol, tampoco estorba.
         assert!(ascenso_permitido(None, &admin));
+    }
+
+    /// **El ascenso no se cuela escribiendo el rol con otra caja.**
+    ///
+    /// La guardia parsea antes de comparar, así que `SUPERADMIN`, `Superadmin` y
+    /// ` superadmin ` no son un rol distinto que se escape: no parsean, así que
+    /// no son un ascenso — y el escritor los rechaza después con su nombre. La
+    /// forma canónica sí se caza.
+    #[tokio::test]
+    async fn el_ascenso_no_se_cuela_con_otra_caja() {
+        let pool = base().await;
+        let admin = quien(&pool, 1).await;
+        assert!(!ascenso_permitido(Some("superadmin"), &admin), "la forma canónica");
+        for variante in ["SUPERADMIN", "Superadmin", "SuperAdmin", " superadmin"] {
+            // No parsean, así que no son un ascenso: la guardia los deja pasar y
+            // el ALTA los rechaza con 400. Se comprueba que ese segundo filtro
+            // existe de verdad, no que la guardia haga su trabajo.
+            assert!(RolUsuario::desde_str(variante).is_none(), "«{variante}» parseó");
+        }
+        // Y la pareja end-to-end: el alta con la variante NO crea nada.
+        let n = UsuarioAltaAdmin {
+            username: Some("x@x.co".into()),
+            email: None,
+            password: "x".into(),
+            nombre_completo: "X".into(),
+            rol: "SUPERADMIN".into(),
+            especialidad_id: None,
+            registro_medico: None,
+            registro_rethus: None,
+        };
+        assert!(matches!(
+            crear_usuario(&pool, 1, &n, "h").await.unwrap(),
+            Err(FalloUsuario::RolDesconocido(_))
+        ));
+        let n_super: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM usuario WHERE rol LIKE '%uperadmin%'")
+                .fetch_one(&pool).await.unwrap();
+        assert_eq!(n_super, 1, "se creó un superadmin con la caja cambiada");
     }
 
     /// Se mira el DESTINO y no el origen: degradar a un superadmin no crea
