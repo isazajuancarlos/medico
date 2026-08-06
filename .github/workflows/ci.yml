@@ -49,9 +49,12 @@ jobs:
   rust:
     name: rust (test + clippy)
     runs-on: ubuntu-latest
-    # El techo, no la duracion esperada. Maximos medidos por JOB
-    # sobre las 5 ultimas corridas: rust 5 min, pytest 3, front 1,
-    # audit y deny 0. 20 deja >=4x de margen en el mas pesado.
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -71,9 +74,12 @@ jobs:
   backend:
     name: backend (pytest)
     runs-on: ubuntu-latest
-    # El techo, no la duracion esperada. Maximos medidos por JOB
-    # sobre las 5 ultimas corridas: rust 5 min, pytest 3, front 1,
-    # audit y deny 0. 20 deja >=4x de margen en el mas pesado.
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -97,9 +103,12 @@ jobs:
   frontend:
     name: frontend (build + test)
     runs-on: ubuntu-latest
-    # El techo, no la duracion esperada. Maximos medidos por JOB
-    # sobre las 5 ultimas corridas: rust 5 min, pytest 3, front 1,
-    # audit y deny 0. 20 deja >=4x de margen en el mas pesado.
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -121,9 +130,12 @@ jobs:
   auditoria-deps:
     name: cargo-audit (RustSec)
     runs-on: ubuntu-latest
-    # El techo, no la duracion esperada. Maximos medidos por JOB
-    # sobre las 5 ultimas corridas: rust 5 min, pytest 3, front 1,
-    # audit y deny 0. 20 deja >=4x de margen en el mas pesado.
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -141,9 +153,12 @@ jobs:
   cadena-suministro:
     name: cargo-deny (supply chain)
     runs-on: ubuntu-latest
-    # El techo, no la duracion esperada. Maximos medidos por JOB
-    # sobre las 5 ultimas corridas: rust 5 min, pytest 3, front 1,
-    # audit y deny 0. 20 deja >=4x de margen en el mas pesado.
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
