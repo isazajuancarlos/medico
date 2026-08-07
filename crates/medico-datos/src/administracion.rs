@@ -333,6 +333,31 @@ fn hora_valida(h: &str) -> bool {
     chrono::NaiveTime::parse_from_str(h, "%H:%M").is_ok()
 }
 
+/// La postura de seguridad que configura cada institución.
+///
+/// # QUÉ SE APLICA HOY, Y QUÉ NO
+///
+/// Escrito porque hasta el 2026-08-06 estas veintiuna columnas eran de **solo
+/// escritura**: cero lectores en todo el binario. El administrador movía
+/// interruptores en una pantalla y no ocurría nada — que es la forma más cara
+/// del defecto de la directiva 20, porque el sistema *parece* funcionar y nadie
+/// lo descubre hasta que hace falta.
+///
+/// | columna | ¿se aplica? |
+/// |---|---|
+/// | `longitud_minima_password` | **sí** — [`password_admisible`], en las tres rutas que fijan una contraseña |
+/// | `requiere_mayuscula` · `requiere_minuscula` · `requiere_numero` · `requiere_caracter_especial` | **sí**, la misma función |
+/// | `max_intentos_login` · `tiempo_bloqueo_minutos` | **no, y no se van a aplicar**: este binario decidió que el freno fuera una ESPERA que se dobla y no un bloqueo, y la regla vive en `guaca::freno`, compartida con informes. Dos mecanismos para lo mismo es exactamente lo que la migración `0048` explica que no se porta |
+/// | `timeout_sesion_minutos` | no — hoy manda `SESSION_TIMEOUT_MINUTES`, global |
+/// | `requiere_2fa` · `requiere_2fa_admin` · `metodo_2fa` | no — **este binario no tiene segundo factor**; lo tiene informes |
+/// | `dias_expiracion_password` · `historial_passwords` | no — hacen falta la caducidad y el historial de hashes, que no existen |
+/// | `sesiones_simultaneas_permitidas` · `cerrar_otras_sesiones_al_login` | no — la sesión no guarda estado en el servidor a propósito (la cookie firmada lo es todo) |
+/// | `retener_logs_dias` | no — la bitácora está encadenada por hash: borrar un eslabón **rompe la cadena**, así que retener menos no es una opción de configuración sino un cambio de diseño |
+/// | `notificar_login_nuevo_dispositivo` · `notificar_cambio_password` · `notificar_intentos_fallidos` | no — no hay salida de correo en el binario Rust |
+///
+/// Las que dicen «no» se guardan igual: son paridad con el Python y el dato del
+/// cliente no se tira. Lo que no se puede es dejar que la pantalla las presente
+/// como si mandaran; eso va en su tarea, con esta tabla como especificación.
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Politica {
     #[sqlx(rename = "institucion_id")]
@@ -1207,6 +1232,40 @@ pub fn ascenso_permitido(rol_destino: Option<&str>, quien: &crate::usuario::Usua
 /// admin de esa institución: cambiarle el correo, restablecerle la contraseña y
 /// entrar como dueño del sistema.
 ///
+/// La cola `WHERE` que acota una escritura sobre `usuario` al ámbito de quien
+/// administra, **dentro de la misma sentencia**.
+///
+/// `None` significa que ese ámbito no administra a nadie y no hay `UPDATE` que
+/// hacer.
+///
+/// # Por qué existe si `del_ambito` ya comprobó
+///
+/// Porque comprobar y actuar en dos sentencias deja una ventana entre el «es
+/// mío» y el «lo cambio», y este repositorio ya escribió la regla en
+/// `usuario::fijar_documento`: *el filtro del ámbito va DENTRO del UPDATE, no en
+/// una consulta previa*. Las tres escrituras de administración —actualizar,
+/// desactivar y restablecer la contraseña— hacían lo contrario: `del_ambito` y
+/// después `UPDATE … WHERE id = ?` a secas. No era explotable —ninguna ruta
+/// cambia `institucion_id`, así que la fila no puede mudarse de dueño entre las
+/// dos— y por eso esto es una **segunda vuelta de llave**, no un parche: el día
+/// que exista un traslado entre instituciones, la ventana se abre sola y en
+/// silencio.
+///
+/// La exclusión del superadmin va **por ROL y no por institución**, igual que en
+/// `del_ambito`: un superadmin con `institucion_id` puesto es una fila creable
+/// —la columna no tiene `CHECK`— y sin esta mitad el `UPDATE` lo alcanzaría
+/// aunque la comprobación previa lo hubiera descartado.
+fn cola_del_ambito(ambito: Ambito) -> Option<(&'static str, Option<i64>)> {
+    match ambito {
+        Ambito::Superadmin => Some((" WHERE id = ? AND rol <> 'superadmin'", None)),
+        Ambito::Institucion(inst) => Some((
+            " WHERE id = ? AND institucion_id = ? AND rol <> 'superadmin'",
+            Some(inst),
+        )),
+        Ambito::Ninguno => None,
+    }
+}
+
 /// Es la razón de ser de `Ambito` (`aislamiento.rs`): que «sin institución» no
 /// se confunda con «superadmin». Aquí se volvía a confundir leyendo la columna
 /// en lugar del enum.
@@ -1301,6 +1360,16 @@ pub async fn crear_usuario(
 pub struct Consumo {
     /// Pasa de inactivo a activo: ocupa un asiento que estaba libre.
     pub reactiva: bool,
+    /// **Queda como médico sin serlo antes**, o entra al conjunto de médicos
+    /// activos por la puerta de la reactivación.
+    ///
+    /// Es la otra mitad del mismo olvido, y la que el Python sí cobraba
+    /// (`exigir_cupo_al_modificar`): ascender a alguien que ya existe consume un
+    /// asiento de médico exactamente igual que darlo de alta, y sin esto una IPS
+    /// con el cupo de médicos lleno lo rodea creando auxiliares y ascendiéndolos
+    /// después. `reactiva` no lo cubre —el ascenso no cambia `activo`— así que
+    /// son dos banderas y no una (directiva 32).
+    pub entra_al_cupo_de_medicos: bool,
 }
 
 pub async fn consumo_de(
@@ -1309,13 +1378,39 @@ pub async fn consumo_de(
     id: i64,
     c: &UsuarioCambioAdmin,
 ) -> Result<Option<Consumo>, sqlx::Error> {
-    let Some((_, _, era_activo)) = del_ambito(pool, ambito, id).await? else {
+    let Some((_, era_rol, era_activo)) = del_ambito(pool, ambito, id).await? else {
         return Ok(None);
     };
     let sera_activo = c.activo.unwrap_or(era_activo);
+    let sera_rol = c.rol.as_deref().unwrap_or(&era_rol);
+    let era_medico = RolUsuario::desde_str(&era_rol) == Some(RolUsuario::Medico);
+    let sera_medico = RolUsuario::desde_str(sera_rol) == Some(RolUsuario::Medico);
     // Se comprueba al ENTRAR, nunca al salir: desactivar libera asiento y
-    // estorbarlo sería cerrar por cerrar.
-    Ok(Some(Consumo { reactiva: sera_activo && !era_activo }))
+    // estorbarlo sería cerrar por cerrar. Igual con el rol: bajar de médico a
+    // auxiliar no se frena.
+    //
+    // Al cupo de médicos se entra por DOS puertas y hay que mirar las dos: por
+    // el rol (no era médico y va a serlo) y por la reactivación (ya constaba
+    // como médico, pero inactivo, y por tanto no contaba).
+    Ok(Some(Consumo {
+        reactiva: sera_activo && !era_activo,
+        entra_al_cupo_de_medicos: sera_activo && sera_medico && (!era_medico || !era_activo),
+    }))
+}
+
+impl Consumo {
+    /// Los asientos que hay que pedirle a la licencia, o `None` si el cambio no
+    /// ocupa ninguno y por tanto **ni siquiera se le pregunta**.
+    ///
+    /// Preguntar de más no es inofensivo: una licencia vencida bloquearía
+    /// entonces un cambio de nombre o de correo, y la licencia limita la
+    /// EXPANSIÓN y nada más.
+    pub fn asiento(&self) -> Option<crate::licencia::Asiento> {
+        (self.reactiva || self.entra_al_cupo_de_medicos).then_some(crate::licencia::Asiento {
+            de_usuario: self.reactiva,
+            de_medico: self.entra_al_cupo_de_medicos,
+        })
+    }
 }
 
 pub async fn actualizar_usuario(
@@ -1332,15 +1427,18 @@ pub async fn actualizar_usuario(
     {
         return Ok(Err(FalloUsuario::RolDesconocido(r.clone())));
     }
-    let r = sqlx::query(
+    let Some((cola, inst)) = cola_del_ambito(ambito) else {
+        return Ok(Err(FalloUsuario::NoExiste));
+    };
+    let sql = format!(
         "UPDATE usuario SET \
          nombre = COALESCE(?, nombre), email = COALESCE(?, email), rol = COALESCE(?, rol), \
          activo = COALESCE(?, activo), especialidad_id = COALESCE(?, especialidad_id), \
          registro_medico = COALESCE(?, registro_medico), \
          registro_rethus = COALESCE(?, registro_rethus), \
-         requiere_cambio_password = COALESCE(?, requiere_cambio_password) \
-         WHERE id = ?",
-    )
+         requiere_cambio_password = COALESCE(?, requiere_cambio_password){cola}"
+    );
+    let r = sqlx::query(&sql)
     .bind(c.nombre_completo.as_deref().map(str::trim))
     .bind(c.email.as_deref().map(str::trim))
     .bind(&c.rol)
@@ -1349,7 +1447,11 @@ pub async fn actualizar_usuario(
     .bind(c.registro_medico.as_deref().map(str::trim))
     .bind(c.registro_rethus.as_deref().map(str::trim))
     .bind(c.requiere_cambio_password)
-    .bind(id)
+    .bind(id);
+    let r = match inst {
+        Some(i) => r.bind(i),
+        None => r,
+    }
     .execute(pool)
     .await;
     match r {
@@ -1359,6 +1461,40 @@ pub async fn actualizar_usuario(
         ))),
         Err(e) => Err(e),
     }
+}
+
+/// La contraseña PROPIA. Devuelve el `token_version` resultante, o `None` si el
+/// usuario no existe.
+///
+/// **No lleva ámbito, y eso es el diseño**: el id no viene del cliente sino de
+/// la cookie ya verificada, así que no hay fila ajena que alcanzar. Si algún día
+/// aceptara un id por parámetro, esta función tendría que crecer una puerta —y
+/// entonces sería `restablecer_password`, que ya existe.
+///
+/// **Apaga `requiere_cambio_password`**, que es lo que convierte esa columna en
+/// una bandera con ciclo cerrado: la enciende el restablecimiento del admin y la
+/// apaga el cambio propio. Hasta hoy solo tenía la mitad que la enciende.
+///
+/// Sube `token_version` **en la misma sentencia** que escribe el hash: en dos,
+/// habría un instante con la contraseña nueva puesta y las sesiones viejas
+/// todavía vivas. El incremento se calcula DENTRO del SQL por la razón de
+/// siempre —hacerlo en Rust pierde incrementos bajo concurrencia— y se devuelve
+/// con `RETURNING` para que quien llama pueda reemitir la cookie sin releer.
+pub async fn cambiar_password_propia(
+    pool: &crate::Pool,
+    usuario_id: i64,
+    hash: &str,
+) -> Result<Option<i64>, sqlx::Error> {
+    sqlx::query_scalar(
+        "UPDATE usuario SET password_hash = ?, requiere_cambio_password = 0, \
+         ultimo_cambio_password = ?, token_version = token_version + 1 \
+         WHERE id = ? RETURNING token_version",
+    )
+    .bind(hash)
+    .bind(crate::ahora())
+    .bind(usuario_id)
+    .fetch_optional(pool)
+    .await
 }
 
 /// Baja lógica: `activo = 0`. **No se borra la fila**, porque su id aparece en
@@ -1375,10 +1511,17 @@ pub async fn desactivar_usuario(
     if del_ambito(pool, ambito, id).await?.is_none() {
         return Ok(false);
     }
-    sqlx::query("UPDATE usuario SET activo = 0, token_version = token_version + 1 WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
+    let Some((cola, inst)) = cola_del_ambito(ambito) else {
+        return Ok(false);
+    };
+    let sql = format!("UPDATE usuario SET activo = 0, token_version = token_version + 1{cola}");
+    let q = sqlx::query(&sql).bind(id);
+    match inst {
+        Some(i) => q.bind(i),
+        None => q,
+    }
+    .execute(pool)
+    .await?;
     Ok(true)
 }
 
@@ -1412,13 +1555,21 @@ pub async fn restablecer_password(
     let Some((email, _, _)) = del_ambito(pool, ambito, id).await? else {
         return Ok(false);
     };
-    sqlx::query(
+    let Some((cola, inst)) = cola_del_ambito(ambito) else {
+        return Ok(false);
+    };
+    let sql = format!(
         "UPDATE usuario SET password_hash = ?, requiere_cambio_password = 1, \
-         ultimo_cambio_password = ?, token_version = token_version + 1 WHERE id = ?",
-    )
+         ultimo_cambio_password = ?, token_version = token_version + 1{cola}"
+    );
+    let q = sqlx::query(&sql)
     .bind(hash)
     .bind(crate::ahora())
-    .bind(id)
+    .bind(id);
+    match inst {
+        Some(i) => q.bind(i),
+        None => q,
+    }
     .execute(pool)
     .await?;
     // Y se le quita el freno: si estaba esperando por intentos fallidos, la
@@ -1817,20 +1968,21 @@ mod pruebas {
         let c = UsuarioCambioAdmin { activo: Some(true), ..Default::default() };
         assert_eq!(
             consumo_de(&pool, UNO, 5, &c).await.unwrap(),
-            Some(Consumo { reactiva: true })
+            // El 5 es médico, así que reactivarlo entra en LOS DOS cupos.
+            Some(Consumo { reactiva: true, entra_al_cupo_de_medicos: true })
         );
 
         // Y las tres formas de NO entrar al conjunto contado:
         let ya_activo = UsuarioCambioAdmin { activo: Some(true), ..Default::default() };
         assert_eq!(
             consumo_de(&pool, UNO, 2, &ya_activo).await.unwrap(),
-            Some(Consumo { reactiva: false }),
+            Some(Consumo { reactiva: false, entra_al_cupo_de_medicos: false }),
             "el que ya estaba activo no ocupa un asiento nuevo"
         );
         let apagar = UsuarioCambioAdmin { activo: Some(false), ..Default::default() };
         assert_eq!(
             consumo_de(&pool, UNO, 2, &apagar).await.unwrap(),
-            Some(Consumo { reactiva: false }),
+            Some(Consumo { reactiva: false, entra_al_cupo_de_medicos: false }),
             "desactivar LIBERA: estorbarlo sería cerrar por cerrar"
         );
         let solo_nombre = UsuarioCambioAdmin {
@@ -1839,9 +1991,89 @@ mod pruebas {
         };
         assert_eq!(
             consumo_de(&pool, UNO, 5, &solo_nombre).await.unwrap(),
-            Some(Consumo { reactiva: false }),
+            Some(Consumo { reactiva: false, entra_al_cupo_de_medicos: false }),
             "guardar sin tocar `activo` no es crecer"
         );
+    }
+
+    /// **El ASCENSO consume asiento de médico y NO de usuario**, que es la
+    /// distinción entera. El 2 está activo y es médico; el 6 está activo y es
+    /// auxiliar.
+    ///
+    /// Sin la segunda mitad —`de_usuario: false`— una IPS con el cupo de
+    /// usuarios justo no podría ascender a nadie, que es rechazar la operación
+    /// normal de un cliente legítimo (directiva 21).
+    #[tokio::test]
+    async fn ascender_a_medico_ocupa_asiento_de_medico_y_no_de_usuario() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+             VALUES (6,'Auxiliar','aux@x.co','h','auxiliar_enfermeria',1,1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let ascender = UsuarioCambioAdmin { rol: Some("medico".into()), ..Default::default() };
+        let c = consumo_de(&pool, UNO, 6, &ascender).await.unwrap().unwrap();
+        assert_eq!(
+            c,
+            Consumo { reactiva: false, entra_al_cupo_de_medicos: true },
+            "ascender a médico no entraba en ningún cupo: era el rodeo del tope"
+        );
+        assert_eq!(
+            c.asiento(),
+            Some(crate::licencia::Asiento { de_usuario: false, de_medico: true })
+        );
+
+        // LA PAREJA 1 — bajar de médico a auxiliar LIBERA, no se frena.
+        let bajar = UsuarioCambioAdmin { rol: Some("auxiliar_enfermeria".into()), ..Default::default() };
+        let b = consumo_de(&pool, UNO, 2, &bajar).await.unwrap().unwrap();
+        assert!(!b.entra_al_cupo_de_medicos);
+        assert_eq!(b.asiento(), None, "ni siquiera se le pregunta a la licencia");
+
+        // LA PAREJA 2 — quien YA era médico y sigue activo no vuelve a pagar.
+        let sigue = UsuarioCambioAdmin { rol: Some("medico".into()), ..Default::default() };
+        let s = consumo_de(&pool, UNO, 2, &sigue).await.unwrap().unwrap();
+        assert!(!s.entra_al_cupo_de_medicos, "cobró dos veces el mismo asiento");
+
+        // Y un cambio que no toca ni rol ni actividad no consulta la licencia:
+        // si lo hiciera, una licencia vencida bloquearía corregir un dedazo.
+        let dedazo = UsuarioCambioAdmin { email: Some("bien@x.co".into()), ..Default::default() };
+        assert_eq!(consumo_de(&pool, UNO, 6, &dedazo).await.unwrap().unwrap().asiento(), None);
+    }
+
+    /// **La cola del ámbito, medida DIRECTAMENTE, y hay que decir por qué.**
+    ///
+    /// La prueba de integración de esta salvaguarda —`el_update_de_personal_no_
+    /// alcanza_la_fila_ajena_por_si_solo`, en `rutas.rs`— **no discrimina**, y
+    /// se comprobó por mutación el 2026-08-06: quitándole el filtro a esta cola,
+    /// aquella sigue verde. No es un defecto suyo, es que el camino no llega:
+    /// `del_ambito` corre ANTES y devuelve `None` para la fila ajena, así que el
+    /// `UPDATE` ni se ejecuta. Mientras la hebilla funcione, el cinturón es
+    /// inalcanzable — que es literalmente lo que significa «segunda vuelta de
+    /// llave», y por eso aquella mide `del_ambito` y no esto.
+    ///
+    /// Lo que sí se puede medir es la REGLA, aquí, con sus dos mitades: que la
+    /// cola del ámbito de institución acote por institución, y que la del
+    /// superadmin —que sí ve a todos— siga excluyendo al superadmin por ROL.
+    #[test]
+    fn la_cola_del_ambito_acota_por_institucion_y_excluye_al_superadmin() {
+        let (cola, inst) = cola_del_ambito(Ambito::Institucion(7)).expect("debe administrar");
+        assert!(cola.contains("institucion_id = ?"), "no acota por institución: {cola}");
+        assert!(cola.contains("rol <> 'superadmin'"), "alcanza al superadmin: {cola}");
+        assert_eq!(inst, Some(7), "el id de la institución no se enlaza");
+
+        // El superadmin ve a todos: NO acota por institución —hacerlo lo dejaría
+        // sin administrar a nadie— pero sigue sin tocar a otro superadmin.
+        let (cola, inst) = cola_del_ambito(Ambito::Superadmin).expect("debe administrar");
+        assert!(!cola.contains("institucion_id"), "acotó al superadmin: {cola}");
+        assert!(cola.contains("rol <> 'superadmin'"), "un superadmin administra a otro: {cola}");
+        assert_eq!(inst, None);
+
+        // Y quien no pertenece a ninguna no administra a nadie: `None`, que el
+        // llamante traduce a 404 SIN ejecutar el UPDATE.
+        assert!(cola_del_ambito(Ambito::Ninguno).is_none());
     }
 
     #[tokio::test]

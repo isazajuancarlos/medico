@@ -233,6 +233,43 @@ pub async fn actualizar(
         .validar(&propuesta, quien)
         .map_err(|r| (StatusCode::UNPROCESSABLE_ENTITY, r.to_string()).into_response())?;
 
+    // NADIE CONCEDE LO QUE SU PROPIO ROL NO TRAE.
+    //
+    // Sin esto, `GestionarUsuarios` es la raíz de la institución y la pantalla
+    // no lo dice: medido en la revisión de esta rama, a un laboratorista al que
+    // el admin le concede SOLO `gestionar_usuarios` se le abre el camino de
+    // concederse `firmar_clinico` a sí mismo y, acto seguido, **firmar una
+    // historia clínica** (204). No era escalada de frontera —el admin ya podía
+    // concederlo directo— pero la matriz presenta 18 casillas como iguales
+    // cuando una de ellas vale por las otras diecisiete.
+    //
+    // Se compara contra el DEFECTO NACIONAL (`rol.puede`) y no contra la matriz
+    // efectiva de la institución, y esa elección es la regla:
+    //
+    // - contra la matriz efectiva, un admin que se hubiera revocado a sí mismo
+    //   `firmar_clinico` no podría devolvérselo NUNCA — se quedaría encerrado
+    //   fuera de su propia institución sin más salida que abrir la base a mano
+    //   (directiva 21: la regla se prueba contra el cliente legítimo);
+    // - contra el defecto, un `Admin` no pierde nada —tiene las diecisiete
+    //   configurables— y el laboratorista sigue sin poder conceder lo que su
+    //   rol no contempla, que es exactamente el camino que hay que cortar.
+    //
+    // `GestionarInstituciones` no necesita línea aquí: ya está cerrada por
+    // `configurable_por_institucion`, y esto es una segunda vuelta de llave.
+    if let Some(c) = propuesta
+        .iter()
+        .find(|&&(cap, _, permitido)| permitido && !quien.puede(cap))
+    {
+        return Err((
+            StatusCode::FORBIDDEN,
+            format!(
+                "no puede conceder «{}»: su rol no la tiene",
+                c.0.como_str()
+            ),
+        )
+            .into_response());
+    }
+
     // La bitácora ANTES de aplicar y **de forma obligatoria**, al revés que el
     // acceso a dato de paciente, que es best-effort porque allí manda la
     // atención (decisión de Juan, 2026-07-29). Aquí no hay paciente esperando:

@@ -516,10 +516,73 @@ pruebas en verde y sin que ninguna las viera. Las tres son de la misma familia:
    que es el único registro de un ensayo de contraseñas.
 
 Las sujetan tres pruebas HTTP y siete unitarias, **todas con su pareja**, y las
-tres pasaron el banco de mutación. Lo que la revisión dejó sin arreglar —el cupo
-de médicos de la licencia, que en Rust no existe como columna, y cuatro
-observaciones no explotables— está en las tareas, con su medición y el motivo de
-no haberlo tocado.
+tres pasaron el banco de mutación.
+
+### Y lo que la misma revisión dejó por debajo del listón (2026-08-06)
+
+Cuatro observaciones y una regresión comercial, hechas en una segunda pasada.
+
+**El cupo de MÉDICOS de la licencia, que no existía.** La tabla `licencia` tenía
+una sola cota, `max_usuarios`, y el Python vivo tiene dos (`core/deps.py:337`,
+`hay_cupo(..., para_medico=True)`): una IPS con plan de 3 médicos podía dar de
+alta 20. Migración `0049`, columna **anulable y sin `DEFAULT`** —`NULL` es «este
+plan no pactó cupo de médicos», nunca cero, porque las licencias ya firmadas no
+lo pactaron y ponerles un número sería inventar una cláusula—.
+
+**La pieza que casi sale mal es `licencia::Asiento { de_usuario, de_medico }`.**
+La primera versión pasaba un solo booleano, y con eso un **ascenso** exigía
+además asiento de usuario: una IPS con el cupo justo no habría podido ascender a
+nadie que ya estuviera contado. Son dos magnitudes (directiva 32):
+
+| operación | asiento de usuario | asiento de médico |
+|---|---|---|
+| alta de una recepcionista | sí | no |
+| alta de un médico | sí | **sí** |
+| reactivar a quien se fue | sí | según su rol |
+| **ascender a médico a quien ya está activo** | **no** | **sí** |
+
+Y el ascenso se cobra, que es la otra mitad que el Python sí tenía: sin ella el
+tope se rodea creando auxiliares y ascendiéndolos después, porque el `PUT` no
+toca `activo` y `reactiva` no lo veía. `Puerta::CupoDeMedicosLleno` es variante
+propia —motivo `cupo_de_medicos_lleno`— y no un matiz de `cupo_lleno`: a quien lo
+recibe todavía le caben auxiliares, y un solo motivo le haría ampliar el plan
+equivocado.
+
+**`GestionarUsuarios` era la RAÍZ y la matriz no lo decía.** Un laboratorista con
+esa sola casilla se concedía `firmar_clinico` y firmaba una historia. Ahora
+`capacidades::actualizar` rechaza con 403 conceder lo que el rol de quien concede
+no trae **por defecto nacional** — y esa elección es la regla: contra la matriz
+EFECTIVA, un admin que se hubiera revocado una capacidad no podría devolvérsela
+nunca. El bloque va **después** de `validar`, para no adelantarse al 422 más
+específico de `configurable_por_institucion`; adelantarlo puso en rojo a
+`no_se_concede_la_gestion_de_instituciones_ni_se_toca_al_superadmin`, y la prueba
+tenía razón.
+
+**El filtro del ámbito, DENTRO del `UPDATE`.** Las tres escrituras de personal
+comprobaban con `del_ambito` y después escribían con `WHERE id = ?` a secas,
+contra la regla que este repositorio ya tiene escrita en
+`usuario::fijar_documento`. No era explotable —ninguna ruta muda una fila de
+institución— así que `cola_del_ambito` es segunda vuelta de llave, con la
+exclusión del superadmin **por rol** y no por institución.
+
+**Y nace `POST /api/mi-clave`, porque nadie podía cambiar su propia contraseña.**
+Ese hueco tenía dos mitades que se tapaban entre sí: la falta de ruta, y
+`requiere_cambio_password` —que el restablecimiento del admin SÍ escribe— siendo
+una bandera imposible de satisfacer. Cuatro reglas: exige la contraseña actual
+(sin ella, una sesión robada se queda con la cuenta), pasa la nueva por la misma
+`password_admisible`, sube `token_version` en la misma sentencia y **reemite la
+cookie** — las dos últimas juntas son la diferencia entre «cerré todas las
+sesiones» y «cerré todas menos la mía». Está en `ABIERTAS_A_PROPOSITO` del
+guardián de escrituras con su motivo: escribe la fila propia, y la contraseña
+actual es una prueba más fuerte que cualquier capacidad.
+
+**`politica_seguridad` sigue a medias, y ahora lo dice.** De sus 21 columnas se
+aplican cinco. El doc-comment de `Politica` lleva la tabla entera con cuáles no
+se aplican y por qué — y **tres no se aplicarán nunca**: `max_intentos_login` y
+`tiempo_bloqueo_minutos`, porque este binario decidió freno-que-se-agota en vez
+de bloqueo, y `retener_logs_dias`, porque la bitácora está encadenada por hash y
+podarla la rompe. Lo que queda pendiente es que la pantalla deje de presentarlas
+como si mandaran.
 
 **`/api/admin/capacidades` no existía en NINGUNA de las dos pilas** y el frontal
 la llamaba: la matriz de capacidades vive en `/api/capacidades` desde #235, con

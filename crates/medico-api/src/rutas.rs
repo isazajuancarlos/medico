@@ -122,6 +122,10 @@ pub fn router(estado: Estado) -> Router {
     Router::new()
         .route("/api/acceso", post(acceso))
         .route("/api/salir", post(salir))
+        // La contraseña PROPIA, cualquier rol. Va aquí y no bajo `/api/admin`
+        // porque no administra a nadie: es la única contraseña que uno puede
+        // cambiar sin permiso de gestión.
+        .route("/api/mi-clave", post(mi_clave))
         .route("/api/salir-todo", post(salir_todo))
         .route("/api/yo", get(yo))
         .route("/api/demo", get(demo))
@@ -632,6 +636,80 @@ async fn acceso(
             .into_response(),
         None => StatusCode::UNAUTHORIZED.into_response(),
     }
+}
+
+#[derive(Deserialize)]
+struct CambioPropio {
+    actual: String,
+    nueva: String,
+}
+
+/// `POST /api/mi-clave` — **la contraseña propia, para cualquier rol.**
+///
+/// Hasta el 2026-08-06 esto no existía, y ese hueco tenía dos consecuencias que
+/// se tapaban entre sí: nadie podía cambiar su contraseña sin pedírselo a un
+/// administrador, y por eso `requiere_cambio_password` —que el restablecimiento
+/// SÍ escribe— era una bandera imposible de satisfacer. Marcar un deber que el
+/// producto no deja cumplir es peor que no marcarlo.
+///
+/// Cuatro reglas, y ninguna es opcional:
+///
+/// 1. **Se exige la contraseña ACTUAL.** Sin ella, una sesión robada se queda
+///    con la cuenta para siempre: el ladrón la cambia y el dueño ya no entra.
+///    Se verifica con el mismo Argon2 del login.
+/// 2. **La nueva pasa por la política de la institución**, la misma función que
+///    el alta y el restablecimiento (`password_admisible`). Una tercera regla
+///    aquí sería la puerta por la que entra la contraseña de un carácter.
+/// 3. **Sube `token_version` en la MISMA sentencia**, que es lo que echa a quien
+///    entró con la vieja. En dos sentencias habría un instante con la clave
+///    nueva puesta y las sesiones viejas vivas.
+/// 4. **Y se reemite la cookie**, porque la regla 3 también me expulsa a MÍ:
+///    sin esto, cambiar la contraseña te echa de tu propia pantalla y nadie
+///    vuelve a usar el botón.
+///
+/// La 3 y la 4 juntas son la diferencia entre «cerré todas las sesiones» y
+/// «cerré todas menos la mía», que es lo que el usuario espera y lo que la
+/// seguridad necesita.
+async fn mi_clave(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Json(p): Json<CambioPropio>,
+) -> Response {
+    if !claves::verificar(&p.actual, &u.password_hash) {
+        // 401 y no 403: lo que falla es probar quién eres, no un permiso. Y el
+        // mensaje no distingue de un fallo de política, para no convertir esta
+        // ruta en un oráculo de contraseñas desde una sesión robada.
+        return (StatusCode::UNAUTHORIZED, "la contraseña actual no coincide").into_response();
+    }
+    let politica = match u.institucion_id {
+        Some(inst) => match administracion::politica(&e.pool, inst).await {
+            Ok(p) => p,
+            Err(_) => return fallo_db(),
+        },
+        None => None,
+    };
+    if let Err(motivo) = administracion::password_admisible(&p.nueva, politica.as_ref()) {
+        return (StatusCode::BAD_REQUEST, motivo).into_response();
+    }
+    let Some(hash) = claves::hashear(&p.nueva) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let version = match administracion::cambiar_password_propia(&e.pool, u.id, &hash).await {
+        Ok(Some(v)) => v,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return fallo_db(),
+    };
+    // La cookie NUEVA con la versión nueva: sigues dentro aquí y caes en el resto.
+    let cookie = sesion::emitir(&e.secreto, u.id, version, e.minutos);
+    (
+        StatusCode::OK,
+        [(
+            header::SET_COOKIE,
+            sesion::cabecera_abrir(&cookie, e.minutos, e.tras_proxy),
+        )],
+        Json(Ok2 { ok: true }),
+    )
+        .into_response()
 }
 
 /// Cierra la sesión borrando la cookie. No necesita estar autenticado: pedir
@@ -2665,7 +2743,9 @@ async fn crear_usuario(
         // no puede darse por vencida porque el reloj de la máquina ya pasó la
         // medianoche en otro huso.
         let hoy = medico_dominio::zona::hoy().to_string();
-        match licencia::puerta_para_usuario(&e.pool, id, &hoy).await {
+        // El SEGUNDO cupo, el de médicos, solo se mira si quien entra va a serlo.
+        let medico = rol == RolUsuario::Medico;
+        match licencia::puerta_para_usuario(&e.pool, id, &hoy, licencia::Asiento::alta(medico)).await {
             Ok(licencia::Puerta::Abierta) => {}
             Ok(bloqueo) => {
                 return (StatusCode::PAYMENT_REQUIRED, Json(Bloqueo { motivo: motivo(bloqueo) }))
@@ -2774,6 +2854,11 @@ fn motivo(p: licencia::Puerta) -> &'static str {
         licencia::Puerta::SinLicencia => "sin_licencia",
         licencia::Puerta::Vencida => "licencia_vencida",
         licencia::Puerta::CupoLleno => "cupo_lleno",
+        // Motivo PROPIO y no un matiz de `cupo_lleno`: a quien lo recibe todavía
+        // le caben recepcionistas, regentes y auxiliares, y lo que tiene que
+        // comprar es otra cosa. Un solo motivo le haría ampliar el plan
+        // equivocado.
+        licencia::Puerta::CupoDeMedicosLleno => "cupo_de_medicos_lleno",
         licencia::Puerta::Abierta => "abierta",
     }
 }
@@ -2781,6 +2866,10 @@ fn motivo(p: licencia::Puerta) -> &'static str {
 #[derive(Deserialize)]
 struct FijarLicencia {
     max_usuarios: i64,
+    /// Ausente = el plan no pacta cupo de médicos, que es como están todas las
+    /// licencias anteriores al 2026-08-06. No es cero (ver la migración `0049`).
+    #[serde(default)]
+    max_medicos: Option<i64>,
     vence: Option<String>,
 }
 
@@ -2795,8 +2884,13 @@ async fn fijar_licencia(
     if u.rol() != Some(RolUsuario::Superadmin) {
         return StatusCode::FORBIDDEN;
     }
-    match licencia::fijar(&e.pool, id, req.max_usuarios, req.vence.as_deref()).await {
+    // Un cupo de cero médicos es un imposible y lo rechaza el `CHECK` del
+    // esquema; se traduce a 400 y no a 500 porque es entrada del cliente.
+    match licencia::fijar(&e.pool, id, req.max_usuarios, req.max_medicos, req.vence.as_deref())
+        .await
+    {
         Ok(()) => StatusCode::NO_CONTENT,
+        Err(_) if req.max_medicos.is_some_and(|m| m <= 0) => StatusCode::BAD_REQUEST,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -5324,7 +5418,13 @@ async fn adm_crear_usuario(
         Ok(v) => v,
         Err(r) => return r.into_response(),
     };
-    if let Some(r) = puerta_de_licencia(&e, &u, id).await {
+    // El rol viene como cadena del cuerpo: se PARSEA para preguntar por el cupo
+    // de médicos, no se compara el texto. `"MEDICO"`, `"Medico"` y un rol
+    // inventado tienen que decidir lo mismo que decidirá `crear_usuario`, y una
+    // comparación de cadenas es exactamente lo que ya dejó dos pantallas
+    // muertas en este repositorio.
+    let sera_medico = RolUsuario::desde_str(&n.rol) == Some(RolUsuario::Medico);
+    if let Some(r) = puerta_de_licencia(&e, &u, id, licencia::Asiento::alta(sera_medico)).await {
         return r;
     }
     let politica = match administracion::politica(&e.pool, id).await {
@@ -5366,12 +5466,24 @@ async fn adm_crear_usuario(
 
 /// La licencia limita la EXPANSIÓN y nada más. El superadmin queda exento: no
 /// pertenece a ninguna institución y es quien da de alta a los clientes.
-async fn puerta_de_licencia(e: &Estado, u: &usuario::Usuario, institucion_id: i64) -> Option<Response> {
+///
+/// El `Asiento` dice cuál de los DOS cupos se está ocupando, y va como parámetro
+/// porque quien llama es el único que sabe qué había antes: en el alta se ocupan
+/// los dos (si el rol es médico), y en el `PUT` lo decide
+/// `administracion::consumo_de`, que compara el estado de antes con el de
+/// después — un ascenso a médico de alguien que ya está activo ocupa asiento de
+/// médico y **no** de usuario.
+async fn puerta_de_licencia(
+    e: &Estado,
+    u: &usuario::Usuario,
+    institucion_id: i64,
+    asiento: licencia::Asiento,
+) -> Option<Response> {
     if u.rol() == Some(RolUsuario::Superadmin) {
         return None;
     }
     let hoy = medico_dominio::zona::hoy().to_string();
-    match licencia::puerta_para_usuario(&e.pool, institucion_id, &hoy).await {
+    match licencia::puerta_para_usuario(&e.pool, institucion_id, &hoy, asiento).await {
         Ok(licencia::Puerta::Abierta) => None,
         Ok(bloqueo) => Some(
             (StatusCode::PAYMENT_REQUIRED, Json(Bloqueo { motivo: motivo(bloqueo) })).into_response(),
@@ -5414,18 +5526,23 @@ async fn adm_actualizar_usuario(
             .into_response();
     }
     // EL CUPO SE CONSUME SIN CREAR A NADIE: reactivar a quien se fue ocupa un
-    // asiento igual que un alta. Comprobarlo solo al crear deja crecer sin
-    // límite a una institución con el tope lleno.
+    // asiento igual que un alta, y ASCENDER a alguien a médico ocupa un asiento
+    // de médico igual que darlo de alta. Comprobarlo solo al crear deja crecer
+    // sin límite a una institución con el tope lleno — y, para el segundo cupo,
+    // deja el rodeo obvio: crear auxiliares y ascenderlos después.
     match administracion::consumo_de(&e.pool, u.ambito(), id, &c).await {
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Ok(Some(consumo)) if consumo.reactiva => {
-            if let Some(inst) = u.institucion_id
-                && let Some(r) = puerta_de_licencia(&e, &u, inst).await
+        Ok(Some(consumo)) => {
+            // `asiento()` devuelve `None` cuando el cambio no ocupa ninguno —un
+            // cambio de nombre, de correo— y entonces NO se le pregunta a la
+            // licencia: si no, una vencida bloquearía corregir un dedazo.
+            if let Some(asiento) = consumo.asiento()
+                && let Some(inst) = u.institucion_id
+                && let Some(r) = puerta_de_licencia(&e, &u, inst, asiento).await
             {
                 return r;
             }
         }
-        Ok(Some(_)) => {}
         Err(_) => return fallo_db(),
     }
     if let Err(r) = anotar_acto_admin(
@@ -5862,7 +5979,7 @@ mod pruebas {
         async fn la_contrasena_vacia_no_la_admite_ninguna_de_las_dos_rutas() {
             let e = con_tres_roles().await;
             let admin = con_admin(&e).await;
-            medico_datos::licencia::fijar(&e.pool, 1, 50, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 50, None, None).await.unwrap();
             let antes: String =
                 sqlx::query_scalar("SELECT password_hash FROM usuario WHERE id = 5")
                     .fetch_one(&e.pool).await.unwrap();
@@ -5979,7 +6096,7 @@ mod pruebas {
         async fn los_actos_de_administracion_dejan_rastro_y_los_listados_no() {
             let e = con_tres_roles().await;
             let admin = con_admin(&e).await;
-            medico_datos::licencia::fijar(&e.pool, 1, 50, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 50, None, None).await.unwrap();
             let cuantos = |e: Estado| async move {
                 sqlx::query_scalar::<_, i64>("SELECT count(*) FROM acceso")
                     .fetch_one(&e.pool).await.unwrap()
@@ -6018,6 +6135,273 @@ mod pruebas {
                 "SELECT contenido FROM acceso ORDER BY secuencia DESC LIMIT 1",
             ).fetch_one(&e.pool).await.unwrap();
             assert!(ultimo.contains("politica_seguridad"), "el rastro no nombra el recurso: {ultimo}");
+        }
+
+        /// **La contraseña propia: las cuatro reglas, cada una con su pareja.**
+        ///
+        /// Hasta el 2026-08-06 esta ruta no existía, así que nadie podía cambiar
+        /// su contraseña sin pedírselo a un administrador — y por eso
+        /// `requiere_cambio_password` era una bandera imposible de satisfacer.
+        #[tokio::test]
+        async fn la_contrasena_propia_se_cambia_y_echa_a_las_sesiones_viejas() {
+            let e = con_tres_roles().await;
+            let vieja = cookie_de(5);
+            let cuerpo = |actual: &str, nueva: &str| {
+                format!(r#"{{"actual":"{actual}","nueva":"{nueva}"}}"#)
+            };
+
+            // 1. Sin la contraseña ACTUAL no se cambia: una sesión robada no se
+            //    queda con la cuenta.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/mi-clave", &vieja, &cuerpo("no-es", "Clave-larga-12345")).await,
+                StatusCode::UNAUTHORIZED
+            );
+            // 2. Y la nueva pasa por la MISMA política que el alta: la ruta no
+            //    es un tercer camino con su propia regla más floja.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/mi-clave", &vieja, &cuerpo("clave123", "")).await,
+                StatusCode::BAD_REQUEST
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/mi-clave", &vieja, &cuerpo("clave123", "corta1")).await,
+                StatusCode::BAD_REQUEST
+            );
+            // Por la vía REAL: tras los tres rechazos, la contraseña sigue siendo
+            // la de antes y la sesión sigue viva.
+            assert_eq!(pedir(&e, "GET", "/api/yo", &vieja).await, StatusCode::OK);
+
+            // LA PAREJA — con la actual buena y una nueva que cumple, cambia.
+            let r = pedir_resp(&e, "POST", "/api/mi-clave", &vieja,
+                               &cuerpo("clave123", "Clave-larga-12345")).await;
+            assert_eq!(r.status(), StatusCode::OK);
+            let nueva_cookie = r
+                .headers()
+                .get(header::SET_COOKIE)
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.split(';').next().unwrap_or_default().to_string())
+                .expect("no reemitió la cookie");
+
+            // 3. La sesión VIEJA cae — es la revocación por `token_version`.
+            assert_eq!(
+                pedir(&e, "GET", "/api/yo", &vieja).await,
+                StatusCode::UNAUTHORIZED,
+                "la sesión anterior siguió viva tras cambiar la contraseña"
+            );
+            // 4. Y la reemitida sigue dentro: si no, cambiar la clave te expulsa
+            //    de tu propia pantalla y nadie vuelve a usar el botón.
+            assert_eq!(
+                pedir(&e, "GET", "/api/yo", &nueva_cookie).await,
+                StatusCode::OK,
+                "me echó a mí también"
+            );
+
+            // Y la bandera queda APAGADA: el ciclo que el restablecimiento del
+            // admin abre, este cierra.
+            let (marca, version): (bool, i64) = sqlx::query_as(
+                "SELECT requiere_cambio_password, token_version FROM usuario WHERE id = 5",
+            ).fetch_one(&e.pool).await.unwrap();
+            assert!(!marca);
+            assert_eq!(version, 1, "el incremento no se escribió");
+        }
+
+        /// **Nadie concede lo que su propio rol no trae.**
+        ///
+        /// `GestionarUsuarios` era la raíz de la institución y la matriz no lo
+        /// decía: un laboratorista con esa sola casilla se concedía
+        /// `firmar_clinico` y firmaba una historia clínica. La comparación es
+        /// contra el DEFECTO nacional, así que un `Admin` —que tiene las
+        /// diecisiete configurables— no pierde nada.
+        #[tokio::test]
+        async fn nadie_concede_una_capacidad_que_su_rol_no_tiene() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            // Al laboratorista (id 5) se le da la llave maestra, que es
+            // exactamente la precondición del hallazgo.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/capacidades", &admin,
+                    r#"{"cambios":[{"capacidad":"gestionar_usuarios","rol":"laboratorista","permitido":true}]}"#).await,
+                StatusCode::OK
+            );
+            let lab = cookie_de(5);
+
+            // Y ahora NO puede concederse lo que su rol no contempla.
+            for cap in ["firmar_clinico", "escribir_clinico", "generar_rips"] {
+                let cuerpo = format!(
+                    r#"{{"cambios":[{{"capacidad":"{cap}","rol":"laboratorista","permitido":true}}]}}"#
+                );
+                assert_eq!(
+                    pedir_con(&e, "PUT", "/api/capacidades", &lab, &cuerpo).await,
+                    StatusCode::FORBIDDEN,
+                    "un laboratorista se concedió «{cap}»"
+                );
+            }
+            // Por la vía REAL: sigue sin poder firmar.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/historias/1/firmar", &lab, "").await,
+                StatusCode::FORBIDDEN
+            );
+
+            // LA PAREJA 1 — el ADMIN sí las concede: la regla no cierra el uso
+            // normal, que es la prueba que toda restricción tiene que pasar.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/capacidades", &admin,
+                    r#"{"cambios":[{"capacidad":"firmar_clinico","rol":"laboratorista","permitido":true}]}"#).await,
+                StatusCode::OK,
+                "la regla estorbó al administrador legítimo"
+            );
+            // LA PAREJA 2 — y el laboratorista sí puede QUITAR y devolver al
+            // defecto, que no es conceder: si no, la matriz sería de una sola
+            // dirección.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/capacidades", &lab,
+                    r#"{"cambios":[{"capacidad":"firmar_clinico","rol":"laboratorista","permitido":false}]}"#).await,
+                StatusCode::OK
+            );
+        }
+
+        /// **Las tres escrituras de personal no tocan la fila del vecino.**
+        ///
+        /// # ESTA PRUEBA NO MIDE LA COLA DEL `UPDATE`, y hay que decirlo
+        ///
+        /// Se escribió creyendo que sí, y el banco de mutación del 2026-08-06
+        /// dijo lo contrario: quitándole el filtro a `cola_del_ambito` esta
+        /// prueba **sigue verde**. La razón no es que esté mal escrita, es que
+        /// el camino no llega — `del_ambito` corre antes y devuelve `None` para
+        /// la fila ajena, así que el `UPDATE` ni se ejecuta. Mientras la hebilla
+        /// funcione, el cinturón es inalcanzable, que es exactamente lo que
+        /// significa «segunda vuelta de llave».
+        ///
+        /// Así que lo que esto fija es `del_ambito`, que ya es algo y no es poco.
+        /// La REGLA de la cola se mide aparte y directamente, en
+        /// `administracion::pruebas::la_cola_del_ambito_acota_por_institucion_y_excluye_al_superadmin`.
+        /// Dejarlo sin escribir habría sido justo el fallo de la directiva 33:
+        /// una pareja que parece cubrir dos capas y cubre una.
+        #[tokio::test]
+        async fn el_update_de_personal_no_alcanza_la_fila_ajena_por_si_solo() {
+            let e = con_tres_roles().await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query("INSERT INTO institucion (id,nombre,nit) VALUES (2,'Dos','901')")
+                .execute(&e.pool).await.unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (50,'Medica Dos','m2@x.co',?,'medico',2,1)",
+            ).bind(&h).execute(&e.pool).await.unwrap();
+
+            let uno = medico_dominio::Ambito::Institucion(1);
+            let cambio = medico_datos::administracion::UsuarioCambioAdmin {
+                email: Some("robado@x.co".into()),
+                activo: Some(false),
+                ..Default::default()
+            };
+            let _ = medico_datos::administracion::actualizar_usuario(&e.pool, uno, 50, &cambio).await;
+            let _ = medico_datos::administracion::desactivar_usuario(&e.pool, uno, 50).await;
+            let _ = medico_datos::administracion::restablecer_password(&e.pool, uno, 50, &h).await;
+
+            let (correo, activo): (String, bool) =
+                sqlx::query_as("SELECT email, activo FROM usuario WHERE id = 50")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(correo, "m2@x.co", "el UPDATE alcanzó a la institución 2");
+            assert!(activo, "la desactivó");
+
+            // LA PAREJA: con el ámbito bueno, las tres SÍ escriben. Sin esto, la
+            // prueba pasaría con un `WHERE 1=0`.
+            let dos = medico_dominio::Ambito::Institucion(2);
+            assert!(medico_datos::administracion::actualizar_usuario(&e.pool, dos, 50, &cambio)
+                .await.unwrap().is_ok());
+            let (correo, activo): (String, bool) =
+                sqlx::query_as("SELECT email, activo FROM usuario WHERE id = 50")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(correo, "robado@x.co");
+            assert!(!activo);
+        }
+
+        /// **El cupo de médicos, por HTTP y por sus dos puertas.**
+        ///
+        /// El rodeo es el punto: sin cobrar el ASCENSO, una IPS con el tope de
+        /// médicos lleno lo salta creando auxiliares y ascendiéndolos después —y
+        /// el `PUT` no cambia `activo`, así que `reactiva` no lo veía—.
+        #[tokio::test]
+        async fn el_cupo_de_medicos_se_cobra_en_el_alta_y_en_el_ascenso() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            // El cupo se calcula a partir de los médicos que YA hay —la base de
+            // prueba siembra una— en vez de suponer que está vacía: un número
+            // escrito a mano aquí convierte la prueba en rehén de la siembra, y
+            // ya me costó una corrida.
+            let medicos: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM usuario WHERE institucion_id = 1 AND activo = 1 AND rol = 'medico'",
+            ).fetch_one(&e.pool).await.unwrap();
+            // Sitio de sobra para personas; sitio para UN médico más.
+            medico_datos::licencia::fijar(&e.pool, 1, 50, Some(medicos + 1), None).await.unwrap();
+            let alta = |rol: &str, correo: &str| format!(
+                r#"{{"email":"{correo}","password":"Clave-larga-12345","nombre_completo":"N","rol":"{rol}"}}"#
+            );
+
+            // Cabe uno más: entra.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, &alta("medico", "m1@x.co")).await,
+                StatusCode::CREATED
+            );
+            // El segundo NO, y con su motivo propio.
+            let r = pedir_resp(&e, "POST", "/api/admin/usuarios", &admin, &alta("medico", "m2@x.co")).await;
+            assert_eq!(r.status(), StatusCode::PAYMENT_REQUIRED);
+            assert_eq!(cuerpo_json(r).await["motivo"], "cupo_de_medicos_lleno");
+
+            // LA PAREJA: un no-médico sigue entrando. Sin esto, la prueba pasaría
+            // igual con una licencia que lo cerrara todo.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, &alta("auxiliar_enfermeria", "aux@x.co")).await,
+                StatusCode::CREATED
+            );
+
+            // Y EL RODEO: ascender a ese auxiliar tiene que costar lo mismo.
+            let aux: i64 = sqlx::query_scalar("SELECT id FROM usuario WHERE email = 'aux@x.co'")
+                .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(
+                pedir_con(&e, "PUT", &format!("/api/admin/usuarios/{aux}"), &admin,
+                          r#"{"rol":"medico"}"#).await,
+                StatusCode::PAYMENT_REQUIRED,
+                "el ascenso saltó el cupo de médicos"
+            );
+            // Por la vía REAL: el rol no cambió en la base.
+            let rol: String = sqlx::query_scalar("SELECT rol FROM usuario WHERE id = ?")
+                .bind(aux).fetch_one(&e.pool).await.unwrap();
+            assert_eq!(rol, "auxiliar_enfermeria", "se escribió pese al 402");
+
+            // Con sitio, el mismo ascenso pasa: la puerta no está cerrada por estar.
+            medico_datos::licencia::fijar(&e.pool, 1, 50, Some(medicos + 9), None).await.unwrap();
+            assert_eq!(
+                pedir_con(&e, "PUT", &format!("/api/admin/usuarios/{aux}"), &admin,
+                          r#"{"rol":"medico"}"#).await,
+                StatusCode::NO_CONTENT
+            );
+        }
+
+        /// **El cupo de USUARIOS justo no impide ascender**, porque un ascenso no
+        /// añade una persona. Es el falso bloqueo que la separación en dos
+        /// asientos existe para evitar (directiva 21).
+        #[tokio::test]
+        async fn con_el_cupo_de_usuarios_lleno_todavia_se_puede_ascender() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            let activos: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM usuario WHERE institucion_id = 1 AND activo = 1")
+                    .fetch_one(&e.pool).await.unwrap();
+            // Cupo EXACTAMENTE lleno, y sin cupo de médicos pactado.
+            medico_datos::licencia::fijar(&e.pool, 1, activos, None, None).await.unwrap();
+
+            // El CONTROL: no cabe una persona más.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin,
+                    r#"{"email":"n@x.co","password":"Clave-larga-12345","nombre_completo":"N","rol":"medico"}"#).await,
+                StatusCode::PAYMENT_REQUIRED
+            );
+            // Y sin embargo el laboratorista 5, que YA está contado, sí asciende.
+            assert_eq!(
+                pedir_con(&e, "PUT", "/api/admin/usuarios/5", &admin, r#"{"rol":"medico"}"#).await,
+                StatusCode::NO_CONTENT,
+                "el cupo de usuarios bloqueó un ascenso que no añade a nadie"
+            );
         }
 
         /// **Un superadmin CON institución no lo administra ese admin.**
@@ -6126,7 +6510,7 @@ mod pruebas {
         async fn un_admin_no_se_fabrica_un_superadmin_por_ningun_camino() {
             let e = con_tres_roles().await;
             let admin = con_admin(&e).await;
-            medico_datos::licencia::fijar(&e.pool, 1, 50, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 50, None, None).await.unwrap();
 
             // 1. El ALTA.
             const ALTA: &str = r#"{"username":"nuevo@x.co","password":"Clave-larga-12345",
@@ -6177,7 +6561,7 @@ mod pruebas {
                 "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
                  VALUES (9,'Retirada','ret@x.co','h','medico',1,0)",
             ).execute(&e.pool).await.unwrap();
-            medico_datos::licencia::fijar(&e.pool, 1, 3, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 3, None, None).await.unwrap();
 
             assert_eq!(
                 pedir_con(&e, "PUT", "/api/admin/usuarios/9", &admin, r#"{"activo":true}"#).await,
@@ -6195,7 +6579,7 @@ mod pruebas {
                 StatusCode::NO_CONTENT,
                 "guardar el nombre de un inactivo no consume cupo"
             );
-            medico_datos::licencia::fijar(&e.pool, 1, 5, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 5, None, None).await.unwrap();
             assert_eq!(
                 pedir_con(&e, "PUT", "/api/admin/usuarios/9", &admin, r#"{"activo":true}"#).await,
                 StatusCode::NO_CONTENT
@@ -6217,13 +6601,13 @@ mod pruebas {
                 StatusCode::PAYMENT_REQUIRED
             );
             // Con el cupo lleno, tampoco.
-            medico_datos::licencia::fijar(&e.pool, 1, 3, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 3, None, None).await.unwrap();
             assert_eq!(
                 pedir_con(&e, "POST", "/api/admin/usuarios", &admin, ALTA).await,
                 StatusCode::PAYMENT_REQUIRED
             );
             // Con cupo, sí.
-            medico_datos::licencia::fijar(&e.pool, 1, 10, None).await.unwrap();
+            medico_datos::licencia::fijar(&e.pool, 1, 10, None, None).await.unwrap();
             assert_eq!(
                 pedir_con(&e, "POST", "/api/admin/usuarios", &admin, ALTA).await,
                 StatusCode::CREATED
@@ -7653,6 +8037,20 @@ mod pruebas {
             // se le ponga capacidad, y entonces hay que borrarla a conciencia y
             // quitar esta línea. Las dos dicen lo mismo a propósito.
             ("subir_imagen", "el radiólogo no está en ninguna lista de capacidades; ver `subir_imagen_sigue_sin_exigir_rol_a_proposito`"),
+            // `mi_clave` no escribe un recurso de la institución: escribe LA
+            // FILA DE QUIEN LLAMA, y el id sale de la cookie ya verificada, no
+            // del cuerpo. Ponerle una capacidad sería decir que hay roles que no
+            // pueden cambiar su propia contraseña, que es al revés de lo que
+            // hace falta.
+            //
+            // Y no está pelada: exige la contraseña ACTUAL, que es una prueba
+            // MÁS fuerte que cualquier capacidad —una sesión robada la falla—.
+            // Esa exigencia la sujeta
+            // `la_contrasena_propia_se_cambia_y_echa_a_las_sesiones_viejas`, que
+            // se pone roja si alguien la quita; sin esa prueba, esta línea sería
+            // justo el silenciamiento contra el que avisa el comentario de
+            // abajo.
+            ("mi_clave", "escribe la fila propia y exige la contraseña actual; ver `la_contrasena_propia_se_cambia_y_echa_a_las_sesiones_viejas`"),
         ];
 
         // SOLO LA CADENA DEL ROUTER, no el archivo entero. Buscar en todo el
@@ -7693,13 +8091,16 @@ mod pruebas {
                 }
             }
         }
-        // 85 y no 60: hay 91, así que la holgura es de seis y no de treinta y
-        // uno. Un umbral con un tercio de margen toleraría que desapareciera un
-        // tercio de las rutas sin decir nada — es un número que envejece hacia
-        // la ceguera (directiva 30).
+        // 86 y no 60: hay 92 —una más desde que nació `mi_clave`—, así que la
+        // holgura es de seis y no de treinta y dos. Un umbral con un tercio de
+        // margen toleraría que desapareciera un tercio de las rutas sin decir
+        // nada — es un número que envejece hacia la ceguera (directiva 30).
+        // **El suelo se sube con cada ruta nueva**: dejarlo quieto es cómo la
+        // holgura se convierte en el margen de un tercio que este comentario
+        // rechaza.
         assert!(
-            escritores.len() >= 85,
-            "se esperaban al menos 85 escritores y se encontraron {}: ¿cambió la \
+            escritores.len() >= 86,
+            "se esperaban al menos 86 escritores y se encontraron {}: ¿cambió la \
              forma de registrar rutas y esta prueba dejó de mirar nada?",
             escritores.len()
         );
