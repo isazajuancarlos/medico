@@ -25,6 +25,7 @@ use medico_datos::cita::{self, CitaNueva, CitaVista};
 use medico_datos::diagnostico;
 use medico_datos::consentimiento;
 use medico_datos::documento::{self, Documento, DocumentoEdicion, DocumentoNuevo, DocumentoVista};
+use medico_datos::estadisticas;
 use medico_datos::facturacion;
 use medico_datos::formula::{self, Formula, FormulaNueva};
 use medico_datos::urgencias::{self, TriageNuevo};
@@ -302,6 +303,17 @@ pub fn router(estado: Estado) -> Router {
             "/api/agenda/{id}/bloques/{bloque_id}",
             put(agenda_activar_bloque).delete(agenda_borrar_bloque),
         )
+        // Estadísticas. Ocho GET y ni un solo verbo de escritura: es un módulo
+        // de lectura entero, y por eso ninguna de estas rutas aparece en la
+        // lista de excepciones de `ninguna_escritura_se_conforma_con_estar_autenticado`.
+        .route("/api/estadisticas/resumen", get(est_resumen))
+        .route("/api/estadisticas/kpis", get(est_kpis))
+        .route("/api/estadisticas/citas", get(est_citas))
+        .route("/api/estadisticas/pacientes", get(est_pacientes))
+        .route("/api/estadisticas/diagnosticos", get(est_diagnosticos))
+        .route("/api/estadisticas/produccion", get(est_produccion))
+        .route("/api/estadisticas/financiero", get(est_financiero))
+        .route("/api/estadisticas/urgencias", get(est_urgencias))
         // Farmacia. Leer no exige capacidad; escribir sí (`GestionarFarmacia`).
         .route("/api/farmacia/stats", get(farm_stats))
         .route("/api/farmacia/inventario", get(farm_listar).post(farm_crear))
@@ -4317,6 +4329,158 @@ async fn fac_entidades(State(e): State<Estado>, _u: Autenticado) -> Response {
         Ok(v) => Json(v).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Estadísticas
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Ocho paneles de SOLO LECTURA. Piden `Autenticado` y nada más: mirar el resumen
+// de la propia institución no es una acción de gestión, y exigirle una capacidad
+// dejaría sin portada a los roles que atienden. Lo que cada uno ve lo decide su
+// ÁMBITO, que es donde vive el aislamiento — ver `medico_datos::estadisticas`.
+
+/// El periodo que pide el frontal. Los nombres son los que manda
+/// `estadisticas.service.ts` (`fecha_inicio`, `fecha_fin`), no los internos.
+#[derive(Deserialize)]
+struct RangoEstadistica {
+    fecha_inicio: Option<String>,
+    fecha_fin: Option<String>,
+    /// Cuántos diagnósticos devolver. Solo lo usa `/diagnosticos`.
+    top: Option<i64>,
+}
+
+/// Desde dónde arranca un panel cuando el frontal no lo dice.
+enum Defecto {
+    /// El primero del mes en curso: paneles de actividad diaria.
+    MesEnCurso,
+    /// El 1 de enero: paneles acumulados del año (diagnósticos, financiero).
+    AnioEnCurso,
+}
+
+impl RangoEstadistica {
+    /// Resuelve el periodo, o dice qué fecha vino mal.
+    ///
+    /// **Una fecha ilegible se RECHAZA con 400.** El lado Python la habría
+    /// dejado pasar hasta la comparación de texto, donde no casa con nada y el
+    /// panel sale vacío: el usuario ve «no hay datos» cuando lo que hay es un
+    /// filtro roto, que es la peor respuesta posible (directiva 20).
+    fn resolver(&self, defecto: Defecto) -> Result<(String, String), (StatusCode, String)> {
+        let hoy = medico_datos::hoy();
+        let inicio = match &self.fecha_inicio {
+            Some(f) => valida(f, "fecha_inicio")?,
+            None => match defecto {
+                Defecto::MesEnCurso => format!("{}-01", &hoy[..7]),
+                Defecto::AnioEnCurso => format!("{}-01-01", &hoy[..4]),
+            },
+        };
+        let fin = match &self.fecha_fin {
+            Some(f) => valida(f, "fecha_fin")?,
+            None => hoy,
+        };
+        if inicio > fin {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "el periodo va al revés: fecha_inicio ({inicio}) es posterior a \
+                     fecha_fin ({fin})"
+                ),
+            ));
+        }
+        Ok((inicio, fin))
+    }
+}
+
+fn valida(fecha: &str, campo: &str) -> Result<String, (StatusCode, String)> {
+    match chrono::NaiveDate::parse_from_str(fecha, "%Y-%m-%d") {
+        Ok(_) => Ok(fecha.to_string()),
+        Err(_) => Err((
+            StatusCode::BAD_REQUEST,
+            format!("«{fecha}» no es una fecha: {campo} se escribe AAAA-MM-DD"),
+        )),
+    }
+}
+
+fn panel<T: Serialize>(r: Result<T, sqlx::Error>) -> Response {
+    match r {
+        Ok(v) => Json(v).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn est_resumen(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    panel(estadisticas::resumen(&e.pool, u.ambito()).await)
+}
+
+/// El panel de portada. Es `/resumen` recortado a cuatro campos, y así se sirve:
+/// duplicar las consultas para devolver menos es el camino por el que los dos
+/// acaban diciendo cosas distintas.
+async fn est_kpis(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    panel(estadisticas::kpis(&e.pool, u.ambito()).await)
+}
+
+async fn est_citas(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(r): Query<RangoEstadistica>,
+) -> Response {
+    let (i, f) = match r.resolver(Defecto::MesEnCurso) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    panel(estadisticas::citas(&e.pool, u.ambito(), &i, &f).await)
+}
+
+async fn est_pacientes(State(e): State<Estado>, Autenticado(u): Autenticado) -> Response {
+    panel(estadisticas::pacientes(&e.pool, u.ambito()).await)
+}
+
+async fn est_diagnosticos(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(r): Query<RangoEstadistica>,
+) -> Response {
+    let (i, f) = match r.resolver(Defecto::AnioEnCurso) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    panel(estadisticas::diagnosticos(&e.pool, u.ambito(), &i, &f, r.top.unwrap_or(10)).await)
+}
+
+async fn est_produccion(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(r): Query<RangoEstadistica>,
+) -> Response {
+    let (i, f) = match r.resolver(Defecto::MesEnCurso) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    panel(estadisticas::produccion(&e.pool, u.ambito(), &i, &f).await)
+}
+
+async fn est_financiero(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(r): Query<RangoEstadistica>,
+) -> Response {
+    let (i, f) = match r.resolver(Defecto::AnioEnCurso) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    panel(estadisticas::financiero(&e.pool, u.ambito(), &i, &f).await)
+}
+
+async fn est_urgencias(
+    State(e): State<Estado>,
+    Autenticado(u): Autenticado,
+    Query(r): Query<RangoEstadistica>,
+) -> Response {
+    let (i, f) = match r.resolver(Defecto::MesEnCurso) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    panel(estadisticas::urgencias(&e.pool, u.ambito(), &i, &f).await)
 }
 
 #[cfg(test)]
@@ -8699,6 +8863,39 @@ mod pruebas {
                 .execute(&e.pool)
                 .await
                 .unwrap();
+
+                // 8. estadísticas — un módulo entero de AGREGADOS, y por eso
+                //    hace falta un nombre que se pueda buscar en la respuesta:
+                //    un panel fugado devuelve números, y un número de más no se
+                //    distingue de un número correcto mirando el JSON. El de
+                //    `/produccion` sí trae el nombre del profesional.
+                let medico = 70 + inst;
+                sqlx::query(
+                    "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                     VALUES (?,?,?,?,'medico',?,1)",
+                )
+                .bind(medico)
+                .bind(format!("Medico{marca}"))
+                .bind(format!("m{medico}@x.co"))
+                .bind(&h)
+                .bind(inst)
+                .execute(&e.pool)
+                .await
+                .unwrap();
+                sqlx::query(
+                    "INSERT INTO historia (id,fecha,codigo_historia,paciente_id,medico_id,
+                                           creado_por,motivo_consulta,enfermedad_actual,
+                                           diagnostico_principal,plan_tratamiento)
+                     VALUES (?,'2026-03-10 12:00:00',?,?,?,?,'dolor','desde ayer','J00','reposo')",
+                )
+                .bind(700 + inst)
+                .bind(format!("HE-{marca}"))
+                .bind(pac)
+                .bind(medico)
+                .bind(medico)
+                .execute(&e.pool)
+                .await
+                .unwrap();
             }
             e
         }
@@ -8721,6 +8918,15 @@ mod pruebas {
                 ("rehabilitacion", "/api/rehabilitacion/planes", "Funcional"),
                 ("diagnostico", "/api/laboratorio/ordenes", "Hemograma"),
                 ("consentimiento", "/api/consentimiento", "Apendicectomia"),
+                // El periodo va EXPLÍCITO y ancho a propósito: con el defecto
+                // —el mes en curso— esta fila dependería de la fecha del reloj,
+                // y una prueba que solo falla el día 1 a las 20:00 es una prueba
+                // que no dice nada 364 días al año.
+                (
+                    "estadisticas",
+                    "/api/estadisticas/produccion?fecha_inicio=2000-01-01&fecha_fin=2100-01-01",
+                    "Medico",
+                ),
             ];
 
             // Se ACUMULAN los fallos en vez de cortar en el primero, y no es
@@ -8761,6 +8967,155 @@ mod pruebas {
             );
         }
 
+        /// **Los ocho paneles responden, y ninguno revienta.**
+        ///
+        /// Es el positivo de control de todo lo demás: `medico-datos` prueba las
+        /// consultas, pero un panel puede compilar, consultar bien y aun así no
+        /// llegar nunca a servirse —una ruta mal escrita, un extractor que no
+        /// resuelve— y eso no se ve desde abajo. Esta prueba arranca el ROUTER
+        /// real y le habla como le habla el frontal.
+        ///
+        /// El lado Python tenía DOS paneles devolviendo 500 a todo el mundo
+        /// —`/urgencias` por un enum inexistente y `/pacientes` por un
+        /// desempaquetado imposible— y llevaban meses así porque ninguna prueba
+        /// los invocaba. La frase «y ninguno revienta» es exactamente lo que
+        /// faltaba.
+        #[tokio::test]
+        async fn los_ocho_paneles_responden_200() {
+            let e = dos_prestadores_con_todo().await;
+            for panel in [
+                "resumen", "kpis", "citas", "pacientes", "diagnosticos", "produccion",
+                "financiero", "urgencias",
+            ] {
+                let r = pedir(&e, &format!("/api/estadisticas/{panel}"), 60).await;
+                assert_eq!(
+                    r.status(),
+                    StatusCode::OK,
+                    "/api/estadisticas/{panel} respondió {}",
+                    r.status()
+                );
+            }
+        }
+
+        /// Y sin sesión ninguno contesta: son datos del prestador, no un folleto.
+        #[tokio::test]
+        async fn los_paneles_no_se_leen_sin_sesion() {
+            let e = dos_prestadores_con_todo().await;
+            for panel in ["resumen", "kpis", "financiero", "pacientes"] {
+                let r = router(e.clone())
+                    .oneshot(
+                        Request::builder()
+                            .method("GET")
+                            .uri(format!("/api/estadisticas/{panel}"))
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(r.status(), StatusCode::UNAUTHORIZED, "{panel} se leyó sin cookie");
+            }
+        }
+
+        /// La forma del JSON es la que el frontal declara en
+        /// `estadisticas.service.ts`. Un campo que se renombre aquí deja una
+        /// tarjeta en blanco sin que nada falle: el `undefined` de TypeScript no
+        /// avisa en tiempo de ejecución.
+        #[tokio::test]
+        async fn el_json_trae_los_campos_que_el_frontal_lee() {
+            let e = dos_prestadores_con_todo().await;
+            let campos: &[(&str, &[&str])] = &[
+                ("kpis", &["citas_hoy", "citas_mes", "total_pacientes", "fecha"]),
+                (
+                    "resumen",
+                    &[
+                        "fecha", "total_pacientes", "citas_hoy", "citas_mes",
+                        "citas_atendidas_mes", "tasa_asistencia", "consultas_mes",
+                        "urgencias_activas", "hospitalizados", "total_camas",
+                        "camas_disponibles", "camas_ocupadas", "tasa_ocupacion",
+                        "facturas_pendientes", "valor_pendiente",
+                    ],
+                ),
+                ("citas", &["periodo", "total", "by_estado", "by_tipo", "tendencia", "by_medico"]),
+                (
+                    "pacientes",
+                    &["total", "by_sexo", "by_grupo_edad", "by_tipo_usuario", "by_eps", "by_zona"],
+                ),
+                ("diagnosticos", &["periodo", "diagnosticos"]),
+                ("produccion", &["periodo", "medicos"]),
+                (
+                    "financiero",
+                    &[
+                        "periodo", "total_valor", "by_estado", "tendencia_mensual", "glosas",
+                        "valor_glosado_pendiente",
+                    ],
+                ),
+                (
+                    "urgencias",
+                    &["periodo", "total", "by_triage", "by_destino", "estancia_promedio_min"],
+                ),
+            ];
+            for (panel, esperados) in campos {
+                let v = json(pedir(&e, &format!("/api/estadisticas/{panel}"), 60).await).await;
+                let obj = v.as_object().unwrap_or_else(|| panic!("{panel} no devolvió un objeto"));
+                for campo in *esperados {
+                    assert!(
+                        obj.contains_key(*campo),
+                        "a /api/estadisticas/{panel} le falta «{campo}». Tiene: {:?}",
+                        obj.keys().collect::<Vec<_>>()
+                    );
+                }
+            }
+        }
+
+        /// Una fecha mal escrita se RECHAZA diciéndolo, en vez de devolver un
+        /// panel vacío que se lee como «no hubo actividad».
+        #[tokio::test]
+        async fn una_fecha_ilegible_da_400_y_no_un_panel_vacio() {
+            let e = dos_prestadores_con_todo().await;
+            let r = pedir(&e, "/api/estadisticas/citas?fecha_inicio=ayer", 60).await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+
+            let r = pedir(&e, "/api/estadisticas/citas?fecha_fin=2026-13-45", 60).await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST, "el mes 13 no existe");
+
+            let r = pedir(
+                &e,
+                "/api/estadisticas/citas?fecha_inicio=2026-12-01&fecha_fin=2026-01-01",
+                60,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::BAD_REQUEST, "el periodo va al revés");
+
+            // La pareja: una fecha BIEN escrita pasa. Sin esto, un validador que
+            // rechazara todo pasaría los tres assertos de arriba.
+            let r = pedir(
+                &e,
+                "/api/estadisticas/citas?fecha_inicio=2026-01-01&fecha_fin=2026-12-31",
+                60,
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::OK);
+        }
+
+        /// Sin parámetros el periodo lo pone el servidor, y lo dice en la
+        /// respuesta: el frontal pinta ese rango en la cabecera del informe.
+        #[tokio::test]
+        async fn sin_parametros_el_periodo_lo_declara_la_respuesta() {
+            let e = dos_prestadores_con_todo().await;
+            let hoy = medico_datos::hoy();
+
+            let v = json(pedir(&e, "/api/estadisticas/citas", 60).await).await;
+            assert_eq!(v["periodo"]["inicio"], format!("{}-01", &hoy[..7]), "el mes en curso");
+            assert_eq!(v["periodo"]["fin"], hoy);
+
+            let v = json(pedir(&e, "/api/estadisticas/financiero", 60).await).await;
+            assert_eq!(
+                v["periodo"]["inicio"],
+                format!("{}-01-01", &hoy[..4]),
+                "el financiero acumula el AÑO, no el mes"
+            );
+        }
+
         /// El recuento que impide que un módulo nuevo se cuele sin prueba.
         ///
         /// Cuenta los archivos de `medico-datos/src/` que usan `filtro_ambito` y
@@ -8797,6 +9152,7 @@ mod pruebas {
                 "ambulancia",
                 "consentimiento",
                 "diagnostico",
+                "estadisticas",
                 "facturacion",
                 "inventario",
                 "nutricion",

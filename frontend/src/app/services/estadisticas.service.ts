@@ -70,7 +70,8 @@ export interface EstadisticasUrgencias {
   total: number;
   by_triage: Record<string, number>;
   by_destino: Record<string, number>;
-  tiempo_espera_promedio_min: number;
+  /** Minutos medios de ingreso a egreso. Es la ESTANCIA, no la espera. */
+  estancia_promedio_min: number;
 }
 
 @Injectable({ providedIn: 'root' })

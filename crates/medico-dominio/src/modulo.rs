@@ -63,8 +63,8 @@ pub const CATALOGO: &[Modulo] = &[
     m("PORTAL_PACIENTE", "Core", None),
     // --- Hospitalario -------------------------------------------------------
     m("HOSPITALIZACION", "Hospitalario", Some("/api/hospitalizacion")),
-    m("EPICRISIS", "Hospitalario", None),
-    m("INTERCONSULTAS", "Hospitalario", None),
+    m("EPICRISIS", "Hospitalario", Some("/api/documentos")),
+    m("INTERCONSULTAS", "Hospitalario", Some("/api/documentos")),
     m("MAR", "Hospitalario", None),
     m("KARDEX", "Hospitalario", None),
     m("CENSO_DIARIO", "Hospitalario", None),
@@ -72,7 +72,7 @@ pub const CATALOGO: &[Modulo] = &[
     m("CONTRARREFERENCIA", "Hospitalario", Some("/api/contrarreferencia")),
     // --- Quirúrgico ---------------------------------------------------------
     m("QUIROFANO", "Quirúrgico", None),
-    m("NOTA_OPERATORIA", "Quirúrgico", None),
+    m("NOTA_OPERATORIA", "Quirúrgico", Some("/api/documentos")),
     m("PREANESTESIA", "Quirúrgico", None),
     m("RECUPERACION", "Quirúrgico", None),
     // --- Diagnóstico --------------------------------------------------------
@@ -81,7 +81,7 @@ pub const CATALOGO: &[Modulo] = &[
     // --- Soporte clínico ----------------------------------------------------
     m("FARMACIA", "Soporte clínico", Some("/api/farmacia")),
     m("ENFERMERIA", "Soporte clínico", None),
-    m("EVOLUCIONES", "Soporte clínico", None),
+    m("EVOLUCIONES", "Soporte clínico", Some("/api/documentos")),
     m("CONSENTIMIENTO", "Soporte clínico", Some("/api/consentimiento")),
     m("BANCO_SANGRE", "Soporte clínico", None),
     // --- Especialidades -----------------------------------------------------
@@ -103,9 +103,9 @@ pub const CATALOGO: &[Modulo] = &[
     m("AMBULANCIAS", "Traslados", Some("/api/ambulancias")),
     // --- Administrativo -----------------------------------------------------
     m("FACTURACION", "Administrativo", Some("/api/facturacion")),
-    m("RIPS", "Administrativo", None),
+    m("RIPS", "Administrativo", Some("/api/rips")),
     m("AUDITORIA", "Administrativo", Some("/api/acceso")),
-    m("ESTADISTICAS", "Administrativo", None),
+    m("ESTADISTICAS", "Administrativo", Some("/api/estadisticas")),
     m("TURNOS", "Administrativo", None),
     m("COMITES", "Administrativo", None),
     m("EQUIPOS_MEDICOS", "Administrativo", None),
