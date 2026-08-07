@@ -359,6 +359,124 @@ pub struct Politica {
     pub notificar_intentos_fallidos: bool,
 }
 
+/// El suelo de una contraseña, y **no es un defecto inventado** (directiva 20):
+/// es el mismo número que el esquema le impone a
+/// `politica_seguridad.longitud_minima_password` con su
+/// `CHECK (… BETWEEN 8 AND 128)`. Una institución puede exigir más; ninguna
+/// puede bajar de aquí, y una cuenta sin institución —que no tiene política que
+/// leer— se queda exactamente en él.
+pub const MINIMO_PASSWORD: usize = 8;
+
+/// ¿Admite esta contraseña la política de seguridad de su institución?
+///
+/// **Existe porque el mínimo no existía.** Hasta el 2026-08-06 las dos rutas que
+/// fijan una contraseña —el alta de usuario y el restablecimiento por un
+/// administrador— tenían escrito `else { 400, "la contraseña no cumple el
+/// mínimo exigido" }`, y esa rama estaba MUERTA: colgaba de que
+/// `claves::hashear` devolviera `None`, y Argon2 hashea la cadena vacía sin
+/// queja. Medido por HTTP: `{"nueva_password":""}` respondía **204** y después
+/// se entraba con `""`. El admin de la IPS pulsaba «restablecer» con el campo en
+/// blanco y creaba una puerta que abre cualquiera que conozca el correo — a una
+/// cuenta que escribe y **firma** historia clínica (Ley 527/1999). El sistema
+/// Python vivo sí lo comprobaba (`admin.py:400`, `len < 6`); se perdió al
+/// portar.
+///
+/// Y por eso la regla se escribe **aquí y contra la política**, no como un `if`
+/// en cada ruta: las veinte columnas de `politica_seguridad` eran de solo
+/// escritura —el administrador configuraba una postura que el binario no
+/// aplicaba en ninguna parte—, que es la otra mitad del mismo defecto
+/// (directiva 1: se quita la causa, no se tapa el síntoma).
+///
+/// `politica` va como `Option` y no con un valor de relleno: `None` significa
+/// «esta cuenta no pertenece a ninguna institución de la que leer política», y
+/// entonces manda [`MINIMO_PASSWORD`] a secas. Las cuatro exigencias de
+/// composición no se aplican sin política porque **nadie las pidió**; la
+/// longitud sí, porque es el suelo del esquema.
+pub fn password_admisible(clave: &str, politica: Option<&Politica>) -> Result<(), String> {
+    // Se cuentan CARACTERES, no bytes: `len()` daría por larga una contraseña de
+    // cuatro letras acentuadas.
+    let largo = clave.chars().count();
+    let minimo = politica
+        .map(|p| p.longitud_minima_password.max(0) as usize)
+        .unwrap_or(0)
+        .max(MINIMO_PASSWORD);
+    if largo < minimo {
+        return Err(format!(
+            "la contraseña debe tener al menos {minimo} caracteres"
+        ));
+    }
+    let Some(p) = politica else {
+        return Ok(());
+    };
+    // «Especial» es «ni letra ni dígito» —el espacio cuenta—: enumerar los
+    // signos permitidos deja fuera los que no se le ocurrieron a quien escribió
+    // la lista, y rechazar por eso es rechazar una contraseña más fuerte.
+    for (exigido, falta, mensaje) in [
+        (
+            p.requiere_mayuscula,
+            !clave.chars().any(char::is_uppercase),
+            "una letra mayúscula",
+        ),
+        (
+            p.requiere_minuscula,
+            !clave.chars().any(char::is_lowercase),
+            "una letra minúscula",
+        ),
+        (
+            p.requiere_numero,
+            !clave.chars().any(|c| c.is_numeric()),
+            "un dígito",
+        ),
+        (
+            p.requiere_caracter_especial,
+            !clave.chars().any(|c| !c.is_alphanumeric()),
+            "un carácter que no sea letra ni dígito",
+        ),
+    ] {
+        if exigido && falta {
+            return Err(format!(
+                "la política de seguridad de la institución exige {mensaje}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// La política que hay que aplicarle a la contraseña de OTRO usuario, con la
+/// puerta del ámbito ya cruzada.
+///
+/// Devuelve dos niveles de `Option` y **no se pueden colapsar**:
+///
+/// | valor | significa |
+/// |---|---|
+/// | `Ok(None)` | no existe, o no es de este ámbito, o es un superadmin → el llamante responde **404** |
+/// | `Ok(Some(None))` | sí se administra, pero no pertenece a ninguna institución → no hay política, manda el suelo |
+/// | `Ok(Some(Some(p)))` | su política |
+///
+/// **El orden es la razón de que exista**, y no es cosmético: comprobar la
+/// contraseña ANTES del ámbito responde «la política de la institución exige una
+/// mayúscula» sobre un id que debía dar 404, y con eso se enumera la plantilla
+/// del vecino probando números. Es la misma regla que ya rige aquí —404, nunca
+/// 403— aplicada al mensaje de validación.
+pub async fn politica_para_administrar(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    usuario_id: i64,
+) -> Result<Option<Option<Politica>>, sqlx::Error> {
+    if del_ambito(pool, ambito, usuario_id).await?.is_none() {
+        return Ok(None);
+    }
+    let inst: Option<i64> =
+        sqlx::query_scalar("SELECT institucion_id FROM usuario WHERE id = ?")
+            .bind(usuario_id)
+            .fetch_one(pool)
+            .await?;
+    match inst {
+        Some(id) => Ok(Some(politica(pool, id).await?)),
+        None => Ok(Some(None)),
+    }
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PoliticaCambio {
     pub longitud_minima_password: Option<i64>,
@@ -1438,6 +1556,179 @@ mod pruebas {
 
     async fn quien(pool: &crate::Pool, id: i64) -> crate::usuario::Usuario {
         crate::usuario::por_id(pool, id).await.unwrap().unwrap()
+    }
+
+    // ── La contraseña que un administrador le fija a otro ────────────────────
+
+    /// Una `Politica` con los cuatro requisitos de composición APAGADOS, para
+    /// que cada prueba encienda solo el que mide. Se construye a mano y no con
+    /// `Default` porque `Politica` no lo tiene: sus veinte columnas salen de la
+    /// base, y un `Default` inventaría una postura de seguridad que nadie fijó.
+    fn politica_de(longitud: i64) -> Politica {
+        Politica {
+            id: 1,
+            longitud_minima_password: longitud,
+            requiere_mayuscula: false,
+            requiere_minuscula: false,
+            requiere_numero: false,
+            requiere_caracter_especial: false,
+            dias_expiracion_password: 0,
+            historial_passwords: 0,
+            timeout_sesion_minutos: 30,
+            sesiones_simultaneas_permitidas: 1,
+            cerrar_otras_sesiones_al_login: false,
+            max_intentos_login: 5,
+            tiempo_bloqueo_minutos: 5,
+            requiere_2fa: false,
+            requiere_2fa_admin: false,
+            metodo_2fa: "totp".into(),
+            registrar_todos_los_accesos: false,
+            retener_logs_dias: 365,
+            notificar_login_nuevo_dispositivo: false,
+            notificar_cambio_password: false,
+            notificar_intentos_fallidos: false,
+        }
+    }
+
+    /// **La pareja del hallazgo.** El caso rojo es la contraseña VACÍA, que
+    /// hasta el 2026-08-06 el producto aceptaba con un 204: la rama que decía
+    /// «no cumple el mínimo exigido» colgaba de que Argon2 fallara, y Argon2
+    /// hashea `""` sin queja.
+    ///
+    /// El verde de al lado es lo que impide que esta prueba pase con una regla
+    /// que diga que no a todo.
+    #[test]
+    fn la_contrasena_vacia_no_se_admite_y_una_de_ocho_si() {
+        assert!(password_admisible("", None).is_err());
+        assert!(password_admisible("a", None).is_err());
+        assert!(password_admisible("abcdefg", None).is_err(), "siete < 8");
+        assert!(password_admisible("abcdefgh", None).is_ok(), "ocho es el suelo");
+    }
+
+    /// El suelo vale también **sin institución de la que leer política**, que es
+    /// el caso del `admin` que un superadmin crea con `institucion_id = NULL`.
+    /// Y no se rellena con la postura de nadie más: las cuatro exigencias de
+    /// composición no se aplican, porque nadie las pidió.
+    #[test]
+    fn sin_politica_manda_el_suelo_y_solo_el_suelo() {
+        assert_eq!(MINIMO_PASSWORD, 8);
+        assert!(password_admisible("abcdefgh", None).is_ok());
+        // Sin mayúscula, sin dígito y sin signo: pasa igual, porque no hay
+        // política que los exija.
+        assert!(password_admisible("abcdefghij", None).is_ok());
+    }
+
+    /// La institución puede exigir MÁS que el suelo, y esa es la mitad que
+    /// convierte `politica_seguridad` en algo que el binario aplica en vez de
+    /// una tabla de solo escritura.
+    #[test]
+    fn la_politica_sube_el_minimo_pero_no_lo_baja() {
+        let estricta = politica_de(12);
+        assert!(password_admisible("abcdefghijk", Some(&estricta)).is_err(), "once < 12");
+        assert!(password_admisible("abcdefghijkl", Some(&estricta)).is_ok());
+
+        // Y al revés: una política que pidiera menos NO puede rebajar el suelo.
+        // El `CHECK` del esquema ya lo impide (BETWEEN 8 AND 128), pero la regla
+        // no depende de que la base lo sujete.
+        let floja = politica_de(3);
+        assert!(password_admisible("abc", Some(&floja)).is_err());
+        assert!(password_admisible("abcdefgh", Some(&floja)).is_ok());
+    }
+
+    /// Los cuatro requisitos de composición, cada uno con su pareja: la
+    /// contraseña que le falta ESE carácter y la misma con él.
+    #[test]
+    fn cada_requisito_de_composicion_rechaza_solo_lo_suyo() {
+        let exigiendo = |encender: fn(&mut Politica)| {
+            let mut p = politica_de(8);
+            encender(&mut p);
+            p
+        };
+        let casos: [(Politica, &str, &str); 4] = [
+            (
+                exigiendo(|p| p.requiere_mayuscula = true),
+                "abcdefgh1!",
+                "Abcdefgh1!",
+            ),
+            (
+                exigiendo(|p| p.requiere_minuscula = true),
+                "ABCDEFGH1!",
+                "ABCDEFGh1!",
+            ),
+            (
+                exigiendo(|p| p.requiere_numero = true),
+                "Abcdefgh!",
+                "Abcdefgh1!",
+            ),
+            (
+                exigiendo(|p| p.requiere_caracter_especial = true),
+                "Abcdefgh1",
+                "Abcdefgh1!",
+            ),
+        ];
+        for (p, sin, con) in casos {
+            assert!(password_admisible(sin, Some(&p)).is_err(), "«{sin}» debía caer");
+            assert!(password_admisible(con, Some(&p)).is_ok(), "«{con}» debía pasar");
+            // Y el control: con la política por defecto —que no exige nada— la
+            // que caía pasa. Si no, la prueba estaría midiendo la longitud.
+            assert!(password_admisible(sin, Some(&politica_de(8))).is_ok());
+        }
+    }
+
+    /// Se cuentan CARACTERES, no bytes. Siete letras acentuadas son catorce
+    /// bytes: con `len()` esta contraseña habría pasado por larga.
+    #[test]
+    fn el_minimo_cuenta_caracteres_y_no_bytes() {
+        let siete = "áéíóúáé";
+        assert_eq!(siete.len(), 14, "el caso rojo depende de que ocupe 14 bytes");
+        assert_eq!(siete.chars().count(), 7);
+        assert!(password_admisible(siete, None).is_err());
+        assert!(password_admisible("áéíóúáéí", None).is_ok(), "ocho caracteres");
+    }
+
+    /// **El orden: el ámbito antes que la contraseña.** Si se comprobara al
+    /// revés, el mensaje «la política de la institución exige…» se respondería
+    /// sobre un id que debía dar 404, y con eso se enumera la plantilla del
+    /// vecino probando números.
+    #[tokio::test]
+    async fn la_politica_ajena_no_se_lee_ni_para_validar_una_contrasena() {
+        let pool = base().await;
+        // La suya: se administra, y trae política.
+        assert!(
+            politica_para_administrar(&pool, UNO, 2).await.unwrap().is_some(),
+            "la médica 2 es de la institución 1"
+        );
+        // La del vecino: NADA, ni siquiera la política.
+        assert!(
+            politica_para_administrar(&pool, UNO, 3).await.unwrap().is_none(),
+            "el admin 3 es de la institución 2"
+        );
+        // El superadmin no se administra desde aquí, lo pida quien lo pida.
+        assert!(
+            politica_para_administrar(&pool, Ambito::Superadmin, 4).await.unwrap().is_none()
+        );
+        // Y el que no existe se ve igual que el ajeno: 404 en los dos casos.
+        assert!(politica_para_administrar(&pool, UNO, 999).await.unwrap().is_none());
+    }
+
+    /// Un usuario sin institución sí se administra —lo hace el superadmin— pero
+    /// no tiene política que leer. Son los dos niveles de `Option`, y colapsarlos
+    /// convertiría «no hay política» en «no existe».
+    #[tokio::test]
+    async fn el_usuario_sin_institucion_se_administra_y_no_trae_politica() {
+        let pool = base().await;
+        sqlx::query(
+            "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+             VALUES (6,'Suelto','s@x.co','h','admin',NULL,1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let v = politica_para_administrar(&pool, Ambito::Superadmin, 6)
+            .await
+            .unwrap();
+        assert!(v.is_some(), "existe y el superadmin lo administra");
+        assert!(v.unwrap().is_none(), "pero no hay política que leer");
     }
 
     // ── Privilegio: el ascenso ───────────────────────────────────────────────

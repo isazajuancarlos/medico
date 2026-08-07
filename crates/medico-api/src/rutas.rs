@@ -983,6 +983,66 @@ async fn registrar_conjunto(
     }
 }
 
+/// Anota un **acto administrativo** en la bitácora encadenada: crear personal,
+/// cambiarle el rol, restablecerle la contraseña, darlo de baja, quitarle el
+/// freno o reescribir la política de seguridad.
+///
+/// **Antes de aplicar y de forma OBLIGATORIA**, al revés que el acceso a dato de
+/// paciente, que es best-effort porque allí manda la atención. Es la misma
+/// decisión —y el mismo texto— que `capacidades::registrar_cambio` ya había
+/// tomado para la matriz: aquí no hay paciente esperando, y un acto que reparte
+/// o revoca poder sobre datos clínicos sin rastro es justo lo que la bitácora
+/// existe para impedir. Si no se puede registrar, no se aplica.
+///
+/// Existe porque **no existía**: medido sobre esta misma rama, las 24 rutas
+/// `/api/admin/*` no llamaban a `acceso::registrar` ni una vez, mientras
+/// `PUT /api/capacidades` sí lo hacía en la MISMA tabla y `adm_auditoria` la
+/// sirve como la pantalla de auditoría de la institución. O sea que esa pantalla
+/// no podía enseñar jamás quién le cambió los permisos a quién, ni quién
+/// restableció la contraseña de un médico que firma historia clínica.
+///
+/// Va como `Coleccion` y no como `Recurso` por la razón de siempre: no hay UN
+/// paciente. `alcance.pacientes` queda vacío —no salió dato de nadie— y el
+/// `filtro` lleva el detalle, para que el eslabón diga QUÉ se hizo y no solo que
+/// algo se tocó.
+///
+/// Los LISTADOS de administración no pasan por aquí, y es deliberado: los pide
+/// cada pintado de pantalla, y una bitácora que crece con cada carga ahoga la
+/// señal que existe para dar.
+async fn anotar_acto_admin(
+    e: &Estado,
+    u: &medico_datos::usuario::Usuario,
+    accion: &str,
+    recurso: &str,
+    detalle: String,
+) -> Result<(), Response> {
+    let evento = acceso::Evento {
+        usuario_id: u.id,
+        rol: u.rol.clone(),
+        institucion_id: u.institucion_id,
+        accion: accion.to_string(),
+        recurso: recurso.to_string(),
+        objeto: acceso::Objeto::Coleccion {
+            alcance: acceso::Alcance {
+                ambito: acceso::describir_ambito(u.ambito()),
+                filtro: Some(detalle),
+                n: 1,
+                pacientes: vec![],
+            },
+        },
+        ts: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    };
+    acceso::registrar(&e.pool, &evento, e.clave_firma.as_deref())
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "no se pudo registrar el acto en la bitácora: no se aplicó",
+            )
+                .into_response()
+        })
+}
+
 /// El alcance de un conjunto visto por `u`. El ámbito sale del usuario, nunca de
 /// un parámetro: es la misma regla que el RIPS aprendió a la mala.
 fn alcance_visto_por(
@@ -4772,6 +4832,38 @@ fn institucion_objetivo(
     }
 }
 
+/// Los **maestros** —especialidades y entidades— son globales: los comparten
+/// todas las instituciones, así que no se acotan con `institucion_objetivo`, que
+/// exigiría elegir una. Lo único que hay que exigir es que quien los toca
+/// pertenezca a alguna, **o sea superadmin**.
+///
+/// Sin esto, las siete rutas de maestros pedían `Autorizado<AdministrarInstitucion>`
+/// y nada más, y un `admin` con `institucion_id = NULL` —que un superadmin crea
+/// por `POST /api/usuarios` sin dar institución— cae al defecto nacional, donde
+/// ese rol SÍ tiene la capacidad. Medido: `GET /api/admin/entidades` **200** y
+/// `POST` **201** con una cuenta a la que `/api/admin/institucion` y
+/// `/api/capacidades` respondían 403.
+///
+/// No es fuga de dato clínico —son catálogos— pero sí escritura global desde una
+/// cuenta que por diseño **no ve una sola fila**, y `PUT /api/admin/entidades/{id}`
+/// reescribe el `codigo_eps`, que viaja al RIPS de todas las instituciones.
+///
+/// Es la tercera vez que aparece esta forma: ya se arregló en
+/// `institucion_objetivo`, en `capacidades::institucion_de` y en
+/// `modulos::institucion_de`. Aquí la regla es distinta —no hay institución que
+/// elegir— así que es una función propia y no una cuarta copia de aquélla.
+fn puede_administrar_maestros(
+    u: &usuario::Usuario,
+) -> Result<(), (StatusCode, &'static str)> {
+    match u.ambito() {
+        Ambito::Institucion(_) | Ambito::Superadmin => Ok(()),
+        Ambito::Ninguno => Err((
+            StatusCode::FORBIDDEN,
+            "su cuenta no pertenece a ninguna institución: no administra los maestros",
+        )),
+    }
+}
+
 #[derive(Deserialize)]
 struct DeQuien {
     institucion_id: Option<i64>,
@@ -4817,6 +4909,10 @@ async fn adm_actualizar_institucion(
         Ok(v) => v,
         Err(r) => return r.into_response(),
     };
+    if let Err(r) = anotar_acto_admin(&e, &u, "configurar", "institucion", format!("id={id}")).await
+    {
+        return r;
+    }
     match administracion::actualizar_institucion(&e.pool, id, &c).await {
         Ok(true) => match administracion::institucion(&e.pool, id).await {
             Ok(v) => ok(v),
@@ -4854,6 +4950,11 @@ async fn adm_actualizar_configuracion(
         Ok(v) => v,
         Err(r) => return r.into_response(),
     };
+    if let Err(r) =
+        anotar_acto_admin(&e, &u, "configurar", "configuracion", format!("institucion={id}")).await
+    {
+        return r;
+    }
     match administracion::actualizar_configuracion(&e.pool, id, &c).await {
         Ok(Ok(())) => match administracion::configuracion(&e.pool, id).await {
             Ok(v) => ok(v),
@@ -4897,6 +4998,17 @@ async fn adm_actualizar_politica(
         Ok(v) => v,
         Err(r) => return r.into_response(),
     };
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "configurar",
+        "politica_seguridad",
+        format!("institucion={id}"),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::actualizar_politica(&e.pool, id, &c).await {
         Ok(Ok(())) => match administracion::politica(&e.pool, id).await {
             Ok(v) => ok(v),
@@ -4934,6 +5046,17 @@ async fn adm_crear_campo(
         Ok(v) => v,
         Err(r) => return r.into_response(),
     };
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "crear",
+        "campo_dinamico",
+        format!("institucion={id} etiqueta={} tipo={}", n.etiqueta, n.tipo),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::crear_campo(&e.pool, id, &n).await {
         Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
@@ -4947,7 +5070,11 @@ async fn adm_actualizar_campo(
     Path(id): Path<i64>,
     Json(c): Json<administracion::CampoCambio>,
 ) -> Response {
-    match administracion::actualizar_campo(&e.pool, autorizado.0.ambito(), id, &c).await {
+    let u = autorizado.0;
+    if let Err(r) = anotar_acto_admin(&e, &u, "editar", "campo_dinamico", format!("id={id}")).await {
+        return r;
+    }
+    match administracion::actualizar_campo(&e.pool, u.ambito(), id, &c).await {
         Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
         Ok(Ok(false)) => StatusCode::NOT_FOUND.into_response(),
         Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
@@ -4960,7 +5087,11 @@ async fn adm_borrar_campo(
     autorizado: Autorizado<AdministrarInstitucion>,
     Path(id): Path<i64>,
 ) -> Response {
-    match administracion::borrar_campo(&e.pool, autorizado.0.ambito(), id).await {
+    let u = autorizado.0;
+    if let Err(r) = anotar_acto_admin(&e, &u, "borrar", "campo_dinamico", format!("id={id}")).await {
+        return r;
+    }
+    match administracion::borrar_campo(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
         Ok(false) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => fallo_db(),
@@ -4971,8 +5102,11 @@ async fn adm_borrar_campo(
 
 async fn adm_especialidades(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
 ) -> Response {
+    if let Err(r) = puede_administrar_maestros(&autorizado.0) {
+        return r.into_response();
+    }
     match administracion::especialidades(&e.pool).await {
         Ok(v) => Json(v).into_response(),
         Err(_) => fallo_db(),
@@ -4986,9 +5120,24 @@ struct NombreSolo {
 
 async fn adm_crear_especialidad(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
     Json(n): Json<NombreSolo>,
 ) -> Response {
+    let u = autorizado.0;
+    if let Err(r) = puede_administrar_maestros(&u) {
+        return r.into_response();
+    }
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "crear",
+        "especialidad",
+        format!("nombre={}", n.nombre),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::crear_especialidad(&e.pool, &n.nombre).await {
         Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
@@ -4998,9 +5147,16 @@ async fn adm_crear_especialidad(
 
 async fn adm_borrar_especialidad(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
     Path(id): Path<i64>,
 ) -> Response {
+    let u = autorizado.0;
+    if let Err(r) = puede_administrar_maestros(&u) {
+        return r.into_response();
+    }
+    if let Err(r) = anotar_acto_admin(&e, &u, "borrar", "especialidad", format!("id={id}")).await {
+        return r;
+    }
     match administracion::borrar_especialidad(&e.pool, id).await {
         Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
         Ok(Ok(false)) => StatusCode::NOT_FOUND.into_response(),
@@ -5013,8 +5169,11 @@ async fn adm_borrar_especialidad(
 
 async fn adm_entidades(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
 ) -> Response {
+    if let Err(r) = puede_administrar_maestros(&autorizado.0) {
+        return r.into_response();
+    }
     match administracion::entidades(&e.pool).await {
         Ok(v) => Json(v).into_response(),
         Err(_) => fallo_db(),
@@ -5023,9 +5182,18 @@ async fn adm_entidades(
 
 async fn adm_crear_entidad(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
     Json(n): Json<administracion::EntidadNueva>,
 ) -> Response {
+    let u = autorizado.0;
+    if let Err(r) = puede_administrar_maestros(&u) {
+        return r.into_response();
+    }
+    if let Err(r) = anotar_acto_admin(&e, &u, "crear", "entidad", format!("nombre={}", n.nombre))
+        .await
+    {
+        return r;
+    }
     match administracion::crear_entidad(&e.pool, &n).await {
         Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(Err(i)) => (StatusCode::BAD_REQUEST, i.mensaje()).into_response(),
@@ -5035,10 +5203,28 @@ async fn adm_crear_entidad(
 
 async fn adm_actualizar_entidad(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
     Path(id): Path<i64>,
     Json(c): Json<administracion::EntidadCambio>,
 ) -> Response {
+    let u = autorizado.0;
+    if let Err(r) = puede_administrar_maestros(&u) {
+        return r.into_response();
+    }
+    // El `codigo_eps` va en el detalle a propósito: es el campo que viaja al
+    // RIPS de TODAS las instituciones, así que si alguna vez sale mal, el rastro
+    // tiene que decir quién lo cambió y a qué.
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "editar",
+        "entidad",
+        format!("id={id} codigo_eps={:?}", c.codigo_eps),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::actualizar_entidad(&e.pool, id, &c).await {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
         Ok(false) => StatusCode::NOT_FOUND.into_response(),
@@ -5048,9 +5234,16 @@ async fn adm_actualizar_entidad(
 
 async fn adm_borrar_entidad(
     State(e): State<Estado>,
-    _a: Autorizado<AdministrarInstitucion>,
+    autorizado: Autorizado<AdministrarInstitucion>,
     Path(id): Path<i64>,
 ) -> Response {
+    let u = autorizado.0;
+    if let Err(r) = puede_administrar_maestros(&u) {
+        return r.into_response();
+    }
+    if let Err(r) = anotar_acto_admin(&e, &u, "borrar", "entidad", format!("id={id}")).await {
+        return r;
+    }
     match administracion::borrar_entidad(&e.pool, id).await {
         Ok(Ok(true)) => StatusCode::NO_CONTENT.into_response(),
         Ok(Ok(false)) => StatusCode::NOT_FOUND.into_response(),
@@ -5134,13 +5327,36 @@ async fn adm_crear_usuario(
     if let Some(r) = puerta_de_licencia(&e, &u, id).await {
         return r;
     }
-    let Some(hash) = claves::hashear(&n.password) else {
-        return (
-            StatusCode::BAD_REQUEST,
-            "la contraseña no cumple el mínimo exigido",
-        )
-            .into_response();
+    let politica = match administracion::politica(&e.pool, id).await {
+        Ok(p) => p,
+        Err(_) => return fallo_db(),
     };
+    if let Err(motivo) = administracion::password_admisible(&n.password, politica.as_ref()) {
+        return (StatusCode::BAD_REQUEST, motivo).into_response();
+    }
+    // Aquí `None` ya no significa «contraseña corta» —eso lo decidió la política
+    // arriba— sino que Argon2 falló, que es avería del servidor y no culpa de
+    // quien pide. Devolver 400 acusaba al llamante de un defecto nuestro.
+    let Some(hash) = claves::hashear(&n.password) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    // El correo y el rol, nunca la contraseña ni el hash: la bitácora dice QUÉ
+    // se hizo, no repite el secreto que acaba de fijarse.
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "crear",
+        "usuario",
+        format!(
+            "institucion={id} login={} rol={}",
+            n.email.as_deref().or(n.username.as_deref()).unwrap_or("-"),
+            n.rol
+        ),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::crear_usuario(&e.pool, id, &n, &hash).await {
         Ok(Ok(id)) => (StatusCode::CREATED, Json(Creado { id })).into_response(),
         Ok(Err(f)) => fallo_de_usuario(f),
@@ -5212,6 +5428,17 @@ async fn adm_actualizar_usuario(
         Ok(Some(_)) => {}
         Err(_) => return fallo_db(),
     }
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "editar",
+        "usuario",
+        format!("id={id} rol={:?} activo={:?}", c.rol, c.activo),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::actualizar_usuario(&e.pool, u.ambito(), id, &c).await {
         Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
         Ok(Err(f)) => fallo_de_usuario(f),
@@ -5230,6 +5457,9 @@ async fn adm_borrar_usuario(
     // activarlo y la institución se queda sin administración.
     if id == u.id {
         return (StatusCode::BAD_REQUEST, "no puede darse de baja a sí mismo").into_response();
+    }
+    if let Err(r) = anotar_acto_admin(&e, &u, "borrar", "usuario", format!("id={id}")).await {
+        return r;
     }
     match administracion::desactivar_usuario(&e.pool, u.ambito(), id).await {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
@@ -5250,13 +5480,34 @@ async fn adm_reset_password(
     Json(p): Json<ClaveNueva>,
 ) -> Response {
     let u = autorizado.0;
-    let Some(hash) = claves::hashear(&p.nueva_password) else {
-        return (
-            StatusCode::BAD_REQUEST,
-            "la contraseña no cumple el mínimo exigido",
-        )
-            .into_response();
+    // El ámbito PRIMERO: si el id no es suyo, el 404 se responde antes de mirar
+    // la contraseña. Al revés, el mensaje de la política delataría que existe.
+    let politica = match administracion::politica_para_administrar(&e.pool, u.ambito(), id).await {
+        Ok(Some(p)) => p,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return fallo_db(),
     };
+    if let Err(motivo) = administracion::password_admisible(&p.nueva_password, politica.as_ref()) {
+        return (StatusCode::BAD_REQUEST, motivo).into_response();
+    }
+    let Some(hash) = claves::hashear(&p.nueva_password) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    // Se anota también que se le quitó el freno, porque `restablecer_password`
+    // lo hace por dentro y esa segunda cosa no la anuncia el nombre de la ruta:
+    // `quitar_freno` borra `intento_acceso` de TODOS los orígenes de ese correo,
+    // que es el único registro de un ensayo de contraseñas.
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "restablecer_password",
+        "usuario",
+        format!("id={id} (borra también sus intentos de acceso)"),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::restablecer_password(&e.pool, u.ambito(), id, &hash).await {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
         Ok(false) => StatusCode::NOT_FOUND.into_response(),
@@ -5289,6 +5540,20 @@ async fn adm_desbloquear(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return fallo_db(),
     };
+    // Esto BORRA evidencia —`intento_acceso` de todos los orígenes de ese
+    // correo, que es el único registro de un ensayo de contraseñas—, así que es
+    // justo el acto que no puede quedar sin rastro propio.
+    if let Err(r) = anotar_acto_admin(
+        &e,
+        &u,
+        "quitar_freno",
+        "usuario",
+        format!("id={id} (borra sus intentos de acceso)"),
+    )
+    .await
+    {
+        return r;
+    }
     match administracion::quitar_freno(&e.pool, &objetivo.email).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(_) => fallo_db(),
@@ -5580,6 +5845,179 @@ mod pruebas {
                           r#"{"nueva_password":"Clave-larga-12345"}"#).await,
                 StatusCode::NO_CONTENT
             );
+        }
+
+        /// **La contraseña vacía, por HTTP y por las dos rutas que la fijan.**
+        ///
+        /// El caso rojo es literalmente lo que el producto respondía antes:
+        /// `{"nueva_password":""}` → **204**, y después se entraba con `""`. La
+        /// rama que decía «no cumple el mínimo exigido» colgaba de que
+        /// `claves::hashear` devolviera `None`, y Argon2 hashea la cadena vacía
+        /// sin queja — o sea que el mensaje existía y no se emitía jamás.
+        ///
+        /// Se comprueba por la vía REAL del fallo: no basta con el código de
+        /// estado, hay que ver que el hash guardado **no cambió**. Un 400 que
+        /// escribiera igual sería el mismo agujero con otra respuesta.
+        #[tokio::test]
+        async fn la_contrasena_vacia_no_la_admite_ninguna_de_las_dos_rutas() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            medico_datos::licencia::fijar(&e.pool, 1, 50, None).await.unwrap();
+            let antes: String =
+                sqlx::query_scalar("SELECT password_hash FROM usuario WHERE id = 5")
+                    .fetch_one(&e.pool).await.unwrap();
+
+            for mala in ["", "a", "corta12"] {
+                let cuerpo = format!(r#"{{"nueva_password":"{mala}"}}"#);
+                assert_eq!(
+                    pedir_con(&e, "POST", "/api/admin/usuarios/5/reset-password", &admin, &cuerpo).await,
+                    StatusCode::BAD_REQUEST,
+                    "aceptó «{mala}» como contraseña"
+                );
+                let ahora: String =
+                    sqlx::query_scalar("SELECT password_hash FROM usuario WHERE id = 5")
+                        .fetch_one(&e.pool).await.unwrap();
+                assert_eq!(ahora, antes, "escribió el hash de «{mala}» de todas formas");
+            }
+
+            // LA PAREJA: una que sí cumple entra, y esto es lo que impide que la
+            // prueba pase con una regla que diga que no a todo.
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios/5/reset-password", &admin,
+                          r#"{"nueva_password":"Clave-larga-12345"}"#).await,
+                StatusCode::NO_CONTENT
+            );
+            let despues: String =
+                sqlx::query_scalar("SELECT password_hash FROM usuario WHERE id = 5")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_ne!(despues, antes, "el restablecimiento bueno no escribió nada");
+
+            // Y la otra ruta que fija contraseña: el alta.
+            let alta = |clave: &str| format!(
+                r#"{{"email":"nueva@x.co","password":"{clave}","nombre_completo":"N","rol":"medico"}}"#
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, &alta("")).await,
+                StatusCode::BAD_REQUEST,
+                "dio de alta a alguien con contraseña vacía"
+            );
+            let creados: i64 =
+                sqlx::query_scalar("SELECT count(*) FROM usuario WHERE email = 'nueva@x.co'")
+                    .fetch_one(&e.pool).await.unwrap();
+            assert_eq!(creados, 0, "la cuenta se creó pese al 400");
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/usuarios", &admin, &alta("Clave-larga-12345")).await,
+                StatusCode::CREATED
+            );
+        }
+
+        /// **Los maestros exigen pertenecer a alguna institución.**
+        ///
+        /// Un `admin` con `institucion_id = NULL` tiene `Ambito::Ninguno`: no ve
+        /// una sola fila de nadie, y sin embargo alcanzaba las siete rutas de
+        /// especialidades y entidades, porque solo pedían la capacidad y el
+        /// defecto nacional se la concede. `PUT /api/admin/entidades/{id}`
+        /// reescribe el `codigo_eps`, que viaja al RIPS de TODAS las
+        /// instituciones.
+        #[tokio::test]
+        async fn una_cuenta_sin_institucion_no_toca_los_maestros() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            let h = claves::hashear("clave123").unwrap();
+            sqlx::query(
+                "INSERT INTO usuario (id,nombre,email,password_hash,rol,institucion_id,activo)
+                 VALUES (40,'Sin casa','sc@x.co',?,'admin',NULL,1)",
+            ).bind(&h).execute(&e.pool).await.unwrap();
+            let suelto = cookie_de(40);
+
+            let maestros = [
+                ("GET", "/api/admin/especialidades", ""),
+                ("POST", "/api/admin/especialidades", r#"{"nombre":"Colada"}"#),
+                ("DELETE", "/api/admin/especialidades/1", ""),
+                ("GET", "/api/admin/entidades", ""),
+                ("POST", "/api/admin/entidades", r#"{"nit":"999","nombre":"EPS Colada","codigo_eps":"EPS999"}"#),
+                ("PUT", "/api/admin/entidades/1", r#"{"codigo_eps":"ROBADO"}"#),
+                ("DELETE", "/api/admin/entidades/1", ""),
+            ];
+            for (metodo, uri, cuerpo) in maestros {
+                assert_eq!(
+                    pedir_con(&e, metodo, uri, &suelto, cuerpo).await,
+                    StatusCode::FORBIDDEN,
+                    "{metodo} {uri} lo alcanzó una cuenta sin institución"
+                );
+            }
+            // Por la vía REAL del fallo: no quedó ninguna fila escrita.
+            let coladas: i64 = sqlx::query_scalar(
+                "SELECT (SELECT count(*) FROM especialidad WHERE nombre = 'Colada')
+                      + (SELECT count(*) FROM entidad WHERE nit = '999')",
+            ).fetch_one(&e.pool).await.unwrap();
+            assert_eq!(coladas, 0, "escribió en los maestros pese al 403");
+
+            // LA PAREJA, sin la cual esto pasaría igual con una regla que cierre
+            // a todo el mundo: el admin que SÍ tiene institución los administra.
+            assert_eq!(
+                pedir_con(&e, "GET", "/api/admin/entidades", &admin, "").await,
+                StatusCode::OK
+            );
+            assert_eq!(
+                pedir_con(&e, "POST", "/api/admin/especialidades", &admin, r#"{"nombre":"Buena"}"#).await,
+                StatusCode::CREATED
+            );
+        }
+
+        /// **Todo acto de administración deja eslabón, y los listados no.**
+        ///
+        /// La bitácora de `/api/admin` estaba vacía: crear personal, cambiarle el
+        /// rol, restablecerle la contraseña, darlo de baja y reescribir la
+        /// política de seguridad no dejaban rastro, mientras `PUT
+        /// /api/capacidades` sí lo dejaba en esa MISMA tabla y `adm_auditoria`
+        /// la sirve como la pantalla de auditoría de la institución.
+        ///
+        /// La pareja es el LISTADO: si también anotara, la bitácora crecería con
+        /// cada pintado de pantalla y ahogaría la señal que existe para dar.
+        #[tokio::test]
+        async fn los_actos_de_administracion_dejan_rastro_y_los_listados_no() {
+            let e = con_tres_roles().await;
+            let admin = con_admin(&e).await;
+            medico_datos::licencia::fijar(&e.pool, 1, 50, None).await.unwrap();
+            let cuantos = |e: Estado| async move {
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM acceso")
+                    .fetch_one(&e.pool).await.unwrap()
+            };
+
+            // El CONTROL primero: leer no anota.
+            let antes = cuantos(e.clone()).await;
+            for uri in ["/api/admin/usuarios", "/api/admin/entidades", "/api/admin/especialidades"] {
+                pedir_con(&e, "GET", uri, &admin, "").await;
+            }
+            assert_eq!(cuantos(e.clone()).await, antes, "un listado dejó eslabón");
+
+            // Y ahora los actos, uno a uno, exigiendo que cada uno sume.
+            let actos: [(&str, &str, &str); 6] = [
+                ("POST", "/api/admin/usuarios",
+                 r#"{"email":"n@x.co","password":"Clave-larga-12345","nombre_completo":"N","rol":"medico"}"#),
+                ("PUT", "/api/admin/usuarios/5", r#"{"rol":"medico"}"#),
+                ("POST", "/api/admin/usuarios/5/reset-password", r#"{"nueva_password":"Clave-larga-12345"}"#),
+                ("POST", "/api/admin/usuarios/5/desbloquear", ""),
+                ("DELETE", "/api/admin/usuarios/5", ""),
+                ("PUT", "/api/admin/politica-seguridad", r#"{"longitud_minima_password":12}"#),
+            ];
+            for (metodo, uri, cuerpo) in actos {
+                let n = cuantos(e.clone()).await;
+                let codigo = pedir_con(&e, metodo, uri, &admin, cuerpo).await;
+                assert!(codigo.is_success(), "{metodo} {uri} respondió {codigo}");
+                assert_eq!(
+                    cuantos(e.clone()).await,
+                    n + 1,
+                    "{metodo} {uri} se aplicó sin dejar eslabón"
+                );
+            }
+
+            // Y el eslabón dice QUÉ se hizo, no solo que algo se tocó.
+            let ultimo: String = sqlx::query_scalar(
+                "SELECT contenido FROM acceso ORDER BY secuencia DESC LIMIT 1",
+            ).fetch_one(&e.pool).await.unwrap();
+            assert!(ultimo.contains("politica_seguridad"), "el rastro no nombra el recurso: {ultimo}");
         }
 
         /// **Un superadmin CON institución no lo administra ese admin.**

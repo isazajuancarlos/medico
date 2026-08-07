@@ -446,12 +446,80 @@ medido el 2026-08-06:  229/229 llamadas del frontal resueltas (0 sin resolver)
                         reglas que el Python tuvo abiertas por la mitad —solo un
                         superadmin fabrica otro superadmin, el cupo se consume
                         también al REACTIVAR, y el alta pasa por la licencia—,
-                        cada una con su prueba HTTP por los DOS caminos
+                        cada una con su prueba HTTP por los DOS caminos.
+                        Y con las TRES que le faltaban, ver abajo
 
 a medias (1):
   rips — LOS CINCO desde el 2026-08-04. Falta el FEV-RIPS, que es
          la fusión de los cinco en un documento único, no un sexto
 ```
+
+### Las tres que le faltaban a `/api/admin` (2026-08-06)
+
+Las encontró la revisión de seguridad del PR #49 sobre `39375c3`, con las 760
+pruebas en verde y sin que ninguna las viera. Las tres son de la misma familia:
+**el mecanismo existía y no estaba enchufado.**
+
+1. **El mínimo de contraseña no existía, y la rama que lo decía estaba MUERTA.**
+   `claves::hashear` devuelve `None` solo si Argon2 falla, y Argon2 hashea `""`
+   sin queja — así que los dos `else { 400, "la contraseña no cumple el mínimo
+   exigido" }` no se emitían jamás. Medido: `{"nueva_password":""}` → **204**, y
+   después se entraba con `""`. El admin de la IPS pulsaba «restablecer» con el
+   campo en blanco y dejaba abierta una cuenta que **firma** historia clínica
+   (Ley 527/1999). Era **regresión**: el Python vivo sí lo comprueba
+   (`backend/routers/admin.py:400`, `len < 6`).
+
+   La regla vive ahora en `administracion::password_admisible`, y **contra la
+   política de la institución**, no como un `if` en cada ruta. Eso arregla de
+   paso la otra mitad: las 21 columnas de `politica_seguridad` eran de solo
+   escritura —el admin configuraba una postura que el binario no aplicaba en
+   ninguna parte—, y ya se aplican `longitud_minima_password` y los cuatro
+   `requiere_*` de composición. El suelo es **8**, y no es un defecto inventado
+   (directiva 20): es el mismo número del `CHECK (… BETWEEN 8 AND 128)` del
+   esquema. Las demás columnas siguen sin lector; están enumeradas en la tarea.
+
+   **El orden es parte de la regla**: `politica_para_administrar` cruza la puerta
+   del ámbito ANTES de mirar la contraseña. Al revés, el mensaje «la política de
+   la institución exige una mayúscula» se respondería sobre un id que debía dar
+   404, y con eso se enumera la plantilla del vecino probando números — la misma
+   razón por la que aquí es 404 y nunca 403.
+
+2. **Las siete rutas de maestros no tenían puerta de ámbito.** Un `admin` con
+   `institucion_id = NULL` —que un superadmin crea por `POST /api/usuarios` sin
+   dar institución— tiene `Ambito::Ninguno`, no ve una sola fila de nadie, y
+   alcanzaba `especialidades` y `entidades`: **200** al listar y **201** al
+   escribir, mientras `/api/admin/institucion` y `/api/capacidades` le
+   respondían 403. `PUT /api/admin/entidades/{id}` reescribe el `codigo_eps`,
+   que viaja al RIPS de TODAS las instituciones.
+
+   Lo cierra `puede_administrar_maestros`, que es **función propia y no una
+   cuarta copia** de `institucion_objetivo`: un maestro es global, así que no
+   hay institución que elegir y lo único exigible es pertenecer a alguna. Es la
+   tercera vez que aparece esta forma (`institucion_objetivo`,
+   `capacidades::institucion_de`, `modulos::institucion_de`).
+
+3. **Ninguna de las 24 rutas `/api/admin` dejaba línea en la bitácora.** Cero,
+   medido, mientras `PUT /api/capacidades` sí escribía en esa MISMA tabla y
+   `adm_auditoria` la sirve como la pantalla de auditoría de la institución. O
+   sea que esa pantalla no podía enseñar jamás quién le cambió los permisos a
+   quién, ni quién restableció la contraseña de un médico.
+
+   Lo pone `rutas::anotar_acto_admin`, **antes de aplicar y obligatorio** —el
+   mismo criterio, y el mismo texto, que `capacidades::registrar_cambio` ya
+   había tomado: aquí no hay paciente esperando, y si no se puede registrar, no
+   se aplica—. Va como `Coleccion`, porque no hay UN paciente. **Los listados no
+   anotan**, a propósito: los pide cada pintado de pantalla y ahogarían la señal.
+
+   Dos actos llevan su detalle porque **borran evidencia y su nombre no lo
+   dice**: `restablecer_password` llama a `quitar_freno` por dentro, y
+   `quitar_freno` borra `intento_acceso` de todos los orígenes de ese correo,
+   que es el único registro de un ensayo de contraseñas.
+
+Las sujetan tres pruebas HTTP y siete unitarias, **todas con su pareja**, y las
+tres pasaron el banco de mutación. Lo que la revisión dejó sin arreglar —el cupo
+de médicos de la licencia, que en Rust no existe como columna, y cuatro
+observaciones no explotables— está en las tareas, con su medición y el motivo de
+no haberlo tocado.
 
 **`/api/admin/capacidades` no existía en NINGUNA de las dos pilas** y el frontal
 la llamaba: la matriz de capacidades vive en `/api/capacidades` desde #235, con
