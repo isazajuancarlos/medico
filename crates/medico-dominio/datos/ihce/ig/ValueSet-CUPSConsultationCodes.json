@@ -1,0 +1,894 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "CUPSConsultationCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores CUPSConsultationCodes</b></p><a name=\"CUPSConsultationCodes\"> </a><a name=\"hcCUPSConsultationCodes\"> </a><ul><li>Include these codes as defined in <a href=\"CodeSystem-CUPS.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/CUPS</code></a><table class=\"none\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890101\">890101</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR MEDICINA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890102\">890102</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR MEDICINA ESPECIALIZADA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890103\">890103</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR ODONTOLOGIA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890105\">890105</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890106\">890106</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR NUTRICION Y DIETETICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890108\">890108</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890109\">890109</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR TRABAJO SOCIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890110\">890110</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890111\">890111</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890112\">890112</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR TERAPIA RESPIRATORIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890113\">890113</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR TERAPIA OCUPACIONAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890114\">890114</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR PROMOTOR DE LA SALUD</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890115\">890115</a></td><td>ATENCION (VISITA) DOMICILIARIA, POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890116\">890116</a></td><td>ATENCION (VISITA) DOMICILIARIA POR OTRO PROFESIONAL DE LA SALUD</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890120\">890120</a></td><td>ATENCION (VISITA) AL SITIO DE TRABAJO, POR TERAPIA (OCUPACIONAL O FISICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890125\">890125</a></td><td>ATENCION (VISITA) AL SITIO DE TRABAJO, POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890201\">890201</a></td><td>CONSULTA DE PRIMERA VEZ POR MEDICINA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890202\">890202</a></td><td>CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES MEDICAS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890203\">890203</a></td><td>CONSULTA DE PRIMERA VEZ POR ODONTOLOGIA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890204\">890204</a></td><td>CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES EN ODONTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890205\">890205</a></td><td>CONSULTA DE PRIMERA VEZ POR ENFERMERIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890206\">890206</a></td><td>CONSULTA DE PRIMERA VEZ POR NUTRICION Y DIETETICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890207\">890207</a></td><td>CONSULTA DE PRIMERA VEZ POR OPTOMETRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890208\">890208</a></td><td>CONSULTA DE PRIMERA VEZ POR PSICOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890209\">890209</a></td><td>CONSULTA DE PRIMERA VEZ POR TRABAJO SOCIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890210\">890210</a></td><td>CONSULTA DE PRIMERA VEZ POR FONOAUDIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890211\">890211</a></td><td>CONSULTA DE PRIMERA VEZ POR FISIOTERAPIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890212\">890212</a></td><td>CONSULTA DE PRIMERA VEZ POR TERAPIA RESPIRATORIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890213\">890213</a></td><td>CONSULTA DE PRIMERA VEZ POR TERAPIA OCUPACIONAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890214\">890214</a></td><td>CONSULTA DE PRIMERA VEZ POR TERAPIAS ALTERNATIVAS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890215\">890215</a></td><td>CONSULTA DE PRIMERA VEZ POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890216\">890216</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890217\">890217</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ORAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890218\">890218</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDODONCIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890219\">890219</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890220\">890220</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ODONTOPEDIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890221\">890221</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PERIODONCIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890222\">890222</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTODONCIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890223\">890223</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890224\">890224</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REHABILITACION ORAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890225\">890225</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ALERGOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890226\">890226</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890227\">890227</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890228\">890228</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890229\">890229</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890230\">890230</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890231\">890231</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890232\">890232</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890233\">890233</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE TORAX</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890234\">890234</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890235\">890235</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890236\">890236</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890237\">890237</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ONCOLOGICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890238\">890238</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890239\">890239</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890240\">890240</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA VASCULAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890241\">890241</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN COLOPROCTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890242\">890242</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DERMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890243\">890243</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890244\">890244</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890245\">890245</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890246\">890246</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890247\">890247</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890248\">890248</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GENETICA MEDICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890249\">890249</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GERIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890250\">890250</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890251\">890251</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890252\">890252</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890253\">890253</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEPATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890254\">890254</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN INFECTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890255\">890255</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MASTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890256\">890256</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA AEROESPACIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890257\">890257</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890258\">890258</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890259\">890259</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890260\">890260</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890261\">890261</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL DEPORTE</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890262\">890262</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890263\">890263</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FAMILIAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890264\">890264</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890265\">890265</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FORENSE</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890266\">890266</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA INTERNA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890267\">890267</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA NUCLEAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890268\">890268</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890269\">890269</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890270\">890270</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEONATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890271\">890271</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890272\">890272</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890273\">890273</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROCIRUGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890274\">890274</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890275\">890275</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890276\">890276</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OFTALMOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890277\">890277</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890278\">890278</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890279\">890279</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890280\">890280</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890281\">890281</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890282\">890282</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OTORRINOLARINGOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890283\">890283</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PEDIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890284\">890284</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890285\">890285</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890286\">890286</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890287\">890287</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOTERAPIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890288\">890288</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890289\">890289</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890290\">890290</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SEXOLOGIA CLINICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890291\">890291</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TOXICOLOGIA CLINICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890292\">890292</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TRASPLANTES</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890294\">890294</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN UROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890295\">890295</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890296\">890296</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890297\">890297</a></td><td>CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES DE PSICOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890298\">890298</a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ESTETICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890301\">890301</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR MEDICINA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890302\">890302</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES MEDICAS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890303\">890303</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ODONTOLOGIA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890304\">890304</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES EN ODONTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890305\">890305</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ENFERMERIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890306\">890306</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR NUTRICION Y DIETETICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890307\">890307</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OPTOMETRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890308\">890308</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR PSICOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890309\">890309</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TRABAJO SOCIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890310\">890310</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR FONOAUDIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890311\">890311</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR FISIOTERAPIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890312\">890312</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA RESPIRATORIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890313\">890313</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA OCUPACIONAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890314\">890314</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIAS ALTERNATIVAS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890315\">890315</a></td><td>CONSULTA INTEGRAL DE CONTROL O DE SEGUIMIENTO POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890316\">890316</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890317\">890317</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ORAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890318\">890318</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDODONCIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890319\">890319</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890320\">890320</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ODONTOPEDIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890321\">890321</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PERIODONCIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890322\">890322</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTODONCIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890323\">890323</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890324\">890324</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REHABILITACION ORAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890325\">890325</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ALERGOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890326\">890326</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890327\">890327</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890328\">890328</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890329\">890329</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890330\">890330</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890331\">890331</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890332\">890332</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890333\">890333</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE TORAX</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890334\">890334</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890335\">890335</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GENERAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890336\">890336</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890337\">890337</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ONCOLOGICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890338\">890338</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890339\">890339</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890340\">890340</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA VASCULAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890341\">890341</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN COLOPROCTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890342\">890342</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DERMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890343\">890343</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890344\">890344</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890345\">890345</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890346\">890346</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890347\">890347</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890348\">890348</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GENETICA MEDICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890349\">890349</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GERIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890350\">890350</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890351\">890351</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890352\">890352</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890353\">890353</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEPATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890354\">890354</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN INFECTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890355\">890355</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MASTOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890356\">890356</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA AEROESPACIAL</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890357\">890357</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890358\">890358</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890359\">890359</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890360\">890360</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890361\">890361</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL DEPORTE</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890362\">890362</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890363\">890363</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FAMILIAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890364\">890364</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890365\">890365</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FORENSE</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890366\">890366</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA INTERNA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890367\">890367</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA NUCLEAR</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890368\">890368</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890369\">890369</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890370\">890370</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEONATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890371\">890371</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890372\">890372</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890373\">890373</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROCIRUGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890374\">890374</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890375\">890375</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890376\">890376</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OFTALMOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890377\">890377</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890378\">890378</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890379\">890379</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890380\">890380</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890381\">890381</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890382\">890382</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OTORRINOLARINGOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890383\">890383</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PEDIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890384\">890384</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890385\">890385</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890386\">890386</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890387\">890387</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOTERAPIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890388\">890388</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890389\">890389</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890390\">890390</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SEXOLOGIA CLINICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890391\">890391</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TOXICOLOGIA CLINICA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890392\">890392</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TRASPLANTES</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890394\">890394</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN UROLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890395\">890395</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890396\">890396</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890397\">890397</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES DE PSICOLOGIA</td></tr><tr><td><a href=\"CodeSystem-CUPS.html#CUPS-890398\">890398</a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ESTETICA</td></tr></table></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/CUPSConsultationCodes",
+  "version" : "1.0.0",
+  "name" : "CUPSconsultation",
+  "title" : "ValueSet: Unique Codes for consultation encounter services - Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados para tipos encuentros de consulta (ambulatoria) - Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza como una nomenclatura para tipos encuentros de consulta (ambulatoria) en Colombia (capítulo 890 de la terminología CUPS).",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CUPS",
+      "concept" : [{
+        "code" : "890101",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR MEDICINA GENERAL"
+      },
+      {
+        "code" : "890102",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR MEDICINA ESPECIALIZADA"
+      },
+      {
+        "code" : "890103",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR ODONTOLOGIA GENERAL"
+      },
+      {
+        "code" : "890105",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA"
+      },
+      {
+        "code" : "890106",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR NUTRICION Y DIETETICA"
+      },
+      {
+        "code" : "890108",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA"
+      },
+      {
+        "code" : "890109",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR TRABAJO SOCIAL"
+      },
+      {
+        "code" : "890110",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA"
+      },
+      {
+        "code" : "890111",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPIA"
+      },
+      {
+        "code" : "890112",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA RESPIRATORIA"
+      },
+      {
+        "code" : "890113",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA OCUPACIONAL"
+      },
+      {
+        "code" : "890114",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR PROMOTOR DE LA SALUD"
+      },
+      {
+        "code" : "890115",
+        "display" : "ATENCION (VISITA) DOMICILIARIA, POR EQUIPO INTERDISCIPLINARIO"
+      },
+      {
+        "code" : "890116",
+        "display" : "ATENCION (VISITA) DOMICILIARIA POR OTRO PROFESIONAL DE LA SALUD"
+      },
+      {
+        "code" : "890120",
+        "display" : "ATENCION (VISITA) AL SITIO DE TRABAJO, POR TERAPIA (OCUPACIONAL O FISICA)"
+      },
+      {
+        "code" : "890125",
+        "display" : "ATENCION (VISITA) AL SITIO DE TRABAJO, POR EQUIPO INTERDISCIPLINARIO"
+      },
+      {
+        "code" : "890201",
+        "display" : "CONSULTA DE PRIMERA VEZ POR MEDICINA GENERAL"
+      },
+      {
+        "code" : "890202",
+        "display" : "CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES MEDICAS"
+      },
+      {
+        "code" : "890203",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ODONTOLOGIA GENERAL"
+      },
+      {
+        "code" : "890204",
+        "display" : "CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES EN ODONTOLOGIA"
+      },
+      {
+        "code" : "890205",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ENFERMERIA"
+      },
+      {
+        "code" : "890206",
+        "display" : "CONSULTA DE PRIMERA VEZ POR NUTRICION Y DIETETICA"
+      },
+      {
+        "code" : "890207",
+        "display" : "CONSULTA DE PRIMERA VEZ POR OPTOMETRIA"
+      },
+      {
+        "code" : "890208",
+        "display" : "CONSULTA DE PRIMERA VEZ POR PSICOLOGIA"
+      },
+      {
+        "code" : "890209",
+        "display" : "CONSULTA DE PRIMERA VEZ POR TRABAJO SOCIAL"
+      },
+      {
+        "code" : "890210",
+        "display" : "CONSULTA DE PRIMERA VEZ POR FONOAUDIOLOGIA"
+      },
+      {
+        "code" : "890211",
+        "display" : "CONSULTA DE PRIMERA VEZ POR FISIOTERAPIA"
+      },
+      {
+        "code" : "890212",
+        "display" : "CONSULTA DE PRIMERA VEZ POR TERAPIA RESPIRATORIA"
+      },
+      {
+        "code" : "890213",
+        "display" : "CONSULTA DE PRIMERA VEZ POR TERAPIA OCUPACIONAL"
+      },
+      {
+        "code" : "890214",
+        "display" : "CONSULTA DE PRIMERA VEZ POR TERAPIAS ALTERNATIVAS"
+      },
+      {
+        "code" : "890215",
+        "display" : "CONSULTA DE PRIMERA VEZ POR EQUIPO INTERDISCIPLINARIO"
+      },
+      {
+        "code" : "890216",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA"
+      },
+      {
+        "code" : "890217",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ORAL"
+      },
+      {
+        "code" : "890218",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDODONCIA"
+      },
+      {
+        "code" : "890219",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL"
+      },
+      {
+        "code" : "890220",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ODONTOPEDIATRIA"
+      },
+      {
+        "code" : "890221",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PERIODONCIA"
+      },
+      {
+        "code" : "890222",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTODONCIA"
+      },
+      {
+        "code" : "890223",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL"
+      },
+      {
+        "code" : "890224",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REHABILITACION ORAL"
+      },
+      {
+        "code" : "890225",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ALERGOLOGIA"
+      },
+      {
+        "code" : "890226",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA"
+      },
+      {
+        "code" : "890227",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR"
+      },
+      {
+        "code" : "890228",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA"
+      },
+      {
+        "code" : "890229",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890230",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR"
+      },
+      {
+        "code" : "890231",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO"
+      },
+      {
+        "code" : "890232",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS"
+      },
+      {
+        "code" : "890233",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE TORAX"
+      },
+      {
+        "code" : "890234",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL"
+      },
+      {
+        "code" : "890235",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GENERAL"
+      },
+      {
+        "code" : "890236",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL"
+      },
+      {
+        "code" : "890237",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ONCOLOGICA"
+      },
+      {
+        "code" : "890238",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PEDIATRICA"
+      },
+      {
+        "code" : "890239",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA"
+      },
+      {
+        "code" : "890240",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA VASCULAR"
+      },
+      {
+        "code" : "890241",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN COLOPROCTOLOGIA"
+      },
+      {
+        "code" : "890242",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DERMATOLOGIA"
+      },
+      {
+        "code" : "890243",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS"
+      },
+      {
+        "code" : "890244",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA"
+      },
+      {
+        "code" : "890245",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890246",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA"
+      },
+      {
+        "code" : "890247",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890248",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GENETICA MEDICA"
+      },
+      {
+        "code" : "890249",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GERIATRIA"
+      },
+      {
+        "code" : "890250",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA"
+      },
+      {
+        "code" : "890251",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA"
+      },
+      {
+        "code" : "890252",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890253",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEPATOLOGIA"
+      },
+      {
+        "code" : "890254",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN INFECTOLOGIA"
+      },
+      {
+        "code" : "890255",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MASTOLOGIA"
+      },
+      {
+        "code" : "890256",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA AEROESPACIAL"
+      },
+      {
+        "code" : "890257",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)"
+      },
+      {
+        "code" : "890258",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)"
+      },
+      {
+        "code" : "890259",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)"
+      },
+      {
+        "code" : "890260",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)"
+      },
+      {
+        "code" : "890261",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL DEPORTE"
+      },
+      {
+        "code" : "890262",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO"
+      },
+      {
+        "code" : "890263",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FAMILIAR"
+      },
+      {
+        "code" : "890264",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION"
+      },
+      {
+        "code" : "890265",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FORENSE"
+      },
+      {
+        "code" : "890266",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA INTERNA"
+      },
+      {
+        "code" : "890267",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA NUCLEAR"
+      },
+      {
+        "code" : "890268",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA"
+      },
+      {
+        "code" : "890269",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890270",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEONATOLOGIA"
+      },
+      {
+        "code" : "890271",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA"
+      },
+      {
+        "code" : "890272",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890273",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROCIRUGIA"
+      },
+      {
+        "code" : "890274",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA"
+      },
+      {
+        "code" : "890275",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890276",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OFTALMOLOGIA"
+      },
+      {
+        "code" : "890277",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890278",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA"
+      },
+      {
+        "code" : "890279",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890280",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA"
+      },
+      {
+        "code" : "890281",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890282",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OTORRINOLARINGOLOGIA"
+      },
+      {
+        "code" : "890283",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PEDIATRIA"
+      },
+      {
+        "code" : "890284",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA"
+      },
+      {
+        "code" : "890285",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA"
+      },
+      {
+        "code" : "890286",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS"
+      },
+      {
+        "code" : "890287",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOTERAPIA"
+      },
+      {
+        "code" : "890288",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA"
+      },
+      {
+        "code" : "890289",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890290",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SEXOLOGIA CLINICA"
+      },
+      {
+        "code" : "890291",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TOXICOLOGIA CLINICA"
+      },
+      {
+        "code" : "890292",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TRASPLANTES"
+      },
+      {
+        "code" : "890294",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN UROLOGIA"
+      },
+      {
+        "code" : "890295",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)"
+      },
+      {
+        "code" : "890296",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)"
+      },
+      {
+        "code" : "890297",
+        "display" : "CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES DE PSICOLOGIA"
+      },
+      {
+        "code" : "890298",
+        "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ESTETICA"
+      },
+      {
+        "code" : "890301",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR MEDICINA GENERAL"
+      },
+      {
+        "code" : "890302",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES MEDICAS"
+      },
+      {
+        "code" : "890303",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ODONTOLOGIA GENERAL"
+      },
+      {
+        "code" : "890304",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES EN ODONTOLOGIA"
+      },
+      {
+        "code" : "890305",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ENFERMERIA"
+      },
+      {
+        "code" : "890306",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR NUTRICION Y DIETETICA"
+      },
+      {
+        "code" : "890307",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OPTOMETRIA"
+      },
+      {
+        "code" : "890308",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR PSICOLOGIA"
+      },
+      {
+        "code" : "890309",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TRABAJO SOCIAL"
+      },
+      {
+        "code" : "890310",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR FONOAUDIOLOGIA"
+      },
+      {
+        "code" : "890311",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR FISIOTERAPIA"
+      },
+      {
+        "code" : "890312",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA RESPIRATORIA"
+      },
+      {
+        "code" : "890313",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA OCUPACIONAL"
+      },
+      {
+        "code" : "890314",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIAS ALTERNATIVAS"
+      },
+      {
+        "code" : "890315",
+        "display" : "CONSULTA INTEGRAL DE CONTROL O DE SEGUIMIENTO POR EQUIPO INTERDISCIPLINARIO"
+      },
+      {
+        "code" : "890316",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA"
+      },
+      {
+        "code" : "890317",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ORAL"
+      },
+      {
+        "code" : "890318",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDODONCIA"
+      },
+      {
+        "code" : "890319",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL"
+      },
+      {
+        "code" : "890320",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ODONTOPEDIATRIA"
+      },
+      {
+        "code" : "890321",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PERIODONCIA"
+      },
+      {
+        "code" : "890322",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTODONCIA"
+      },
+      {
+        "code" : "890323",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL"
+      },
+      {
+        "code" : "890324",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REHABILITACION ORAL"
+      },
+      {
+        "code" : "890325",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ALERGOLOGIA"
+      },
+      {
+        "code" : "890326",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA"
+      },
+      {
+        "code" : "890327",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR"
+      },
+      {
+        "code" : "890328",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA"
+      },
+      {
+        "code" : "890329",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890330",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR"
+      },
+      {
+        "code" : "890331",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO"
+      },
+      {
+        "code" : "890332",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS"
+      },
+      {
+        "code" : "890333",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE TORAX"
+      },
+      {
+        "code" : "890334",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL"
+      },
+      {
+        "code" : "890335",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GENERAL"
+      },
+      {
+        "code" : "890336",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL"
+      },
+      {
+        "code" : "890337",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ONCOLOGICA"
+      },
+      {
+        "code" : "890338",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PEDIATRICA"
+      },
+      {
+        "code" : "890339",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA"
+      },
+      {
+        "code" : "890340",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA VASCULAR"
+      },
+      {
+        "code" : "890341",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN COLOPROCTOLOGIA"
+      },
+      {
+        "code" : "890342",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DERMATOLOGIA"
+      },
+      {
+        "code" : "890343",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS"
+      },
+      {
+        "code" : "890344",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA"
+      },
+      {
+        "code" : "890345",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890346",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA"
+      },
+      {
+        "code" : "890347",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890348",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GENETICA MEDICA"
+      },
+      {
+        "code" : "890349",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GERIATRIA"
+      },
+      {
+        "code" : "890350",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA"
+      },
+      {
+        "code" : "890351",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA"
+      },
+      {
+        "code" : "890352",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890353",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEPATOLOGIA"
+      },
+      {
+        "code" : "890354",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN INFECTOLOGIA"
+      },
+      {
+        "code" : "890355",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MASTOLOGIA"
+      },
+      {
+        "code" : "890356",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA AEROESPACIAL"
+      },
+      {
+        "code" : "890357",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)"
+      },
+      {
+        "code" : "890358",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)"
+      },
+      {
+        "code" : "890359",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)"
+      },
+      {
+        "code" : "890360",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)"
+      },
+      {
+        "code" : "890361",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL DEPORTE"
+      },
+      {
+        "code" : "890362",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO"
+      },
+      {
+        "code" : "890363",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FAMILIAR"
+      },
+      {
+        "code" : "890364",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION"
+      },
+      {
+        "code" : "890365",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FORENSE"
+      },
+      {
+        "code" : "890366",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA INTERNA"
+      },
+      {
+        "code" : "890367",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA NUCLEAR"
+      },
+      {
+        "code" : "890368",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA"
+      },
+      {
+        "code" : "890369",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890370",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEONATOLOGIA"
+      },
+      {
+        "code" : "890371",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA"
+      },
+      {
+        "code" : "890372",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890373",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROCIRUGIA"
+      },
+      {
+        "code" : "890374",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA"
+      },
+      {
+        "code" : "890375",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890376",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OFTALMOLOGIA"
+      },
+      {
+        "code" : "890377",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890378",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA"
+      },
+      {
+        "code" : "890379",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890380",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA"
+      },
+      {
+        "code" : "890381",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890382",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OTORRINOLARINGOLOGIA"
+      },
+      {
+        "code" : "890383",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PEDIATRIA"
+      },
+      {
+        "code" : "890384",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA"
+      },
+      {
+        "code" : "890385",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA"
+      },
+      {
+        "code" : "890386",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS"
+      },
+      {
+        "code" : "890387",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOTERAPIA"
+      },
+      {
+        "code" : "890388",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA"
+      },
+      {
+        "code" : "890389",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA"
+      },
+      {
+        "code" : "890390",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SEXOLOGIA CLINICA"
+      },
+      {
+        "code" : "890391",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TOXICOLOGIA CLINICA"
+      },
+      {
+        "code" : "890392",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TRASPLANTES"
+      },
+      {
+        "code" : "890394",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN UROLOGIA"
+      },
+      {
+        "code" : "890395",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)"
+      },
+      {
+        "code" : "890396",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)"
+      },
+      {
+        "code" : "890397",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES DE PSICOLOGIA"
+      },
+      {
+        "code" : "890398",
+        "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ESTETICA"
+      }]
+    }]
+  }
+}

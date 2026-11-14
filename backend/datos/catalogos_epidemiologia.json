@@ -1,0 +1,1681 @@
+{
+ "_origen": "Extraído de los catálogos del sistema VFP (ITS.DBF, CVE.DBF, EVENTOS.DBF, rango[1-3].dbf). Son listas de códigos, no datos de pacientes.",
+ "its": [
+  {
+   "cie": "A509",
+   "nombre": "SIFILIS CONGENITA, SIN OTRA ESPECIFICACION"
+  },
+  {
+   "cie": "A519",
+   "nombre": "SIFILIS PRECOZ, SIN OTRA ESPECIFICACION"
+  },
+  {
+   "cie": "A529",
+   "nombre": "SIFILIS TARDIA, NO ESPECIFICADA"
+  },
+  {
+   "cie": "A539",
+   "nombre": "SIFILIS, NO ESPECIFICADA"
+  },
+  {
+   "cie": "A540",
+   "nombre": "INFECCION GONOCOCICA DEL TRACTO GENITOURINARIO INFERIOR SIN ABSCESO PERIURETRAL Y DE GLANDULA ACCESORIA"
+  },
+  {
+   "cie": "A55X",
+   "nombre": "LINFOGRANULOMA (VENEREO) POR CLAMIDIAS"
+  },
+  {
+   "cie": "A568",
+   "nombre": "INFECCION DE TRANSMISION SEXUAL DE OTROS SITIOS DEBIDA A CLAMIDIAS"
+  },
+  {
+   "cie": "A57X",
+   "nombre": "CHANCRO BLANDO"
+  },
+  {
+   "cie": "A58X",
+   "nombre": "GRANULOMA INGUINAL"
+  },
+  {
+   "cie": "A590",
+   "nombre": "TRICOMONIASIS UROGENITAL"
+  },
+  {
+   "cie": "A609",
+   "nombre": "INFECCION ANOGENITAL POR VIRUS DEL HERPES SIMPLE, SIN OTRA ESPECIFICACION"
+  },
+  {
+   "cie": "A63X",
+   "nombre": "(GARDNERELLA) OTRAS ENFERMEDADES DE  TRANSMISION SEXUAL NO CLASIFICADAS EN OTRA PARTE"
+  },
+  {
+   "cie": "A64X",
+   "nombre": "ENFERMEDAD DE TRANSMISION SEXUAL NO ESPECIFICADA"
+  }
+ ],
+ "cve": [
+  {
+   "evento": "100",
+   "nombre": "ACCIDENTE OFIDICO",
+   "cie": "X209"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C009"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C029"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C039"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C052"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C059"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C069"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C07X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C080"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C081"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C089"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C109"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C119"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C139"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C140"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C159"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C169"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C179"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C189"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C20X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C210"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C229"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C23X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C249"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C259"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C261"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C300"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C301"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C319"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C329"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C33X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C349"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C37X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C380"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C383"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C384"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C390"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C400"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C401"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C402"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C403"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C408"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C409"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C410"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C411"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C412"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C413"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C414"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C419"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C439"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C469"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C509"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C519"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C52X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C539"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C55X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C56X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C609"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C61X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C629"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C632"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C64X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C65X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C66X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C679"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C680"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C689"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C699"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C709"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C710"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C716"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C719"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C720"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C750"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C751"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C758"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C80X"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C819"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C837"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C840"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C850"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C859"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C900"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C919"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C929"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C939"
+  },
+  {
+   "evento": "150",
+   "nombre": "CANCER",
+   "cie": "C959"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I442"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I440"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I441"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "R001"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I420"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I255"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "Q211"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "Q212"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "Q210"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I260"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I269"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I089"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I249"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I059"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I350"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I370"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I050"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I052"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I070"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I48X"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I490"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I808"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I800"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I10X"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I270"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I159"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I219"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I252"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I509"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I351"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I340"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I371"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I071"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I501"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I256"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I461"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I248"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I258"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I443"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I451"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "R002"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I460"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I469"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "M302"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "M300"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I341"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I456"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I479"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "R000"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "Q213"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I459"
+  },
+  {
+   "evento": "170",
+   "nombre": "CARDIOVASCULAR",
+   "cie": "I459"
+  },
+  {
+   "evento": "200",
+   "nombre": "CàLERA",
+   "cie": "A009"
+  },
+  {
+   "evento": "205",
+   "nombre": "CHAGAS",
+   "cie": "B571"
+  },
+  {
+   "evento": "210",
+   "nombre": "DENGUE CLµSICO",
+   "cie": "A90X"
+  },
+  {
+   "evento": "220",
+   "nombre": "DENGUE HEMORRµGICO",
+   "cie": "A91X"
+  },
+  {
+   "evento": "225",
+   "nombre": "DIABETES",
+   "cie": "E119"
+  },
+  {
+   "evento": "230",
+   "nombre": "DIFTERIA",
+   "cie": "A369"
+  },
+  {
+   "evento": "298",
+   "nombre": "EVENTO ADVERSO SEGUIDO A LA VACUNACIàN.",
+   "cie": "Y590"
+  },
+  {
+   "evento": "300",
+   "nombre": "EXPOSICIàN RµBICA",
+   "cie": "A829"
+  },
+  {
+   "evento": "310",
+   "nombre": "FIEBRE AMARILLA",
+   "cie": "A959"
+  },
+  {
+   "evento": "320",
+   "nombre": "FIEBRE TIFOIDEA Y PARATIFOIDEA",
+   "cie": "A010"
+  },
+  {
+   "evento": "330",
+   "nombre": "HEPATITIS A",
+   "cie": "B159"
+  },
+  {
+   "evento": "340",
+   "nombre": "HEPATITIS B",
+   "cie": "B161"
+  },
+  {
+   "evento": "343",
+   "nombre": "HIPOTIROIDISMO CONGNITO",
+   "cie": "E031"
+  },
+  {
+   "evento": "350",
+   "nombre": "INTOXICACIàN POR ALIMENTOS O AGUA (ETA)",
+   "cie": "A059"
+  },
+  {
+   "evento": "355",
+   "nombre": "ENFERMEDAD TRANSMITIDA POR ALIMENTOS",
+   "cie": "A059"
+  },
+  {
+   "evento": "360",
+   "nombre": "INTOXICACIàN POR PLAGUICIDAS",
+   "cie": "X489"
+  },
+  {
+   "evento": "370",
+   "nombre": "INTOXICACIàN POR FµRMACOS",
+   "cie": "Y579"
+  },
+  {
+   "evento": "380",
+   "nombre": "INTOXICACIàN POR METANOL",
+   "cie": "T511"
+  },
+  {
+   "evento": "390",
+   "nombre": "INTOXICACIàN POR METALES PESADOS",
+   "cie": "R787"
+  },
+  {
+   "evento": "400",
+   "nombre": "INTOXICACIàN POR SOLVENTES",
+   "cie": "X669"
+  },
+  {
+   "evento": "410",
+   "nombre": "INTOXICACIàN POR OTRAS SUSTANCIAS QUÖMICAS",
+   "cie": "J683"
+  },
+  {
+   "evento": "420",
+   "nombre": "LEISHMANIASIS CUTµNEA",
+   "cie": "B551"
+  },
+  {
+   "evento": "430",
+   "nombre": "LEISHMANIASIS MUCOSA",
+   "cie": "B552"
+  },
+  {
+   "evento": "440",
+   "nombre": "LEISHMANIASIS VISCERAL",
+   "cie": "B550"
+  },
+  {
+   "evento": "450",
+   "nombre": "LEPRA",
+   "cie": "A309"
+  },
+  {
+   "evento": "455",
+   "nombre": "LEPTOSPIROSIS",
+   "cie": "A270"
+  },
+  {
+   "evento": "458",
+   "nombre": "LESIONES POR PàLVORA",
+   "cie": "Y259"
+  },
+  {
+   "evento": "460",
+   "nombre": "MALARIA ASOCIADA (FORMAS MIXTAS)",
+   "cie": "B54X"
+  },
+  {
+   "evento": "470",
+   "nombre": "MALARIA FALCIPARUM",
+   "cie": "B509"
+  },
+  {
+   "evento": "480",
+   "nombre": "MALARIA MALARIE",
+   "cie": "B529"
+  },
+  {
+   "evento": "490",
+   "nombre": "MALARIA VIVAX",
+   "cie": "B519"
+  },
+  {
+   "evento": "495",
+   "nombre": "MALARIA COMPLICADA",
+   "cie": "B500"
+  },
+  {
+   "evento": "498",
+   "nombre": "MALNUTRICIàN",
+   "cie": "E46X"
+  },
+  {
+   "evento": "500",
+   "nombre": "MENINGITIS MENINGOCàCCICA",
+   "cie": "A390"
+  },
+  {
+   "evento": "510",
+   "nombre": "MENINGITIS POR HAEMOPHILUS INFLUENZAE",
+   "cie": "G000"
+  },
+  {
+   "evento": "520",
+   "nombre": "MENINGITIS POR NEUMOCOCO",
+   "cie": "G001"
+  },
+  {
+   "evento": "530",
+   "nombre": "MENINGITIS TUBERCULOSA",
+   "cie": "A170"
+  },
+  {
+   "evento": "540",
+   "nombre": "MORTALIDAD POR MALARIA",
+   "cie": "096X"
+  },
+  {
+   "evento": "550",
+   "nombre": "MORTALIDAD MATERNA",
+   "cie": "P95X"
+  },
+  {
+   "evento": "610",
+   "nombre": "PARµLISIS FLµCIDA AGUDA (MENORES DE 15 A¥OS)",
+   "cie": "A804"
+  },
+  {
+   "evento": "620",
+   "nombre": "PAROTIDITIS",
+   "cie": "B269"
+  },
+  {
+   "evento": "630",
+   "nombre": "PESTE (BUBàNICA/NEUMàNICA)",
+   "cie": "A200"
+  },
+  {
+   "evento": "650",
+   "nombre": "RABIA EN PERROS O GATOS",
+   "cie": "A829"
+  },
+  {
+   "evento": "670",
+   "nombre": "RABIA HUMANA",
+   "cie": "A829"
+  },
+  {
+   "evento": "680",
+   "nombre": "RABIA SV-1",
+   "cie": "A829"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "J459"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "J90X"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "J81X"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "J449"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "J440"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "I270"
+  },
+  {
+   "evento": "700",
+   "nombre": "RESPIRATORIAS CRàNICAS",
+   "cie": "J40X"
+  },
+  {
+   "evento": "710",
+   "nombre": "RUBOLA",
+   "cie": "B069"
+  },
+  {
+   "evento": "720",
+   "nombre": "RUBOLA CONGNITA",
+   "cie": "P350"
+  },
+  {
+   "evento": "730",
+   "nombre": "SARAMPIàN",
+   "cie": "B059"
+  },
+  {
+   "evento": "740",
+   "nombre": "SÖFILIS CONGNITA",
+   "cie": "A509"
+  },
+  {
+   "evento": "750",
+   "nombre": "SÖFILIS GESTACIONAL",
+   "cie": "O981"
+  },
+  {
+   "evento": "760",
+   "nombre": "TTANOS ACCIDENTAL",
+   "cie": "A35X"
+  },
+  {
+   "evento": "770",
+   "nombre": "TTANOS NEONATAL",
+   "cie": "A33X"
+  },
+  {
+   "evento": "780",
+   "nombre": "TIFUS EPIDMICO TRASMITIDO POR PIOJOS",
+   "cie": "A750"
+  },
+  {
+   "evento": "790",
+   "nombre": "TIFUS ENDMICO TRASMITIDO POR PULGAS",
+   "cie": "B881"
+  },
+  {
+   "evento": "800",
+   "nombre": "TOS FERINA",
+   "cie": "A379"
+  },
+  {
+   "evento": "810",
+   "nombre": "TUBERCULOSIS EXTRA PULMONAR",
+   "cie": "A188"
+  },
+  {
+   "evento": "820",
+   "nombre": "TUBERCULOSIS PULMONAR",
+   "cie": "A150"
+  },
+  {
+   "evento": "831",
+   "nombre": "VARICELA INDIVIDUAL",
+   "cie": "BO19"
+  },
+  {
+   "evento": "830",
+   "nombre": "VARICELA COLECTIVO",
+   "cie": "B019"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "A09X"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "P783"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "A020"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "A083"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "A049"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "A084"
+  },
+  {
+   "evento": "998",
+   "nombre": "MORBILIDAD POR EDA",
+   "cie": "A039"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J22X"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J180"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J219"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J209"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J189"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J069"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J039"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J051"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J029"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J040"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J060"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J042"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J00X"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J041"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "J019"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "H651"
+  },
+  {
+   "evento": "995",
+   "nombre": "MORBILIDAD POR IRA",
+   "cie": "H650"
+  }
+ ],
+ "eventos": [
+  {
+   "codigo": "100",
+   "nombre": "ACCIDENTE OFIDICO"
+  },
+  {
+   "codigo": "150",
+   "nombre": "CANCER"
+  },
+  {
+   "codigo": "170",
+   "nombre": "CARDIOVASCULAR"
+  },
+  {
+   "codigo": "200",
+   "nombre": "COLERA"
+  },
+  {
+   "codigo": "205",
+   "nombre": "CHAGAS"
+  },
+  {
+   "codigo": "210",
+   "nombre": "DENGUE CLASICO"
+  },
+  {
+   "codigo": "220",
+   "nombre": "DENGUE HEMORRAGICO"
+  },
+  {
+   "codigo": "225",
+   "nombre": "DIABETES"
+  },
+  {
+   "codigo": "230",
+   "nombre": "DIFTERIA"
+  },
+  {
+   "codigo": "298",
+   "nombre": "EVENTO ADVERSO SEGUIDO A LA VACUNACION"
+  },
+  {
+   "codigo": "300",
+   "nombre": "EXPOSICION RABICA"
+  },
+  {
+   "codigo": "310",
+   "nombre": "FIEBRE AMARILLA"
+  },
+  {
+   "codigo": "320",
+   "nombre": "FIEBRE TIFOIDEA Y PARATIFOIDEA"
+  },
+  {
+   "codigo": "330",
+   "nombre": "HEPATITIS A"
+  },
+  {
+   "codigo": "340",
+   "nombre": "HEPATITIS B"
+  },
+  {
+   "codigo": "343",
+   "nombre": "HIPOTIROIDISMO CONGNITO"
+  },
+  {
+   "codigo": "345",
+   "nombre": "INFECCION RESPIRATORIA AGUDA ESI-IRAG"
+  },
+  {
+   "codigo": "350",
+   "nombre": "INTOXICACION POR ALIMENTOS O AGUA (ETA)"
+  },
+  {
+   "codigo": "355",
+   "nombre": "ENFERMEDAD TRANSMITIDA POR ALIMENTOS"
+  },
+  {
+   "codigo": "360",
+   "nombre": "INTOXICACION POR PLAGUICIDAS"
+  },
+  {
+   "codigo": "370",
+   "nombre": "INTOXICACION POR FARMACOS"
+  },
+  {
+   "codigo": "380",
+   "nombre": "INTOXICACION POR METANOL"
+  },
+  {
+   "codigo": "390",
+   "nombre": "INTOXICACION POR METALES PESADOS"
+  },
+  {
+   "codigo": "400",
+   "nombre": "INTOXICACION POR SOLVENTES"
+  },
+  {
+   "codigo": "410",
+   "nombre": "INTOXICACION POR OTRAS SUSTANCIAS QUIMICAS"
+  },
+  {
+   "codigo": "420",
+   "nombre": "LEISHMANIASIS CUTANEA"
+  },
+  {
+   "codigo": "430",
+   "nombre": "LEISHMANIASIS MUCOSA"
+  },
+  {
+   "codigo": "440",
+   "nombre": "LEISHMANIASIS VISCERAL"
+  },
+  {
+   "codigo": "450",
+   "nombre": "LEPRA"
+  },
+  {
+   "codigo": "455",
+   "nombre": "LEPTOSPIROSIS"
+  },
+  {
+   "codigo": "458",
+   "nombre": "LESIONES POR POLVORA"
+  },
+  {
+   "codigo": "460",
+   "nombre": "MALARIA ASOCIADA (FORMAS MIXTAS)"
+  },
+  {
+   "codigo": "470",
+   "nombre": "MALARIA FALCIPARUM"
+  },
+  {
+   "codigo": "480",
+   "nombre": "MALARIA MALARIE"
+  },
+  {
+   "codigo": "490",
+   "nombre": "MALARIA VIVAX"
+  },
+  {
+   "codigo": "495",
+   "nombre": "MALARIA COMPLICADA"
+  },
+  {
+   "codigo": "498",
+   "nombre": "MALNUTRICION"
+  },
+  {
+   "codigo": "500",
+   "nombre": "MENINGITIS MENINGOCOCICA"
+  },
+  {
+   "codigo": "510",
+   "nombre": "MENINGITIS POR HAEMOPHILUS INFLUENZAE"
+  },
+  {
+   "codigo": "520",
+   "nombre": "MENINGITIS POR NEUMOCOCO"
+  },
+  {
+   "codigo": "530",
+   "nombre": "MENINGITIS TUBERCULOSA"
+  },
+  {
+   "codigo": "540",
+   "nombre": "MORTALIDAD POR MALARIA"
+  },
+  {
+   "codigo": "550",
+   "nombre": "MORTALIDAD MATERNA"
+  },
+  {
+   "codigo": "560",
+   "nombre": "MORTALIDAD PERI NATAL"
+  },
+  {
+   "codigo": "570",
+   "nombre": "MORTALIDAD POR COLERA"
+  },
+  {
+   "codigo": "580",
+   "nombre": "MORTALIDAD POR DENGUE"
+  },
+  {
+   "codigo": "590",
+   "nombre": "MORTALIDAD POR EDA 0-4 ANOS"
+  },
+  {
+   "codigo": "600",
+   "nombre": "MORTALIDAD POR IRA 0-4 ANOS"
+  },
+  {
+   "codigo": "610",
+   "nombre": "PARALISIS FLACIDA AGUDA (MENORES DE 15 ANOS)"
+  },
+  {
+   "codigo": "620",
+   "nombre": "PAROTIDITIS"
+  },
+  {
+   "codigo": "630",
+   "nombre": "PESTE (BUBONICA/NEUMONICA)"
+  },
+  {
+   "codigo": "650",
+   "nombre": "RABIA EN PERROS O GATOS"
+  },
+  {
+   "codigo": "670",
+   "nombre": "RABIA HUMANA"
+  },
+  {
+   "codigo": "680",
+   "nombre": "RABIA SV-1"
+  },
+  {
+   "codigo": "700",
+   "nombre": "RESPIRATORIAS CRONICAS"
+  },
+  {
+   "codigo": "710",
+   "nombre": "RUBOLA"
+  },
+  {
+   "codigo": "720",
+   "nombre": "RUBOLA CONGNITA"
+  },
+  {
+   "codigo": "730",
+   "nombre": "SARAMPION"
+  },
+  {
+   "codigo": "740",
+   "nombre": "SIFILIS CONGNITA"
+  },
+  {
+   "codigo": "750",
+   "nombre": "SIFILIS GESTACIONAL"
+  },
+  {
+   "codigo": "760",
+   "nombre": "TTANOS ACCIDENTAL"
+  },
+  {
+   "codigo": "770",
+   "nombre": "TTANOS NEONATAL"
+  },
+  {
+   "codigo": "780",
+   "nombre": "TIFUS EPIDMICO TRASMITIDO POR PIOJOS"
+  },
+  {
+   "codigo": "790",
+   "nombre": "TIFUS ENDMICO TRASMITIDO POR PULGAS"
+  },
+  {
+   "codigo": "800",
+   "nombre": "TOS FERINA"
+  },
+  {
+   "codigo": "810",
+   "nombre": "TUBERCULOSIS EXTRA PULMONAR"
+  },
+  {
+   "codigo": "820",
+   "nombre": "TUBERCULOSIS PULMONAR"
+  },
+  {
+   "codigo": "831",
+   "nombre": "VARICELA INDIVIDUAL"
+  },
+  {
+   "codigo": "850",
+   "nombre": "VIH/SIDA/MORTALIDAD POR SIDA"
+  },
+  {
+   "codigo": "860",
+   "nombre": "VIH SEGUIMIENTO A GESTANTES"
+  },
+  {
+   "codigo": "870",
+   "nombre": "VIH SEGUIMIENTO A RECIN NACIDOS"
+  },
+  {
+   "codigo": "890",
+   "nombre": "VIGILANCIA ENTOMOLOGICA MALARIA"
+  },
+  {
+   "codigo": "830",
+   "nombre": "VARICELA COLECTIVO"
+  },
+  {
+   "codigo": "998",
+   "nombre": "MORBILIDAD POR EDA"
+  },
+  {
+   "codigo": "995",
+   "nombre": "MORBILIDAD POR IRA"
+  },
+  {
+   "codigo": "910",
+   "nombre": "CHIKUNGUYA"
+  },
+  {
+   "codigo": "895",
+   "nombre": "ZIKA"
+  },
+  {
+   "codigo": "630",
+   "nombre": ""
+  }
+ ],
+ "rangos_etarios": {
+  "rango1": [
+   {
+    "nombre": "rango1",
+    "inicial": 0,
+    "final": 0
+   },
+   {
+    "nombre": "rango2",
+    "inicial": 1,
+    "final": 1
+   },
+   {
+    "nombre": "rango3",
+    "inicial": 2,
+    "final": 4
+   },
+   {
+    "nombre": "rango4",
+    "inicial": 5,
+    "final": 19
+   },
+   {
+    "nombre": "rango5",
+    "inicial": 20,
+    "final": 39
+   },
+   {
+    "nombre": "rango6",
+    "inicial": 40,
+    "final": 59
+   },
+   {
+    "nombre": "rango7",
+    "inicial": 60,
+    "final": 199
+   }
+  ],
+  "rango2": [
+   {
+    "nombre": "rango1",
+    "inicial": 0,
+    "final": 0
+   },
+   {
+    "nombre": "rango2",
+    "inicial": 1,
+    "final": 4
+   },
+   {
+    "nombre": "rango3",
+    "inicial": 5,
+    "final": 14
+   },
+   {
+    "nombre": "rango4",
+    "inicial": 15,
+    "final": 44
+   },
+   {
+    "nombre": "rango5",
+    "inicial": 45,
+    "final": 64
+   },
+   {
+    "nombre": "rango6",
+    "inicial": 65,
+    "final": 199
+   }
+  ],
+  "rango3": [
+   {
+    "nombre": "rango1",
+    "inicial": 0,
+    "final": 0
+   },
+   {
+    "nombre": "rango2",
+    "inicial": 1,
+    "final": 4
+   },
+   {
+    "nombre": "rango3",
+    "inicial": 5,
+    "final": 9
+   },
+   {
+    "nombre": "rango4",
+    "inicial": 10,
+    "final": 14
+   },
+   {
+    "nombre": "rango5",
+    "inicial": 15,
+    "final": 19
+   },
+   {
+    "nombre": "rango6",
+    "inicial": 20,
+    "final": 24
+   },
+   {
+    "nombre": "rango7",
+    "inicial": 25,
+    "final": 29
+   },
+   {
+    "nombre": "rango8",
+    "inicial": 30,
+    "final": 34
+   },
+   {
+    "nombre": "rango9",
+    "inicial": 35,
+    "final": 39
+   },
+   {
+    "nombre": "rango10",
+    "inicial": 40,
+    "final": 44
+   },
+   {
+    "nombre": "rango11",
+    "inicial": 45,
+    "final": 49
+   },
+   {
+    "nombre": "rango12",
+    "inicial": 50,
+    "final": 54
+   },
+   {
+    "nombre": "rango13",
+    "inicial": 55,
+    "final": 59
+   },
+   {
+    "nombre": "rango14",
+    "inicial": 60,
+    "final": 64
+   },
+   {
+    "nombre": "rango15",
+    "inicial": 65,
+    "final": 69
+   },
+   {
+    "nombre": "rango16",
+    "inicial": 70,
+    "final": 74
+   },
+   {
+    "nombre": "rango17",
+    "inicial": 75,
+    "final": 79
+   },
+   {
+    "nombre": "rango18",
+    "inicial": 80,
+    "final": 199
+   }
+  ]
+ }
+}

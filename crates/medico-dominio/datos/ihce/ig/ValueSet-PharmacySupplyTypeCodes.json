@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "PharmacySupplyTypeCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores PharmacySupplyTypeCodes</b></p><a name=\"PharmacySupplyTypeCodes\"> </a><a name=\"hcPharmacySupplyTypeCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-PharmacySupplyType.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/PharmacySupplyType</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/PharmacySupplyTypeCodes",
+  "version" : "1.0.0",
+  "name" : "PharmacySupplyTypeCodes",
+  "title" : "ValueSet: Pharmacy Supply Type Codes",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-07-23",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación para clasificar el tipo de dispensación de medicamentos en el contexto de la Gestión Farmacéutica en Colombia, basado en el CodeSystem v3-ActCode (ActPharmacySupplyType).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Clasificar el tipo de entrega en el proceso de dispensación de medicamentos MIPRES.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0 2006+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/PharmacySupplyType"
+    }]
+  }
+}

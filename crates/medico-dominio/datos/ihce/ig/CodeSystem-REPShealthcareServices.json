@@ -1,0 +1,681 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "REPShealthcareServices",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos REPShealthcareServices</b></p><a name=\"REPShealthcareServices\"> </a><a name=\"hcREPShealthcareServices\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/REPShealthcareServices</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">105<a name=\"REPShealthcareServices-105\"> </a></td><td>CUIDADO INTERMEDIO NEONATAL</td></tr><tr><td style=\"white-space:nowrap\">106<a name=\"REPShealthcareServices-106\"> </a></td><td>CUIDADO INTERMEDIO PEDIATRICO</td></tr><tr><td style=\"white-space:nowrap\">107<a name=\"REPShealthcareServices-107\"> </a></td><td>CUIDADO INTERMEDIO ADULTOS</td></tr><tr><td style=\"white-space:nowrap\">108<a name=\"REPShealthcareServices-108\"> </a></td><td>CUIDADO INTENSIVO NEONATAL</td></tr><tr><td style=\"white-space:nowrap\">109<a name=\"REPShealthcareServices-109\"> </a></td><td>CUIDADO INTENSIVO PEDIATRICO</td></tr><tr><td style=\"white-space:nowrap\">110<a name=\"REPShealthcareServices-110\"> </a></td><td>CUIDADO INTENSIVO ADULTOS</td></tr><tr><td style=\"white-space:nowrap\">1101<a name=\"REPShealthcareServices-1101\"> </a></td><td>ATENCION DEL PARTO</td></tr><tr><td style=\"white-space:nowrap\">1102<a name=\"REPShealthcareServices-1102\"> </a></td><td>URGENCIAS</td></tr><tr><td style=\"white-space:nowrap\">1103<a name=\"REPShealthcareServices-1103\"> </a></td><td>TRANSPORTE ASISTENCIAL BASICO</td></tr><tr><td style=\"white-space:nowrap\">1104<a name=\"REPShealthcareServices-1104\"> </a></td><td>TRANSPORTE ASISTENCIAL MEDICALIZADO</td></tr><tr><td style=\"white-space:nowrap\">1105<a name=\"REPShealthcareServices-1105\"> </a></td><td>ATENCION PREHOSPITALARIA</td></tr><tr><td style=\"white-space:nowrap\">120<a name=\"REPShealthcareServices-120\"> </a></td><td>CUIDADO BASICO NEONATAL</td></tr><tr><td style=\"white-space:nowrap\">129<a name=\"REPShealthcareServices-129\"> </a></td><td>HOSPITALIZACION ADULTOS</td></tr><tr><td style=\"white-space:nowrap\">130<a name=\"REPShealthcareServices-130\"> </a></td><td>HOSPITALIZACION PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">131<a name=\"REPShealthcareServices-131\"> </a></td><td>HOSPITALIZACION EN SALUD MENTAL</td></tr><tr><td style=\"white-space:nowrap\">132<a name=\"REPShealthcareServices-132\"> </a></td><td>HOSPITALIZACION PARCIAL</td></tr><tr><td style=\"white-space:nowrap\">133<a name=\"REPShealthcareServices-133\"> </a></td><td>HOSPITALIZACION PACIENTE CRONICO CON VENTILADOR</td></tr><tr><td style=\"white-space:nowrap\">134<a name=\"REPShealthcareServices-134\"> </a></td><td>HOSPITALIZACION PACIENTE CRONICO SIN VENTILADOR</td></tr><tr><td style=\"white-space:nowrap\">135<a name=\"REPShealthcareServices-135\"> </a></td><td>HOSPITALIZACION EN CONSUMO DE SUSTANCIAS PSICOACTIVAS</td></tr><tr><td style=\"white-space:nowrap\">138<a name=\"REPShealthcareServices-138\"> </a></td><td>CUIDADO BASICO DEL CONSUMO DE SUSTANCIAS PSICOACTIVAS</td></tr><tr><td style=\"white-space:nowrap\">201<a name=\"REPShealthcareServices-201\"> </a></td><td>CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td style=\"white-space:nowrap\">202<a name=\"REPShealthcareServices-202\"> </a></td><td>CIRUGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">203<a name=\"REPShealthcareServices-203\"> </a></td><td>CIRUGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">204<a name=\"REPShealthcareServices-204\"> </a></td><td>CIRUGIA GINECOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">205<a name=\"REPShealthcareServices-205\"> </a></td><td>CIRUGIA MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">207<a name=\"REPShealthcareServices-207\"> </a></td><td>CIRUGIA ORTOPEDICA</td></tr><tr><td style=\"white-space:nowrap\">208<a name=\"REPShealthcareServices-208\"> </a></td><td>CIRUGIA OFTALMOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">209<a name=\"REPShealthcareServices-209\"> </a></td><td>CIRUGIA OTORRINOLARINGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">210<a name=\"REPShealthcareServices-210\"> </a></td><td>CIRUGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">211<a name=\"REPShealthcareServices-211\"> </a></td><td>CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">212<a name=\"REPShealthcareServices-212\"> </a></td><td>CIRUGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">213<a name=\"REPShealthcareServices-213\"> </a></td><td>CIRUGIA PLASTICA Y ESTETICA</td></tr><tr><td style=\"white-space:nowrap\">214<a name=\"REPShealthcareServices-214\"> </a></td><td>CIRUGIA VASCULAR Y ANGIOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">215<a name=\"REPShealthcareServices-215\"> </a></td><td>CIRUGIA UROLOGICA</td></tr><tr><td style=\"white-space:nowrap\">217<a name=\"REPShealthcareServices-217\"> </a></td><td>OTRAS CIRUGIAS</td></tr><tr><td style=\"white-space:nowrap\">218<a name=\"REPShealthcareServices-218\"> </a></td><td>CIRUGIA ENDOVASCULAR NEUROLOGICA</td></tr><tr><td style=\"white-space:nowrap\">227<a name=\"REPShealthcareServices-227\"> </a></td><td>CIRUGIA ONCOLOGICA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">231<a name=\"REPShealthcareServices-231\"> </a></td><td>CIRUGIA DE LA MANO</td></tr><tr><td style=\"white-space:nowrap\">232<a name=\"REPShealthcareServices-232\"> </a></td><td>CIRUGIA DE MAMA Y TUMORES TEJIDOS BLANDOS</td></tr><tr><td style=\"white-space:nowrap\">233<a name=\"REPShealthcareServices-233\"> </a></td><td>CIRUGIA DERMATOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">234<a name=\"REPShealthcareServices-234\"> </a></td><td>CIRUGIA DE TORAX</td></tr><tr><td style=\"white-space:nowrap\">235<a name=\"REPShealthcareServices-235\"> </a></td><td>CIRUGIA GASTROINTESTINAL</td></tr><tr><td style=\"white-space:nowrap\">237<a name=\"REPShealthcareServices-237\"> </a></td><td>CIRUGIA PLASTICA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">245<a name=\"REPShealthcareServices-245\"> </a></td><td>NEUROCIRUGIA</td></tr><tr><td style=\"white-space:nowrap\">301<a name=\"REPShealthcareServices-301\"> </a></td><td>ANESTESIA</td></tr><tr><td style=\"white-space:nowrap\">302<a name=\"REPShealthcareServices-302\"> </a></td><td>CARDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">303<a name=\"REPShealthcareServices-303\"> </a></td><td>CIRUGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">304<a name=\"REPShealthcareServices-304\"> </a></td><td>CIRUGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">306<a name=\"REPShealthcareServices-306\"> </a></td><td>CIRUGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">308<a name=\"REPShealthcareServices-308\"> </a></td><td>DERMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">309<a name=\"REPShealthcareServices-309\"> </a></td><td>DOLOR Y CUIDADOS PALIATIVOS</td></tr><tr><td style=\"white-space:nowrap\">310<a name=\"REPShealthcareServices-310\"> </a></td><td>ENDOCRINOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">311<a name=\"REPShealthcareServices-311\"> </a></td><td>ENDODONCIA</td></tr><tr><td style=\"white-space:nowrap\">312<a name=\"REPShealthcareServices-312\"> </a></td><td>ENFERMERIA</td></tr><tr><td style=\"white-space:nowrap\">313<a name=\"REPShealthcareServices-313\"> </a></td><td>ESTOMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">316<a name=\"REPShealthcareServices-316\"> </a></td><td>GASTROENTEROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">317<a name=\"REPShealthcareServices-317\"> </a></td><td>GENETICA</td></tr><tr><td style=\"white-space:nowrap\">318<a name=\"REPShealthcareServices-318\"> </a></td><td>GERIATRIA</td></tr><tr><td style=\"white-space:nowrap\">320<a name=\"REPShealthcareServices-320\"> </a></td><td>GINECOBSTETRICIA</td></tr><tr><td style=\"white-space:nowrap\">321<a name=\"REPShealthcareServices-321\"> </a></td><td>HEMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">323<a name=\"REPShealthcareServices-323\"> </a></td><td>INFECTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">324<a name=\"REPShealthcareServices-324\"> </a></td><td>INMUNOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">325<a name=\"REPShealthcareServices-325\"> </a></td><td>MEDICINA FAMILIAR</td></tr><tr><td style=\"white-space:nowrap\">326<a name=\"REPShealthcareServices-326\"> </a></td><td>MEDICINA FISICA Y DEL DEPORTE</td></tr><tr><td style=\"white-space:nowrap\">327<a name=\"REPShealthcareServices-327\"> </a></td><td>MEDICINA FISICA Y REHABILITACION</td></tr><tr><td style=\"white-space:nowrap\">328<a name=\"REPShealthcareServices-328\"> </a></td><td>MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">329<a name=\"REPShealthcareServices-329\"> </a></td><td>MEDICINA INTERNA</td></tr><tr><td style=\"white-space:nowrap\">330<a name=\"REPShealthcareServices-330\"> </a></td><td>NEFROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">331<a name=\"REPShealthcareServices-331\"> </a></td><td>NEUMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">332<a name=\"REPShealthcareServices-332\"> </a></td><td>NEUROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">333<a name=\"REPShealthcareServices-333\"> </a></td><td>NUTRICION Y DIETETICA</td></tr><tr><td style=\"white-space:nowrap\">334<a name=\"REPShealthcareServices-334\"> </a></td><td>ODONTOLOGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">335<a name=\"REPShealthcareServices-335\"> </a></td><td>OFTALMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">336<a name=\"REPShealthcareServices-336\"> </a></td><td>ONCOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">337<a name=\"REPShealthcareServices-337\"> </a></td><td>OPTOMETRIA</td></tr><tr><td style=\"white-space:nowrap\">338<a name=\"REPShealthcareServices-338\"> </a></td><td>ORTODONCIA</td></tr><tr><td style=\"white-space:nowrap\">339<a name=\"REPShealthcareServices-339\"> </a></td><td>ORTOPEDIA Y/O TRAUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">340<a name=\"REPShealthcareServices-340\"> </a></td><td>OTORRINOLARINGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">342<a name=\"REPShealthcareServices-342\"> </a></td><td>PEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">343<a name=\"REPShealthcareServices-343\"> </a></td><td>PERIODONCIA</td></tr><tr><td style=\"white-space:nowrap\">344<a name=\"REPShealthcareServices-344\"> </a></td><td>PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">345<a name=\"REPShealthcareServices-345\"> </a></td><td>PSIQUIATRIA</td></tr><tr><td style=\"white-space:nowrap\">346<a name=\"REPShealthcareServices-346\"> </a></td><td>REHABILITACION ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">347<a name=\"REPShealthcareServices-347\"> </a></td><td>REHABILITACION ORAL</td></tr><tr><td style=\"white-space:nowrap\">348<a name=\"REPShealthcareServices-348\"> </a></td><td>REUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">354<a name=\"REPShealthcareServices-354\"> </a></td><td>TOXICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">355<a name=\"REPShealthcareServices-355\"> </a></td><td>UROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">356<a name=\"REPShealthcareServices-356\"> </a></td><td>OTRAS CONSULTAS DE ESPECIALIDAD</td></tr><tr><td style=\"white-space:nowrap\">361<a name=\"REPShealthcareServices-361\"> </a></td><td>CARDIOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">362<a name=\"REPShealthcareServices-362\"> </a></td><td>CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td style=\"white-space:nowrap\">363<a name=\"REPShealthcareServices-363\"> </a></td><td>CIRUGIA DE MANO</td></tr><tr><td style=\"white-space:nowrap\">364<a name=\"REPShealthcareServices-364\"> </a></td><td>CIRUGIA DE MAMA Y TUMORES TEJIDOS BLANDOS</td></tr><tr><td style=\"white-space:nowrap\">365<a name=\"REPShealthcareServices-365\"> </a></td><td>CIRUGIA DERMATOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">366<a name=\"REPShealthcareServices-366\"> </a></td><td>CIRUGIA DE TORAX</td></tr><tr><td style=\"white-space:nowrap\">367<a name=\"REPShealthcareServices-367\"> </a></td><td>CIRUGIA GASTROINTESTINAL</td></tr><tr><td style=\"white-space:nowrap\">368<a name=\"REPShealthcareServices-368\"> </a></td><td>CIRUGIA GINECOLOGICA LAPAROSCOPICA</td></tr><tr><td style=\"white-space:nowrap\">369<a name=\"REPShealthcareServices-369\"> </a></td><td>CIRUGIA PLASTICA Y ESTETICA</td></tr><tr><td style=\"white-space:nowrap\">370<a name=\"REPShealthcareServices-370\"> </a></td><td>CIRUGIA PLASTICA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">371<a name=\"REPShealthcareServices-371\"> </a></td><td>OTRAS CONSULTAS GENERALES</td></tr><tr><td style=\"white-space:nowrap\">372<a name=\"REPShealthcareServices-372\"> </a></td><td>CIRUGIA VASCULAR</td></tr><tr><td style=\"white-space:nowrap\">373<a name=\"REPShealthcareServices-373\"> </a></td><td>CIRUGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">374<a name=\"REPShealthcareServices-374\"> </a></td><td>CIRUGIA ONCOLOGICA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">375<a name=\"REPShealthcareServices-375\"> </a></td><td>DERMATOLOGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">377<a name=\"REPShealthcareServices-377\"> </a></td><td>COLOPROCTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">379<a name=\"REPShealthcareServices-379\"> </a></td><td>GINECOLOGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">383<a name=\"REPShealthcareServices-383\"> </a></td><td>MEDICINA NUCLEAR</td></tr><tr><td style=\"white-space:nowrap\">384<a name=\"REPShealthcareServices-384\"> </a></td><td>NEFROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">385<a name=\"REPShealthcareServices-385\"> </a></td><td>NEONATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">386<a name=\"REPShealthcareServices-386\"> </a></td><td>NEUMOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">387<a name=\"REPShealthcareServices-387\"> </a></td><td>NEUROCIRUGIA</td></tr><tr><td style=\"white-space:nowrap\">388<a name=\"REPShealthcareServices-388\"> </a></td><td>NEUROPEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">390<a name=\"REPShealthcareServices-390\"> </a></td><td>OFTALMOLOGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">391<a name=\"REPShealthcareServices-391\"> </a></td><td>ONCOLOGIA Y HEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">393<a name=\"REPShealthcareServices-393\"> </a></td><td>ORTOPEDIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">395<a name=\"REPShealthcareServices-395\"> </a></td><td>UROLOGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">396<a name=\"REPShealthcareServices-396\"> </a></td><td>ODONTOPEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">397<a name=\"REPShealthcareServices-397\"> </a></td><td>MEDICINA ESTETICA</td></tr><tr><td style=\"white-space:nowrap\">406<a name=\"REPShealthcareServices-406\"> </a></td><td>HEMATOLOGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">407<a name=\"REPShealthcareServices-407\"> </a></td><td>MEDICINA DEL TRABAJO Y MEDICINA LABORAL</td></tr><tr><td style=\"white-space:nowrap\">408<a name=\"REPShealthcareServices-408\"> </a></td><td>RADIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">409<a name=\"REPShealthcareServices-409\"> </a></td><td>ORTOPEDIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">410<a name=\"REPShealthcareServices-410\"> </a></td><td>CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">411<a name=\"REPShealthcareServices-411\"> </a></td><td>CIRUGIA MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">412<a name=\"REPShealthcareServices-412\"> </a></td><td>MEDICINA ALTERNATIVA Y COMPLEMENTARIA - HOMEOPATICA</td></tr><tr><td style=\"white-space:nowrap\">413<a name=\"REPShealthcareServices-413\"> </a></td><td>MEDICINA ALTERNATIVA Y COMPLEMENTARIA - AYURVEDICA</td></tr><tr><td style=\"white-space:nowrap\">414<a name=\"REPShealthcareServices-414\"> </a></td><td>MEDICINA ALTERNATIVA Y COMPLEMENTARIA - TRADICIONAL CHINA</td></tr><tr><td style=\"white-space:nowrap\">415<a name=\"REPShealthcareServices-415\"> </a></td><td>MEDICINA ALTERNATIVA Y COMPLEMENTARIA - NATUROPATICA</td></tr><tr><td style=\"white-space:nowrap\">416<a name=\"REPShealthcareServices-416\"> </a></td><td>MEDICINA ALTERNATIVA Y COMPLEMENTARIA - NEURALTERAPEUTICA</td></tr><tr><td style=\"white-space:nowrap\">417<a name=\"REPShealthcareServices-417\"> </a></td><td>TERAPIAS ALTERNATIVAS Y COMPLEMENTARIAS - BIOENERGETICA</td></tr><tr><td style=\"white-space:nowrap\">418<a name=\"REPShealthcareServices-418\"> </a></td><td>TERAPIAS ALTERNATIVAS Y COMPLEMENTARIAS - TERAPIA CON FILTROS</td></tr><tr><td style=\"white-space:nowrap\">419<a name=\"REPShealthcareServices-419\"> </a></td><td>TERAPIAS ALTERNATIVAS Y COMPLEMENTARIAS - TERAPIAS MANUALES</td></tr><tr><td style=\"white-space:nowrap\">420<a name=\"REPShealthcareServices-420\"> </a></td><td>VACUNACION</td></tr><tr><td style=\"white-space:nowrap\">421<a name=\"REPShealthcareServices-421\"> </a></td><td>PATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">422<a name=\"REPShealthcareServices-422\"> </a></td><td>MEDICINA ALTERNATIVA Y COMPLEMENTARIA - OSTEOPATICA</td></tr><tr><td style=\"white-space:nowrap\">423<a name=\"REPShealthcareServices-423\"> </a></td><td>SEGURIDAD Y SALUD EN EL TRABAJO</td></tr><tr><td style=\"white-space:nowrap\">706<a name=\"REPShealthcareServices-706\"> </a></td><td>LABORATORIO CLINICO</td></tr><tr><td style=\"white-space:nowrap\">709<a name=\"REPShealthcareServices-709\"> </a></td><td>QUIMIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">711<a name=\"REPShealthcareServices-711\"> </a></td><td>RADIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">712<a name=\"REPShealthcareServices-712\"> </a></td><td>TOMA DE MUESTRAS DE LABORATORIO CLINICO</td></tr><tr><td style=\"white-space:nowrap\">714<a name=\"REPShealthcareServices-714\"> </a></td><td>SERVICIO FARMACEUTICO</td></tr><tr><td style=\"white-space:nowrap\">715<a name=\"REPShealthcareServices-715\"> </a></td><td>MEDICINA NUCLEAR</td></tr><tr><td style=\"white-space:nowrap\">717<a name=\"REPShealthcareServices-717\"> </a></td><td>LABORATORIO CITOLOGIAS CERVICO-UTERINAS</td></tr><tr><td style=\"white-space:nowrap\">728<a name=\"REPShealthcareServices-728\"> </a></td><td>TERAPIA OCUPACIONAL</td></tr><tr><td style=\"white-space:nowrap\">729<a name=\"REPShealthcareServices-729\"> </a></td><td>TERAPIA RESPIRATORIA</td></tr><tr><td style=\"white-space:nowrap\">731<a name=\"REPShealthcareServices-731\"> </a></td><td>LABORATORIO DE HISTOTECNOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">733<a name=\"REPShealthcareServices-733\"> </a></td><td>HEMODIALISIS</td></tr><tr><td style=\"white-space:nowrap\">734<a name=\"REPShealthcareServices-734\"> </a></td><td>DIALISIS PERITONEAL</td></tr><tr><td style=\"white-space:nowrap\">739<a name=\"REPShealthcareServices-739\"> </a></td><td>FISIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">740<a name=\"REPShealthcareServices-740\"> </a></td><td>FONOAUDIOLOGIA Y/O TERAPIA DEL LENGUAJE</td></tr><tr><td style=\"white-space:nowrap\">742<a name=\"REPShealthcareServices-742\"> </a></td><td>DIAGNOSTICO VASCULAR</td></tr><tr><td style=\"white-space:nowrap\">743<a name=\"REPShealthcareServices-743\"> </a></td><td>HEMODINAMIA E INTERVENCIONISMO</td></tr><tr><td style=\"white-space:nowrap\">744<a name=\"REPShealthcareServices-744\"> </a></td><td>IMAGENES DIAGNOSTICAS- IONIZANTES</td></tr><tr><td style=\"white-space:nowrap\">745<a name=\"REPShealthcareServices-745\"> </a></td><td>IMAGENES DIAGNOSTICAS - NO IONIZANTES</td></tr><tr><td style=\"white-space:nowrap\">746<a name=\"REPShealthcareServices-746\"> </a></td><td>GESTION PRE-TRANSFUSIONAL</td></tr><tr><td style=\"white-space:nowrap\">747<a name=\"REPShealthcareServices-747\"> </a></td><td>PATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">748<a name=\"REPShealthcareServices-748\"> </a></td><td>RADIOLOGIA ODONTOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">749<a name=\"REPShealthcareServices-749\"> </a></td><td>TOMA DE MUESTRAS DE CUELLO UTERINO Y GINECOLOGICAS</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/REPShealthcareServices",
+  "version" : "1.0.0",
+  "name" : "REPShealthcareServices",
+  "title" : "CodeSystem: REPS Healthcare Services",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2022-09-02",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de servicios de atención en salud habilitados - Colombia.  Tomado de https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx?Code=Servicios",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de servicios de atención en salud habilitados - Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 157,
+  "concept" : [{
+    "code" : "105",
+    "display" : "CUIDADO INTERMEDIO NEONATAL"
+  },
+  {
+    "code" : "106",
+    "display" : "CUIDADO INTERMEDIO PEDIATRICO"
+  },
+  {
+    "code" : "107",
+    "display" : "CUIDADO INTERMEDIO ADULTOS"
+  },
+  {
+    "code" : "108",
+    "display" : "CUIDADO INTENSIVO NEONATAL"
+  },
+  {
+    "code" : "109",
+    "display" : "CUIDADO INTENSIVO PEDIATRICO"
+  },
+  {
+    "code" : "110",
+    "display" : "CUIDADO INTENSIVO ADULTOS"
+  },
+  {
+    "code" : "1101",
+    "display" : "ATENCION DEL PARTO"
+  },
+  {
+    "code" : "1102",
+    "display" : "URGENCIAS"
+  },
+  {
+    "code" : "1103",
+    "display" : "TRANSPORTE ASISTENCIAL BASICO"
+  },
+  {
+    "code" : "1104",
+    "display" : "TRANSPORTE ASISTENCIAL MEDICALIZADO"
+  },
+  {
+    "code" : "1105",
+    "display" : "ATENCION PREHOSPITALARIA"
+  },
+  {
+    "code" : "120",
+    "display" : "CUIDADO BASICO NEONATAL"
+  },
+  {
+    "code" : "129",
+    "display" : "HOSPITALIZACION ADULTOS"
+  },
+  {
+    "code" : "130",
+    "display" : "HOSPITALIZACION PEDIATRICA"
+  },
+  {
+    "code" : "131",
+    "display" : "HOSPITALIZACION EN SALUD MENTAL"
+  },
+  {
+    "code" : "132",
+    "display" : "HOSPITALIZACION PARCIAL"
+  },
+  {
+    "code" : "133",
+    "display" : "HOSPITALIZACION PACIENTE CRONICO CON VENTILADOR"
+  },
+  {
+    "code" : "134",
+    "display" : "HOSPITALIZACION PACIENTE CRONICO SIN VENTILADOR"
+  },
+  {
+    "code" : "135",
+    "display" : "HOSPITALIZACION EN CONSUMO DE SUSTANCIAS PSICOACTIVAS"
+  },
+  {
+    "code" : "138",
+    "display" : "CUIDADO BASICO DEL CONSUMO DE SUSTANCIAS PSICOACTIVAS"
+  },
+  {
+    "code" : "201",
+    "display" : "CIRUGIA DE CABEZA Y CUELLO"
+  },
+  {
+    "code" : "202",
+    "display" : "CIRUGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "203",
+    "display" : "CIRUGIA GENERAL"
+  },
+  {
+    "code" : "204",
+    "display" : "CIRUGIA GINECOLOGICA"
+  },
+  {
+    "code" : "205",
+    "display" : "CIRUGIA MAXILOFACIAL"
+  },
+  {
+    "code" : "207",
+    "display" : "CIRUGIA ORTOPEDICA"
+  },
+  {
+    "code" : "208",
+    "display" : "CIRUGIA OFTALMOLOGICA"
+  },
+  {
+    "code" : "209",
+    "display" : "CIRUGIA OTORRINOLARINGOLOGIA"
+  },
+  {
+    "code" : "210",
+    "display" : "CIRUGIA ONCOLOGICA"
+  },
+  {
+    "code" : "211",
+    "display" : "CIRUGIA ORAL"
+  },
+  {
+    "code" : "212",
+    "display" : "CIRUGIA PEDIATRICA"
+  },
+  {
+    "code" : "213",
+    "display" : "CIRUGIA PLASTICA Y ESTETICA"
+  },
+  {
+    "code" : "214",
+    "display" : "CIRUGIA VASCULAR Y ANGIOLOGICA"
+  },
+  {
+    "code" : "215",
+    "display" : "CIRUGIA UROLOGICA"
+  },
+  {
+    "code" : "217",
+    "display" : "OTRAS CIRUGIAS"
+  },
+  {
+    "code" : "218",
+    "display" : "CIRUGIA ENDOVASCULAR NEUROLOGICA"
+  },
+  {
+    "code" : "227",
+    "display" : "CIRUGIA ONCOLOGICA PEDIATRICA"
+  },
+  {
+    "code" : "231",
+    "display" : "CIRUGIA DE LA MANO"
+  },
+  {
+    "code" : "232",
+    "display" : "CIRUGIA DE MAMA Y TUMORES TEJIDOS BLANDOS"
+  },
+  {
+    "code" : "233",
+    "display" : "CIRUGIA DERMATOLOGICA"
+  },
+  {
+    "code" : "234",
+    "display" : "CIRUGIA DE TORAX"
+  },
+  {
+    "code" : "235",
+    "display" : "CIRUGIA GASTROINTESTINAL"
+  },
+  {
+    "code" : "237",
+    "display" : "CIRUGIA PLASTICA ONCOLOGICA"
+  },
+  {
+    "code" : "245",
+    "display" : "NEUROCIRUGIA"
+  },
+  {
+    "code" : "301",
+    "display" : "ANESTESIA"
+  },
+  {
+    "code" : "302",
+    "display" : "CARDIOLOGIA"
+  },
+  {
+    "code" : "303",
+    "display" : "CIRUGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "304",
+    "display" : "CIRUGIA GENERAL"
+  },
+  {
+    "code" : "306",
+    "display" : "CIRUGIA PEDIATRICA"
+  },
+  {
+    "code" : "308",
+    "display" : "DERMATOLOGIA"
+  },
+  {
+    "code" : "309",
+    "display" : "DOLOR Y CUIDADOS PALIATIVOS"
+  },
+  {
+    "code" : "310",
+    "display" : "ENDOCRINOLOGIA"
+  },
+  {
+    "code" : "311",
+    "display" : "ENDODONCIA"
+  },
+  {
+    "code" : "312",
+    "display" : "ENFERMERIA"
+  },
+  {
+    "code" : "313",
+    "display" : "ESTOMATOLOGIA"
+  },
+  {
+    "code" : "316",
+    "display" : "GASTROENTEROLOGIA"
+  },
+  {
+    "code" : "317",
+    "display" : "GENETICA"
+  },
+  {
+    "code" : "318",
+    "display" : "GERIATRIA"
+  },
+  {
+    "code" : "320",
+    "display" : "GINECOBSTETRICIA"
+  },
+  {
+    "code" : "321",
+    "display" : "HEMATOLOGIA"
+  },
+  {
+    "code" : "323",
+    "display" : "INFECTOLOGIA"
+  },
+  {
+    "code" : "324",
+    "display" : "INMUNOLOGIA"
+  },
+  {
+    "code" : "325",
+    "display" : "MEDICINA FAMILIAR"
+  },
+  {
+    "code" : "326",
+    "display" : "MEDICINA FISICA Y DEL DEPORTE"
+  },
+  {
+    "code" : "327",
+    "display" : "MEDICINA FISICA Y REHABILITACION"
+  },
+  {
+    "code" : "328",
+    "display" : "MEDICINA GENERAL"
+  },
+  {
+    "code" : "329",
+    "display" : "MEDICINA INTERNA"
+  },
+  {
+    "code" : "330",
+    "display" : "NEFROLOGIA"
+  },
+  {
+    "code" : "331",
+    "display" : "NEUMOLOGIA"
+  },
+  {
+    "code" : "332",
+    "display" : "NEUROLOGIA"
+  },
+  {
+    "code" : "333",
+    "display" : "NUTRICION Y DIETETICA"
+  },
+  {
+    "code" : "334",
+    "display" : "ODONTOLOGIA GENERAL"
+  },
+  {
+    "code" : "335",
+    "display" : "OFTALMOLOGIA"
+  },
+  {
+    "code" : "336",
+    "display" : "ONCOLOGIA CLINICA"
+  },
+  {
+    "code" : "337",
+    "display" : "OPTOMETRIA"
+  },
+  {
+    "code" : "338",
+    "display" : "ORTODONCIA"
+  },
+  {
+    "code" : "339",
+    "display" : "ORTOPEDIA Y/O TRAUMATOLOGIA"
+  },
+  {
+    "code" : "340",
+    "display" : "OTORRINOLARINGOLOGIA"
+  },
+  {
+    "code" : "342",
+    "display" : "PEDIATRIA"
+  },
+  {
+    "code" : "343",
+    "display" : "PERIODONCIA"
+  },
+  {
+    "code" : "344",
+    "display" : "PSICOLOGIA"
+  },
+  {
+    "code" : "345",
+    "display" : "PSIQUIATRIA"
+  },
+  {
+    "code" : "346",
+    "display" : "REHABILITACION ONCOLOGICA"
+  },
+  {
+    "code" : "347",
+    "display" : "REHABILITACION ORAL"
+  },
+  {
+    "code" : "348",
+    "display" : "REUMATOLOGIA"
+  },
+  {
+    "code" : "354",
+    "display" : "TOXICOLOGIA"
+  },
+  {
+    "code" : "355",
+    "display" : "UROLOGIA"
+  },
+  {
+    "code" : "356",
+    "display" : "OTRAS CONSULTAS DE ESPECIALIDAD"
+  },
+  {
+    "code" : "361",
+    "display" : "CARDIOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "362",
+    "display" : "CIRUGIA DE CABEZA Y CUELLO"
+  },
+  {
+    "code" : "363",
+    "display" : "CIRUGIA DE MANO"
+  },
+  {
+    "code" : "364",
+    "display" : "CIRUGIA DE MAMA Y TUMORES TEJIDOS BLANDOS"
+  },
+  {
+    "code" : "365",
+    "display" : "CIRUGIA DERMATOLOGICA"
+  },
+  {
+    "code" : "366",
+    "display" : "CIRUGIA DE TORAX"
+  },
+  {
+    "code" : "367",
+    "display" : "CIRUGIA GASTROINTESTINAL"
+  },
+  {
+    "code" : "368",
+    "display" : "CIRUGIA GINECOLOGICA LAPAROSCOPICA"
+  },
+  {
+    "code" : "369",
+    "display" : "CIRUGIA PLASTICA Y ESTETICA"
+  },
+  {
+    "code" : "370",
+    "display" : "CIRUGIA PLASTICA ONCOLOGICA"
+  },
+  {
+    "code" : "371",
+    "display" : "OTRAS CONSULTAS GENERALES"
+  },
+  {
+    "code" : "372",
+    "display" : "CIRUGIA VASCULAR"
+  },
+  {
+    "code" : "373",
+    "display" : "CIRUGIA ONCOLOGICA"
+  },
+  {
+    "code" : "374",
+    "display" : "CIRUGIA ONCOLOGICA PEDIATRICA"
+  },
+  {
+    "code" : "375",
+    "display" : "DERMATOLOGIA ONCOLOGICA"
+  },
+  {
+    "code" : "377",
+    "display" : "COLOPROCTOLOGIA"
+  },
+  {
+    "code" : "379",
+    "display" : "GINECOLOGIA ONCOLOGICA"
+  },
+  {
+    "code" : "383",
+    "display" : "MEDICINA NUCLEAR"
+  },
+  {
+    "code" : "384",
+    "display" : "NEFROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "385",
+    "display" : "NEONATOLOGIA"
+  },
+  {
+    "code" : "386",
+    "display" : "NEUMOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "387",
+    "display" : "NEUROCIRUGIA"
+  },
+  {
+    "code" : "388",
+    "display" : "NEUROPEDIATRIA"
+  },
+  {
+    "code" : "390",
+    "display" : "OFTALMOLOGIA ONCOLOGICA"
+  },
+  {
+    "code" : "391",
+    "display" : "ONCOLOGIA Y HEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "393",
+    "display" : "ORTOPEDIA ONCOLOGICA"
+  },
+  {
+    "code" : "395",
+    "display" : "UROLOGIA ONCOLOGICA"
+  },
+  {
+    "code" : "396",
+    "display" : "ODONTOPEDIATRIA"
+  },
+  {
+    "code" : "397",
+    "display" : "MEDICINA ESTETICA"
+  },
+  {
+    "code" : "406",
+    "display" : "HEMATOLOGIA ONCOLOGICA"
+  },
+  {
+    "code" : "407",
+    "display" : "MEDICINA DEL TRABAJO Y MEDICINA LABORAL"
+  },
+  {
+    "code" : "408",
+    "display" : "RADIOTERAPIA"
+  },
+  {
+    "code" : "409",
+    "display" : "ORTOPEDIA PEDIATRICA"
+  },
+  {
+    "code" : "410",
+    "display" : "CIRUGIA ORAL"
+  },
+  {
+    "code" : "411",
+    "display" : "CIRUGIA MAXILOFACIAL"
+  },
+  {
+    "code" : "412",
+    "display" : "MEDICINA ALTERNATIVA Y COMPLEMENTARIA - HOMEOPATICA"
+  },
+  {
+    "code" : "413",
+    "display" : "MEDICINA ALTERNATIVA Y COMPLEMENTARIA - AYURVEDICA"
+  },
+  {
+    "code" : "414",
+    "display" : "MEDICINA ALTERNATIVA Y COMPLEMENTARIA - TRADICIONAL CHINA"
+  },
+  {
+    "code" : "415",
+    "display" : "MEDICINA ALTERNATIVA Y COMPLEMENTARIA - NATUROPATICA"
+  },
+  {
+    "code" : "416",
+    "display" : "MEDICINA ALTERNATIVA Y COMPLEMENTARIA - NEURALTERAPEUTICA"
+  },
+  {
+    "code" : "417",
+    "display" : "TERAPIAS ALTERNATIVAS Y COMPLEMENTARIAS - BIOENERGETICA"
+  },
+  {
+    "code" : "418",
+    "display" : "TERAPIAS ALTERNATIVAS Y COMPLEMENTARIAS - TERAPIA CON FILTROS"
+  },
+  {
+    "code" : "419",
+    "display" : "TERAPIAS ALTERNATIVAS Y COMPLEMENTARIAS - TERAPIAS MANUALES"
+  },
+  {
+    "code" : "420",
+    "display" : "VACUNACION"
+  },
+  {
+    "code" : "421",
+    "display" : "PATOLOGIA"
+  },
+  {
+    "code" : "422",
+    "display" : "MEDICINA ALTERNATIVA Y COMPLEMENTARIA - OSTEOPATICA"
+  },
+  {
+    "code" : "423",
+    "display" : "SEGURIDAD Y SALUD EN EL TRABAJO"
+  },
+  {
+    "code" : "706",
+    "display" : "LABORATORIO CLINICO"
+  },
+  {
+    "code" : "709",
+    "display" : "QUIMIOTERAPIA"
+  },
+  {
+    "code" : "711",
+    "display" : "RADIOTERAPIA"
+  },
+  {
+    "code" : "712",
+    "display" : "TOMA DE MUESTRAS DE LABORATORIO CLINICO"
+  },
+  {
+    "code" : "714",
+    "display" : "SERVICIO FARMACEUTICO"
+  },
+  {
+    "code" : "715",
+    "display" : "MEDICINA NUCLEAR"
+  },
+  {
+    "code" : "717",
+    "display" : "LABORATORIO CITOLOGIAS CERVICO-UTERINAS"
+  },
+  {
+    "code" : "728",
+    "display" : "TERAPIA OCUPACIONAL"
+  },
+  {
+    "code" : "729",
+    "display" : "TERAPIA RESPIRATORIA"
+  },
+  {
+    "code" : "731",
+    "display" : "LABORATORIO DE HISTOTECNOLOGIA"
+  },
+  {
+    "code" : "733",
+    "display" : "HEMODIALISIS"
+  },
+  {
+    "code" : "734",
+    "display" : "DIALISIS PERITONEAL"
+  },
+  {
+    "code" : "739",
+    "display" : "FISIOTERAPIA"
+  },
+  {
+    "code" : "740",
+    "display" : "FONOAUDIOLOGIA Y/O TERAPIA DEL LENGUAJE"
+  },
+  {
+    "code" : "742",
+    "display" : "DIAGNOSTICO VASCULAR"
+  },
+  {
+    "code" : "743",
+    "display" : "HEMODINAMIA E INTERVENCIONISMO"
+  },
+  {
+    "code" : "744",
+    "display" : "IMAGENES DIAGNOSTICAS- IONIZANTES"
+  },
+  {
+    "code" : "745",
+    "display" : "IMAGENES DIAGNOSTICAS - NO IONIZANTES"
+  },
+  {
+    "code" : "746",
+    "display" : "GESTION PRE-TRANSFUSIONAL"
+  },
+  {
+    "code" : "747",
+    "display" : "PATOLOGIA"
+  },
+  {
+    "code" : "748",
+    "display" : "RADIOLOGIA ODONTOLOGICA"
+  },
+  {
+    "code" : "749",
+    "display" : "TOMA DE MUESTRAS DE CUELLO UTERINO Y GINECOLOGICAS"
+  }]
+}

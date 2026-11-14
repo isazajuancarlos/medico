@@ -1,0 +1,66 @@
+version: '3.8'
+
+# ==============================================================================
+# MED-SYS PRO v2.0 - Docker Compose
+# Arquitectura: PostgreSQL + FastAPI Backend + Angular Frontend (Nginx)
+# Uso: docker compose up -d
+#
+# ESTA PILA ES EL BACKEND PYTHON, que se retira con el port a Rust (#156). El
+# producto que se entrega es el binario de `crates/medico-api`; esto queda como
+# implementación de referencia mientras se porta RIPS.
+#
+# LOS TRES SECRETOS SE EXIGEN DEL ENTORNO Y NO TIENEN VALOR POR DEFECTO. Hasta
+# hoy venían escritos aquí, así que `docker compose up -d` —el comando que el
+# CLAUDE.md documenta como «pila completa»— levantaba el backend firmando JWT con
+# una clave que está en el repositorio, sin que el operador hiciera nada. La
+# sintaxis `${VAR:?mensaje}` hace que compose ABORTE si falta, que es lo que debe
+# pasar: un secreto ausente para el arranque, nunca uno de relleno.
+#
+#   export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+#   export SECRET_KEY="$(openssl rand -hex 32)"
+#   export JWT_SECRET_KEY="$(openssl rand -hex 32)"
+#   docker compose up -d
+# ==============================================================================
+
+services:
+  # --- Base de datos PostgreSQL ---
+  db:
+    image: postgres:16-alpine
+    container_name: medsys-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: medsys_db
+      POSTGRES_USER: medsys_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD (exportela; no hay valor por defecto)}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - medsys_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medsys_user -d medsys_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- El servicio `backend` (FastAPI) se RETIRÓ el 2026-08-09 (#598) ---
+  #
+  # Su API HTTP se quedó sin cliente desplegado cuando Angular salió (el VPS
+  # arranca solo `medico-api`), y el FEV-RIPS de Rust quedó probado byte a byte
+  # de extremo a extremo contra el Python, que es la condición del ADR para
+  # apagarlo. Con eso se borraron `main.py` y los 30 `routers/`. Lo que queda del
+  # Python es la cadena RIPS/FEV-RIPS como MÓDULOS —`rips_completo.py`,
+  # `fev_rips.py`, `models.py`, `database.py`, `cie11.py` y sus catálogos—, que
+  # no se levanta con compose: se invoca desde código y desde sus pruebas.
+  #
+  # --- El servicio de frontal ya se había ido el 2026-08-08 con Angular ---
+  # Las pantallas viven en el binario Rust (`./construir.sh`), que se despliega
+  # solo, un archivo, sin compose.
+  #
+  # El `db` de abajo queda como referencia; sin el `backend` no tiene consumidor
+  # (las pruebas del Python usan SQLite, y el producto es el binario Rust con
+  # SQLite). Retirarlo entero es una decisión aparte.
+
+volumes:
+  medsys_pgdata:
+    driver: local

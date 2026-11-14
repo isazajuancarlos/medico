@@ -1,0 +1,44 @@
+-- La residencia en TEXTO del paciente, y la procedencia de sus datos (#84).
+--
+-- El estándar guarda `cod_municipio` como código DIVIPOLA directo, y esa es la
+-- forma buena: un código no se teclea mal como un nombre. Pero el VFP vivo del
+-- prestador capturaba la ciudad y el departamento como TEXTO LIBRE, y esos
+-- pacientes entran a la migración (#16/#65) SIN código. Tirar el texto obligaría
+-- a re-capturar el municipio de todo el padrón a mano; guardarlo permite
+-- DERIVAR el código cuando el nombre identifica un municipio sin ambigüedad
+-- (`medico_dominio::derivaciones`), sin pedirle nada al clínico.
+--
+-- Nace vacío para todo paciente actual: los que se capturan hoy traen el código
+-- directo y estas dos columnas se quedan en NULL. Son la FUENTE de una
+-- derivación, no un dato que se muestre.
+ALTER TABLE paciente ADD COLUMN ciudad_residencia       TEXT;
+ALTER TABLE paciente ADD COLUMN departamento_residencia TEXT;
+
+-- La procedencia de los datos DEL PACIENTE, JSON `{campo: procedencia}`, con la
+-- misma forma y los mismos cuatro valores que `historia.procedencias`
+-- (`confirmado`/`derivado`/`propuesto`/`no_aplica`). Antes solo la historia la
+-- llevaba, y el bloque de identificación del RIPS se auditaba con `None` a la
+-- espera de este «incremento futuro» (`documentos::usuario_base`). Con esto, un
+-- `cod_municipio` que DERIVÓ la máquina queda marcado `derivado`, y como el
+-- municipio es un campo DURO, la auditoría del cierre lo saca como «duro sin
+-- aval» en vez de dejarlo pasar por cierto.
+--
+-- Defecto la cadena EN BLANCO, no `'{}'` y no NULL. La distinción no es
+-- cosmética: el auditor (`rips::Recolector::en_registro`) lee TRES estados, y el
+-- padrón legado cae en el primero:
+--   - blanco/NULL  → «fila anterior a la captura»: se SALTA (despliegue
+--                    incremental). Es la verdad de un paciente del VFP (#16/#65),
+--                    que nunca pasó por la captura nueva: su procedencia es
+--                    genuinamente desconocida, no «vacía».
+--   - `'{}'`       → «capturado bajo el sistema nuevo y NADA avalado»: audita
+--                    todos sus campos con valor como `SinRespaldo`.
+-- Poner `'{}'` de defecto marcaría SinRespaldo toda la demografía de todo el
+-- padrón en el primer cierre —volumen, y una afirmación falsa: esas filas no se
+-- «capturaron vacías», predatan la captura—. El blanco las deja donde deben
+-- estar, sin re-capturar nada a mano; y en cuanto un paciente se edita o se crea,
+-- `crear`/`actualizar` le escriben su procedencia real (se auto-sana).
+--
+-- Se queda NOT NULL (blanco, no NULL) para que cada lector siga leyendo `String`
+-- sin decidir qué hacer con la ausencia — el blanco YA es el centinela que el
+-- parser (`Respaldos::desde_json`) y `en_registro` entienden como ausencia.
+ALTER TABLE paciente ADD COLUMN procedencias TEXT NOT NULL DEFAULT '';

@@ -1,0 +1,384 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "IUMPrimerNivel",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos IUMPrimerNivel</b></p><a name=\"IUMPrimerNivel\"> </a><a name=\"hcIUMPrimerNivel\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/IUMPrimerNivel</code> provides <b>a fragment</b> that includes following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">1A102244<a name=\"IUMPrimerNivel-1A102244\"> </a></td><td>AGUA ESTERIL 1-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1A103593<a name=\"IUMPrimerNivel-1A103593\"> </a></td><td>AMIKACINA 250-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1A105281<a name=\"IUMPrimerNivel-1A105281\"> </a></td><td>ALBUMINA 2-mg/1- U POLVOS PARA RECONSTITUIR</td></tr><tr><td style=\"white-space:nowrap\">1B103311<a name=\"IUMPrimerNivel-1B103311\"> </a></td><td>BROMURO DE ROCURONIO 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1B105613<a name=\"IUMPrimerNivel-1B105613\"> </a></td><td>BETIATIDA 1-mg/1- U POLVOS PARA RECONSTITUIR</td></tr><tr><td style=\"white-space:nowrap\">1C100130<a name=\"IUMPrimerNivel-1C100130\"> </a></td><td>CEFRADINA 5000-mg/100- ml POLVOS PARA RECONSTITUIR ORAL </td></tr><tr><td style=\"white-space:nowrap\">1C100132<a name=\"IUMPrimerNivel-1C100132\"> </a></td><td>CLINDAMICINA 150-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1C101308<a name=\"IUMPrimerNivel-1C101308\"> </a></td><td>CITRATO DE GALIO </td></tr><tr><td style=\"white-space:nowrap\">1C101586<a name=\"IUMPrimerNivel-1C101586\"> </a></td><td>CALCIO GLUCONATO 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1C102649<a name=\"IUMPrimerNivel-1C102649\"> </a></td><td>ACIDO CROMOGLICICO 40-mg/1- ml OTRAS SOLUCIONES OFTALMICA </td></tr><tr><td style=\"white-space:nowrap\">1C104785<a name=\"IUMPrimerNivel-1C104785\"> </a></td><td>CEFRADINA 1000-mg/1- U POLVOS PARA RECONSTITUIR INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1C104947<a name=\"IUMPrimerNivel-1C104947\"> </a></td><td>CASSIA ANGUSTIFOLIA HOJA 200-mg/100- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1D100087<a name=\"IUMPrimerNivel-1D100087\"> </a></td><td>DOCETAXEL 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1D100888<a name=\"IUMPrimerNivel-1D100888\"> </a></td><td>DOPAMINA 40-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1D102547<a name=\"IUMPrimerNivel-1D102547\"> </a></td><td>DEXTROSA 50-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1D104391<a name=\"IUMPrimerNivel-1D104391\"> </a></td><td>DEXTROSA 100-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1D105553<a name=\"IUMPrimerNivel-1D105553\"> </a></td><td>DOXOFILINA 2000-mg/100- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1E104099<a name=\"IUMPrimerNivel-1E104099\"> </a></td><td>ERITROMICINA 500-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1F101591<a name=\"IUMPrimerNivel-1F101591\"> </a></td><td>FUROSEMIDA 10-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1F102055<a name=\"IUMPrimerNivel-1F102055\"> </a></td><td>FACTOR IX 50-UI/1- ml POLVOS PARA RECONSTITUIR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1F103778<a name=\"IUMPrimerNivel-1F103778\"> </a></td><td>FIEBRE TIFOIDEA, ANTIGENO DE POLISACARIDO PURIFICADO 0.0500-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR SUBCUTANEA </td></tr><tr><td style=\"white-space:nowrap\">1G104303<a name=\"IUMPrimerNivel-1G104303\"> </a></td><td>GUAIFENESINA 2000-mg/100- ml OTRAS SOLUCIONES ORAL </td></tr><tr><td style=\"white-space:nowrap\">1G105713<a name=\"IUMPrimerNivel-1G105713\"> </a></td><td>GINKGO BILOBA HOJAS 40-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">1H102210<a name=\"IUMPrimerNivel-1H102210\"> </a></td><td>HIDROCLOROTIAZIDA 25-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1H104622<a name=\"IUMPrimerNivel-1H104622\"> </a></td><td>HIDROXICARBAMIDA 500-mg/1- U CAPSULAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1I101203<a name=\"IUMPrimerNivel-1I101203\"> </a></td><td>ITRACONAZOL 1000-mg/100- ml OTRAS SOLUCIONES ORAL </td></tr><tr><td style=\"white-space:nowrap\">1I101770<a name=\"IUMPrimerNivel-1I101770\"> </a></td><td>ISOTRETINOINA 20-mg/1- U CAPSULAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1I101796<a name=\"IUMPrimerNivel-1I101796\"> </a></td><td>IODURO </td></tr><tr><td style=\"white-space:nowrap\">1I106252<a name=\"IUMPrimerNivel-1I106252\"> </a></td><td>INTERFERON BETA-1A 0.0880-mg/1- ml OTRAS SOLUCIONES SUBCUTANEA </td></tr><tr><td style=\"white-space:nowrap\">1K103325<a name=\"IUMPrimerNivel-1K103325\"> </a></td><td>KETOPROFENO 50-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR </td></tr><tr><td style=\"white-space:nowrap\">1L100565<a name=\"IUMPrimerNivel-1L100565\"> </a></td><td>LIDOCAINA 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1M100215<a name=\"IUMPrimerNivel-1M100215\"> </a></td><td>METOPROLOL 100-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1M100295<a name=\"IUMPrimerNivel-1M100295\"> </a></td><td>MINOXIDIL 5000-mg/100- ml OTRAS SOLUCIONES TOPICA </td></tr><tr><td style=\"white-space:nowrap\">1M100526<a name=\"IUMPrimerNivel-1M100526\"> </a></td><td>MEBEVERINA 200-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1M100606<a name=\"IUMPrimerNivel-1M100606\"> </a></td><td>MIDAZOLAM 5-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1M101422<a name=\"IUMPrimerNivel-1M101422\"> </a></td><td>METAMIZOL 400-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1M103584<a name=\"IUMPrimerNivel-1M103584\"> </a></td><td>METRONIDAZOL 5000-mg/100- ml SUSPENSION ORAL </td></tr><tr><td style=\"white-space:nowrap\">1M103845<a name=\"IUMPrimerNivel-1M103845\"> </a></td><td>MISOPROSTOL 200-µg/1- U TABLETAS DE LIBERACION NO MODIFICADA VAGINAL </td></tr><tr><td style=\"white-space:nowrap\">1N100236<a name=\"IUMPrimerNivel-1N100236\"> </a></td><td>NIMESULIDA 1000-mg/100- ml SUSPENSION ORAL </td></tr><tr><td style=\"white-space:nowrap\">1N101470<a name=\"IUMPrimerNivel-1N101470\"> </a></td><td>NITROFURAZONA 0.2000-g/100- g UNGÜENTO TOPICA </td></tr><tr><td style=\"white-space:nowrap\">1O103225<a name=\"IUMPrimerNivel-1O103225\"> </a></td><td>OXACILINA 1000-mg/1- U POLVOS PARA RECONSTITUIR INTRAMUSCULAR INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1O104757<a name=\"IUMPrimerNivel-1O104757\"> </a></td><td>OXCARBAZEPINA 6000-mg/100- ml SUSPENSION ORAL </td></tr><tr><td style=\"white-space:nowrap\">1O105823<a name=\"IUMPrimerNivel-1O105823\"> </a></td><td>ORNITINA 3-g/1- U GRANULOS DE LIBERACION MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">1O105824<a name=\"IUMPrimerNivel-1O105824\"> </a></td><td>ORNITINA 500-g/1- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1P102378<a name=\"IUMPrimerNivel-1P102378\"> </a></td><td>PENTOBARBITAL 50-mg/1- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1P103103<a name=\"IUMPrimerNivel-1P103103\"> </a></td><td>PROXIMETACAINA 5-mg/1- ml OTRAS SOLUCIONES OFTALMICA </td></tr><tr><td style=\"white-space:nowrap\">1P104819<a name=\"IUMPrimerNivel-1P104819\"> </a></td><td>PERMETRINA 1000-mg/100- ml JABONES Y CHAMPU</td></tr><tr><td style=\"white-space:nowrap\">1P105005<a name=\"IUMPrimerNivel-1P105005\"> </a></td><td>PIRANTEL 250-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">1P105032<a name=\"IUMPrimerNivel-1P105032\"> </a></td><td>PIPERACINA 20000-mg/100- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1P105048<a name=\"IUMPrimerNivel-1P105048\"> </a></td><td>PODOFILINA 20000-mg/100- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1P105084<a name=\"IUMPrimerNivel-1P105084\"> </a></td><td>POTASIO CLORURO 2-mEq/1- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1R100920<a name=\"IUMPrimerNivel-1R100920\"> </a></td><td>RANITIDINA 150-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1S100707<a name=\"IUMPrimerNivel-1S100707\"> </a></td><td>SERTRALINA 50-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1S102255<a name=\"IUMPrimerNivel-1S102255\"> </a></td><td>SULFADIAZINA 1000-mg/100- g CREMA TOPICA </td></tr><tr><td style=\"white-space:nowrap\">1S102502<a name=\"IUMPrimerNivel-1S102502\"> </a></td><td>SALBUTAMOL 100-µg/1- Dosis AEROSOL INHALATORIA </td></tr><tr><td style=\"white-space:nowrap\">1S104003<a name=\"IUMPrimerNivel-1S104003\"> </a></td><td>SUCRALFATO 20000-mg/100- ml SUSPENSION ORAL </td></tr><tr><td style=\"white-space:nowrap\">1T100818<a name=\"IUMPrimerNivel-1T100818\"> </a></td><td>TIMOLOL 5-mg/1- ml OTRAS SOLUCIONES CONJUNTIVAL </td></tr><tr><td style=\"white-space:nowrap\">1T101449<a name=\"IUMPrimerNivel-1T101449\"> </a></td><td>TECNECIO</td></tr><tr><td style=\"white-space:nowrap\">1T103389<a name=\"IUMPrimerNivel-1T103389\"> </a></td><td>TOCOFEROL ALFA 400-UI/1- U CAPSULAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1T104879<a name=\"IUMPrimerNivel-1T104879\"> </a></td><td>TRICLOSAN 200-mg/100- g POLVOS PARA NO RECONSTITUIR TOPICA </td></tr><tr><td style=\"white-space:nowrap\">1T104886<a name=\"IUMPrimerNivel-1T104886\"> </a></td><td>TRIMEBUTINA 1333-mg/100- ml POLVOS PARA RECONSTITUIR</td></tr><tr><td style=\"white-space:nowrap\">1T104930<a name=\"IUMPrimerNivel-1T104930\"> </a></td><td>TIOMERSAL 100-mg/100- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">1T104938<a name=\"IUMPrimerNivel-1T104938\"> </a></td><td>TOCOFEROL ALFA 100-UI/1- U CAPSULAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">1V104238<a name=\"IUMPrimerNivel-1V104238\"> </a></td><td>VALERATO DE ESTRADIOL 2-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">1Z104640<a name=\"IUMPrimerNivel-1Z104640\"> </a></td><td>ZIDOVUDINA 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">1Z104841<a name=\"IUMPrimerNivel-1Z104841\"> </a></td><td>ZIDOVUDINA 1000-mg/100- ml OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">2A100352<a name=\"IUMPrimerNivel-2A100352\"> </a></td><td>ALUMINIO HIDROXIDO 4000-mg/100- ml/MAGNESIO HIDROXIDO 4000-mg/100- ml/SIMETICONA 400-mg/100- ml SUSPENSION ORAL </td></tr><tr><td style=\"white-space:nowrap\">2A101966<a name=\"IUMPrimerNivel-2A101966\"> </a></td><td>ALCANFOR 5-g/100- g/EUCALIPTOL 1.5000-g/100- g/MENTOL 2.9000-g/100- g UNGÜENTO TOPICA </td></tr><tr><td style=\"white-space:nowrap\">2A102283<a name=\"IUMPrimerNivel-2A102283\"> </a></td><td>ALCOHOL ISOPROPILICO 63.6400-mg/100- ml/YODO 602-mg/100- ml OTRAS SOLUCIONES TOPICA </td></tr><tr><td style=\"white-space:nowrap\">2A103302<a name=\"IUMPrimerNivel-2A103302\"> </a></td><td>ALCANFOR 3-g/100- g/MENTOL 4-g/100- g/METILO SALICILATO 14-g/100- g UNGÜENTO TOPICA </td></tr><tr><td style=\"white-space:nowrap\">2A105189<a name=\"IUMPrimerNivel-2A105189\"> </a></td><td>AMLODIPINO 5-mg/1- U/HIDROCLOROTIAZIDA 12.5000-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">2A105204<a name=\"IUMPrimerNivel-2A105204\"> </a></td><td>AMLODIPINO 10-mg/1- U/HIDROCLOROTIAZIDA 25-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">2A105934<a name=\"IUMPrimerNivel-2A105934\"> </a></td><td>AMBROXOL 300-mg/100- ml/CLENBUTEROL 0.2000-mg/100- ml OTRAS SOLUCIONES ORAL </td></tr><tr><td style=\"white-space:nowrap\">2C100051<a name=\"IUMPrimerNivel-2C100051\"> </a></td><td>CLOTRIMAZOL 1-g/100- g/DEXAMETASONA 0.0400-g/100- g/NEOMICINA 0.5000-g/100- g CREMA TOPICA </td></tr><tr><td style=\"white-space:nowrap\">2C101130<a name=\"IUMPrimerNivel-2C101130\"> </a></td><td>CARBIDOPA 25-mg/1- U/LEVODOPA 250-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">2C105214<a name=\"IUMPrimerNivel-2C105214\"> </a></td><td>CALCIO 315-mg/1- U/COLECALCIFEROL 200-UI/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL </td></tr><tr><td style=\"white-space:nowrap\">2C105507<a name=\"IUMPrimerNivel-2C105507\"> </a></td><td>CLORFENAMINA 2-mg/1- U/FENILEFRINA 10-mg/1- U/PARACETAMOL 500-mg/1- U GRANULOS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">2D104398<a name=\"IUMPrimerNivel-2D104398\"> </a></td><td>DEXTROSA 50-mg/1- ml/SODIO CLORURO 3.3000-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA </td></tr><tr><td style=\"white-space:nowrap\">2F103194<a name=\"IUMPrimerNivel-2F103194\"> </a></td><td>FLUTICASONA 500-µg/1- U/SALMETEROL 50-µg/1- U POLVOS PARA NO RECONSTITUIR INHALATORIA BUCAL </td></tr><tr><td style=\"white-space:nowrap\">2F105694<a name=\"IUMPrimerNivel-2F105694\"> </a></td><td>FLUTICASONA 100-µg/1- Dosis/SALMEFAMOL 50-µg/1- Dosis POLVOS PARA RECONSTITUIR</td></tr><tr><td style=\"white-space:nowrap\">2M101124<a name=\"IUMPrimerNivel-2M101124\"> </a></td><td>MENTOL 10-g/100- g/METILO SALICILATO 15-g/100- g CREMA TOPICA </td></tr><tr><td style=\"white-space:nowrap\">3A104241<a name=\"IUMPrimerNivel-3A104241\"> </a></td><td>APROTININA 3000-UI/1- U/CALCIO CLORURO 17.7000-mg/1- U/FACTOR XIII 180-UI/1- U/FIBRINOGENO 270-mg/1- U/TROMBINA 1500-UI/1- U POLVOS PARA RECONSTITUIR TOPICA </td></tr><tr><td style=\"white-space:nowrap\">3A104242<a name=\"IUMPrimerNivel-3A104242\"> </a></td><td>APROTININA 1000-UI/1- U/CALCIO CLORURO 5.9000-mg/1- U/FACTOR XIII 60-UI/1- U/FIBRINOGENO 90-mg/1- U/TROMBINA 500-UI/1- U POLVOS PARA RECONSTITUIR TOPICA </td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/IUMPrimerNivel",
+  "version" : "1.0.0",
+  "name" : "IUMPrimerNivel",
+  "title" : "CodeSystem: Codificación de medicamentos MIPRES",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de Medicamentos IUM Primer Nivel",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de códigos de medicamentos IUM Primer Nivel",
+  "copyright" : "MinSalud Colombia, CCBY4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "fragment",
+  "concept" : [{
+    "code" : "1A102244",
+    "display" : "AGUA ESTERIL 1-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1A103593",
+    "display" : "AMIKACINA 250-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1A105281",
+    "display" : "ALBUMINA 2-mg/1- U POLVOS PARA RECONSTITUIR"
+  },
+  {
+    "code" : "1B103311",
+    "display" : "BROMURO DE ROCURONIO 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1B105613",
+    "display" : "BETIATIDA 1-mg/1- U POLVOS PARA RECONSTITUIR"
+  },
+  {
+    "code" : "1C100130",
+    "display" : "CEFRADINA 5000-mg/100- ml POLVOS PARA RECONSTITUIR ORAL "
+  },
+  {
+    "code" : "1C100132",
+    "display" : "CLINDAMICINA 150-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1C101308",
+    "display" : "CITRATO DE GALIO "
+  },
+  {
+    "code" : "1C101586",
+    "display" : "CALCIO GLUCONATO 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1C102649",
+    "display" : "ACIDO CROMOGLICICO 40-mg/1- ml OTRAS SOLUCIONES OFTALMICA "
+  },
+  {
+    "code" : "1C104785",
+    "display" : "CEFRADINA 1000-mg/1- U POLVOS PARA RECONSTITUIR INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1C104947",
+    "display" : "CASSIA ANGUSTIFOLIA HOJA 200-mg/100- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1D100087",
+    "display" : "DOCETAXEL 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1D100888",
+    "display" : "DOPAMINA 40-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1D102547",
+    "display" : "DEXTROSA 50-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1D104391",
+    "display" : "DEXTROSA 100-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1D105553",
+    "display" : "DOXOFILINA 2000-mg/100- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1E104099",
+    "display" : "ERITROMICINA 500-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1F101591",
+    "display" : "FUROSEMIDA 10-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1F102055",
+    "display" : "FACTOR IX 50-UI/1- ml POLVOS PARA RECONSTITUIR INTRAVENOSA "
+  },
+  {
+    "code" : "1F103778",
+    "display" : "FIEBRE TIFOIDEA, ANTIGENO DE POLISACARIDO PURIFICADO 0.0500-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR SUBCUTANEA "
+  },
+  {
+    "code" : "1G104303",
+    "display" : "GUAIFENESINA 2000-mg/100- ml OTRAS SOLUCIONES ORAL "
+  },
+  {
+    "code" : "1G105713",
+    "display" : "GINKGO BILOBA HOJAS 40-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "1H102210",
+    "display" : "HIDROCLOROTIAZIDA 25-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1H104622",
+    "display" : "HIDROXICARBAMIDA 500-mg/1- U CAPSULAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1I101203",
+    "display" : "ITRACONAZOL 1000-mg/100- ml OTRAS SOLUCIONES ORAL "
+  },
+  {
+    "code" : "1I101770",
+    "display" : "ISOTRETINOINA 20-mg/1- U CAPSULAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1I101796",
+    "display" : "IODURO "
+  },
+  {
+    "code" : "1I106252",
+    "display" : "INTERFERON BETA-1A 0.0880-mg/1- ml OTRAS SOLUCIONES SUBCUTANEA "
+  },
+  {
+    "code" : "1K103325",
+    "display" : "KETOPROFENO 50-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR "
+  },
+  {
+    "code" : "1L100565",
+    "display" : "LIDOCAINA 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1M100215",
+    "display" : "METOPROLOL 100-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1M100295",
+    "display" : "MINOXIDIL 5000-mg/100- ml OTRAS SOLUCIONES TOPICA "
+  },
+  {
+    "code" : "1M100526",
+    "display" : "MEBEVERINA 200-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1M100606",
+    "display" : "MIDAZOLAM 5-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1M101422",
+    "display" : "METAMIZOL 400-mg/1- ml OTRAS SOLUCIONES INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1M103584",
+    "display" : "METRONIDAZOL 5000-mg/100- ml SUSPENSION ORAL "
+  },
+  {
+    "code" : "1M103845",
+    "display" : "MISOPROSTOL 200-µg/1- U TABLETAS DE LIBERACION NO MODIFICADA VAGINAL "
+  },
+  {
+    "code" : "1N100236",
+    "display" : "NIMESULIDA 1000-mg/100- ml SUSPENSION ORAL "
+  },
+  {
+    "code" : "1N101470",
+    "display" : "NITROFURAZONA 0.2000-g/100- g UNGÜENTO TOPICA "
+  },
+  {
+    "code" : "1O103225",
+    "display" : "OXACILINA 1000-mg/1- U POLVOS PARA RECONSTITUIR INTRAMUSCULAR INTRAVENOSA "
+  },
+  {
+    "code" : "1O104757",
+    "display" : "OXCARBAZEPINA 6000-mg/100- ml SUSPENSION ORAL "
+  },
+  {
+    "code" : "1O105823",
+    "display" : "ORNITINA 3-g/1- U GRANULOS DE LIBERACION MODIFICADA"
+  },
+  {
+    "code" : "1O105824",
+    "display" : "ORNITINA 500-g/1- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1P102378",
+    "display" : "PENTOBARBITAL 50-mg/1- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1P103103",
+    "display" : "PROXIMETACAINA 5-mg/1- ml OTRAS SOLUCIONES OFTALMICA "
+  },
+  {
+    "code" : "1P104819",
+    "display" : "PERMETRINA 1000-mg/100- ml JABONES Y CHAMPU"
+  },
+  {
+    "code" : "1P105005",
+    "display" : "PIRANTEL 250-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "1P105032",
+    "display" : "PIPERACINA 20000-mg/100- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1P105048",
+    "display" : "PODOFILINA 20000-mg/100- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1P105084",
+    "display" : "POTASIO CLORURO 2-mEq/1- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1R100920",
+    "display" : "RANITIDINA 150-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1S100707",
+    "display" : "SERTRALINA 50-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1S102255",
+    "display" : "SULFADIAZINA 1000-mg/100- g CREMA TOPICA "
+  },
+  {
+    "code" : "1S102502",
+    "display" : "SALBUTAMOL 100-µg/1- Dosis AEROSOL INHALATORIA "
+  },
+  {
+    "code" : "1S104003",
+    "display" : "SUCRALFATO 20000-mg/100- ml SUSPENSION ORAL "
+  },
+  {
+    "code" : "1T100818",
+    "display" : "TIMOLOL 5-mg/1- ml OTRAS SOLUCIONES CONJUNTIVAL "
+  },
+  {
+    "code" : "1T101449",
+    "display" : "TECNECIO"
+  },
+  {
+    "code" : "1T103389",
+    "display" : "TOCOFEROL ALFA 400-UI/1- U CAPSULAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1T104879",
+    "display" : "TRICLOSAN 200-mg/100- g POLVOS PARA NO RECONSTITUIR TOPICA "
+  },
+  {
+    "code" : "1T104886",
+    "display" : "TRIMEBUTINA 1333-mg/100- ml POLVOS PARA RECONSTITUIR"
+  },
+  {
+    "code" : "1T104930",
+    "display" : "TIOMERSAL 100-mg/100- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "1T104938",
+    "display" : "TOCOFEROL ALFA 100-UI/1- U CAPSULAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "1V104238",
+    "display" : "VALERATO DE ESTRADIOL 2-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "1Z104640",
+    "display" : "ZIDOVUDINA 10-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "1Z104841",
+    "display" : "ZIDOVUDINA 1000-mg/100- ml OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "2A100352",
+    "display" : "ALUMINIO HIDROXIDO 4000-mg/100- ml/MAGNESIO HIDROXIDO 4000-mg/100- ml/SIMETICONA 400-mg/100- ml SUSPENSION ORAL "
+  },
+  {
+    "code" : "2A101966",
+    "display" : "ALCANFOR 5-g/100- g/EUCALIPTOL 1.5000-g/100- g/MENTOL 2.9000-g/100- g UNGÜENTO TOPICA "
+  },
+  {
+    "code" : "2A102283",
+    "display" : "ALCOHOL ISOPROPILICO 63.6400-mg/100- ml/YODO 602-mg/100- ml OTRAS SOLUCIONES TOPICA "
+  },
+  {
+    "code" : "2A103302",
+    "display" : "ALCANFOR 3-g/100- g/MENTOL 4-g/100- g/METILO SALICILATO 14-g/100- g UNGÜENTO TOPICA "
+  },
+  {
+    "code" : "2A105189",
+    "display" : "AMLODIPINO 5-mg/1- U/HIDROCLOROTIAZIDA 12.5000-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "2A105204",
+    "display" : "AMLODIPINO 10-mg/1- U/HIDROCLOROTIAZIDA 25-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "2A105934",
+    "display" : "AMBROXOL 300-mg/100- ml/CLENBUTEROL 0.2000-mg/100- ml OTRAS SOLUCIONES ORAL "
+  },
+  {
+    "code" : "2C100051",
+    "display" : "CLOTRIMAZOL 1-g/100- g/DEXAMETASONA 0.0400-g/100- g/NEOMICINA 0.5000-g/100- g CREMA TOPICA "
+  },
+  {
+    "code" : "2C101130",
+    "display" : "CARBIDOPA 25-mg/1- U/LEVODOPA 250-mg/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "2C105214",
+    "display" : "CALCIO 315-mg/1- U/COLECALCIFEROL 200-UI/1- U TABLETAS DE LIBERACION NO MODIFICADA ORAL "
+  },
+  {
+    "code" : "2C105507",
+    "display" : "CLORFENAMINA 2-mg/1- U/FENILEFRINA 10-mg/1- U/PARACETAMOL 500-mg/1- U GRANULOS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "2D104398",
+    "display" : "DEXTROSA 50-mg/1- ml/SODIO CLORURO 3.3000-mg/1- ml OTRAS SOLUCIONES INTRAVENOSA "
+  },
+  {
+    "code" : "2F103194",
+    "display" : "FLUTICASONA 500-µg/1- U/SALMETEROL 50-µg/1- U POLVOS PARA NO RECONSTITUIR INHALATORIA BUCAL "
+  },
+  {
+    "code" : "2F105694",
+    "display" : "FLUTICASONA 100-µg/1- Dosis/SALMEFAMOL 50-µg/1- Dosis POLVOS PARA RECONSTITUIR"
+  },
+  {
+    "code" : "2M101124",
+    "display" : "MENTOL 10-g/100- g/METILO SALICILATO 15-g/100- g CREMA TOPICA "
+  },
+  {
+    "code" : "3A104241",
+    "display" : "APROTININA 3000-UI/1- U/CALCIO CLORURO 17.7000-mg/1- U/FACTOR XIII 180-UI/1- U/FIBRINOGENO 270-mg/1- U/TROMBINA 1500-UI/1- U POLVOS PARA RECONSTITUIR TOPICA "
+  },
+  {
+    "code" : "3A104242",
+    "display" : "APROTININA 1000-UI/1- U/CALCIO CLORURO 5.9000-mg/1- U/FACTOR XIII 60-UI/1- U/FIBRINOGENO 90-mg/1- U/TROMBINA 500-UI/1- U POLVOS PARA RECONSTITUIR TOPICA "
+  }]
+}

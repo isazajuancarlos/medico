@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "RETHUSqualificationCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores RETHUSqualificationCodes</b></p><a name=\"RETHUSqualificationCodes\"> </a><a name=\"hcRETHUSqualificationCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-RETHUSqualification.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/RETHUSqualificationCodes",
+  "version" : "1.0.0",
+  "name" : "RETHUSqualification",
+  "title" : "ValueSet: RETHUS Qualification Codes",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de cualificación de las competencias de los profesionales de salud.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza como nomenclador de cualificación de las competencias de los profesionales de salud (tomado de la versión 3 de Mipres - Sispro).",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2006+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification"
+    }]
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ColombianPersonIdentifierCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ColombianPersonIdentifierCodes</b></p><a name=\"ColombianPersonIdentifierCodes\"> </a><a name=\"hcColombianPersonIdentifierCodes\"> </a><ul><li>Include these codes as defined in <a href=\"CodeSystem-ColombianPersonIdentifier.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianPersonIdentifier</code></a><table class=\"none\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-CN\">CN</a></td><td>Certificado de nacido vivo</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-RC\">RC</a></td><td>Registro civil</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-TI\">TI</a></td><td>Tarjeta de Identidad</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-CC\">CC</a></td><td>Cédula ciudadanía</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-PA\">PA</a></td><td>Pasaporte</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-CD\">CD</a></td><td>Carné diplomático</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-CE\">CE</a></td><td>Cédula de extranjería</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-DE\">DE</a></td><td>Documento Extranjero</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-SC\">SC</a></td><td>Salvoconducto de permanencia</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-PE\">PE</a></td><td>Permiso Especial de Permanencia</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-PT\">PT</a></td><td>Permiso Temporal de Permanencia</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-PPT\">PPT</a></td><td>Permiso por protección temporal</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-RUT\">RUT</a></td><td>Registro Único Tributario</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-AS\">AS</a></td><td>Adulto sin identificar</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-MS\">MS</a></td><td>Menor sin identificar</td></tr><tr><td><a href=\"CodeSystem-ColombianPersonIdentifier.html#ColombianPersonIdentifier-SI\">SI</a></td><td>Sin identificación</td></tr></table></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianPersonIdentifierCodes",
+  "version" : "1.0.0",
+  "name" : "ColombianPersonIdentifierCodes",
+  "title" : "ValueSet: Colombian Person Identifier Codes",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de tipos de identificaciones para personas en Colombia",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores de identificadores para personas en Colombia, es utilizado en elementos de recursos FHIR como: *Patient.identifier.type*, *Practitioner.identifier.type*, *Person.identifier.type* y *RelatedPerson.identifier.type*.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0, 2024+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianPersonIdentifier",
+      "concept" : [{
+        "code" : "CN",
+        "display" : "Certificado de nacido vivo"
+      },
+      {
+        "code" : "RC",
+        "display" : "Registro civil"
+      },
+      {
+        "code" : "TI",
+        "display" : "Tarjeta de Identidad"
+      },
+      {
+        "code" : "CC",
+        "display" : "Cédula ciudadanía"
+      },
+      {
+        "code" : "PA",
+        "display" : "Pasaporte"
+      },
+      {
+        "code" : "CD",
+        "display" : "Carné diplomático"
+      },
+      {
+        "code" : "CE",
+        "display" : "Cédula de extranjería"
+      },
+      {
+        "code" : "DE",
+        "display" : "Documento Extranjero"
+      },
+      {
+        "code" : "SC",
+        "display" : "Salvoconducto de permanencia"
+      },
+      {
+        "code" : "PE",
+        "display" : "Permiso Especial de Permanencia"
+      },
+      {
+        "code" : "PT",
+        "display" : "Permiso Temporal de Permanencia"
+      },
+      {
+        "code" : "PPT",
+        "display" : "Permiso por protección temporal"
+      },
+      {
+        "code" : "RUT",
+        "display" : "Registro Único Tributario"
+      },
+      {
+        "code" : "AS",
+        "display" : "Adulto sin identificar"
+      },
+      {
+        "code" : "MS",
+        "display" : "Menor sin identificar"
+      },
+      {
+        "code" : "SI",
+        "display" : "Sin identificación"
+      }]
+    }]
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresAmbitosAtencion",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresAmbitosAtencion</b></p><a name=\"MipresAmbitosAtencion\"> </a><a name=\"hcMipresAmbitosAtencion\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresAmbitosAtencion</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">11<a name=\"MipresAmbitosAtencion-11\"> </a></td><td>Ambulatorio - priorizado</td></tr><tr><td style=\"white-space:nowrap\">12<a name=\"MipresAmbitosAtencion-12\"> </a></td><td>Ambulatorio - no priorizado</td></tr><tr><td style=\"white-space:nowrap\">21<a name=\"MipresAmbitosAtencion-21\"> </a></td><td>Hospitalario - domiciliario</td></tr><tr><td style=\"white-space:nowrap\">22<a name=\"MipresAmbitosAtencion-22\"> </a></td><td>Hospitalario - internación</td></tr><tr><td style=\"white-space:nowrap\">30<a name=\"MipresAmbitosAtencion-30\"> </a></td><td>Urgencias</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresAmbitosAtencion",
+  "version" : "1.0.0",
+  "name" : "MipresAmbitosAtencion",
+  "title" : "CodeSystem: Mipres Ámbitos de atención",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de ámbitos de atención MIPRES",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de ámbitos de atención en MIPRES",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 5,
+  "concept" : [{
+    "code" : "11",
+    "display" : "Ambulatorio - priorizado"
+  },
+  {
+    "code" : "12",
+    "display" : "Ambulatorio - no priorizado"
+  },
+  {
+    "code" : "21",
+    "display" : "Hospitalario - domiciliario"
+  },
+  {
+    "code" : "22",
+    "display" : "Hospitalario - internación"
+  },
+  {
+    "code" : "30",
+    "display" : "Urgencias"
+  }]
+}

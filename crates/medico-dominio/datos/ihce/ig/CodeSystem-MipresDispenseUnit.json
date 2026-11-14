@@ -1,0 +1,345 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresDispenseUnit",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresDispenseUnit</b></p><a name=\"MipresDispenseUnit\"> </a><a name=\"hcMipresDispenseUnit\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresDispenseUnit</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">1<a name=\"MipresDispenseUnit-1\"> </a></td><td>AMPOLLA</td></tr><tr><td style=\"white-space:nowrap\">10<a name=\"MipresDispenseUnit-10\"> </a></td><td>ENVASE</td></tr><tr><td style=\"white-space:nowrap\">11<a name=\"MipresDispenseUnit-11\"> </a></td><td>CAJA</td></tr><tr><td style=\"white-space:nowrap\">12<a name=\"MipresDispenseUnit-12\"> </a></td><td>LATA</td></tr><tr><td style=\"white-space:nowrap\">13<a name=\"MipresDispenseUnit-13\"> </a></td><td>FRASCO</td></tr><tr><td style=\"white-space:nowrap\">14<a name=\"MipresDispenseUnit-14\"> </a></td><td>CAPSULA</td></tr><tr><td style=\"white-space:nowrap\">15<a name=\"MipresDispenseUnit-15\"> </a></td><td>CARTON</td></tr><tr><td style=\"white-space:nowrap\">16<a name=\"MipresDispenseUnit-16\"> </a></td><td>CARTUCHO</td></tr><tr><td style=\"white-space:nowrap\">17<a name=\"MipresDispenseUnit-17\"> </a></td><td>ESTUCHE</td></tr><tr><td style=\"white-space:nowrap\">18<a name=\"MipresDispenseUnit-18\"> </a></td><td>PELICULA DE PVC TRANSPARENTE DE COLORES</td></tr><tr><td style=\"white-space:nowrap\">19<a name=\"MipresDispenseUnit-19\"> </a></td><td>UNIDADES CLINICAS</td></tr><tr><td style=\"white-space:nowrap\">2<a name=\"MipresDispenseUnit-2\"> </a></td><td>APLICADOR</td></tr><tr><td style=\"white-space:nowrap\">20<a name=\"MipresDispenseUnit-20\"> </a></td><td>RECUBRIMIENTO</td></tr><tr><td style=\"white-space:nowrap\">21<a name=\"MipresDispenseUnit-21\"> </a></td><td>CONTENEDOR</td></tr><tr><td style=\"white-space:nowrap\">22<a name=\"MipresDispenseUnit-22\"> </a></td><td>RECUENTO</td></tr><tr><td style=\"white-space:nowrap\">23<a name=\"MipresDispenseUnit-23\"> </a></td><td>COPA</td></tr><tr><td style=\"white-space:nowrap\">24<a name=\"MipresDispenseUnit-24\"> </a></td><td>CILINDRO</td></tr><tr><td style=\"white-space:nowrap\">25<a name=\"MipresDispenseUnit-25\"> </a></td><td>VASOS DEWAR</td></tr><tr><td style=\"white-space:nowrap\">26<a name=\"MipresDispenseUnit-26\"> </a></td><td>DIAL PACK</td></tr><tr><td style=\"white-space:nowrap\">27<a name=\"MipresDispenseUnit-27\"> </a></td><td>DISCO</td></tr><tr><td style=\"white-space:nowrap\">28<a name=\"MipresDispenseUnit-28\"> </a></td><td>DOSIS EN ENVASE</td></tr><tr><td style=\"white-space:nowrap\">29<a name=\"MipresDispenseUnit-29\"> </a></td><td>GOTAS</td></tr><tr><td style=\"white-space:nowrap\">3<a name=\"MipresDispenseUnit-3\"> </a></td><td>BOLSA</td></tr><tr><td style=\"white-space:nowrap\">30<a name=\"MipresDispenseUnit-30\"> </a></td><td>TAMBOR - BOMBO</td></tr><tr><td style=\"white-space:nowrap\">31<a name=\"MipresDispenseUnit-31\"> </a></td><td>PELICULA</td></tr><tr><td style=\"white-space:nowrap\">32<a name=\"MipresDispenseUnit-32\"> </a></td><td>GENERADOR</td></tr><tr><td style=\"white-space:nowrap\">33<a name=\"MipresDispenseUnit-33\"> </a></td><td>GLOBULO</td></tr><tr><td style=\"white-space:nowrap\">34<a name=\"MipresDispenseUnit-34\"> </a></td><td>DILUCION HOMEOPATICA</td></tr><tr><td style=\"white-space:nowrap\">35<a name=\"MipresDispenseUnit-35\"> </a></td><td>IMPLANTE</td></tr><tr><td style=\"white-space:nowrap\">37<a name=\"MipresDispenseUnit-37\"> </a></td><td>INHALADOR</td></tr><tr><td style=\"white-space:nowrap\">38<a name=\"MipresDispenseUnit-38\"> </a></td><td>INHALADOR, RECARGA</td></tr><tr><td style=\"white-space:nowrap\">39<a name=\"MipresDispenseUnit-39\"> </a></td><td>INSERTO</td></tr><tr><td style=\"white-space:nowrap\">4<a name=\"MipresDispenseUnit-4\"> </a></td><td>BARRA</td></tr><tr><td style=\"white-space:nowrap\">41<a name=\"MipresDispenseUnit-41\"> </a></td><td>JARRA</td></tr><tr><td style=\"white-space:nowrap\">42<a name=\"MipresDispenseUnit-42\"> </a></td><td>UNIDAD INHIBIDORA DE CALICREINA</td></tr><tr><td style=\"white-space:nowrap\">43<a name=\"MipresDispenseUnit-43\"> </a></td><td>KIT</td></tr><tr><td style=\"white-space:nowrap\">44<a name=\"MipresDispenseUnit-44\"> </a></td><td>PASTILLA</td></tr><tr><td style=\"white-space:nowrap\">45<a name=\"MipresDispenseUnit-45\"> </a></td><td>EMBALAJE</td></tr><tr><td style=\"white-space:nowrap\">46<a name=\"MipresDispenseUnit-46\"> </a></td><td>PAQUETE</td></tr><tr><td style=\"white-space:nowrap\">47<a name=\"MipresDispenseUnit-47\"> </a></td><td>BALDE</td></tr><tr><td style=\"white-space:nowrap\">48<a name=\"MipresDispenseUnit-48\"> </a></td><td>PARTES</td></tr><tr><td style=\"white-space:nowrap\">49<a name=\"MipresDispenseUnit-49\"> </a></td><td>PARCHE</td></tr><tr><td style=\"white-space:nowrap\">5<a name=\"MipresDispenseUnit-5\"> </a></td><td>PERLA</td></tr><tr><td style=\"white-space:nowrap\">50<a name=\"MipresDispenseUnit-50\"> </a></td><td>PILDORA (PELLET)</td></tr><tr><td style=\"white-space:nowrap\">51<a name=\"MipresDispenseUnit-51\"> </a></td><td>PIEZA</td></tr><tr><td style=\"white-space:nowrap\">53<a name=\"MipresDispenseUnit-53\"> </a></td><td>UNIDADES DE PRESION</td></tr><tr><td style=\"white-space:nowrap\">54<a name=\"MipresDispenseUnit-54\"> </a></td><td>ANILLO</td></tr><tr><td style=\"white-space:nowrap\">55<a name=\"MipresDispenseUnit-55\"> </a></td><td>SATURADO</td></tr><tr><td style=\"white-space:nowrap\">56<a name=\"MipresDispenseUnit-56\"> </a></td><td>CUCHARA MEDIDORA</td></tr><tr><td style=\"white-space:nowrap\">57<a name=\"MipresDispenseUnit-57\"> </a></td><td>ESPONJA</td></tr><tr><td style=\"white-space:nowrap\">58<a name=\"MipresDispenseUnit-58\"> </a></td><td>ATOMIZADOR (SPRAY)</td></tr><tr><td style=\"white-space:nowrap\">61<a name=\"MipresDispenseUnit-61\"> </a></td><td>TIRA</td></tr><tr><td style=\"white-space:nowrap\">63<a name=\"MipresDispenseUnit-63\"> </a></td><td>SUPOSITORIO</td></tr><tr><td style=\"white-space:nowrap\">64<a name=\"MipresDispenseUnit-64\"> </a></td><td>HISOPO</td></tr><tr><td style=\"white-space:nowrap\">65<a name=\"MipresDispenseUnit-65\"> </a></td><td>JERINGA</td></tr><tr><td style=\"white-space:nowrap\">66<a name=\"MipresDispenseUnit-66\"> </a></td><td>TABLETA</td></tr><tr><td style=\"white-space:nowrap\">67<a name=\"MipresDispenseUnit-67\"> </a></td><td>TABMINDER</td></tr><tr><td style=\"white-space:nowrap\">68<a name=\"MipresDispenseUnit-68\"> </a></td><td>TAMPON</td></tr><tr><td style=\"white-space:nowrap\">69<a name=\"MipresDispenseUnit-69\"> </a></td><td>TANQUE</td></tr><tr><td style=\"white-space:nowrap\">70<a name=\"MipresDispenseUnit-70\"> </a></td><td>PRUEBA</td></tr><tr><td style=\"white-space:nowrap\">71<a name=\"MipresDispenseUnit-71\"> </a></td><td>BANDEJA</td></tr><tr><td style=\"white-space:nowrap\">72<a name=\"MipresDispenseUnit-72\"> </a></td><td>TROCHE</td></tr><tr><td style=\"white-space:nowrap\">73<a name=\"MipresDispenseUnit-73\"> </a></td><td>TUBO</td></tr><tr><td style=\"white-space:nowrap\">74<a name=\"MipresDispenseUnit-74\"> </a></td><td>UNIDADES</td></tr><tr><td style=\"white-space:nowrap\">75<a name=\"MipresDispenseUnit-75\"> </a></td><td>VIAL</td></tr><tr><td style=\"white-space:nowrap\">76<a name=\"MipresDispenseUnit-76\"> </a></td><td>OBLEA</td></tr><tr><td style=\"white-space:nowrap\">77<a name=\"MipresDispenseUnit-77\"> </a></td><td>TERMO</td></tr><tr><td style=\"white-space:nowrap\">78<a name=\"MipresDispenseUnit-78\"> </a></td><td>SOBRE</td></tr><tr><td style=\"white-space:nowrap\">79<a name=\"MipresDispenseUnit-79\"> </a></td><td>PLUMA</td></tr><tr><td style=\"white-space:nowrap\">8<a name=\"MipresDispenseUnit-8\"> </a></td><td>BLOQUE</td></tr><tr><td style=\"white-space:nowrap\">80<a name=\"MipresDispenseUnit-80\"> </a></td><td>LITRO</td></tr><tr><td style=\"white-space:nowrap\">81<a name=\"MipresDispenseUnit-81\"> </a></td><td>OVULO</td></tr><tr><td style=\"white-space:nowrap\">9<a name=\"MipresDispenseUnit-9\"> </a></td><td>BOLO</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresDispenseUnit",
+  "version" : "1.0.0",
+  "name" : "MipresDispenseUnit",
+  "title" : "CodeSystem: Mipres Dispense Unit",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de unidades farmacéuticas para dispensación de medicamentos, proveniente de la tabla [UPR de Mipres](https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx?Code=UPR)",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de unidades farmacéuticas para dispensación de medicamentos.",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 73,
+  "concept" : [{
+    "code" : "1",
+    "display" : "AMPOLLA"
+  },
+  {
+    "code" : "10",
+    "display" : "ENVASE"
+  },
+  {
+    "code" : "11",
+    "display" : "CAJA"
+  },
+  {
+    "code" : "12",
+    "display" : "LATA"
+  },
+  {
+    "code" : "13",
+    "display" : "FRASCO"
+  },
+  {
+    "code" : "14",
+    "display" : "CAPSULA"
+  },
+  {
+    "code" : "15",
+    "display" : "CARTON"
+  },
+  {
+    "code" : "16",
+    "display" : "CARTUCHO"
+  },
+  {
+    "code" : "17",
+    "display" : "ESTUCHE"
+  },
+  {
+    "code" : "18",
+    "display" : "PELICULA DE PVC TRANSPARENTE DE COLORES"
+  },
+  {
+    "code" : "19",
+    "display" : "UNIDADES CLINICAS"
+  },
+  {
+    "code" : "2",
+    "display" : "APLICADOR"
+  },
+  {
+    "code" : "20",
+    "display" : "RECUBRIMIENTO"
+  },
+  {
+    "code" : "21",
+    "display" : "CONTENEDOR"
+  },
+  {
+    "code" : "22",
+    "display" : "RECUENTO"
+  },
+  {
+    "code" : "23",
+    "display" : "COPA"
+  },
+  {
+    "code" : "24",
+    "display" : "CILINDRO"
+  },
+  {
+    "code" : "25",
+    "display" : "VASOS DEWAR"
+  },
+  {
+    "code" : "26",
+    "display" : "DIAL PACK"
+  },
+  {
+    "code" : "27",
+    "display" : "DISCO"
+  },
+  {
+    "code" : "28",
+    "display" : "DOSIS EN ENVASE"
+  },
+  {
+    "code" : "29",
+    "display" : "GOTAS"
+  },
+  {
+    "code" : "3",
+    "display" : "BOLSA"
+  },
+  {
+    "code" : "30",
+    "display" : "TAMBOR - BOMBO"
+  },
+  {
+    "code" : "31",
+    "display" : "PELICULA"
+  },
+  {
+    "code" : "32",
+    "display" : "GENERADOR"
+  },
+  {
+    "code" : "33",
+    "display" : "GLOBULO"
+  },
+  {
+    "code" : "34",
+    "display" : "DILUCION HOMEOPATICA"
+  },
+  {
+    "code" : "35",
+    "display" : "IMPLANTE"
+  },
+  {
+    "code" : "37",
+    "display" : "INHALADOR"
+  },
+  {
+    "code" : "38",
+    "display" : "INHALADOR, RECARGA"
+  },
+  {
+    "code" : "39",
+    "display" : "INSERTO"
+  },
+  {
+    "code" : "4",
+    "display" : "BARRA"
+  },
+  {
+    "code" : "41",
+    "display" : "JARRA"
+  },
+  {
+    "code" : "42",
+    "display" : "UNIDAD INHIBIDORA DE CALICREINA"
+  },
+  {
+    "code" : "43",
+    "display" : "KIT"
+  },
+  {
+    "code" : "44",
+    "display" : "PASTILLA"
+  },
+  {
+    "code" : "45",
+    "display" : "EMBALAJE"
+  },
+  {
+    "code" : "46",
+    "display" : "PAQUETE"
+  },
+  {
+    "code" : "47",
+    "display" : "BALDE"
+  },
+  {
+    "code" : "48",
+    "display" : "PARTES"
+  },
+  {
+    "code" : "49",
+    "display" : "PARCHE"
+  },
+  {
+    "code" : "5",
+    "display" : "PERLA"
+  },
+  {
+    "code" : "50",
+    "display" : "PILDORA (PELLET)"
+  },
+  {
+    "code" : "51",
+    "display" : "PIEZA"
+  },
+  {
+    "code" : "53",
+    "display" : "UNIDADES DE PRESION"
+  },
+  {
+    "code" : "54",
+    "display" : "ANILLO"
+  },
+  {
+    "code" : "55",
+    "display" : "SATURADO"
+  },
+  {
+    "code" : "56",
+    "display" : "CUCHARA MEDIDORA"
+  },
+  {
+    "code" : "57",
+    "display" : "ESPONJA"
+  },
+  {
+    "code" : "58",
+    "display" : "ATOMIZADOR (SPRAY)"
+  },
+  {
+    "code" : "61",
+    "display" : "TIRA"
+  },
+  {
+    "code" : "63",
+    "display" : "SUPOSITORIO"
+  },
+  {
+    "code" : "64",
+    "display" : "HISOPO"
+  },
+  {
+    "code" : "65",
+    "display" : "JERINGA"
+  },
+  {
+    "code" : "66",
+    "display" : "TABLETA"
+  },
+  {
+    "code" : "67",
+    "display" : "TABMINDER"
+  },
+  {
+    "code" : "68",
+    "display" : "TAMPON"
+  },
+  {
+    "code" : "69",
+    "display" : "TANQUE"
+  },
+  {
+    "code" : "70",
+    "display" : "PRUEBA"
+  },
+  {
+    "code" : "71",
+    "display" : "BANDEJA"
+  },
+  {
+    "code" : "72",
+    "display" : "TROCHE"
+  },
+  {
+    "code" : "73",
+    "display" : "TUBO"
+  },
+  {
+    "code" : "74",
+    "display" : "UNIDADES"
+  },
+  {
+    "code" : "75",
+    "display" : "VIAL"
+  },
+  {
+    "code" : "76",
+    "display" : "OBLEA"
+  },
+  {
+    "code" : "77",
+    "display" : "TERMO"
+  },
+  {
+    "code" : "78",
+    "display" : "SOBRE"
+  },
+  {
+    "code" : "79",
+    "display" : "PLUMA"
+  },
+  {
+    "code" : "8",
+    "display" : "BLOQUE"
+  },
+  {
+    "code" : "80",
+    "display" : "LITRO"
+  },
+  {
+    "code" : "81",
+    "display" : "OVULO"
+  },
+  {
+    "code" : "9",
+    "display" : "BOLO"
+  }]
+}

@@ -1,0 +1,89 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianTechModality",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianTechModality</b></p><a name=\"ColombianTechModality\"> </a><a name=\"hcColombianTechModality\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianTechModality</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"ColombianTechModality-01\"> </a></td><td>Intramural</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"ColombianTechModality-02\"> </a></td><td>Extramural unidad móvil</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"ColombianTechModality-03\"> </a></td><td>Extramural domiciliaria</td></tr><tr><td style=\"white-space:nowrap\">04<a name=\"ColombianTechModality-04\"> </a></td><td>Extramural jornada de salud</td></tr><tr><td style=\"white-space:nowrap\">05<a name=\"ColombianTechModality-05\"> </a></td><td>Extramural (atención pre hospitalaria o transporte asistencial)</td></tr><tr><td style=\"white-space:nowrap\">06<a name=\"ColombianTechModality-06\"> </a></td><td>Telemedicina interactiva</td></tr><tr><td style=\"white-space:nowrap\">07<a name=\"ColombianTechModality-07\"> </a></td><td>Telemedicina no interactiva</td></tr><tr><td style=\"white-space:nowrap\">08<a name=\"ColombianTechModality-08\"> </a></td><td>Telemedicina - Telexperticia</td></tr><tr><td style=\"white-space:nowrap\">09<a name=\"ColombianTechModality-09\"> </a></td><td>Telemedicina - Telemonitoreo</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianTechModality",
+  "version" : "1.0.0",
+  "name" : "ColombianTechModality",
+  "title" : "CodeSystem: Modalidad de realización de la tecnología de salud",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de modalidad de realización de la tecnología de salud.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de la modalidad de realización de la tecnología de salud.]",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 9,
+  "concept" : [{
+    "code" : "01",
+    "display" : "Intramural"
+  },
+  {
+    "code" : "02",
+    "display" : "Extramural unidad móvil"
+  },
+  {
+    "code" : "03",
+    "display" : "Extramural domiciliaria"
+  },
+  {
+    "code" : "04",
+    "display" : "Extramural jornada de salud"
+  },
+  {
+    "code" : "05",
+    "display" : "Extramural (atención pre hospitalaria o transporte asistencial)"
+  },
+  {
+    "code" : "06",
+    "display" : "Telemedicina interactiva"
+  },
+  {
+    "code" : "07",
+    "display" : "Telemedicina no interactiva"
+  },
+  {
+    "code" : "08",
+    "display" : "Telemedicina - Telexperticia"
+  },
+  {
+    "code" : "09",
+    "display" : "Telemedicina - Telemonitoreo"
+  }]
+}

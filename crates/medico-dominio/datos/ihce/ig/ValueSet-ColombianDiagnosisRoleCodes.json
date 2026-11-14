@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ColombianDiagnosisRoleCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ColombianDiagnosisRoleCodes</b></p><a name=\"ColombianDiagnosisRoleCodes\"> </a><a name=\"hcColombianDiagnosisRoleCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-ColombianDiagnosisRole.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDiagnosisRole</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianDiagnosisRoleCodes",
+  "version" : "1.0.0",
+  "name" : "ColombianDiagnosisRole",
+  "title" : "ValueSet: Colombian Diagnosis Role",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de tipo de diagnóstico asociado a un encuentro de atención en salud - Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza como nomenclatura de de tipo de diagnóstico asociado a un encuentro de atención en salud - Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDiagnosisRole"
+    }]
+  }
+}

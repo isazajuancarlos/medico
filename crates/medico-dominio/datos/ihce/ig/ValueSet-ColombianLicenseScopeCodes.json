@@ -1,0 +1,55 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ColombianLicenseScopeCodes",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ColombianLicenseScopeCodes</b></p><a name=\"ColombianLicenseScopeCodes\"> </a><a name=\"hcColombianLicenseScopeCodes\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><ul><li>Include all codes defined in <a href=\"CodeSystem-ColombianLicenseScope.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianLicenseScope</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianLicenseScopeCodes",
+  "version" : "1.0.0",
+  "name" : "ColombianLicenseScopeCodes",
+  "title" : "ValueSet: Incapacidad - Alcance de la incapacidad",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de códigos de clasificación del alcance de la incapacidad en Colombia (Nueva | Prórroga).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados colombianos se utiliza para registrar el alcance de la incapacidad en Colombia (Nueva | Prórroga).",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianLicenseScope"
+    }]
+  }
+}

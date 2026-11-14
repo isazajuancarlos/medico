@@ -1,0 +1,1418 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "UMM",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos UMM</b></p><a name=\"UMM\"> </a><a name=\"hcUMM\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/UMM</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">1<a name=\"UMM-1\"> </a></td><td>EID50</td><td>dosis infecciosa de embrión 50</td></tr><tr><td style=\"white-space:nowrap\">10<a name=\"UMM-10\"> </a></td><td>Bq</td><td>bequerel(ios)</td></tr><tr><td style=\"white-space:nowrap\">100<a name=\"UMM-100\"> </a></td><td>l</td><td>litro(s)</td></tr><tr><td style=\"white-space:nowrap\">101<a name=\"UMM-101\"> </a></td><td>log10 EID50</td><td>log 10 50% dosis infecciosa de embrión</td></tr><tr><td style=\"white-space:nowrap\">102<a name=\"UMM-102\"> </a></td><td>log10 EID51/dosis</td><td>log 10 50% dosis infecciosa de embrión/dosis</td></tr><tr><td style=\"white-space:nowrap\">103<a name=\"UMM-103\"> </a></td><td>log10 CCID50</td><td>log10 dosis infecciosa cultivo celular 50</td></tr><tr><td style=\"white-space:nowrap\">104<a name=\"UMM-104\"> </a></td><td>log10 CCID50/dosis</td><td>log10 dosis infecciosa de cultivo celular 50/dosis</td></tr><tr><td style=\"white-space:nowrap\">105<a name=\"UMM-105\"> </a></td><td>log10 unidades ELISA</td><td>log10 unidad de ensayo inmunoenzimático</td></tr><tr><td style=\"white-space:nowrap\">106<a name=\"UMM-106\"> </a></td><td>log10 unidades ELISA/dosis</td><td>log10 unidad de ensayo inmunoenzimático/dosis</td></tr><tr><td style=\"white-space:nowrap\">107<a name=\"UMM-107\"> </a></td><td>log10 FAI50</td><td>log10 ensayo fluorescente dosis infecciosa del 50%</td></tr><tr><td style=\"white-space:nowrap\">108<a name=\"UMM-108\"> </a></td><td>log10 FAI50/dosis</td><td>log10 ensayo fluorescente dosis infecciosa del 50%/dosis</td></tr><tr><td style=\"white-space:nowrap\">109<a name=\"UMM-109\"> </a></td><td>log10 PFU</td><td>log10 unidad(es) formadoras de placa</td></tr><tr><td style=\"white-space:nowrap\">11<a name=\"UMM-11\"> </a></td><td>Bq/g</td><td>bequerel(ios)/gramo</td></tr><tr><td style=\"white-space:nowrap\">110<a name=\"UMM-110\"> </a></td><td>log10 PFU/dosis</td><td>log10 unidad(es) formadoras de placa/dosis</td></tr><tr><td style=\"white-space:nowrap\">111<a name=\"UMM-111\"> </a></td><td>log10 TCID50</td><td>log10 dosis infecciosa de cultivo tisular 50%</td></tr><tr><td style=\"white-space:nowrap\">112<a name=\"UMM-112\"> </a></td><td>log10 TCID50/dosis</td><td>log10 dosis infecciosa de cultivo tisular 50%/dosis</td></tr><tr><td style=\"white-space:nowrap\">113<a name=\"UMM-113\"> </a></td><td>log10/ml</td><td>log10/ml</td></tr><tr><td style=\"white-space:nowrap\">114<a name=\"UMM-114\"> </a></td><td>LU</td><td>unidades de loomis</td></tr><tr><td style=\"white-space:nowrap\">115<a name=\"UMM-115\"> </a></td><td>LU/g</td><td>unidades de loomis/gramo</td></tr><tr><td style=\"white-space:nowrap\">116<a name=\"UMM-116\"> </a></td><td>LU/ml</td><td>unidades de loomis/mililitro</td></tr><tr><td style=\"white-space:nowrap\">117<a name=\"UMM-117\"> </a></td><td>lm</td><td>lumen</td></tr><tr><td style=\"white-space:nowrap\">118<a name=\"UMM-118\"> </a></td><td>lx</td><td>lux</td></tr><tr><td style=\"white-space:nowrap\">119<a name=\"UMM-119\"> </a></td><td>unidades MUSP</td><td>mega; unidad de la Farmacopea de los Estados Unidos</td></tr><tr><td style=\"white-space:nowrap\">12<a name=\"UMM-12\"> </a></td><td>Bq/kg</td><td>bequerel(ios)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">120<a name=\"UMM-120\"> </a></td><td>MBq</td><td>megabecquerel(ios)</td></tr><tr><td style=\"white-space:nowrap\">121<a name=\"UMM-121\"> </a></td><td>MBq/g</td><td>megabecquerel(ios)/gramo</td></tr><tr><td style=\"white-space:nowrap\">122<a name=\"UMM-122\"> </a></td><td>MBq/kg</td><td>megabecquerel(ios)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">123<a name=\"UMM-123\"> </a></td><td>MBq/l</td><td>megabecquerel(ios)/litro</td></tr><tr><td style=\"white-space:nowrap\">124<a name=\"UMM-124\"> </a></td><td>MBq/µg</td><td>megabecquerel(ios)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">125<a name=\"UMM-125\"> </a></td><td>MBq/µl</td><td>megabecquerel(ios)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">126<a name=\"UMM-126\"> </a></td><td>MBq/mg</td><td>megabecquerel(ios)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">127<a name=\"UMM-127\"> </a></td><td>MBq/ml</td><td>megabecquerel(ios)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">128<a name=\"UMM-128\"> </a></td><td>m</td><td>metro</td></tr><tr><td style=\"white-space:nowrap\">129<a name=\"UMM-129\"> </a></td><td>µCi</td><td>microcurio(s)</td></tr><tr><td style=\"white-space:nowrap\">13<a name=\"UMM-13\"> </a></td><td>Bq/l</td><td>bequerel(ios)/litro</td></tr><tr><td style=\"white-space:nowrap\">130<a name=\"UMM-130\"> </a></td><td>µCi/g</td><td>microcurio(s)/gramo</td></tr><tr><td style=\"white-space:nowrap\">131<a name=\"UMM-131\"> </a></td><td>µCi/kg</td><td>microcurio(s)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">132<a name=\"UMM-132\"> </a></td><td>µCi/l</td><td>microcurio(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">133<a name=\"UMM-133\"> </a></td><td>µCi/µg</td><td>microcurio(s)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">134<a name=\"UMM-134\"> </a></td><td>µCi/µl</td><td>microcurio(s)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">135<a name=\"UMM-135\"> </a></td><td>µCi/mg</td><td>microcurio(s)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">136<a name=\"UMM-136\"> </a></td><td>µCi/ml</td><td>microcurio(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">137<a name=\"UMM-137\"> </a></td><td>µg</td><td>microgramo(s)</td></tr><tr><td style=\"white-space:nowrap\">138<a name=\"UMM-138\"> </a></td><td>µg/m3</td><td>microgramo(s)/metro cúbico</td></tr><tr><td style=\"white-space:nowrap\">139<a name=\"UMM-139\"> </a></td><td>µg/kg</td><td>microgramo(s)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">14<a name=\"UMM-14\"> </a></td><td>Bq/µg</td><td>bequerel(ios)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">140<a name=\"UMM-140\"> </a></td><td>µg/l</td><td>microgramo(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">141<a name=\"UMM-141\"> </a></td><td>µg/µl</td><td>microgramo(s)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">142<a name=\"UMM-142\"> </a></td><td>µg/ml</td><td>microgramo(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">143<a name=\"UMM-143\"> </a></td><td>µg/m2</td><td>microgramo(s)/metro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">144<a name=\"UMM-144\"> </a></td><td>µkat</td><td>microkatal</td></tr><tr><td style=\"white-space:nowrap\">145<a name=\"UMM-145\"> </a></td><td>µkat</td><td>microkatales</td></tr><tr><td style=\"white-space:nowrap\">146<a name=\"UMM-146\"> </a></td><td>µl</td><td>microlitro(s)</td></tr><tr><td style=\"white-space:nowrap\">147<a name=\"UMM-147\"> </a></td><td>µl/ml</td><td>microlitro(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">148<a name=\"UMM-148\"> </a></td><td>µmol</td><td>micromol(es)</td></tr><tr><td style=\"white-space:nowrap\">149<a name=\"UMM-149\"> </a></td><td>µmol/l</td><td>micromol(es)/litro</td></tr><tr><td style=\"white-space:nowrap\">15<a name=\"UMM-15\"> </a></td><td>Bq/µl</td><td>bequerel(ios)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">150<a name=\"UMM-150\"> </a></td><td>µmol/ml</td><td>micromol(es)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">151<a name=\"UMM-151\"> </a></td><td>mCi</td><td>milicurio(s)</td></tr><tr><td style=\"white-space:nowrap\">152<a name=\"UMM-152\"> </a></td><td>mCi/g</td><td>milicurio(s)/gramo</td></tr><tr><td style=\"white-space:nowrap\">153<a name=\"UMM-153\"> </a></td><td>mCi/kg</td><td>milicurio(s)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">154<a name=\"UMM-154\"> </a></td><td>mCi/l</td><td>milicurio(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">155<a name=\"UMM-155\"> </a></td><td>mCi/µg</td><td>milicurio(s)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">156<a name=\"UMM-156\"> </a></td><td>mCi/µl</td><td>milicurio(s)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">157<a name=\"UMM-157\"> </a></td><td>mCi/mg</td><td>milicurio(s)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">158<a name=\"UMM-158\"> </a></td><td>mCi/ml</td><td>milicurio(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">159<a name=\"UMM-159\"> </a></td><td>mEq</td><td>miliequivalente(s)</td></tr><tr><td style=\"white-space:nowrap\">16<a name=\"UMM-16\"> </a></td><td>Bq/mg</td><td>bequerel(ios)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">160<a name=\"UMM-160\"> </a></td><td>mEq/g</td><td>miliequivalente(s)/gramo</td></tr><tr><td style=\"white-space:nowrap\">161<a name=\"UMM-161\"> </a></td><td>mEq/kg</td><td>miliequivalente(s)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">162<a name=\"UMM-162\"> </a></td><td>mEq/l</td><td>miliequivalente(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">163<a name=\"UMM-163\"> </a></td><td>mEq/µg</td><td>miliequivalente(s)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">164<a name=\"UMM-164\"> </a></td><td>mEq/µl</td><td>miliequivalente(s)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">165<a name=\"UMM-165\"> </a></td><td>mEq/mg</td><td>miliequivalente(s)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">166<a name=\"UMM-166\"> </a></td><td>mEq/ml</td><td>miliequivalente(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">167<a name=\"UMM-167\"> </a></td><td>mg (titer)</td><td>miligramo (titer)</td></tr><tr><td style=\"white-space:nowrap\">168<a name=\"UMM-168\"> </a></td><td>mg</td><td>miligramo(s)</td></tr><tr><td style=\"white-space:nowrap\">169<a name=\"UMM-169\"> </a></td><td>mg/m3</td><td>miligramo(s)/metro cúbico</td></tr><tr><td style=\"white-space:nowrap\">17<a name=\"UMM-17\"> </a></td><td>Bq/ml</td><td>bequerel(ios)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">170<a name=\"UMM-170\"> </a></td><td>mg/g</td><td>miligramo(s)/gramo</td></tr><tr><td style=\"white-space:nowrap\">171<a name=\"UMM-171\"> </a></td><td>mg/kg</td><td>miligramo(s)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">172<a name=\"UMM-172\"> </a></td><td>mg/l</td><td>miligramo(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">173<a name=\"UMM-173\"> </a></td><td>mg/ml</td><td>miligramo(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">174<a name=\"UMM-174\"> </a></td><td>mg/m2</td><td>miligramo(s)/metro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">175<a name=\"UMM-175\"> </a></td><td>mkatal</td><td>milikatal</td></tr><tr><td style=\"white-space:nowrap\">176<a name=\"UMM-176\"> </a></td><td>ml</td><td>mililitro(s)</td></tr><tr><td style=\"white-space:nowrap\">177<a name=\"UMM-177\"> </a></td><td>ml/cm2</td><td>mililitro(s)/centímetro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">178<a name=\"UMM-178\"> </a></td><td>mm</td><td>milimetro</td></tr><tr><td style=\"white-space:nowrap\">179<a name=\"UMM-179\"> </a></td><td>mmol</td><td>milimol(es)</td></tr><tr><td style=\"white-space:nowrap\">18<a name=\"UMM-18\"> </a></td><td>billon CFU</td><td>billon de unidades formadoras de colonia</td></tr><tr><td style=\"white-space:nowrap\">180<a name=\"UMM-180\"> </a></td><td>mmol/g</td><td>milimol(es)/gramo</td></tr><tr><td style=\"white-space:nowrap\">181<a name=\"UMM-181\"> </a></td><td>mmol/kg</td><td>milimol(es)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">182<a name=\"UMM-182\"> </a></td><td>mmol/l</td><td>milimol(es)/litro</td></tr><tr><td style=\"white-space:nowrap\">183<a name=\"UMM-183\"> </a></td><td>mmol/ml</td><td>milimol(es)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">184<a name=\"UMM-184\"> </a></td><td>millon UFC</td><td>millones de unidades formadoras de colonias</td></tr><tr><td style=\"white-space:nowrap\">185<a name=\"UMM-185\"> </a></td><td>millon UFC/g</td><td>millones de unidades formadoras de colonias/gramo</td></tr><tr><td style=\"white-space:nowrap\">186<a name=\"UMM-186\"> </a></td><td>millon UFC/ml</td><td>millones de unidades formadoras de colonias/mililitro</td></tr><tr><td style=\"white-space:nowrap\">187<a name=\"UMM-187\"> </a></td><td>millon UI</td><td>millones de unidadades internacionales</td></tr><tr><td style=\"white-space:nowrap\">188<a name=\"UMM-188\"> </a></td><td>millon de organismos</td><td>millon de organismos</td></tr><tr><td style=\"white-space:nowrap\">189<a name=\"UMM-189\"> </a></td><td>millon de organismos/g</td><td>millon de organismos/gramo</td></tr><tr><td style=\"white-space:nowrap\">19<a name=\"UMM-19\"> </a></td><td>billon CFU/g</td><td>billon de unidades formadoras de colonia/gramo</td></tr><tr><td style=\"white-space:nowrap\">190<a name=\"UMM-190\"> </a></td><td>millon de organismos/mg</td><td>millon de organismos/miligramo</td></tr><tr><td style=\"white-space:nowrap\">191<a name=\"UMM-191\"> </a></td><td>millon de organismos/ml</td><td>millon de organismos/mililitro</td></tr><tr><td style=\"white-space:nowrap\">192<a name=\"UMM-192\"> </a></td><td>millon de unidades USP</td><td>millon de unidades de la Farmacopea de los Estados Unidos</td></tr><tr><td style=\"white-space:nowrap\">193<a name=\"UMM-193\"> </a></td><td>millon de unidades</td><td>millon de unidades</td></tr><tr><td style=\"white-space:nowrap\">194<a name=\"UMM-194\"> </a></td><td>mOsm/kg</td><td>miliosmol(es)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">195<a name=\"UMM-195\"> </a></td><td>min</td><td>minuto</td></tr><tr><td style=\"white-space:nowrap\">196<a name=\"UMM-196\"> </a></td><td>mol</td><td>mol(es)</td></tr><tr><td style=\"white-space:nowrap\">197<a name=\"UMM-197\"> </a></td><td>mol/g</td><td>mol(es)/gramo</td></tr><tr><td style=\"white-space:nowrap\">198<a name=\"UMM-198\"> </a></td><td>mol/kg</td><td>mol(es)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">199<a name=\"UMM-199\"> </a></td><td>mol/l</td><td>mol(es)/litro</td></tr><tr><td style=\"white-space:nowrap\">2<a name=\"UMM-2\"> </a></td><td>EID50/dosis</td><td>dosis infecciosa de embrión 50/dosis</td></tr><tr><td style=\"white-space:nowrap\">20<a name=\"UMM-20\"> </a></td><td>billon CFU/ml</td><td>billon de unidades formadoras de colonia/mililitro</td></tr><tr><td style=\"white-space:nowrap\">200<a name=\"UMM-200\"> </a></td><td>mol/mg</td><td>mol(es)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">201<a name=\"UMM-201\"> </a></td><td>mol/ml</td><td>mol(es)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">202<a name=\"UMM-202\"> </a></td><td>nCi</td><td>nanocurio(s)</td></tr><tr><td style=\"white-space:nowrap\">203<a name=\"UMM-203\"> </a></td><td>ng</td><td>nanogramo(s)</td></tr><tr><td style=\"white-space:nowrap\">204<a name=\"UMM-204\"> </a></td><td>nkat</td><td>nanokatal</td></tr><tr><td style=\"white-space:nowrap\">205<a name=\"UMM-205\"> </a></td><td>nl</td><td>nanolitro(s)</td></tr><tr><td style=\"white-space:nowrap\">206<a name=\"UMM-206\"> </a></td><td>nmol</td><td>nanomol(es)</td></tr><tr><td style=\"white-space:nowrap\">207<a name=\"UMM-207\"> </a></td><td>nmol/ml</td><td>nanomol(es)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">208<a name=\"UMM-208\"> </a></td><td>N</td><td>newton</td></tr><tr><td style=\"white-space:nowrap\">209<a name=\"UMM-209\"> </a></td><td>unidades NIH/cm2</td><td>NIH unidades de trombina inactivada/centímetro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">21<a name=\"UMM-21\"> </a></td><td>billon de organismos</td><td>billon de organismos</td></tr><tr><td style=\"white-space:nowrap\">210<a name=\"UMM-210\"> </a></td><td>?</td><td>ohmio</td></tr><tr><td style=\"white-space:nowrap\">211<a name=\"UMM-211\"> </a></td><td>OZ</td><td>onza</td></tr><tr><td style=\"white-space:nowrap\">212<a name=\"UMM-212\"> </a></td><td>PPM</td><td>parte por millon</td></tr><tr><td style=\"white-space:nowrap\">213<a name=\"UMM-213\"> </a></td><td>PPM</td><td>pascal</td></tr><tr><td style=\"white-space:nowrap\">214<a name=\"UMM-214\"> </a></td><td>%</td><td>porcentaje</td></tr><tr><td style=\"white-space:nowrap\">215<a name=\"UMM-215\"> </a></td><td>% (v/v)</td><td>porcentaje volumen/volumen</td></tr><tr><td style=\"white-space:nowrap\">216<a name=\"UMM-216\"> </a></td><td>% (p/v)</td><td>porcentaje peso/volumen</td></tr><tr><td style=\"white-space:nowrap\">217<a name=\"UMM-217\"> </a></td><td>% (p/p)</td><td>porcentaje peso/peso</td></tr><tr><td style=\"white-space:nowrap\">218<a name=\"UMM-218\"> </a></td><td>pg</td><td>picogramo(s)</td></tr><tr><td style=\"white-space:nowrap\">219<a name=\"UMM-219\"> </a></td><td>pkat</td><td>picokatal</td></tr><tr><td style=\"white-space:nowrap\">22<a name=\"UMM-22\"> </a></td><td>billon de organismos/g</td><td>billon de organismos/gramo</td></tr><tr><td style=\"white-space:nowrap\">220<a name=\"UMM-220\"> </a></td><td>PFU</td><td>unidades formadoras de placa</td></tr><tr><td style=\"white-space:nowrap\">221<a name=\"UMM-221\"> </a></td><td>PFU e. 1000 LD50 en ratón</td><td>unidad formadora de placa equivalente a 1000 DL50 en ratón</td></tr><tr><td style=\"white-space:nowrap\">222<a name=\"UMM-222\"> </a></td><td>PFU/dosis</td><td>unidades formadoras de placa/dosis</td></tr><tr><td style=\"white-space:nowrap\">223<a name=\"UMM-223\"> </a></td><td>PFU/ml</td><td>unidades formadoras de placa/mililitro</td></tr><tr><td style=\"white-space:nowrap\">224<a name=\"UMM-224\"> </a></td><td>unidad formadora de viruela</td><td>unidad(es) formadoras de viruela</td></tr><tr><td style=\"white-space:nowrap\">225<a name=\"UMM-225\"> </a></td><td>LB</td><td>libra</td></tr><tr><td style=\"white-space:nowrap\">226<a name=\"UMM-226\"> </a></td><td>unidades de presión/ml</td><td>unidades de presión/mililitro</td></tr><tr><td style=\"white-space:nowrap\">227<a name=\"UMM-227\"> </a></td><td>PNU/ml</td><td>unidades de nitrogeno proteico/mililitro</td></tr><tr><td style=\"white-space:nowrap\">228<a name=\"UMM-228\"> </a></td><td>QS</td><td>cantidad suficiente</td></tr><tr><td style=\"white-space:nowrap\">229<a name=\"UMM-229\"> </a></td><td>r/min</td><td>revoluciones/minuto</td></tr><tr><td style=\"white-space:nowrap\">23<a name=\"UMM-23\"> </a></td><td>billon de organismos/mg</td><td>billon de organismos/miligramo</td></tr><tr><td style=\"white-space:nowrap\">230<a name=\"UMM-230\"> </a></td><td>s</td><td>segundos</td></tr><tr><td style=\"white-space:nowrap\">231<a name=\"UMM-231\"> </a></td><td>S</td><td>siemens</td></tr><tr><td style=\"white-space:nowrap\">232<a name=\"UMM-232\"> </a></td><td>Sv</td><td>sievert</td></tr><tr><td style=\"white-space:nowrap\">233<a name=\"UMM-233\"> </a></td><td>cm2</td><td>centímetro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">234<a name=\"UMM-234\"> </a></td><td>m2</td><td>metro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">235<a name=\"UMM-235\"> </a></td><td>T</td><td>tesla</td></tr><tr><td style=\"white-space:nowrap\">236<a name=\"UMM-236\"> </a></td><td>miles CFU</td><td>miles de unidades formadoras de colonia</td></tr><tr><td style=\"white-space:nowrap\">237<a name=\"UMM-237\"> </a></td><td>miles CFU/g</td><td>miles de unidades formadoras de colonia/gramo</td></tr><tr><td style=\"white-space:nowrap\">238<a name=\"UMM-238\"> </a></td><td>miles CFU/ml</td><td>miles de unidades formadoras de colonia/mililitro</td></tr><tr><td style=\"white-space:nowrap\">239<a name=\"UMM-239\"> </a></td><td>miles de organismos</td><td>miles de organismos</td></tr><tr><td style=\"white-space:nowrap\">24<a name=\"UMM-24\"> </a></td><td>billon de organismos/ml</td><td>billon de organismos/mililitro</td></tr><tr><td style=\"white-space:nowrap\">240<a name=\"UMM-240\"> </a></td><td>miles de organismos/g</td><td>miles de organismos/gramo</td></tr><tr><td style=\"white-space:nowrap\">241<a name=\"UMM-241\"> </a></td><td>miles de organismos/ml</td><td>miles de organismos/mililitro</td></tr><tr><td style=\"white-space:nowrap\">242<a name=\"UMM-242\"> </a></td><td>TCID50/dosis</td><td>dosis infecciosa de cultivo tisular 50/ dosis</td></tr><tr><td style=\"white-space:nowrap\">243<a name=\"UMM-243\"> </a></td><td>titre</td><td>titre</td></tr><tr><td style=\"white-space:nowrap\">244<a name=\"UMM-244\"> </a></td><td>t</td><td>tonelada</td></tr><tr><td style=\"white-space:nowrap\">245<a name=\"UMM-245\"> </a></td><td>unidad de tuberculina</td><td>unidad(es) de tuberculina</td></tr><tr><td style=\"white-space:nowrap\">246<a name=\"UMM-246\"> </a></td><td>unidad de tuberculina/ml</td><td>unidad(es) de tuberculina/mililitro</td></tr><tr><td style=\"white-space:nowrap\">247<a name=\"UMM-247\"> </a></td><td>U</td><td>unidades</td></tr><tr><td style=\"white-space:nowrap\">248<a name=\"UMM-248\"> </a></td><td>U/g</td><td>unidades/gramo</td></tr><tr><td style=\"white-space:nowrap\">249<a name=\"UMM-249\"> </a></td><td>U/ml</td><td>unidades/mililitro</td></tr><tr><td style=\"white-space:nowrap\">25<a name=\"UMM-25\"> </a></td><td>cd</td><td>candela</td></tr><tr><td style=\"white-space:nowrap\">250<a name=\"UMM-250\"> </a></td><td>unidades USP</td><td>unidades de la Farmacopea de los Estados Unidos</td></tr><tr><td style=\"white-space:nowrap\">251<a name=\"UMM-251\"> </a></td><td>V</td><td>voltio</td></tr><tr><td style=\"white-space:nowrap\">252<a name=\"UMM-252\"> </a></td><td>W</td><td>vatio</td></tr><tr><td style=\"white-space:nowrap\">253<a name=\"UMM-253\"> </a></td><td>Wb</td><td>weber</td></tr><tr><td style=\"white-space:nowrap\">254<a name=\"UMM-254\"> </a></td><td>vp</td><td>Particulas Virales</td></tr><tr><td style=\"white-space:nowrap\">255<a name=\"UMM-255\"> </a></td><td>DLmin</td><td>Dosis letal minima</td></tr><tr><td style=\"white-space:nowrap\">256<a name=\"UMM-256\"> </a></td><td>DMN</td><td>Dosis minima necrotizante</td></tr><tr><td style=\"white-space:nowrap\">257<a name=\"UMM-257\"> </a></td><td>vg</td><td>Genomas vectoriales</td></tr><tr><td style=\"white-space:nowrap\">26<a name=\"UMM-26\"> </a></td><td>CCID50</td><td>dosis infecciosa cultivo celular 50</td></tr><tr><td style=\"white-space:nowrap\">27<a name=\"UMM-27\"> </a></td><td>CCID50/dosis</td><td>dosis infecciosa cultivo celular 50/dosis</td></tr><tr><td style=\"white-space:nowrap\">28<a name=\"UMM-28\"> </a></td><td>°C</td><td>temperatura en Celsius</td></tr><tr><td style=\"white-space:nowrap\">29<a name=\"UMM-29\"> </a></td><td>CFU/g</td><td>unidades formadoras de colonias/gramo</td></tr><tr><td style=\"white-space:nowrap\">3<a name=\"UMM-3\"> </a></td><td>AU/ml</td><td>unidades de alergia/mililitro</td></tr><tr><td style=\"white-space:nowrap\">30<a name=\"UMM-30\"> </a></td><td>CFU/ml</td><td>nidades formadoras de colonias/mililitro</td></tr><tr><td style=\"white-space:nowrap\">31<a name=\"UMM-31\"> </a></td><td>Co</td><td>culombio</td></tr><tr><td style=\"white-space:nowrap\">32<a name=\"UMM-32\"> </a></td><td>m3</td><td>metro cúbico</td></tr><tr><td style=\"white-space:nowrap\">33<a name=\"UMM-33\"> </a></td><td>Ci</td><td>curio(s)</td></tr><tr><td style=\"white-space:nowrap\">34<a name=\"UMM-34\"> </a></td><td>Ci/g</td><td>curie(s)/gramo</td></tr><tr><td style=\"white-space:nowrap\">35<a name=\"UMM-35\"> </a></td><td>Ci/kg</td><td>curie(s)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">36<a name=\"UMM-36\"> </a></td><td>Ci/litro</td><td>curie(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">37<a name=\"UMM-37\"> </a></td><td>Ci/µg</td><td>curie(s)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">38<a name=\"UMM-38\"> </a></td><td>Ci/µl</td><td>curie(s)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">39<a name=\"UMM-39\"> </a></td><td>Ci/mg</td><td>curie(s)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">4<a name=\"UMM-4\"> </a></td><td>A</td><td>amperio</td></tr><tr><td style=\"white-space:nowrap\">40<a name=\"UMM-40\"> </a></td><td>Ci/ml</td><td>curie(s)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">41<a name=\"UMM-41\"> </a></td><td>DAgU</td><td>unidad(es) de Antigeno D</td></tr><tr><td style=\"white-space:nowrap\">42<a name=\"UMM-42\"> </a></td><td>DAgU/ml</td><td>unidad(es) de Antigeno D/mililitro</td></tr><tr><td style=\"white-space:nowrap\">43<a name=\"UMM-43\"> </a></td><td>d</td><td>dia</td></tr><tr><td style=\"white-space:nowrap\">44<a name=\"UMM-44\"> </a></td><td>°</td><td>grado</td></tr><tr><td style=\"white-space:nowrap\">45<a name=\"UMM-45\"> </a></td><td>DF</td><td>forma de dosificación</td></tr><tr><td style=\"white-space:nowrap\">46<a name=\"UMM-46\"> </a></td><td>Gtt</td><td>gota(s)</td></tr><tr><td style=\"white-space:nowrap\">47<a name=\"UMM-47\"> </a></td><td>unidades ELISA</td><td>unidad de ensayo inmunoenzimático</td></tr><tr><td style=\"white-space:nowrap\">48<a name=\"UMM-48\"> </a></td><td>unidades ELISA/dosis</td><td>unidad de ensayo inmunoenzimático/dosis</td></tr><tr><td style=\"white-space:nowrap\">49<a name=\"UMM-49\"> </a></td><td>unidades ELISA/ml</td><td>unidad de ensayo inmunoenzimático/mililitro</td></tr><tr><td style=\"white-space:nowrap\">5<a name=\"UMM-5\"> </a></td><td>AgU</td><td>unidad(es) de antígeno</td></tr><tr><td style=\"white-space:nowrap\">50<a name=\"UMM-50\"> </a></td><td>F</td><td>faradio</td></tr><tr><td style=\"white-space:nowrap\">51<a name=\"UMM-51\"> </a></td><td>FAI50</td><td>ensayo fluorescente dosis infecciosa 50</td></tr><tr><td style=\"white-space:nowrap\">52<a name=\"UMM-52\"> </a></td><td>FAI50/dosis</td><td>ensayo fluorescente dosis infecciosa 50/dosis</td></tr><tr><td style=\"white-space:nowrap\">53<a name=\"UMM-53\"> </a></td><td>GBq</td><td>gigabecquerel(ios)</td></tr><tr><td style=\"white-space:nowrap\">54<a name=\"UMM-54\"> </a></td><td>GBq/g</td><td>gigabecquerel/gramo</td></tr><tr><td style=\"white-space:nowrap\">55<a name=\"UMM-55\"> </a></td><td>GBq/kg</td><td>gigabecquerel/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">56<a name=\"UMM-56\"> </a></td><td>GBq/l</td><td>gigabecquerel/litro</td></tr><tr><td style=\"white-space:nowrap\">57<a name=\"UMM-57\"> </a></td><td>GBq/µg</td><td>gigabecquerel/microgramo</td></tr><tr><td style=\"white-space:nowrap\">58<a name=\"UMM-58\"> </a></td><td>GBq/µl</td><td>gigabecquerel/microlitro</td></tr><tr><td style=\"white-space:nowrap\">59<a name=\"UMM-59\"> </a></td><td>GBq/mg</td><td>gigabecquerel/miligramo</td></tr><tr><td style=\"white-space:nowrap\">6<a name=\"UMM-6\"> </a></td><td>AgU/ml</td><td>unidad(es) de antígeno/mililitro</td></tr><tr><td style=\"white-space:nowrap\">60<a name=\"UMM-60\"> </a></td><td>GBq/ml</td><td>gigabecquerel/mililitro</td></tr><tr><td style=\"white-space:nowrap\">61<a name=\"UMM-61\"> </a></td><td>g (titre)</td><td>gramo (titre)</td></tr><tr><td style=\"white-space:nowrap\">62<a name=\"UMM-62\"> </a></td><td>g</td><td>gramo(s)</td></tr><tr><td style=\"white-space:nowrap\">63<a name=\"UMM-63\"> </a></td><td>g/m3</td><td>gramo/metro cúbico</td></tr><tr><td style=\"white-space:nowrap\">64<a name=\"UMM-64\"> </a></td><td>g/l</td><td>gramo/litro</td></tr><tr><td style=\"white-space:nowrap\">65<a name=\"UMM-65\"> </a></td><td>g/ml</td><td>gramo/mililitro</td></tr><tr><td style=\"white-space:nowrap\">66<a name=\"UMM-66\"> </a></td><td>g/m2</td><td>gramo/metro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">67<a name=\"UMM-67\"> </a></td><td>Gy</td><td>gray</td></tr><tr><td style=\"white-space:nowrap\">68<a name=\"UMM-68\"> </a></td><td>H</td><td>henrio</td></tr><tr><td style=\"white-space:nowrap\">69<a name=\"UMM-69\"> </a></td><td>Hz</td><td>hertz</td></tr><tr><td style=\"white-space:nowrap\">7<a name=\"UMM-7\"> </a></td><td>ATU</td><td>unidades de antitrombina</td></tr><tr><td style=\"white-space:nowrap\">70<a name=\"UMM-70\"> </a></td><td>h</td><td>hora</td></tr><tr><td style=\"white-space:nowrap\">71<a name=\"UMM-71\"> </a></td><td>IOU</td><td>unidad(es) internacional(es) de opacidad</td></tr><tr><td style=\"white-space:nowrap\">72<a name=\"UMM-72\"> </a></td><td>UI</td><td>unidad(es) internacional(es)</td></tr><tr><td style=\"white-space:nowrap\">73<a name=\"UMM-73\"> </a></td><td>UI/g</td><td>unidad(es) internacional(es)/gramo</td></tr><tr><td style=\"white-space:nowrap\">74<a name=\"UMM-74\"> </a></td><td>UI/kg</td><td>unidad(es) internacional(es)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">75<a name=\"UMM-75\"> </a></td><td>UI/l</td><td>unidad(es) internacional(es)/litro</td></tr><tr><td style=\"white-space:nowrap\">76<a name=\"UMM-76\"> </a></td><td>UI/mg</td><td>unidad(es) internacional(es)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">77<a name=\"UMM-77\"> </a></td><td>UI/ml</td><td>unidad(es) internacional(es)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">78<a name=\"UMM-78\"> </a></td><td>J</td><td>julio</td></tr><tr><td style=\"white-space:nowrap\">79<a name=\"UMM-79\"> </a></td><td>KIU/ml</td><td>unidad calicreína inactivador/mililitro</td></tr><tr><td style=\"white-space:nowrap\">8<a name=\"UMM-8\"> </a></td><td>anti-Xa IU</td><td>unidades internacionales de actividad anti-Xa</td></tr><tr><td style=\"white-space:nowrap\">80<a name=\"UMM-80\"> </a></td><td>kat</td><td>katal</td></tr><tr><td style=\"white-space:nowrap\">81<a name=\"UMM-81\"> </a></td><td>K</td><td>kelvin</td></tr><tr><td style=\"white-space:nowrap\">82<a name=\"UMM-82\"> </a></td><td>kUI</td><td>unidad internacional de kilo</td></tr><tr><td style=\"white-space:nowrap\">83<a name=\"UMM-83\"> </a></td><td>unidades Kusp</td><td>unidad de la Farmacopea de los Estados Unidos de kilo</td></tr><tr><td style=\"white-space:nowrap\">84<a name=\"UMM-84\"> </a></td><td>unidades k</td><td>unidades kilo</td></tr><tr><td style=\"white-space:nowrap\">85<a name=\"UMM-85\"> </a></td><td>kBq</td><td>kilobecquerel(ios)</td></tr><tr><td style=\"white-space:nowrap\">86<a name=\"UMM-86\"> </a></td><td>kBq/g</td><td>kilobecquerel(ios)/gramo</td></tr><tr><td style=\"white-space:nowrap\">87<a name=\"UMM-87\"> </a></td><td>kBq/kg</td><td>kilobecquerel(ios)/kilogramo</td></tr><tr><td style=\"white-space:nowrap\">88<a name=\"UMM-88\"> </a></td><td>kBq/l</td><td>kilobecquerel(ios)/litro</td></tr><tr><td style=\"white-space:nowrap\">89<a name=\"UMM-89\"> </a></td><td>kBq/µg</td><td>kilobecquerel(ios)/microgramo</td></tr><tr><td style=\"white-space:nowrap\">9<a name=\"UMM-9\"> </a></td><td>anti-Xa IU/ml</td><td>unidades internacionales de actividad anti-Xa/mililitro</td></tr><tr><td style=\"white-space:nowrap\">90<a name=\"UMM-90\"> </a></td><td>kBq/µl</td><td>kilobecquerel(ios)/microlitro</td></tr><tr><td style=\"white-space:nowrap\">9000<a name=\"UMM-9000\"> </a></td><td>Dosis</td><td>Dosis</td></tr><tr><td style=\"white-space:nowrap\">9001<a name=\"UMM-9001\"> </a></td><td>TPU</td><td>TPU</td></tr><tr><td style=\"white-space:nowrap\">9002<a name=\"UMM-9002\"> </a></td><td>TSU</td><td>TSU</td></tr><tr><td style=\"white-space:nowrap\">9003<a name=\"UMM-9003\"> </a></td><td>DBU</td><td>DBU</td></tr><tr><td style=\"white-space:nowrap\">9004<a name=\"UMM-9004\"> </a></td><td>SU</td><td>SU</td></tr><tr><td style=\"white-space:nowrap\">9005<a name=\"UMM-9005\"> </a></td><td>IR</td><td>IR</td></tr><tr><td style=\"white-space:nowrap\">9006<a name=\"UMM-9006\"> </a></td><td>DPP</td><td>DPP</td></tr><tr><td style=\"white-space:nowrap\">9007<a name=\"UMM-9007\"> </a></td><td>HEP</td><td>HEP</td></tr><tr><td style=\"white-space:nowrap\">9008<a name=\"UMM-9008\"> </a></td><td>UT</td><td>UT</td></tr><tr><td style=\"white-space:nowrap\">9009<a name=\"UMM-9009\"> </a></td><td>SQ</td><td>SQ</td></tr><tr><td style=\"white-space:nowrap\">9010<a name=\"UMM-9010\"> </a></td><td>UB</td><td>UB</td></tr><tr><td style=\"white-space:nowrap\">9011<a name=\"UMM-9011\"> </a></td><td>DL50</td><td>Dosis letal 50</td></tr><tr><td style=\"white-space:nowrap\">9012<a name=\"UMM-9012\"> </a></td><td>AU</td><td>Unidades de Alergia</td></tr><tr><td style=\"white-space:nowrap\">9013<a name=\"UMM-9013\"> </a></td><td>BAU</td><td>Bioequivalente Unidades de Alergia</td></tr><tr><td style=\"white-space:nowrap\">9014<a name=\"UMM-9014\"> </a></td><td>PNU</td><td>Unidades de nitrogeno proteico</td></tr><tr><td style=\"white-space:nowrap\">9015<a name=\"UMM-9015\"> </a></td><td>DPU</td><td>Unidades de diagnostico no estandarizadas biologicamente</td></tr><tr><td style=\"white-space:nowrap\">91<a name=\"UMM-91\"> </a></td><td>kBq/mg</td><td>kilobecquerel(ios)/miligramo</td></tr><tr><td style=\"white-space:nowrap\">92<a name=\"UMM-92\"> </a></td><td>kBq/ml</td><td>kilobecquerel(ios)/mililitro</td></tr><tr><td style=\"white-space:nowrap\">93<a name=\"UMM-93\"> </a></td><td>kg</td><td>kilogramo(s)</td></tr><tr><td style=\"white-space:nowrap\">94<a name=\"UMM-94\"> </a></td><td>kg/m3</td><td>kilogramo(s)/metro cúbico</td></tr><tr><td style=\"white-space:nowrap\">95<a name=\"UMM-95\"> </a></td><td>kg/l</td><td>kilogramo(s)/litro</td></tr><tr><td style=\"white-space:nowrap\">96<a name=\"UMM-96\"> </a></td><td>kg/m2</td><td>kilogramo(s)/metro cuadrado</td></tr><tr><td style=\"white-space:nowrap\">97<a name=\"UMM-97\"> </a></td><td>LacU</td><td>unidades de lactasa</td></tr><tr><td style=\"white-space:nowrap\">98<a name=\"UMM-98\"> </a></td><td>LfU</td><td>unidades de floculación (lime flocculation unit(s))</td></tr><tr><td style=\"white-space:nowrap\">99<a name=\"UMM-99\"> </a></td><td>LfU/ml</td><td>unidades de floculación (lime flocculation unit(s))/mililitro</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/UMM",
+  "version" : "1.0.0",
+  "name" : "UMM",
+  "title" : "CodeSystem: Unidad de Medida de Medicamentos",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de unidades de medida de medicamentos - Colombia.]",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de unidades de medida de medicamentos - Colombia.",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 273,
+  "concept" : [{
+    "code" : "1",
+    "display" : "EID50",
+    "definition" : "dosis infecciosa de embrión 50"
+  },
+  {
+    "code" : "10",
+    "display" : "Bq",
+    "definition" : "bequerel(ios)"
+  },
+  {
+    "code" : "100",
+    "display" : "l",
+    "definition" : "litro(s)"
+  },
+  {
+    "code" : "101",
+    "display" : "log10 EID50",
+    "definition" : "log 10 50% dosis infecciosa de embrión"
+  },
+  {
+    "code" : "102",
+    "display" : "log10 EID51/dosis",
+    "definition" : "log 10 50% dosis infecciosa de embrión/dosis"
+  },
+  {
+    "code" : "103",
+    "display" : "log10 CCID50",
+    "definition" : "log10 dosis infecciosa cultivo celular 50"
+  },
+  {
+    "code" : "104",
+    "display" : "log10 CCID50/dosis",
+    "definition" : "log10 dosis infecciosa de cultivo celular 50/dosis"
+  },
+  {
+    "code" : "105",
+    "display" : "log10 unidades ELISA",
+    "definition" : "log10 unidad de ensayo inmunoenzimático"
+  },
+  {
+    "code" : "106",
+    "display" : "log10 unidades ELISA/dosis",
+    "definition" : "log10 unidad de ensayo inmunoenzimático/dosis"
+  },
+  {
+    "code" : "107",
+    "display" : "log10 FAI50",
+    "definition" : "log10 ensayo fluorescente dosis infecciosa del 50%"
+  },
+  {
+    "code" : "108",
+    "display" : "log10 FAI50/dosis",
+    "definition" : "log10 ensayo fluorescente dosis infecciosa del 50%/dosis"
+  },
+  {
+    "code" : "109",
+    "display" : "log10 PFU",
+    "definition" : "log10 unidad(es) formadoras de placa"
+  },
+  {
+    "code" : "11",
+    "display" : "Bq/g",
+    "definition" : "bequerel(ios)/gramo"
+  },
+  {
+    "code" : "110",
+    "display" : "log10 PFU/dosis",
+    "definition" : "log10 unidad(es) formadoras de placa/dosis"
+  },
+  {
+    "code" : "111",
+    "display" : "log10 TCID50",
+    "definition" : "log10 dosis infecciosa de cultivo tisular 50%"
+  },
+  {
+    "code" : "112",
+    "display" : "log10 TCID50/dosis",
+    "definition" : "log10 dosis infecciosa de cultivo tisular 50%/dosis"
+  },
+  {
+    "code" : "113",
+    "display" : "log10/ml",
+    "definition" : "log10/ml"
+  },
+  {
+    "code" : "114",
+    "display" : "LU",
+    "definition" : "unidades de loomis"
+  },
+  {
+    "code" : "115",
+    "display" : "LU/g",
+    "definition" : "unidades de loomis/gramo"
+  },
+  {
+    "code" : "116",
+    "display" : "LU/ml",
+    "definition" : "unidades de loomis/mililitro"
+  },
+  {
+    "code" : "117",
+    "display" : "lm",
+    "definition" : "lumen"
+  },
+  {
+    "code" : "118",
+    "display" : "lx",
+    "definition" : "lux"
+  },
+  {
+    "code" : "119",
+    "display" : "unidades MUSP",
+    "definition" : "mega; unidad de la Farmacopea de los Estados Unidos"
+  },
+  {
+    "code" : "12",
+    "display" : "Bq/kg",
+    "definition" : "bequerel(ios)/kilogramo"
+  },
+  {
+    "code" : "120",
+    "display" : "MBq",
+    "definition" : "megabecquerel(ios)"
+  },
+  {
+    "code" : "121",
+    "display" : "MBq/g",
+    "definition" : "megabecquerel(ios)/gramo"
+  },
+  {
+    "code" : "122",
+    "display" : "MBq/kg",
+    "definition" : "megabecquerel(ios)/kilogramo"
+  },
+  {
+    "code" : "123",
+    "display" : "MBq/l",
+    "definition" : "megabecquerel(ios)/litro"
+  },
+  {
+    "code" : "124",
+    "display" : "MBq/µg",
+    "definition" : "megabecquerel(ios)/microgramo"
+  },
+  {
+    "code" : "125",
+    "display" : "MBq/µl",
+    "definition" : "megabecquerel(ios)/microlitro"
+  },
+  {
+    "code" : "126",
+    "display" : "MBq/mg",
+    "definition" : "megabecquerel(ios)/miligramo"
+  },
+  {
+    "code" : "127",
+    "display" : "MBq/ml",
+    "definition" : "megabecquerel(ios)/mililitro"
+  },
+  {
+    "code" : "128",
+    "display" : "m",
+    "definition" : "metro"
+  },
+  {
+    "code" : "129",
+    "display" : "µCi",
+    "definition" : "microcurio(s)"
+  },
+  {
+    "code" : "13",
+    "display" : "Bq/l",
+    "definition" : "bequerel(ios)/litro"
+  },
+  {
+    "code" : "130",
+    "display" : "µCi/g",
+    "definition" : "microcurio(s)/gramo"
+  },
+  {
+    "code" : "131",
+    "display" : "µCi/kg",
+    "definition" : "microcurio(s)/kilogramo"
+  },
+  {
+    "code" : "132",
+    "display" : "µCi/l",
+    "definition" : "microcurio(s)/litro"
+  },
+  {
+    "code" : "133",
+    "display" : "µCi/µg",
+    "definition" : "microcurio(s)/microgramo"
+  },
+  {
+    "code" : "134",
+    "display" : "µCi/µl",
+    "definition" : "microcurio(s)/microlitro"
+  },
+  {
+    "code" : "135",
+    "display" : "µCi/mg",
+    "definition" : "microcurio(s)/miligramo"
+  },
+  {
+    "code" : "136",
+    "display" : "µCi/ml",
+    "definition" : "microcurio(s)/mililitro"
+  },
+  {
+    "code" : "137",
+    "display" : "µg",
+    "definition" : "microgramo(s)"
+  },
+  {
+    "code" : "138",
+    "display" : "µg/m3",
+    "definition" : "microgramo(s)/metro cúbico"
+  },
+  {
+    "code" : "139",
+    "display" : "µg/kg",
+    "definition" : "microgramo(s)/kilogramo"
+  },
+  {
+    "code" : "14",
+    "display" : "Bq/µg",
+    "definition" : "bequerel(ios)/microgramo"
+  },
+  {
+    "code" : "140",
+    "display" : "µg/l",
+    "definition" : "microgramo(s)/litro"
+  },
+  {
+    "code" : "141",
+    "display" : "µg/µl",
+    "definition" : "microgramo(s)/microlitro"
+  },
+  {
+    "code" : "142",
+    "display" : "µg/ml",
+    "definition" : "microgramo(s)/mililitro"
+  },
+  {
+    "code" : "143",
+    "display" : "µg/m2",
+    "definition" : "microgramo(s)/metro cuadrado"
+  },
+  {
+    "code" : "144",
+    "display" : "µkat",
+    "definition" : "microkatal"
+  },
+  {
+    "code" : "145",
+    "display" : "µkat",
+    "definition" : "microkatales"
+  },
+  {
+    "code" : "146",
+    "display" : "µl",
+    "definition" : "microlitro(s)"
+  },
+  {
+    "code" : "147",
+    "display" : "µl/ml",
+    "definition" : "microlitro(s)/mililitro"
+  },
+  {
+    "code" : "148",
+    "display" : "µmol",
+    "definition" : "micromol(es)"
+  },
+  {
+    "code" : "149",
+    "display" : "µmol/l",
+    "definition" : "micromol(es)/litro"
+  },
+  {
+    "code" : "15",
+    "display" : "Bq/µl",
+    "definition" : "bequerel(ios)/microlitro"
+  },
+  {
+    "code" : "150",
+    "display" : "µmol/ml",
+    "definition" : "micromol(es)/mililitro"
+  },
+  {
+    "code" : "151",
+    "display" : "mCi",
+    "definition" : "milicurio(s)"
+  },
+  {
+    "code" : "152",
+    "display" : "mCi/g",
+    "definition" : "milicurio(s)/gramo"
+  },
+  {
+    "code" : "153",
+    "display" : "mCi/kg",
+    "definition" : "milicurio(s)/kilogramo"
+  },
+  {
+    "code" : "154",
+    "display" : "mCi/l",
+    "definition" : "milicurio(s)/litro"
+  },
+  {
+    "code" : "155",
+    "display" : "mCi/µg",
+    "definition" : "milicurio(s)/microgramo"
+  },
+  {
+    "code" : "156",
+    "display" : "mCi/µl",
+    "definition" : "milicurio(s)/microlitro"
+  },
+  {
+    "code" : "157",
+    "display" : "mCi/mg",
+    "definition" : "milicurio(s)/miligramo"
+  },
+  {
+    "code" : "158",
+    "display" : "mCi/ml",
+    "definition" : "milicurio(s)/mililitro"
+  },
+  {
+    "code" : "159",
+    "display" : "mEq",
+    "definition" : "miliequivalente(s)"
+  },
+  {
+    "code" : "16",
+    "display" : "Bq/mg",
+    "definition" : "bequerel(ios)/miligramo"
+  },
+  {
+    "code" : "160",
+    "display" : "mEq/g",
+    "definition" : "miliequivalente(s)/gramo"
+  },
+  {
+    "code" : "161",
+    "display" : "mEq/kg",
+    "definition" : "miliequivalente(s)/kilogramo"
+  },
+  {
+    "code" : "162",
+    "display" : "mEq/l",
+    "definition" : "miliequivalente(s)/litro"
+  },
+  {
+    "code" : "163",
+    "display" : "mEq/µg",
+    "definition" : "miliequivalente(s)/microgramo"
+  },
+  {
+    "code" : "164",
+    "display" : "mEq/µl",
+    "definition" : "miliequivalente(s)/microlitro"
+  },
+  {
+    "code" : "165",
+    "display" : "mEq/mg",
+    "definition" : "miliequivalente(s)/miligramo"
+  },
+  {
+    "code" : "166",
+    "display" : "mEq/ml",
+    "definition" : "miliequivalente(s)/mililitro"
+  },
+  {
+    "code" : "167",
+    "display" : "mg (titer)",
+    "definition" : "miligramo (titer)"
+  },
+  {
+    "code" : "168",
+    "display" : "mg",
+    "definition" : "miligramo(s)"
+  },
+  {
+    "code" : "169",
+    "display" : "mg/m3",
+    "definition" : "miligramo(s)/metro cúbico"
+  },
+  {
+    "code" : "17",
+    "display" : "Bq/ml",
+    "definition" : "bequerel(ios)/mililitro"
+  },
+  {
+    "code" : "170",
+    "display" : "mg/g",
+    "definition" : "miligramo(s)/gramo"
+  },
+  {
+    "code" : "171",
+    "display" : "mg/kg",
+    "definition" : "miligramo(s)/kilogramo"
+  },
+  {
+    "code" : "172",
+    "display" : "mg/l",
+    "definition" : "miligramo(s)/litro"
+  },
+  {
+    "code" : "173",
+    "display" : "mg/ml",
+    "definition" : "miligramo(s)/mililitro"
+  },
+  {
+    "code" : "174",
+    "display" : "mg/m2",
+    "definition" : "miligramo(s)/metro cuadrado"
+  },
+  {
+    "code" : "175",
+    "display" : "mkatal",
+    "definition" : "milikatal"
+  },
+  {
+    "code" : "176",
+    "display" : "ml",
+    "definition" : "mililitro(s)"
+  },
+  {
+    "code" : "177",
+    "display" : "ml/cm2",
+    "definition" : "mililitro(s)/centímetro cuadrado"
+  },
+  {
+    "code" : "178",
+    "display" : "mm",
+    "definition" : "milimetro"
+  },
+  {
+    "code" : "179",
+    "display" : "mmol",
+    "definition" : "milimol(es)"
+  },
+  {
+    "code" : "18",
+    "display" : "billon CFU",
+    "definition" : "billon de unidades formadoras de colonia"
+  },
+  {
+    "code" : "180",
+    "display" : "mmol/g",
+    "definition" : "milimol(es)/gramo"
+  },
+  {
+    "code" : "181",
+    "display" : "mmol/kg",
+    "definition" : "milimol(es)/kilogramo"
+  },
+  {
+    "code" : "182",
+    "display" : "mmol/l",
+    "definition" : "milimol(es)/litro"
+  },
+  {
+    "code" : "183",
+    "display" : "mmol/ml",
+    "definition" : "milimol(es)/mililitro"
+  },
+  {
+    "code" : "184",
+    "display" : "millon UFC",
+    "definition" : "millones de unidades formadoras de colonias"
+  },
+  {
+    "code" : "185",
+    "display" : "millon UFC/g",
+    "definition" : "millones de unidades formadoras de colonias/gramo"
+  },
+  {
+    "code" : "186",
+    "display" : "millon UFC/ml",
+    "definition" : "millones de unidades formadoras de colonias/mililitro"
+  },
+  {
+    "code" : "187",
+    "display" : "millon UI",
+    "definition" : "millones de unidadades internacionales"
+  },
+  {
+    "code" : "188",
+    "display" : "millon de organismos",
+    "definition" : "millon de organismos"
+  },
+  {
+    "code" : "189",
+    "display" : "millon de organismos/g",
+    "definition" : "millon de organismos/gramo"
+  },
+  {
+    "code" : "19",
+    "display" : "billon CFU/g",
+    "definition" : "billon de unidades formadoras de colonia/gramo"
+  },
+  {
+    "code" : "190",
+    "display" : "millon de organismos/mg",
+    "definition" : "millon de organismos/miligramo"
+  },
+  {
+    "code" : "191",
+    "display" : "millon de organismos/ml",
+    "definition" : "millon de organismos/mililitro"
+  },
+  {
+    "code" : "192",
+    "display" : "millon de unidades USP",
+    "definition" : "millon de unidades de la Farmacopea de los Estados Unidos"
+  },
+  {
+    "code" : "193",
+    "display" : "millon de unidades",
+    "definition" : "millon de unidades"
+  },
+  {
+    "code" : "194",
+    "display" : "mOsm/kg",
+    "definition" : "miliosmol(es)/kilogramo"
+  },
+  {
+    "code" : "195",
+    "display" : "min",
+    "definition" : "minuto"
+  },
+  {
+    "code" : "196",
+    "display" : "mol",
+    "definition" : "mol(es)"
+  },
+  {
+    "code" : "197",
+    "display" : "mol/g",
+    "definition" : "mol(es)/gramo"
+  },
+  {
+    "code" : "198",
+    "display" : "mol/kg",
+    "definition" : "mol(es)/kilogramo"
+  },
+  {
+    "code" : "199",
+    "display" : "mol/l",
+    "definition" : "mol(es)/litro"
+  },
+  {
+    "code" : "2",
+    "display" : "EID50/dosis",
+    "definition" : "dosis infecciosa de embrión 50/dosis"
+  },
+  {
+    "code" : "20",
+    "display" : "billon CFU/ml",
+    "definition" : "billon de unidades formadoras de colonia/mililitro"
+  },
+  {
+    "code" : "200",
+    "display" : "mol/mg",
+    "definition" : "mol(es)/miligramo"
+  },
+  {
+    "code" : "201",
+    "display" : "mol/ml",
+    "definition" : "mol(es)/mililitro"
+  },
+  {
+    "code" : "202",
+    "display" : "nCi",
+    "definition" : "nanocurio(s)"
+  },
+  {
+    "code" : "203",
+    "display" : "ng",
+    "definition" : "nanogramo(s)"
+  },
+  {
+    "code" : "204",
+    "display" : "nkat",
+    "definition" : "nanokatal"
+  },
+  {
+    "code" : "205",
+    "display" : "nl",
+    "definition" : "nanolitro(s)"
+  },
+  {
+    "code" : "206",
+    "display" : "nmol",
+    "definition" : "nanomol(es)"
+  },
+  {
+    "code" : "207",
+    "display" : "nmol/ml",
+    "definition" : "nanomol(es)/mililitro"
+  },
+  {
+    "code" : "208",
+    "display" : "N",
+    "definition" : "newton"
+  },
+  {
+    "code" : "209",
+    "display" : "unidades NIH/cm2",
+    "definition" : "NIH unidades de trombina inactivada/centímetro cuadrado"
+  },
+  {
+    "code" : "21",
+    "display" : "billon de organismos",
+    "definition" : "billon de organismos"
+  },
+  {
+    "code" : "210",
+    "display" : "?",
+    "definition" : "ohmio"
+  },
+  {
+    "code" : "211",
+    "display" : "OZ",
+    "definition" : "onza"
+  },
+  {
+    "code" : "212",
+    "display" : "PPM",
+    "definition" : "parte por millon"
+  },
+  {
+    "code" : "213",
+    "display" : "PPM",
+    "definition" : "pascal"
+  },
+  {
+    "code" : "214",
+    "display" : "%",
+    "definition" : "porcentaje"
+  },
+  {
+    "code" : "215",
+    "display" : "% (v/v)",
+    "definition" : "porcentaje volumen/volumen"
+  },
+  {
+    "code" : "216",
+    "display" : "% (p/v)",
+    "definition" : "porcentaje peso/volumen"
+  },
+  {
+    "code" : "217",
+    "display" : "% (p/p)",
+    "definition" : "porcentaje peso/peso"
+  },
+  {
+    "code" : "218",
+    "display" : "pg",
+    "definition" : "picogramo(s)"
+  },
+  {
+    "code" : "219",
+    "display" : "pkat",
+    "definition" : "picokatal"
+  },
+  {
+    "code" : "22",
+    "display" : "billon de organismos/g",
+    "definition" : "billon de organismos/gramo"
+  },
+  {
+    "code" : "220",
+    "display" : "PFU",
+    "definition" : "unidades formadoras de placa"
+  },
+  {
+    "code" : "221",
+    "display" : "PFU e. 1000 LD50 en ratón",
+    "definition" : "unidad formadora de placa equivalente a 1000 DL50 en ratón"
+  },
+  {
+    "code" : "222",
+    "display" : "PFU/dosis",
+    "definition" : "unidades formadoras de placa/dosis"
+  },
+  {
+    "code" : "223",
+    "display" : "PFU/ml",
+    "definition" : "unidades formadoras de placa/mililitro"
+  },
+  {
+    "code" : "224",
+    "display" : "unidad formadora de viruela",
+    "definition" : "unidad(es) formadoras de viruela"
+  },
+  {
+    "code" : "225",
+    "display" : "LB",
+    "definition" : "libra"
+  },
+  {
+    "code" : "226",
+    "display" : "unidades de presión/ml",
+    "definition" : "unidades de presión/mililitro"
+  },
+  {
+    "code" : "227",
+    "display" : "PNU/ml",
+    "definition" : "unidades de nitrogeno proteico/mililitro"
+  },
+  {
+    "code" : "228",
+    "display" : "QS",
+    "definition" : "cantidad suficiente"
+  },
+  {
+    "code" : "229",
+    "display" : "r/min",
+    "definition" : "revoluciones/minuto"
+  },
+  {
+    "code" : "23",
+    "display" : "billon de organismos/mg",
+    "definition" : "billon de organismos/miligramo"
+  },
+  {
+    "code" : "230",
+    "display" : "s",
+    "definition" : "segundos"
+  },
+  {
+    "code" : "231",
+    "display" : "S",
+    "definition" : "siemens"
+  },
+  {
+    "code" : "232",
+    "display" : "Sv",
+    "definition" : "sievert"
+  },
+  {
+    "code" : "233",
+    "display" : "cm2",
+    "definition" : "centímetro cuadrado"
+  },
+  {
+    "code" : "234",
+    "display" : "m2",
+    "definition" : "metro cuadrado"
+  },
+  {
+    "code" : "235",
+    "display" : "T",
+    "definition" : "tesla"
+  },
+  {
+    "code" : "236",
+    "display" : "miles CFU",
+    "definition" : "miles de unidades formadoras de colonia"
+  },
+  {
+    "code" : "237",
+    "display" : "miles CFU/g",
+    "definition" : "miles de unidades formadoras de colonia/gramo"
+  },
+  {
+    "code" : "238",
+    "display" : "miles CFU/ml",
+    "definition" : "miles de unidades formadoras de colonia/mililitro"
+  },
+  {
+    "code" : "239",
+    "display" : "miles de organismos",
+    "definition" : "miles de organismos"
+  },
+  {
+    "code" : "24",
+    "display" : "billon de organismos/ml",
+    "definition" : "billon de organismos/mililitro"
+  },
+  {
+    "code" : "240",
+    "display" : "miles de organismos/g",
+    "definition" : "miles de organismos/gramo"
+  },
+  {
+    "code" : "241",
+    "display" : "miles de organismos/ml",
+    "definition" : "miles de organismos/mililitro"
+  },
+  {
+    "code" : "242",
+    "display" : "TCID50/dosis",
+    "definition" : "dosis infecciosa de cultivo tisular 50/ dosis"
+  },
+  {
+    "code" : "243",
+    "display" : "titre",
+    "definition" : "titre"
+  },
+  {
+    "code" : "244",
+    "display" : "t",
+    "definition" : "tonelada"
+  },
+  {
+    "code" : "245",
+    "display" : "unidad de tuberculina",
+    "definition" : "unidad(es) de tuberculina"
+  },
+  {
+    "code" : "246",
+    "display" : "unidad de tuberculina/ml",
+    "definition" : "unidad(es) de tuberculina/mililitro"
+  },
+  {
+    "code" : "247",
+    "display" : "U",
+    "definition" : "unidades"
+  },
+  {
+    "code" : "248",
+    "display" : "U/g",
+    "definition" : "unidades/gramo"
+  },
+  {
+    "code" : "249",
+    "display" : "U/ml",
+    "definition" : "unidades/mililitro"
+  },
+  {
+    "code" : "25",
+    "display" : "cd",
+    "definition" : "candela"
+  },
+  {
+    "code" : "250",
+    "display" : "unidades USP",
+    "definition" : "unidades de la Farmacopea de los Estados Unidos"
+  },
+  {
+    "code" : "251",
+    "display" : "V",
+    "definition" : "voltio"
+  },
+  {
+    "code" : "252",
+    "display" : "W",
+    "definition" : "vatio"
+  },
+  {
+    "code" : "253",
+    "display" : "Wb",
+    "definition" : "weber"
+  },
+  {
+    "code" : "254",
+    "display" : "vp",
+    "definition" : "Particulas Virales"
+  },
+  {
+    "code" : "255",
+    "display" : "DLmin",
+    "definition" : "Dosis letal minima"
+  },
+  {
+    "code" : "256",
+    "display" : "DMN",
+    "definition" : "Dosis minima necrotizante"
+  },
+  {
+    "code" : "257",
+    "display" : "vg",
+    "definition" : "Genomas vectoriales"
+  },
+  {
+    "code" : "26",
+    "display" : "CCID50",
+    "definition" : "dosis infecciosa cultivo celular 50"
+  },
+  {
+    "code" : "27",
+    "display" : "CCID50/dosis",
+    "definition" : "dosis infecciosa cultivo celular 50/dosis"
+  },
+  {
+    "code" : "28",
+    "display" : "°C",
+    "definition" : "temperatura en Celsius"
+  },
+  {
+    "code" : "29",
+    "display" : "CFU/g",
+    "definition" : "unidades formadoras de colonias/gramo"
+  },
+  {
+    "code" : "3",
+    "display" : "AU/ml",
+    "definition" : "unidades de alergia/mililitro"
+  },
+  {
+    "code" : "30",
+    "display" : "CFU/ml",
+    "definition" : "nidades formadoras de colonias/mililitro"
+  },
+  {
+    "code" : "31",
+    "display" : "Co",
+    "definition" : "culombio"
+  },
+  {
+    "code" : "32",
+    "display" : "m3",
+    "definition" : "metro cúbico"
+  },
+  {
+    "code" : "33",
+    "display" : "Ci",
+    "definition" : "curio(s)"
+  },
+  {
+    "code" : "34",
+    "display" : "Ci/g",
+    "definition" : "curie(s)/gramo"
+  },
+  {
+    "code" : "35",
+    "display" : "Ci/kg",
+    "definition" : "curie(s)/kilogramo"
+  },
+  {
+    "code" : "36",
+    "display" : "Ci/litro",
+    "definition" : "curie(s)/litro"
+  },
+  {
+    "code" : "37",
+    "display" : "Ci/µg",
+    "definition" : "curie(s)/microgramo"
+  },
+  {
+    "code" : "38",
+    "display" : "Ci/µl",
+    "definition" : "curie(s)/microlitro"
+  },
+  {
+    "code" : "39",
+    "display" : "Ci/mg",
+    "definition" : "curie(s)/miligramo"
+  },
+  {
+    "code" : "4",
+    "display" : "A",
+    "definition" : "amperio"
+  },
+  {
+    "code" : "40",
+    "display" : "Ci/ml",
+    "definition" : "curie(s)/mililitro"
+  },
+  {
+    "code" : "41",
+    "display" : "DAgU",
+    "definition" : "unidad(es) de Antigeno D"
+  },
+  {
+    "code" : "42",
+    "display" : "DAgU/ml",
+    "definition" : "unidad(es) de Antigeno D/mililitro"
+  },
+  {
+    "code" : "43",
+    "display" : "d",
+    "definition" : "dia"
+  },
+  {
+    "code" : "44",
+    "display" : "°",
+    "definition" : "grado"
+  },
+  {
+    "code" : "45",
+    "display" : "DF",
+    "definition" : "forma de dosificación"
+  },
+  {
+    "code" : "46",
+    "display" : "Gtt",
+    "definition" : "gota(s)"
+  },
+  {
+    "code" : "47",
+    "display" : "unidades ELISA",
+    "definition" : "unidad de ensayo inmunoenzimático"
+  },
+  {
+    "code" : "48",
+    "display" : "unidades ELISA/dosis",
+    "definition" : "unidad de ensayo inmunoenzimático/dosis"
+  },
+  {
+    "code" : "49",
+    "display" : "unidades ELISA/ml",
+    "definition" : "unidad de ensayo inmunoenzimático/mililitro"
+  },
+  {
+    "code" : "5",
+    "display" : "AgU",
+    "definition" : "unidad(es) de antígeno"
+  },
+  {
+    "code" : "50",
+    "display" : "F",
+    "definition" : "faradio"
+  },
+  {
+    "code" : "51",
+    "display" : "FAI50",
+    "definition" : "ensayo fluorescente dosis infecciosa 50"
+  },
+  {
+    "code" : "52",
+    "display" : "FAI50/dosis",
+    "definition" : "ensayo fluorescente dosis infecciosa 50/dosis"
+  },
+  {
+    "code" : "53",
+    "display" : "GBq",
+    "definition" : "gigabecquerel(ios)"
+  },
+  {
+    "code" : "54",
+    "display" : "GBq/g",
+    "definition" : "gigabecquerel/gramo"
+  },
+  {
+    "code" : "55",
+    "display" : "GBq/kg",
+    "definition" : "gigabecquerel/kilogramo"
+  },
+  {
+    "code" : "56",
+    "display" : "GBq/l",
+    "definition" : "gigabecquerel/litro"
+  },
+  {
+    "code" : "57",
+    "display" : "GBq/µg",
+    "definition" : "gigabecquerel/microgramo"
+  },
+  {
+    "code" : "58",
+    "display" : "GBq/µl",
+    "definition" : "gigabecquerel/microlitro"
+  },
+  {
+    "code" : "59",
+    "display" : "GBq/mg",
+    "definition" : "gigabecquerel/miligramo"
+  },
+  {
+    "code" : "6",
+    "display" : "AgU/ml",
+    "definition" : "unidad(es) de antígeno/mililitro"
+  },
+  {
+    "code" : "60",
+    "display" : "GBq/ml",
+    "definition" : "gigabecquerel/mililitro"
+  },
+  {
+    "code" : "61",
+    "display" : "g (titre)",
+    "definition" : "gramo (titre)"
+  },
+  {
+    "code" : "62",
+    "display" : "g",
+    "definition" : "gramo(s)"
+  },
+  {
+    "code" : "63",
+    "display" : "g/m3",
+    "definition" : "gramo/metro cúbico"
+  },
+  {
+    "code" : "64",
+    "display" : "g/l",
+    "definition" : "gramo/litro"
+  },
+  {
+    "code" : "65",
+    "display" : "g/ml",
+    "definition" : "gramo/mililitro"
+  },
+  {
+    "code" : "66",
+    "display" : "g/m2",
+    "definition" : "gramo/metro cuadrado"
+  },
+  {
+    "code" : "67",
+    "display" : "Gy",
+    "definition" : "gray"
+  },
+  {
+    "code" : "68",
+    "display" : "H",
+    "definition" : "henrio"
+  },
+  {
+    "code" : "69",
+    "display" : "Hz",
+    "definition" : "hertz"
+  },
+  {
+    "code" : "7",
+    "display" : "ATU",
+    "definition" : "unidades de antitrombina"
+  },
+  {
+    "code" : "70",
+    "display" : "h",
+    "definition" : "hora"
+  },
+  {
+    "code" : "71",
+    "display" : "IOU",
+    "definition" : "unidad(es) internacional(es) de opacidad"
+  },
+  {
+    "code" : "72",
+    "display" : "UI",
+    "definition" : "unidad(es) internacional(es)"
+  },
+  {
+    "code" : "73",
+    "display" : "UI/g",
+    "definition" : "unidad(es) internacional(es)/gramo"
+  },
+  {
+    "code" : "74",
+    "display" : "UI/kg",
+    "definition" : "unidad(es) internacional(es)/kilogramo"
+  },
+  {
+    "code" : "75",
+    "display" : "UI/l",
+    "definition" : "unidad(es) internacional(es)/litro"
+  },
+  {
+    "code" : "76",
+    "display" : "UI/mg",
+    "definition" : "unidad(es) internacional(es)/miligramo"
+  },
+  {
+    "code" : "77",
+    "display" : "UI/ml",
+    "definition" : "unidad(es) internacional(es)/mililitro"
+  },
+  {
+    "code" : "78",
+    "display" : "J",
+    "definition" : "julio"
+  },
+  {
+    "code" : "79",
+    "display" : "KIU/ml",
+    "definition" : "unidad calicreína inactivador/mililitro"
+  },
+  {
+    "code" : "8",
+    "display" : "anti-Xa IU",
+    "definition" : "unidades internacionales de actividad anti-Xa"
+  },
+  {
+    "code" : "80",
+    "display" : "kat",
+    "definition" : "katal"
+  },
+  {
+    "code" : "81",
+    "display" : "K",
+    "definition" : "kelvin"
+  },
+  {
+    "code" : "82",
+    "display" : "kUI",
+    "definition" : "unidad internacional de kilo"
+  },
+  {
+    "code" : "83",
+    "display" : "unidades Kusp",
+    "definition" : "unidad de la Farmacopea de los Estados Unidos de kilo"
+  },
+  {
+    "code" : "84",
+    "display" : "unidades k",
+    "definition" : "unidades kilo"
+  },
+  {
+    "code" : "85",
+    "display" : "kBq",
+    "definition" : "kilobecquerel(ios)"
+  },
+  {
+    "code" : "86",
+    "display" : "kBq/g",
+    "definition" : "kilobecquerel(ios)/gramo"
+  },
+  {
+    "code" : "87",
+    "display" : "kBq/kg",
+    "definition" : "kilobecquerel(ios)/kilogramo"
+  },
+  {
+    "code" : "88",
+    "display" : "kBq/l",
+    "definition" : "kilobecquerel(ios)/litro"
+  },
+  {
+    "code" : "89",
+    "display" : "kBq/µg",
+    "definition" : "kilobecquerel(ios)/microgramo"
+  },
+  {
+    "code" : "9",
+    "display" : "anti-Xa IU/ml",
+    "definition" : "unidades internacionales de actividad anti-Xa/mililitro"
+  },
+  {
+    "code" : "90",
+    "display" : "kBq/µl",
+    "definition" : "kilobecquerel(ios)/microlitro"
+  },
+  {
+    "code" : "9000",
+    "display" : "Dosis",
+    "definition" : "Dosis"
+  },
+  {
+    "code" : "9001",
+    "display" : "TPU",
+    "definition" : "TPU"
+  },
+  {
+    "code" : "9002",
+    "display" : "TSU",
+    "definition" : "TSU"
+  },
+  {
+    "code" : "9003",
+    "display" : "DBU",
+    "definition" : "DBU"
+  },
+  {
+    "code" : "9004",
+    "display" : "SU",
+    "definition" : "SU"
+  },
+  {
+    "code" : "9005",
+    "display" : "IR",
+    "definition" : "IR"
+  },
+  {
+    "code" : "9006",
+    "display" : "DPP",
+    "definition" : "DPP"
+  },
+  {
+    "code" : "9007",
+    "display" : "HEP",
+    "definition" : "HEP"
+  },
+  {
+    "code" : "9008",
+    "display" : "UT",
+    "definition" : "UT"
+  },
+  {
+    "code" : "9009",
+    "display" : "SQ",
+    "definition" : "SQ"
+  },
+  {
+    "code" : "9010",
+    "display" : "UB",
+    "definition" : "UB"
+  },
+  {
+    "code" : "9011",
+    "display" : "DL50",
+    "definition" : "Dosis letal 50"
+  },
+  {
+    "code" : "9012",
+    "display" : "AU",
+    "definition" : "Unidades de Alergia"
+  },
+  {
+    "code" : "9013",
+    "display" : "BAU",
+    "definition" : "Bioequivalente Unidades de Alergia"
+  },
+  {
+    "code" : "9014",
+    "display" : "PNU",
+    "definition" : "Unidades de nitrogeno proteico"
+  },
+  {
+    "code" : "9015",
+    "display" : "DPU",
+    "definition" : "Unidades de diagnostico no estandarizadas biologicamente"
+  },
+  {
+    "code" : "91",
+    "display" : "kBq/mg",
+    "definition" : "kilobecquerel(ios)/miligramo"
+  },
+  {
+    "code" : "92",
+    "display" : "kBq/ml",
+    "definition" : "kilobecquerel(ios)/mililitro"
+  },
+  {
+    "code" : "93",
+    "display" : "kg",
+    "definition" : "kilogramo(s)"
+  },
+  {
+    "code" : "94",
+    "display" : "kg/m3",
+    "definition" : "kilogramo(s)/metro cúbico"
+  },
+  {
+    "code" : "95",
+    "display" : "kg/l",
+    "definition" : "kilogramo(s)/litro"
+  },
+  {
+    "code" : "96",
+    "display" : "kg/m2",
+    "definition" : "kilogramo(s)/metro cuadrado"
+  },
+  {
+    "code" : "97",
+    "display" : "LacU",
+    "definition" : "unidades de lactasa"
+  },
+  {
+    "code" : "98",
+    "display" : "LfU",
+    "definition" : "unidades de floculación (lime flocculation unit(s))"
+  },
+  {
+    "code" : "99",
+    "display" : "LfU/ml",
+    "definition" : "unidades de floculación (lime flocculation unit(s))/mililitro"
+  }]
+}

@@ -1,0 +1,91 @@
+# EL VALIDADOR DE PRODUCCIÓN, EN LINUX.
+#
+# Es `compose.yml` —la adaptación que ya funciona aquí— con cuatro cambios y
+# nada más: el registro, la imagen, el perfil y los NOMBRES. Todo lo demás
+# (certificados por volumen relativo, persistencia del esquema, el puerto) se
+# conserva porque ya estaba resuelto para Linux.
+#
+#   ./certificado.sh                                 # una vez: genera el .pfx
+#   export CERT_PASSWORD=...                         # la del .pfx
+#   docker login -u puller -p <la del apilocal-dockercompose.Production.yml> \
+#       crmspsgovcoprd.azurecr.io
+#   docker compose -f compose.produccion.yml pull
+#   docker compose -f compose.produccion.yml up -d
+#
+# LOS NOMBRES SON DISTINTOS DE LOS DE STAGE a propósito. El archivo que entrega
+# MinSalud usa `fevrips-api` en los dos, así que levantar el equivocado ocupaba
+# el nombre y la aplicación hablaba con el validador de pruebas SIN DECIRLO. Con
+# `-prod` no pueden confundirse; y como los dos publican el 9443, el segundo que
+# se levante falla al enlazar el puerto en vez de robárselo al otro.
+#
+# ESTO ES PRODUCCIÓN: un paquete aceptado obtiene un CUV con efectos ante la EPS
+# y la Supersalud. Aquí NO entran datos sintéticos. Para probar, `compose.yml`.
+
+#
+# Adaptado de `apilocal-dockercompose.Stage.yml`, el archivo que entrega el
+# Ministerio. Se conserva todo lo que decide el comportamiento del validador y
+# solo se cambia lo que no puede funcionar aquí; cada cambio, anotado.
+#
+#     ./certificado.sh                      # una vez: genera el .pfx
+#     docker login ...                      # ver README: la credencial NO vive aquí
+#     docker compose pull && docker compose up -d
+#
+# NUNCA usar el archivo .Production.yml para probar. Su perfil es
+# `DockerProduction` y valida contra el ambiente con efectos jurídicos y
+# financieros reales: una factura inventada obtendría allí un CUV verdadero.
+
+networks:
+  fevrips-net:
+    driver: bridge
+
+services:
+  fevrips-db:
+    container_name: fevrips-db-prod
+    image: mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
+    environment:
+      - ACCEPT_EULA=Y
+      # Fijada por el Ministerio. No es un secreto nuestro —viene en el archivo
+      # que reparte a todos los prestadores— y presumiblemente el API la lleva
+      # en su cadena de conexión, así que cambiarla lo dejaría sin base. NO
+      # VERIFICADO que se pueda cambiar; mientras tanto, se deja como está y el
+      # 1433 no se publica al host, que es lo que de verdad la protege.
+      - MSSQL_SA_PASSWORD=FEVRIPS1*
+      - MSSQL_MEMORY_LIMIT_MB=9000
+      - MSSQL_COLLATION=SQL_Latin1_General_CP1_CI_AS
+      # CAMBIO: el original pide `Enterprise`. `Developer` es funcionalmente
+      # equivalente y su licencia cubre desarrollo y pruebas sin coste, que es
+      # exactamente lo que hacemos aquí. Declarar Enterprise sería afirmar una
+      # licencia que no tenemos, y quien acepta el EULA es quien corre el
+      # contenedor, no quien repartió el archivo.
+      - MSSQL_PID=Developer
+    volumes:
+      # CAMBIO: el original no persiste nada, así que recrear el contenedor
+      # borraba el esquema que el API acaba de migrar y obligaba a esperar el
+      # arranque completo otra vez.
+      - datos-sql-prod:/var/opt/mssql
+    networks:
+      - fevrips-net
+
+  fevrips-api:
+    container_name: fevrips-api-prod
+    image: crmspsgovcoprd.azurecr.io/production-fevrips-apilocal
+    ports:
+      # 5100 es el puerto REAL dentro del contenedor; 9443 es solo la cara que
+      # da al host, que es la que documenta el manual de consumo.
+      - "9443:5100"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=DockerProduction
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=${CERT_PASSWORD:?exporta CERT_PASSWORD (ver certificado.sh)}
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/certificates/fevrips.pfx
+    volumes:
+      # CAMBIO: el original monta `C:\Certificates`, ruta de Windows. En Linux
+      # docker la tomaría como un nombre de volumen y el API arrancaría sin
+      # certificado.
+      - ./certificates:/certificates:ro
+    networks:
+      - fevrips-net
+    depends_on:
+      - fevrips-db
+
+volumes:
+  datos-sql-prod:

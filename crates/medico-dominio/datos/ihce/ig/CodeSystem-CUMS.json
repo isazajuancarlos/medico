@@ -1,0 +1,764 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "CUMS",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos CUMS</b></p><a name=\"CUMS\"> </a><a name=\"hcCUMS\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/CUMS</code> provides <b>a fragment</b> that includes following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">31330<a name=\"CUMS-31330\"> </a></td><td>MOTRIN® 800 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">32566<a name=\"CUMS-32566\"> </a></td><td>CLAVULIN® 500 MG TABLETAS</td></tr><tr><td style=\"white-space:nowrap\">32820<a name=\"CUMS-32820\"> </a></td><td>CLAVULIN® SUSPENSION 250</td></tr><tr><td style=\"white-space:nowrap\">36575<a name=\"CUMS-36575\"> </a></td><td>AMOXICILINA CAPSULAS 500 MG</td></tr><tr><td style=\"white-space:nowrap\">39114<a name=\"CUMS-39114\"> </a></td><td>NAPROXENO 250 MG TABLETA</td></tr><tr><td style=\"white-space:nowrap\">224493<a name=\"CUMS-224493\"> </a></td><td>CLAVULIN® JUNIOR 12 H (POLVO PARA RECONSTITUIR A SUSPENSION ORAL)</td></tr><tr><td style=\"white-space:nowrap\">19900510<a name=\"CUMS-19900510\"> </a></td><td>MOTRIN® 400 MG</td></tr><tr><td style=\"white-space:nowrap\">19904176<a name=\"CUMS-19904176\"> </a></td><td>NAPROXENO SODICO 550 MG TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">19909128<a name=\"CUMS-19909128\"> </a></td><td>NEOGRAM® TABLETA</td></tr><tr><td style=\"white-space:nowrap\">19927831<a name=\"CUMS-19927831\"> </a></td><td>NAPROXENO TABLETAS RECUBIERTAS 250 MG</td></tr><tr><td style=\"white-space:nowrap\">19934889<a name=\"CUMS-19934889\"> </a></td><td>RELADOL® TABLETAS</td></tr><tr><td style=\"white-space:nowrap\">19937061<a name=\"CUMS-19937061\"> </a></td><td>NORAVER- G CONTRA LOS SINTOMAS DE LA GRIPA</td></tr><tr><td style=\"white-space:nowrap\">19944399<a name=\"CUMS-19944399\"> </a></td><td>IBUPROFENO TABLETAS 400 MG</td></tr><tr><td style=\"white-space:nowrap\">19959398<a name=\"CUMS-19959398\"> </a></td><td>CARDIOASPIRINA® 81MG TABLETAS CON CUBIERTA ENTERICA</td></tr><tr><td style=\"white-space:nowrap\">19992938<a name=\"CUMS-19992938\"> </a></td><td>MOVIDOL®</td></tr><tr><td style=\"white-space:nowrap\">20006710<a name=\"CUMS-20006710\"> </a></td><td>INFEMOX® CAPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20027170<a name=\"CUMS-20027170\"> </a></td><td>IBUPROFENO TABLETAS RECUBIERTAS 800 MG</td></tr><tr><td style=\"white-space:nowrap\">20028367<a name=\"CUMS-20028367\"> </a></td><td>NAPROXENO TABLETAS RECUBIERTAS 500 MG</td></tr><tr><td style=\"white-space:nowrap\">20031136<a name=\"CUMS-20031136\"> </a></td><td>ALCADOL® ULTRA</td></tr><tr><td style=\"white-space:nowrap\">20034334<a name=\"CUMS-20034334\"> </a></td><td>AMOXEM ® 500 MG</td></tr><tr><td style=\"white-space:nowrap\">20037830<a name=\"CUMS-20037830\"> </a></td><td>DURAFEX</td></tr><tr><td style=\"white-space:nowrap\">20038756<a name=\"CUMS-20038756\"> </a></td><td>SUPRIFENO SUSPENSION ORAL 2 G /100 ML</td></tr><tr><td style=\"white-space:nowrap\">20062919<a name=\"CUMS-20062919\"> </a></td><td>IBUPIRIÑO®</td></tr><tr><td style=\"white-space:nowrap\">20073433<a name=\"CUMS-20073433\"> </a></td><td>CONGESTEX FORTE GRIPA</td></tr><tr><td style=\"white-space:nowrap\">20079039<a name=\"CUMS-20079039\"> </a></td><td>ATAK CLAV®</td></tr><tr><td style=\"white-space:nowrap\">20082270<a name=\"CUMS-20082270\"> </a></td><td>VENCEDOL®TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20083462<a name=\"CUMS-20083462\"> </a></td><td>SOLOMOXY</td></tr><tr><td style=\"white-space:nowrap\">20086048<a name=\"CUMS-20086048\"> </a></td><td>ATAK BD ® 875 MG TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">20086565<a name=\"CUMS-20086565\"> </a></td><td>AMOXICILINA 500 MG CAPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20089999<a name=\"CUMS-20089999\"> </a></td><td>CEFADOL®</td></tr><tr><td style=\"white-space:nowrap\">20091356<a name=\"CUMS-20091356\"> </a></td><td>NAPROFEN ® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20095641<a name=\"CUMS-20095641\"> </a></td><td>DOLINSTANT® 100 MG/5 ML SUSPENSION ORAL</td></tr><tr><td style=\"white-space:nowrap\">20097529<a name=\"CUMS-20097529\"> </a></td><td>SPASMOFLEX ®FORTE TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20097707<a name=\"CUMS-20097707\"> </a></td><td>LEGRIP PLUS</td></tr><tr><td style=\"white-space:nowrap\">20097708<a name=\"CUMS-20097708\"> </a></td><td>NEXT GL GENOMMA LAB®</td></tr><tr><td style=\"white-space:nowrap\">20099719<a name=\"CUMS-20099719\"> </a></td><td>AMOXOLQRP®</td></tr><tr><td style=\"white-space:nowrap\">20102583<a name=\"CUMS-20102583\"> </a></td><td>AMOXICILINA 250 MG/5 ML POLVO PARA SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">20104221<a name=\"CUMS-20104221\"> </a></td><td>DURAFLEX ADVANCE.</td></tr><tr><td style=\"white-space:nowrap\">20112370<a name=\"CUMS-20112370\"> </a></td><td>FIN-ESPAM FEM ® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20113049<a name=\"CUMS-20113049\"> </a></td><td>ZODIPIN®</td></tr><tr><td style=\"white-space:nowrap\">20113881<a name=\"CUMS-20113881\"> </a></td><td>MIALGILOX</td></tr><tr><td style=\"white-space:nowrap\">20114154<a name=\"CUMS-20114154\"> </a></td><td>TIOMED® FORTE</td></tr><tr><td style=\"white-space:nowrap\">20114842<a name=\"CUMS-20114842\"> </a></td><td>METOCARBAMOL 500 MG + IBUPROFENO 200MG.</td></tr><tr><td style=\"white-space:nowrap\">20115558<a name=\"CUMS-20115558\"> </a></td><td>BUFEDOL® F</td></tr><tr><td style=\"white-space:nowrap\">20121023<a name=\"CUMS-20121023\"> </a></td><td>AMOXCLAVER® 625</td></tr><tr><td style=\"white-space:nowrap\">20121189<a name=\"CUMS-20121189\"> </a></td><td>AMOXICILINA 400 ACIDO CLAVULANICO 57</td></tr><tr><td style=\"white-space:nowrap\">20121277<a name=\"CUMS-20121277\"> </a></td><td>VEROXINA ® 250</td></tr><tr><td style=\"white-space:nowrap\">20121771<a name=\"CUMS-20121771\"> </a></td><td>TRIPSOPEN ® 500 MG CAPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20121772<a name=\"CUMS-20121772\"> </a></td><td>TRIPSOPEN ® POLVO PARA RECONSTITUIR A SUSPENSION ORAL</td></tr><tr><td style=\"white-space:nowrap\">20122253<a name=\"CUMS-20122253\"> </a></td><td>AMOXCLAVER® 1000</td></tr><tr><td style=\"white-space:nowrap\">20122610<a name=\"CUMS-20122610\"> </a></td><td>TRIFAMOX SUSPENSION DUO</td></tr><tr><td style=\"white-space:nowrap\">20123891<a name=\"CUMS-20123891\"> </a></td><td>GOFEN FORTE®</td></tr><tr><td style=\"white-space:nowrap\">20124922<a name=\"CUMS-20124922\"> </a></td><td>AMOXCLAVER® 312.5 POLVO PARA SUSPENSION ORAL</td></tr><tr><td style=\"white-space:nowrap\">20125150<a name=\"CUMS-20125150\"> </a></td><td>AMOXICILINA 250 MG/5 ML POLVO PARA SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">20125193<a name=\"CUMS-20125193\"> </a></td><td>WEIDERMICINA 500 MG CAPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20125206<a name=\"CUMS-20125206\"> </a></td><td>WEIDERMICINA 250 MG/5 ML POLVO PARA SUSPENSION.</td></tr><tr><td style=\"white-space:nowrap\">20126847<a name=\"CUMS-20126847\"> </a></td><td>DOLIVIUM® PLUS TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">20128919<a name=\"CUMS-20128919\"> </a></td><td>DOXU® 7.5</td></tr><tr><td style=\"white-space:nowrap\">20129546<a name=\"CUMS-20129546\"> </a></td><td>GENFAR DOL ULTRAFORTE</td></tr><tr><td style=\"white-space:nowrap\">20129968<a name=\"CUMS-20129968\"> </a></td><td>NAPROXENO 500 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20131004<a name=\"CUMS-20131004\"> </a></td><td>TREDOL® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20131066<a name=\"CUMS-20131066\"> </a></td><td>AMOXICILINA 400 MG + ÁCIDO CLAVULANICO 57 MG / 5 ML POLVO PARA RECONSTITUIR A SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">20131947<a name=\"CUMS-20131947\"> </a></td><td>AKRIMOXYL ®250MG /5ML POLVO PARA SUSPENSION</td></tr><tr><td style=\"white-space:nowrap\">20131977<a name=\"CUMS-20131977\"> </a></td><td>AMOXICLIN DUO® COMPRIMIDOS RECUBIERTOS</td></tr><tr><td style=\"white-space:nowrap\">20133395<a name=\"CUMS-20133395\"> </a></td><td>AMOXICILINA 500 MG + ACIDO CLAVULANICO 125 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20133692<a name=\"CUMS-20133692\"> </a></td><td>KETONOZ® 400 MG</td></tr><tr><td style=\"white-space:nowrap\">20133770<a name=\"CUMS-20133770\"> </a></td><td>AMOXICILINA 250MG/5 ML+ ACIDO CLAVULANICO 62.5 MG /5 MLPOLVO PARA RECONSTITUIR A SUSPENSIÓNORAL</td></tr><tr><td style=\"white-space:nowrap\">20133790<a name=\"CUMS-20133790\"> </a></td><td>AMOXICILINA + CLAVULANATO DE POTASIO 400 + 57 MG / 5 ML POLVO PARA RECONSTIUTIR A SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">20135836<a name=\"CUMS-20135836\"> </a></td><td>AMOXIDAL 1.0 G</td></tr><tr><td style=\"white-space:nowrap\">20137563<a name=\"CUMS-20137563\"> </a></td><td>AMOXICILINA 875 MG + ÁCIDO CLAVULÓNICO 125 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20138975<a name=\"CUMS-20138975\"> </a></td><td>BIOMICILINA® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20143321<a name=\"CUMS-20143321\"> </a></td><td>AMOXIDAL PLUS COMPRIMIDOS RECUBIERTOS</td></tr><tr><td style=\"white-space:nowrap\">20147326<a name=\"CUMS-20147326\"> </a></td><td>MOVIDOL® M</td></tr><tr><td style=\"white-space:nowrap\">20147981<a name=\"CUMS-20147981\"> </a></td><td>AMOXICLIN DUO® NIÑOS POLVO PARA RECONSTITUIR A SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">20151834<a name=\"CUMS-20151834\"> </a></td><td>ACIX®</td></tr><tr><td style=\"white-space:nowrap\">20151888<a name=\"CUMS-20151888\"> </a></td><td>BACTROLESS® 500 MG CÁPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20153910<a name=\"CUMS-20153910\"> </a></td><td>IBYRAF ®</td></tr><tr><td style=\"white-space:nowrap\">20155039<a name=\"CUMS-20155039\"> </a></td><td>DORALIV MIGRA®</td></tr><tr><td style=\"white-space:nowrap\">20155743<a name=\"CUMS-20155743\"> </a></td><td>IBUPROFENO 4MG/ ML</td></tr><tr><td style=\"white-space:nowrap\">20155967<a name=\"CUMS-20155967\"> </a></td><td>SANADOL ADVANCED</td></tr><tr><td style=\"white-space:nowrap\">20156034<a name=\"CUMS-20156034\"> </a></td><td>SUPRIM-D</td></tr><tr><td style=\"white-space:nowrap\">20156147<a name=\"CUMS-20156147\"> </a></td><td>DORALIV® 400 MG</td></tr><tr><td style=\"white-space:nowrap\">20156373<a name=\"CUMS-20156373\"> </a></td><td>REDUGRIP®</td></tr><tr><td style=\"white-space:nowrap\">20158779<a name=\"CUMS-20158779\"> </a></td><td>AMOXIDAL 250MG/5ML</td></tr><tr><td style=\"white-space:nowrap\">20159060<a name=\"CUMS-20159060\"> </a></td><td>AMOXIDAL® 500 MG/5ML</td></tr><tr><td style=\"white-space:nowrap\">20161817<a name=\"CUMS-20161817\"> </a></td><td>FOLTRIP ®</td></tr><tr><td style=\"white-space:nowrap\">20163771<a name=\"CUMS-20163771\"> </a></td><td>AMOXICILINA 875 MG+ ACIDO CLAVULANICO 125 MGTABLETA</td></tr><tr><td style=\"white-space:nowrap\">20164988<a name=\"CUMS-20164988\"> </a></td><td>CEFABLAN®</td></tr><tr><td style=\"white-space:nowrap\">20168494<a name=\"CUMS-20168494\"> </a></td><td>ALFACILINA® 250MG/5ML</td></tr><tr><td style=\"white-space:nowrap\">20169707<a name=\"CUMS-20169707\"> </a></td><td>AMOXICILINA 875MG</td></tr><tr><td style=\"white-space:nowrap\">20171458<a name=\"CUMS-20171458\"> </a></td><td>KOACT 642.9</td></tr><tr><td style=\"white-space:nowrap\">20176040<a name=\"CUMS-20176040\"> </a></td><td>GIMEDOL EXTRA FUERTE</td></tr><tr><td style=\"white-space:nowrap\">20177646<a name=\"CUMS-20177646\"> </a></td><td>NEXAID® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20179712<a name=\"CUMS-20179712\"> </a></td><td>ACTRON MAX ®CÁPSULA BLANDA</td></tr><tr><td style=\"white-space:nowrap\">20187915<a name=\"CUMS-20187915\"> </a></td><td>APRODOL FORTE ®</td></tr><tr><td style=\"white-space:nowrap\">20188646<a name=\"CUMS-20188646\"> </a></td><td>AMPLIEX® 250 MG/5 ML.</td></tr><tr><td style=\"white-space:nowrap\">20188767<a name=\"CUMS-20188767\"> </a></td><td>KALMADOL CHILDREN®SUSPENSION ORAL</td></tr><tr><td style=\"white-space:nowrap\">20191816<a name=\"CUMS-20191816\"> </a></td><td>NODOL SPAS®</td></tr><tr><td style=\"white-space:nowrap\">20192258<a name=\"CUMS-20192258\"> </a></td><td>AMOKEM CV® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20195411<a name=\"CUMS-20195411\"> </a></td><td>VENCEDOL® FEMME 400MG CAPSULA DURA CON CONTENIDO LIQUIDO</td></tr><tr><td style=\"white-space:nowrap\">20196545<a name=\"CUMS-20196545\"> </a></td><td>SIMDOLL FEM® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20198689<a name=\"CUMS-20198689\"> </a></td><td>DELTMOXI CÁPSULAS 500MG</td></tr><tr><td style=\"white-space:nowrap\">20199242<a name=\"CUMS-20199242\"> </a></td><td>AMOXICILINA POLVO PARA SUSPENSION ORAL 250MG/5 ML</td></tr><tr><td style=\"white-space:nowrap\">20201899<a name=\"CUMS-20201899\"> </a></td><td>ALINAX UP®</td></tr><tr><td style=\"white-space:nowrap\">20204579<a name=\"CUMS-20204579\"> </a></td><td>IPICLAV® SUSPENSION 457</td></tr><tr><td style=\"white-space:nowrap\">20205291<a name=\"CUMS-20205291\"> </a></td><td>NAPROXENO SODICO 275 MG</td></tr><tr><td style=\"white-space:nowrap\">20206619<a name=\"CUMS-20206619\"> </a></td><td>DOLOCODONA</td></tr><tr><td style=\"white-space:nowrap\">20206821<a name=\"CUMS-20206821\"> </a></td><td>IBUPROFENO 800 MG TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">20207756<a name=\"CUMS-20207756\"> </a></td><td>IBUPROFENO 400 MG TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">20208299<a name=\"CUMS-20208299\"> </a></td><td>AMOXICLADELT® TABLETAS 625 MG</td></tr><tr><td style=\"white-space:nowrap\">20208953<a name=\"CUMS-20208953\"> </a></td><td>IBUPROFENO 600 MG CAPSULA BLANDA</td></tr><tr><td style=\"white-space:nowrap\">20210473<a name=\"CUMS-20210473\"> </a></td><td>RELAFEN® TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20210883<a name=\"CUMS-20210883\"> </a></td><td>DOLUMBAR® FORTE</td></tr><tr><td style=\"white-space:nowrap\">20211792<a name=\"CUMS-20211792\"> </a></td><td>BLOCDOL BX 500 MG.</td></tr><tr><td style=\"white-space:nowrap\">20216035<a name=\"CUMS-20216035\"> </a></td><td>AMOXICILINA 875MG TABLETA</td></tr><tr><td style=\"white-space:nowrap\">20219403<a name=\"CUMS-20219403\"> </a></td><td>ORTOFLEX ® L TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20223411<a name=\"CUMS-20223411\"> </a></td><td>AMOXICILINA 500 MG CÁPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20225690<a name=\"CUMS-20225690\"> </a></td><td>NOTTS DORALIV NIÑOS</td></tr><tr><td style=\"white-space:nowrap\">20230828<a name=\"CUMS-20230828\"> </a></td><td>AMOXICILINA 250 MG + ACIDO CLAVULÁNICO 62.5 MG / 5ML POLVO PARA RECONSTITUIR A SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">20230842<a name=\"CUMS-20230842\"> </a></td><td>AMOXICILINA 500 MG + ACIDO CLAVULÁNICO 125 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20230859<a name=\"CUMS-20230859\"> </a></td><td>AMOXICILINA 875 MG + ACIDO CLAVULÁNICO 125 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20232977<a name=\"CUMS-20232977\"> </a></td><td>NAPROXENO 500 MG TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20233344<a name=\"CUMS-20233344\"> </a></td><td>AINEDAP® FORTE</td></tr><tr><td style=\"white-space:nowrap\">20258062<a name=\"CUMS-20258062\"> </a></td><td>AFLIXDOL® FORTE TABLETAS</td></tr><tr><td style=\"white-space:nowrap\">20137789<a name=\"CUMS-20137789\"> </a></td><td>CODALGEN®</td></tr><tr><td style=\"white-space:nowrap\">20087738<a name=\"CUMS-20087738\"> </a></td><td>DOLOFF® 7.5-325 TABLETAS RECUBIERTAS.</td></tr><tr><td style=\"white-space:nowrap\">20138422<a name=\"CUMS-20138422\"> </a></td><td>CODALGEN® F</td></tr><tr><td style=\"white-space:nowrap\">20190946<a name=\"CUMS-20190946\"> </a></td><td>ACETAMINOFÉN 325 MG + FOSFATO DE CODEÍNA 30 MG TABLETAS</td></tr><tr><td style=\"white-space:nowrap\">20110089<a name=\"CUMS-20110089\"> </a></td><td>PYCDOL 325/8 MG</td></tr><tr><td style=\"white-space:nowrap\">20190532<a name=\"CUMS-20190532\"> </a></td><td>NODOL MAX® TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">20113513<a name=\"CUMS-20113513\"> </a></td><td>DEPALGOS® 5 MG /325 MG</td></tr><tr><td style=\"white-space:nowrap\">20152354<a name=\"CUMS-20152354\"> </a></td><td>ACUVICTA®</td></tr><tr><td style=\"white-space:nowrap\">20218626<a name=\"CUMS-20218626\"> </a></td><td>TRAMYDOL® COMPUESTO TABLETAS RECUBIERTAS</td></tr><tr><td style=\"white-space:nowrap\">20155033<a name=\"CUMS-20155033\"> </a></td><td>FIREXIFEN JARABE</td></tr><tr><td style=\"white-space:nowrap\">20172805<a name=\"CUMS-20172805\"> </a></td><td>GENIOL NIÑOS 3% JARABE</td></tr><tr><td style=\"white-space:nowrap\">20176507<a name=\"CUMS-20176507\"> </a></td><td>DOLONAL®</td></tr><tr><td style=\"white-space:nowrap\">35595<a name=\"CUMS-35595\"> </a></td><td>AMETREX JARABE</td></tr><tr><td style=\"white-space:nowrap\">20149123<a name=\"CUMS-20149123\"> </a></td><td>ALGISIL® 500 MG SOFTGEL</td></tr><tr><td style=\"white-space:nowrap\">20114189<a name=\"CUMS-20114189\"> </a></td><td>ACETAMINOFEN RAPID GEL</td></tr><tr><td style=\"white-space:nowrap\">46000<a name=\"CUMS-46000\"> </a></td><td>DOLOFEN® 500 MG.</td></tr><tr><td style=\"white-space:nowrap\">20229168<a name=\"CUMS-20229168\"> </a></td><td>ADOREM® BABY 3.2 G / 100 ML JARABE</td></tr><tr><td style=\"white-space:nowrap\">20146942<a name=\"CUMS-20146942\"> </a></td><td>OCTALGINA 1% SOLUCIÓN INYECTABLE - ACETAMINOFÉN 1% SOLUCIÓN INYECTABLE</td></tr><tr><td style=\"white-space:nowrap\">20179253<a name=\"CUMS-20179253\"> </a></td><td>LESPYREN®</td></tr><tr><td style=\"white-space:nowrap\">20145940<a name=\"CUMS-20145940\"> </a></td><td>MEJORAL® TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">20152244<a name=\"CUMS-20152244\"> </a></td><td>ACERADOX®</td></tr><tr><td style=\"white-space:nowrap\">20154863<a name=\"CUMS-20154863\"> </a></td><td>GENIOL®500MG</td></tr><tr><td style=\"white-space:nowrap\">20168474<a name=\"CUMS-20168474\"> </a></td><td>PRODOL® MTABLETAS</td></tr><tr><td style=\"white-space:nowrap\">20156693<a name=\"CUMS-20156693\"> </a></td><td>PUNZADOL®</td></tr><tr><td style=\"white-space:nowrap\">20176946<a name=\"CUMS-20176946\"> </a></td><td>FIREXIFEN® 500 MG</td></tr><tr><td style=\"white-space:nowrap\">19986458<a name=\"CUMS-19986458\"> </a></td><td>ACETAMINOFEN TABLETAS 500 MG</td></tr><tr><td style=\"white-space:nowrap\">20126339<a name=\"CUMS-20126339\"> </a></td><td>ACETAMINOFEN GOTAS</td></tr><tr><td style=\"white-space:nowrap\">20147590<a name=\"CUMS-20147590\"> </a></td><td>CATALAC® GOTAS ORALES 100 MG/ML</td></tr><tr><td style=\"white-space:nowrap\">20155035<a name=\"CUMS-20155035\"> </a></td><td>FIREXIFEN GOTAS</td></tr><tr><td style=\"white-space:nowrap\">20164285<a name=\"CUMS-20164285\"> </a></td><td>DOLEX NIÑOS GOTAS (SOLUCIÓN)</td></tr><tr><td style=\"white-space:nowrap\">20093114<a name=\"CUMS-20093114\"> </a></td><td>SANAFEN® GOTAS 100 MG/ML</td></tr><tr><td style=\"white-space:nowrap\">207412<a name=\"CUMS-207412\"> </a></td><td>ACETAMINOFEN GOTAS</td></tr><tr><td style=\"white-space:nowrap\">20164279<a name=\"CUMS-20164279\"> </a></td><td>DOLEX BEBES JARABE</td></tr><tr><td style=\"white-space:nowrap\">20164282<a name=\"CUMS-20164282\"> </a></td><td>DOLEX NIÑOS 3.2% JARABE</td></tr><tr><td style=\"white-space:nowrap\">20122539<a name=\"CUMS-20122539\"> </a></td><td>ACETAMINOFEN 32 MG/ML</td></tr><tr><td style=\"white-space:nowrap\">20162754<a name=\"CUMS-20162754\"> </a></td><td>LOFOTEN® JARABE</td></tr><tr><td style=\"white-space:nowrap\">20147594<a name=\"CUMS-20147594\"> </a></td><td>CATALAC® 250 MG / 5 ML SUSPENSION</td></tr><tr><td style=\"white-space:nowrap\">20160239<a name=\"CUMS-20160239\"> </a></td><td>ALGISIL® 250 MG/ 5 ML . SUSPENSION</td></tr><tr><td style=\"white-space:nowrap\">20172807<a name=\"CUMS-20172807\"> </a></td><td>GENIOL NIÑOS SUSPENSIÓN250MG / 5ML</td></tr><tr><td style=\"white-space:nowrap\">207411<a name=\"CUMS-207411\"> </a></td><td>ACETAMINOFEN JARABE</td></tr><tr><td style=\"white-space:nowrap\">20036840<a name=\"CUMS-20036840\"> </a></td><td>SANAFEN ® JARABE</td></tr><tr><td style=\"white-space:nowrap\">20071759<a name=\"CUMS-20071759\"> </a></td><td>DOLEX® FORTE NF</td></tr><tr><td style=\"white-space:nowrap\">20120374<a name=\"CUMS-20120374\"> </a></td><td>NORAVER® NF NOCHE</td></tr><tr><td style=\"white-space:nowrap\">20115063<a name=\"CUMS-20115063\"> </a></td><td>BALANDOF® 7.5 - 325</td></tr><tr><td style=\"white-space:nowrap\">20131730<a name=\"CUMS-20131730\"> </a></td><td>SINALGEN FORTE® 7.5/325 TABLETAS</td></tr><tr><td style=\"white-space:nowrap\">20102177<a name=\"CUMS-20102177\"> </a></td><td>VICK® FORT-9</td></tr><tr><td style=\"white-space:nowrap\">20120371<a name=\"CUMS-20120371\"> </a></td><td>NORAVER® NF DIA</td></tr><tr><td style=\"white-space:nowrap\">20152795<a name=\"CUMS-20152795\"> </a></td><td>PARAGRIP CAPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20168487<a name=\"CUMS-20168487\"> </a></td><td>GENIOL® GRIPA</td></tr><tr><td style=\"white-space:nowrap\">20175112<a name=\"CUMS-20175112\"> </a></td><td>ULTRAGRIP® CAPSULAS</td></tr><tr><td style=\"white-space:nowrap\">20194943<a name=\"CUMS-20194943\"> </a></td><td>EFRIMEL® SOLUCION ORAL</td></tr><tr><td style=\"white-space:nowrap\">20188459<a name=\"CUMS-20188459\"> </a></td><td>RESFRYGRYP NOCHE®</td></tr><tr><td style=\"white-space:nowrap\">20195443<a name=\"CUMS-20195443\"> </a></td><td>DOLICOX GRIP®NOCHE</td></tr><tr><td style=\"white-space:nowrap\">20019621<a name=\"CUMS-20019621\"> </a></td><td>OXYGRIP® JARABE</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CUMS",
+  "version" : "1.0.0",
+  "name" : "CUMS",
+  "title" : "CodeSystem: Unique Medication Codes - Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de Código Único de Medicamentos en Colombia (CUMS).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de Código Único de Medicamentos en Colombia (CUMS).",
+  "copyright" : "MinSalud Colombia, CCBY4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "fragment",
+  "concept" : [{
+    "code" : "31330",
+    "display" : "MOTRIN® 800 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "32566",
+    "display" : "CLAVULIN® 500 MG TABLETAS"
+  },
+  {
+    "code" : "32820",
+    "display" : "CLAVULIN® SUSPENSION 250"
+  },
+  {
+    "code" : "36575",
+    "display" : "AMOXICILINA CAPSULAS 500 MG"
+  },
+  {
+    "code" : "39114",
+    "display" : "NAPROXENO 250 MG TABLETA"
+  },
+  {
+    "code" : "224493",
+    "display" : "CLAVULIN® JUNIOR 12 H (POLVO PARA RECONSTITUIR A SUSPENSION ORAL)"
+  },
+  {
+    "code" : "19900510",
+    "display" : "MOTRIN® 400 MG"
+  },
+  {
+    "code" : "19904176",
+    "display" : "NAPROXENO SODICO 550 MG TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "19909128",
+    "display" : "NEOGRAM® TABLETA"
+  },
+  {
+    "code" : "19927831",
+    "display" : "NAPROXENO TABLETAS RECUBIERTAS 250 MG"
+  },
+  {
+    "code" : "19934889",
+    "display" : "RELADOL® TABLETAS"
+  },
+  {
+    "code" : "19937061",
+    "display" : "NORAVER- G CONTRA LOS SINTOMAS DE LA GRIPA"
+  },
+  {
+    "code" : "19944399",
+    "display" : "IBUPROFENO TABLETAS 400 MG"
+  },
+  {
+    "code" : "19959398",
+    "display" : "CARDIOASPIRINA® 81MG TABLETAS CON CUBIERTA ENTERICA"
+  },
+  {
+    "code" : "19992938",
+    "display" : "MOVIDOL®"
+  },
+  {
+    "code" : "20006710",
+    "display" : "INFEMOX® CAPSULAS"
+  },
+  {
+    "code" : "20027170",
+    "display" : "IBUPROFENO TABLETAS RECUBIERTAS 800 MG"
+  },
+  {
+    "code" : "20028367",
+    "display" : "NAPROXENO TABLETAS RECUBIERTAS 500 MG"
+  },
+  {
+    "code" : "20031136",
+    "display" : "ALCADOL® ULTRA"
+  },
+  {
+    "code" : "20034334",
+    "display" : "AMOXEM ® 500 MG"
+  },
+  {
+    "code" : "20037830",
+    "display" : "DURAFEX"
+  },
+  {
+    "code" : "20038756",
+    "display" : "SUPRIFENO SUSPENSION ORAL 2 G /100 ML"
+  },
+  {
+    "code" : "20062919",
+    "display" : "IBUPIRIÑO®"
+  },
+  {
+    "code" : "20073433",
+    "display" : "CONGESTEX FORTE GRIPA"
+  },
+  {
+    "code" : "20079039",
+    "display" : "ATAK CLAV®"
+  },
+  {
+    "code" : "20082270",
+    "display" : "VENCEDOL®TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20083462",
+    "display" : "SOLOMOXY"
+  },
+  {
+    "code" : "20086048",
+    "display" : "ATAK BD ® 875 MG TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "20086565",
+    "display" : "AMOXICILINA 500 MG CAPSULAS"
+  },
+  {
+    "code" : "20089999",
+    "display" : "CEFADOL®"
+  },
+  {
+    "code" : "20091356",
+    "display" : "NAPROFEN ® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20095641",
+    "display" : "DOLINSTANT® 100 MG/5 ML SUSPENSION ORAL"
+  },
+  {
+    "code" : "20097529",
+    "display" : "SPASMOFLEX ®FORTE TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20097707",
+    "display" : "LEGRIP PLUS"
+  },
+  {
+    "code" : "20097708",
+    "display" : "NEXT GL GENOMMA LAB®"
+  },
+  {
+    "code" : "20099719",
+    "display" : "AMOXOLQRP®"
+  },
+  {
+    "code" : "20102583",
+    "display" : "AMOXICILINA 250 MG/5 ML POLVO PARA SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "20104221",
+    "display" : "DURAFLEX ADVANCE."
+  },
+  {
+    "code" : "20112370",
+    "display" : "FIN-ESPAM FEM ® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20113049",
+    "display" : "ZODIPIN®"
+  },
+  {
+    "code" : "20113881",
+    "display" : "MIALGILOX"
+  },
+  {
+    "code" : "20114154",
+    "display" : "TIOMED® FORTE"
+  },
+  {
+    "code" : "20114842",
+    "display" : "METOCARBAMOL 500 MG + IBUPROFENO 200MG."
+  },
+  {
+    "code" : "20115558",
+    "display" : "BUFEDOL® F"
+  },
+  {
+    "code" : "20121023",
+    "display" : "AMOXCLAVER® 625"
+  },
+  {
+    "code" : "20121189",
+    "display" : "AMOXICILINA 400 ACIDO CLAVULANICO 57"
+  },
+  {
+    "code" : "20121277",
+    "display" : "VEROXINA ® 250"
+  },
+  {
+    "code" : "20121771",
+    "display" : "TRIPSOPEN ® 500 MG CAPSULAS"
+  },
+  {
+    "code" : "20121772",
+    "display" : "TRIPSOPEN ® POLVO PARA RECONSTITUIR A SUSPENSION ORAL"
+  },
+  {
+    "code" : "20122253",
+    "display" : "AMOXCLAVER® 1000"
+  },
+  {
+    "code" : "20122610",
+    "display" : "TRIFAMOX SUSPENSION DUO"
+  },
+  {
+    "code" : "20123891",
+    "display" : "GOFEN FORTE®"
+  },
+  {
+    "code" : "20124922",
+    "display" : "AMOXCLAVER® 312.5 POLVO PARA SUSPENSION ORAL"
+  },
+  {
+    "code" : "20125150",
+    "display" : "AMOXICILINA 250 MG/5 ML POLVO PARA SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "20125193",
+    "display" : "WEIDERMICINA 500 MG CAPSULAS"
+  },
+  {
+    "code" : "20125206",
+    "display" : "WEIDERMICINA 250 MG/5 ML POLVO PARA SUSPENSION."
+  },
+  {
+    "code" : "20126847",
+    "display" : "DOLIVIUM® PLUS TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "20128919",
+    "display" : "DOXU® 7.5"
+  },
+  {
+    "code" : "20129546",
+    "display" : "GENFAR DOL ULTRAFORTE"
+  },
+  {
+    "code" : "20129968",
+    "display" : "NAPROXENO 500 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20131004",
+    "display" : "TREDOL® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20131066",
+    "display" : "AMOXICILINA 400 MG + ÁCIDO CLAVULANICO 57 MG / 5 ML POLVO PARA RECONSTITUIR A SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "20131947",
+    "display" : "AKRIMOXYL ®250MG /5ML POLVO PARA SUSPENSION"
+  },
+  {
+    "code" : "20131977",
+    "display" : "AMOXICLIN DUO® COMPRIMIDOS RECUBIERTOS"
+  },
+  {
+    "code" : "20133395",
+    "display" : "AMOXICILINA 500 MG + ACIDO CLAVULANICO 125 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20133692",
+    "display" : "KETONOZ® 400 MG"
+  },
+  {
+    "code" : "20133770",
+    "display" : "AMOXICILINA 250MG/5 ML+ ACIDO CLAVULANICO 62.5 MG /5 MLPOLVO PARA RECONSTITUIR A SUSPENSIÓNORAL"
+  },
+  {
+    "code" : "20133790",
+    "display" : "AMOXICILINA + CLAVULANATO DE POTASIO 400 + 57 MG / 5 ML POLVO PARA RECONSTIUTIR A SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "20135836",
+    "display" : "AMOXIDAL 1.0 G"
+  },
+  {
+    "code" : "20137563",
+    "display" : "AMOXICILINA 875 MG + ÁCIDO CLAVULÓNICO 125 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20138975",
+    "display" : "BIOMICILINA® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20143321",
+    "display" : "AMOXIDAL PLUS COMPRIMIDOS RECUBIERTOS"
+  },
+  {
+    "code" : "20147326",
+    "display" : "MOVIDOL® M"
+  },
+  {
+    "code" : "20147981",
+    "display" : "AMOXICLIN DUO® NIÑOS POLVO PARA RECONSTITUIR A SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "20151834",
+    "display" : "ACIX®"
+  },
+  {
+    "code" : "20151888",
+    "display" : "BACTROLESS® 500 MG CÁPSULAS"
+  },
+  {
+    "code" : "20153910",
+    "display" : "IBYRAF ®"
+  },
+  {
+    "code" : "20155039",
+    "display" : "DORALIV MIGRA®"
+  },
+  {
+    "code" : "20155743",
+    "display" : "IBUPROFENO 4MG/ ML"
+  },
+  {
+    "code" : "20155967",
+    "display" : "SANADOL ADVANCED"
+  },
+  {
+    "code" : "20156034",
+    "display" : "SUPRIM-D"
+  },
+  {
+    "code" : "20156147",
+    "display" : "DORALIV® 400 MG"
+  },
+  {
+    "code" : "20156373",
+    "display" : "REDUGRIP®"
+  },
+  {
+    "code" : "20158779",
+    "display" : "AMOXIDAL 250MG/5ML"
+  },
+  {
+    "code" : "20159060",
+    "display" : "AMOXIDAL® 500 MG/5ML"
+  },
+  {
+    "code" : "20161817",
+    "display" : "FOLTRIP ®"
+  },
+  {
+    "code" : "20163771",
+    "display" : "AMOXICILINA 875 MG+ ACIDO CLAVULANICO 125 MGTABLETA"
+  },
+  {
+    "code" : "20164988",
+    "display" : "CEFABLAN®"
+  },
+  {
+    "code" : "20168494",
+    "display" : "ALFACILINA® 250MG/5ML"
+  },
+  {
+    "code" : "20169707",
+    "display" : "AMOXICILINA 875MG"
+  },
+  {
+    "code" : "20171458",
+    "display" : "KOACT 642.9"
+  },
+  {
+    "code" : "20176040",
+    "display" : "GIMEDOL EXTRA FUERTE"
+  },
+  {
+    "code" : "20177646",
+    "display" : "NEXAID® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20179712",
+    "display" : "ACTRON MAX ®CÁPSULA BLANDA"
+  },
+  {
+    "code" : "20187915",
+    "display" : "APRODOL FORTE ®"
+  },
+  {
+    "code" : "20188646",
+    "display" : "AMPLIEX® 250 MG/5 ML."
+  },
+  {
+    "code" : "20188767",
+    "display" : "KALMADOL CHILDREN®SUSPENSION ORAL"
+  },
+  {
+    "code" : "20191816",
+    "display" : "NODOL SPAS®"
+  },
+  {
+    "code" : "20192258",
+    "display" : "AMOKEM CV® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20195411",
+    "display" : "VENCEDOL® FEMME 400MG CAPSULA DURA CON CONTENIDO LIQUIDO"
+  },
+  {
+    "code" : "20196545",
+    "display" : "SIMDOLL FEM® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20198689",
+    "display" : "DELTMOXI CÁPSULAS 500MG"
+  },
+  {
+    "code" : "20199242",
+    "display" : "AMOXICILINA POLVO PARA SUSPENSION ORAL 250MG/5 ML"
+  },
+  {
+    "code" : "20201899",
+    "display" : "ALINAX UP®"
+  },
+  {
+    "code" : "20204579",
+    "display" : "IPICLAV® SUSPENSION 457"
+  },
+  {
+    "code" : "20205291",
+    "display" : "NAPROXENO SODICO 275 MG"
+  },
+  {
+    "code" : "20206619",
+    "display" : "DOLOCODONA"
+  },
+  {
+    "code" : "20206821",
+    "display" : "IBUPROFENO 800 MG TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "20207756",
+    "display" : "IBUPROFENO 400 MG TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "20208299",
+    "display" : "AMOXICLADELT® TABLETAS 625 MG"
+  },
+  {
+    "code" : "20208953",
+    "display" : "IBUPROFENO 600 MG CAPSULA BLANDA"
+  },
+  {
+    "code" : "20210473",
+    "display" : "RELAFEN® TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20210883",
+    "display" : "DOLUMBAR® FORTE"
+  },
+  {
+    "code" : "20211792",
+    "display" : "BLOCDOL BX 500 MG."
+  },
+  {
+    "code" : "20216035",
+    "display" : "AMOXICILINA 875MG TABLETA"
+  },
+  {
+    "code" : "20219403",
+    "display" : "ORTOFLEX ® L TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20223411",
+    "display" : "AMOXICILINA 500 MG CÁPSULAS"
+  },
+  {
+    "code" : "20225690",
+    "display" : "NOTTS DORALIV NIÑOS"
+  },
+  {
+    "code" : "20230828",
+    "display" : "AMOXICILINA 250 MG + ACIDO CLAVULÁNICO 62.5 MG / 5ML POLVO PARA RECONSTITUIR A SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "20230842",
+    "display" : "AMOXICILINA 500 MG + ACIDO CLAVULÁNICO 125 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20230859",
+    "display" : "AMOXICILINA 875 MG + ACIDO CLAVULÁNICO 125 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20232977",
+    "display" : "NAPROXENO 500 MG TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20233344",
+    "display" : "AINEDAP® FORTE"
+  },
+  {
+    "code" : "20258062",
+    "display" : "AFLIXDOL® FORTE TABLETAS"
+  },
+  {
+    "code" : "20137789",
+    "display" : "CODALGEN®"
+  },
+  {
+    "code" : "20087738",
+    "display" : "DOLOFF® 7.5-325 TABLETAS RECUBIERTAS."
+  },
+  {
+    "code" : "20138422",
+    "display" : "CODALGEN® F"
+  },
+  {
+    "code" : "20190946",
+    "display" : "ACETAMINOFÉN 325 MG + FOSFATO DE CODEÍNA 30 MG TABLETAS"
+  },
+  {
+    "code" : "20110089",
+    "display" : "PYCDOL 325/8 MG"
+  },
+  {
+    "code" : "20190532",
+    "display" : "NODOL MAX® TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "20113513",
+    "display" : "DEPALGOS® 5 MG /325 MG"
+  },
+  {
+    "code" : "20152354",
+    "display" : "ACUVICTA®"
+  },
+  {
+    "code" : "20218626",
+    "display" : "TRAMYDOL® COMPUESTO TABLETAS RECUBIERTAS"
+  },
+  {
+    "code" : "20155033",
+    "display" : "FIREXIFEN JARABE"
+  },
+  {
+    "code" : "20172805",
+    "display" : "GENIOL NIÑOS 3% JARABE"
+  },
+  {
+    "code" : "20176507",
+    "display" : "DOLONAL®"
+  },
+  {
+    "code" : "35595",
+    "display" : "AMETREX JARABE"
+  },
+  {
+    "code" : "20149123",
+    "display" : "ALGISIL® 500 MG SOFTGEL"
+  },
+  {
+    "code" : "20114189",
+    "display" : "ACETAMINOFEN RAPID GEL"
+  },
+  {
+    "code" : "46000",
+    "display" : "DOLOFEN® 500 MG."
+  },
+  {
+    "code" : "20229168",
+    "display" : "ADOREM® BABY 3.2 G / 100 ML JARABE"
+  },
+  {
+    "code" : "20146942",
+    "display" : "OCTALGINA 1% SOLUCIÓN INYECTABLE - ACETAMINOFÉN 1% SOLUCIÓN INYECTABLE"
+  },
+  {
+    "code" : "20179253",
+    "display" : "LESPYREN®"
+  },
+  {
+    "code" : "20145940",
+    "display" : "MEJORAL® TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "20152244",
+    "display" : "ACERADOX®"
+  },
+  {
+    "code" : "20154863",
+    "display" : "GENIOL®500MG"
+  },
+  {
+    "code" : "20168474",
+    "display" : "PRODOL® MTABLETAS"
+  },
+  {
+    "code" : "20156693",
+    "display" : "PUNZADOL®"
+  },
+  {
+    "code" : "20176946",
+    "display" : "FIREXIFEN® 500 MG"
+  },
+  {
+    "code" : "19986458",
+    "display" : "ACETAMINOFEN TABLETAS 500 MG"
+  },
+  {
+    "code" : "20126339",
+    "display" : "ACETAMINOFEN GOTAS"
+  },
+  {
+    "code" : "20147590",
+    "display" : "CATALAC® GOTAS ORALES 100 MG/ML"
+  },
+  {
+    "code" : "20155035",
+    "display" : "FIREXIFEN GOTAS"
+  },
+  {
+    "code" : "20164285",
+    "display" : "DOLEX NIÑOS GOTAS (SOLUCIÓN)"
+  },
+  {
+    "code" : "20093114",
+    "display" : "SANAFEN® GOTAS 100 MG/ML"
+  },
+  {
+    "code" : "207412",
+    "display" : "ACETAMINOFEN GOTAS"
+  },
+  {
+    "code" : "20164279",
+    "display" : "DOLEX BEBES JARABE"
+  },
+  {
+    "code" : "20164282",
+    "display" : "DOLEX NIÑOS 3.2% JARABE"
+  },
+  {
+    "code" : "20122539",
+    "display" : "ACETAMINOFEN 32 MG/ML"
+  },
+  {
+    "code" : "20162754",
+    "display" : "LOFOTEN® JARABE"
+  },
+  {
+    "code" : "20147594",
+    "display" : "CATALAC® 250 MG / 5 ML SUSPENSION"
+  },
+  {
+    "code" : "20160239",
+    "display" : "ALGISIL® 250 MG/ 5 ML . SUSPENSION"
+  },
+  {
+    "code" : "20172807",
+    "display" : "GENIOL NIÑOS SUSPENSIÓN250MG / 5ML"
+  },
+  {
+    "code" : "207411",
+    "display" : "ACETAMINOFEN JARABE"
+  },
+  {
+    "code" : "20036840",
+    "display" : "SANAFEN ® JARABE"
+  },
+  {
+    "code" : "20071759",
+    "display" : "DOLEX® FORTE NF"
+  },
+  {
+    "code" : "20120374",
+    "display" : "NORAVER® NF NOCHE"
+  },
+  {
+    "code" : "20115063",
+    "display" : "BALANDOF® 7.5 - 325"
+  },
+  {
+    "code" : "20131730",
+    "display" : "SINALGEN FORTE® 7.5/325 TABLETAS"
+  },
+  {
+    "code" : "20102177",
+    "display" : "VICK® FORT-9"
+  },
+  {
+    "code" : "20120371",
+    "display" : "NORAVER® NF DIA"
+  },
+  {
+    "code" : "20152795",
+    "display" : "PARAGRIP CAPSULAS"
+  },
+  {
+    "code" : "20168487",
+    "display" : "GENIOL® GRIPA"
+  },
+  {
+    "code" : "20175112",
+    "display" : "ULTRAGRIP® CAPSULAS"
+  },
+  {
+    "code" : "20194943",
+    "display" : "EFRIMEL® SOLUCION ORAL"
+  },
+  {
+    "code" : "20188459",
+    "display" : "RESFRYGRYP NOCHE®"
+  },
+  {
+    "code" : "20195443",
+    "display" : "DOLICOX GRIP®NOCHE"
+  },
+  {
+    "code" : "20019621",
+    "display" : "OXYGRIP® JARABE"
+  }]
+}

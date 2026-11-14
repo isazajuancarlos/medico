@@ -1,0 +1,53 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "MedicationDispensePerformerFunctionCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores MedicationDispensePerformerFunctionCodes</b></p><a name=\"MedicationDispensePerformerFunctionCodes\"> </a><a name=\"hcMedicationDispensePerformerFunctionCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-MedicationDispensePerformerFunction.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/MedicationDispensePerformerFunction</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/MedicationDispensePerformerFunctionCodes",
+  "version" : "1.0.0",
+  "name" : "MedicationDispensePerformerFunctionCodes",
+  "title" : "ValueSet: Función en el proceso de dispensación de medicamentos",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-06-01",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Roles desempeñados por las organizaciones en el proceso de dispensación de medicamentos en el marco de la gestión farmacéutica en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "copyright" : "Ministerio de Salud y Protección Social, CC BY-NC-SA 4.0, 2025+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MedicationDispensePerformerFunction"
+    }]
+  }
+}

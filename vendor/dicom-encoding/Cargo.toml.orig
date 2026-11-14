@@ -1,0 +1,24 @@
+[package]
+name = "dicom-encoding"
+version = "0.10.1"
+authors = ["Eduardo Pinho <enet4mikeenet@gmail.com>"]
+description = "DICOM encoding and decoding primitives"
+edition = "2024"
+rust-version = "1.85.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Enet4/dicom-rs"
+categories = ["encoding"]
+keywords = ["dicom"]
+readme = "README.md"
+
+[dependencies]
+dicom-core = { path = "../core", version = "0.10.1" }
+dicom-dictionary-std = { path = "../dictionary-std", version = "0.10.1" }
+encoding = "0.2.33"
+byteordered = "0.6"
+inventory = { version = "0.3.2", optional = true }
+snafu = "0.9"
+
+[features]
+default = []
+inventory-registry = ['inventory']

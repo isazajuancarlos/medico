@@ -1,0 +1,896 @@
+//! Bitácora de acceso a dato personal (Ley 1581 / OWASP A09).
+//!
+//! Cada acceso a un dato de paciente se registra como un eslabón **encadenado
+//! por hash y firmado** (sobre `guaca::auditoria`): borrar o reordenar una
+//! entrada rompe la cadena, no solo alterarla. Es el rastro que la ley de datos
+//! personales exige y que no se puede maquillar por debajo.
+//!
+//! **Dos niveles de garantía, según haya clave (`MEDICO_SIGNING_KEY`):**
+//! - Sin clave: la cadena se encadena por hash igual. Detecta manipulación
+//!   ACCIDENTAL o parcial, pero alguien con escritura en la BD podría rehacer
+//!   toda la cadena (los hashes son públicos). Es lo mínimo.
+//! - Con clave: cada eslabón va firmado. Ya no se puede forjar ni rehacer sin la
+//!   clave privada. Es lo que se debe usar en producción — configúrala desde el
+//!   primer día, porque un eslabón sin firma no verifica bajo una clave.
+
+use std::collections::BTreeMap;
+
+use guaca::auditoria::{self, Auditoria, Entrada, GENESIS};
+use medico_dominio::{Ambito, Visibilidad};
+use serde_json::Value;
+
+/// Un acceso que se va a registrar. `ts` en UTC (RFC 3339); el llamante lo pone
+/// para no atar el módulo al reloj.
+#[derive(Debug, Clone)]
+pub struct Evento {
+    pub usuario_id: i64,
+    pub rol: String,
+    /// Institución del usuario, o `None` para el superadmin.
+    pub institucion_id: Option<i64>,
+    /// `ver`, `editar`, `exportar`, `imprimir`, `listar`…
+    pub accion: String,
+    /// `historia`, `documento`, `imagen`, `paciente`, `pacientes`…
+    pub recurso: String,
+    /// QUÉ se tocó. Ver [`Objeto`].
+    pub objeto: Objeto,
+    pub ts: String,
+}
+
+/// El objeto del acceso: **qué** se tocó. Son tres formas y no se mezclan
+/// (directiva #20: no se rellena el que no aplica con un valor falso).
+///
+/// Fue un enum el 2026-08-02, y ese es el punto: antes eran tres `Option`
+/// —`paciente_id`, `recurso_id`, `alcance`— con un `debug_assert` que exigía
+/// «uno u otro, nunca ambos ni ninguno». Un `debug_assert` solo grita en
+/// depuración y solo si alguien ejecuta esa línea, así que la afirmación que
+/// sostiene todo el rastro dependía de que una prueba pasara por ahí. Ahora un
+/// evento mal formado **no se puede escribir** (memoria: la afirmación necesita
+/// su prueba en el TIPO).
+///
+/// La tercera forma —`DeUnTitular`— es la que faltaba, y sin ella los listados
+/// acotados a un paciente no tenían dónde ir: como `Coleccion` desaparecían del
+/// rastro de su titular (un listado no guarda ids, y con razón), y meterles el id
+/// en `alcance.pacientes` habría dicho que el dato SALIÓ del sistema, que es lo
+/// que significa esa lista.
+#[derive(Debug, Clone)]
+pub enum Objeto {
+    /// **Un recurso concreto de un paciente**: ver o editar su historia, un
+    /// documento, una imagen. Hay un id y hay un titular.
+    ///
+    /// Es la forma de siempre, y su contenido canónico NO inserta la clave
+    /// `alcance`: byte a byte el mismo de antes de existir las colecciones, para
+    /// que las cadenas ya selladas sigan verificando.
+    Recurso { paciente_id: i64, recurso_id: i64 },
+
+    /// **Un conjunto de registros de UN titular**: los documentos del paciente
+    /// 10, sus resultados de laboratorio, sus historias. No hay un id —hay
+    /// varios— pero sí hay un titular, así que entra en SU rastro.
+    ///
+    /// `alcance.pacientes` va vacío: el titular ya está nombrado aparte, y esa
+    /// lista significa «se lo llevó», no «lo miró». En el rastro se lee como
+    /// `pacientes_n: 0`, que es la diferencia que el titular necesita ver entre
+    /// alguien que consultó y alguien que exportó.
+    DeUnTitular { paciente_id: i64, alcance: Alcance },
+
+    /// **Un conjunto que atraviesa titulares**: el directorio de pacientes, una
+    /// exportación de RIPS, un cambio de configuración. Solo entra en el rastro
+    /// de alguien si es una exportación y su id está en `alcance.pacientes`.
+    Coleccion { alcance: Alcance },
+}
+
+impl Objeto {
+    /// El titular, si el acceso tuvo uno. Es la clave del rastro de la Ley 1581.
+    fn paciente_id(&self) -> Option<i64> {
+        match self {
+            Objeto::Recurso { paciente_id, .. } | Objeto::DeUnTitular { paciente_id, .. } => {
+                Some(*paciente_id)
+            }
+            Objeto::Coleccion { .. } => None,
+        }
+    }
+
+    /// El id del recurso, solo cuando hay UNO.
+    fn recurso_id(&self) -> Option<i64> {
+        match self {
+            Objeto::Recurso { recurso_id, .. } => Some(*recurso_id),
+            _ => None,
+        }
+    }
+
+    fn alcance(&self) -> Option<&Alcance> {
+        match self {
+            Objeto::Recurso { .. } => None,
+            Objeto::DeUnTitular { alcance, .. } | Objeto::Coleccion { alcance } => Some(alcance),
+        }
+    }
+}
+
+/// El alcance de un acceso a una **colección**. Un **listado** guarda a qué
+/// ámbito se consultó, con qué filtro y cuántos resultados devolvió — pero NO los
+/// ids: ver un nombre en una lista filtrada no es acceder al expediente, y
+/// abanicar un eslabón por fila ahogaría la cadena. Una **exportación** guarda
+/// ADEMÁS los `pacientes` que sacó, porque el dato salió y el titular tiene
+/// derecho a saber si el suyo se exportó (Ley 1581); `por_paciente` los casa.
+#[derive(Debug, Clone)]
+pub struct Alcance {
+    /// Descripción del ámbito consultado, p. ej. `"institucion:1"` o `"superadmin"`.
+    pub ambito: String,
+    /// El filtro/búsqueda aplicado, si hubo.
+    pub filtro: Option<String>,
+    /// Cuántos resultados devolvió el acceso.
+    pub n: i64,
+    /// Los pacientes que el acceso cubrió — SOLO en una exportación (el dato
+    /// salió); vacío en un listado.
+    pub pacientes: Vec<i64>,
+}
+
+impl Alcance {
+    /// El objeto canónico anidado. Se construye con `serde_json::Map` (que sin
+    /// `preserve_order` es un `BTreeMap`: claves ordenadas → determinista).
+    fn a_valor(&self) -> Value {
+        let mut m = serde_json::Map::new();
+        m.insert("ambito".into(), Value::from(self.ambito.clone()));
+        m.insert(
+            "filtro".into(),
+            self.filtro.clone().map_or(Value::Null, Value::from),
+        );
+        m.insert("n".into(), Value::from(self.n));
+        m.insert("pacientes".into(), Value::from(self.pacientes.clone()));
+        Value::Object(m)
+    }
+}
+
+/// El contenido canónico que se hashea y firma. Única fuente: registrar y
+/// verificar lo construyen igual, o el hash no cuadraría. La clave `alcance` solo
+/// aparece cuando hay conjunto — un recurso único produce el contenido de
+/// siempre, y por eso las cadenas selladas antes de 2026-07-29 siguen verificando
+/// (lo fija `el_contenido_canonico_del_recurso_unico_esta_congelado`).
+fn contenido_de(e: &Evento) -> BTreeMap<String, Value> {
+    let mut m = BTreeMap::new();
+    m.insert("v".into(), Value::from(1));
+    m.insert("usuario_id".into(), Value::from(e.usuario_id));
+    m.insert("rol".into(), Value::from(e.rol.clone()));
+    m.insert(
+        "institucion_id".into(),
+        e.institucion_id.map_or(Value::Null, Value::from),
+    );
+    m.insert("accion".into(), Value::from(e.accion.clone()));
+    m.insert("recurso".into(), Value::from(e.recurso.clone()));
+    m.insert(
+        "recurso_id".into(),
+        e.objeto.recurso_id().map_or(Value::Null, Value::from),
+    );
+    m.insert(
+        "paciente_id".into(),
+        e.objeto.paciente_id().map_or(Value::Null, Value::from),
+    );
+    if let Some(a) = e.objeto.alcance() {
+        m.insert("alcance".into(), a.a_valor());
+    }
+    m.insert("ts".into(), Value::from(e.ts.clone()));
+    m
+}
+
+fn a_hex(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
+
+fn de_hex32(s: &str) -> Option<[u8; 32]> {
+    if s.len() != 64 || !s.is_ascii() {
+        return None;
+    }
+    let mut out = [0u8; 32];
+    for (i, byte) in out.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&s[2 * i..2 * i + 2], 16).ok()?;
+    }
+    Some(out)
+}
+
+/// `true` si el error es una carrera de escritura recuperable (colisión de
+/// secuencia o base bloqueada): dos accesos concurrentes leyeron el mismo último
+/// eslabón. Se reintenta; NO se pierde el registro.
+fn es_conflicto(e: &sqlx::Error) -> bool {
+    if let sqlx::Error::Database(db) = e {
+        let m = db.message().to_ascii_lowercase();
+        return m.contains("unique") || m.contains("locked") || m.contains("busy");
+    }
+    false
+}
+
+/// Inserta el eslabón sobre una conexión que YA está en una transacción de
+/// escritura (BEGIN IMMEDIATE). Separada para poder hacer COMMIT/ROLLBACK limpio.
+async fn insertar(
+    conn: &mut sqlx::SqliteConnection,
+    evento: &Evento,
+    sk_hex: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    let ultimo: Option<(i64, String)> =
+        sqlx::query_as("SELECT secuencia, hash FROM acceso ORDER BY secuencia DESC LIMIT 1")
+            .fetch_optional(&mut *conn)
+            .await?;
+    let (secuencia, anterior) = match ultimo {
+        Some((s, h)) => (
+            s + 1,
+            de_hex32(&h).expect("un hash almacenado por nosotros siempre es hex de 32 bytes"),
+        ),
+        None => (0, GENESIS),
+    };
+
+    let cont = contenido_de(evento);
+    // La firma: real si hay clave válida, "" si no. El hash lo calcula sellar_con
+    // siempre, así que la cadena existe con o sin clave.
+    let firmar = |pre: &[u8]| Some(sk_hex.and_then(|s| guaca::firma::firmar(pre, s)).unwrap_or_default());
+    let sello = auditoria::sellar_con(secuencia as u64, anterior, &cont, firmar)
+        .expect("la clausura de firma siempre devuelve Some");
+
+    sqlx::query("INSERT INTO acceso (secuencia, hash_anterior, contenido, hash, firma) VALUES (?,?,?,?,?)")
+        .bind(secuencia)
+        .bind(a_hex(&anterior))
+        .bind(serde_json::to_string(&cont).expect("un BTreeMap<String,Value> siempre serializa"))
+        .bind(a_hex(&sello.hash))
+        .bind(&sello.firma)
+        .execute(&mut *conn)
+        .await?;
+    Ok(())
+}
+
+async fn intentar(pool: &crate::Pool, evento: &Evento, sk_hex: Option<&str>) -> Result<(), sqlx::Error> {
+    let mut conn = pool.acquire().await?;
+    // busy_timeout: ante contención, ESPERA en vez de fallar al instante.
+    sqlx::query("PRAGMA busy_timeout = 5000").execute(&mut *conn).await?;
+    // BEGIN IMMEDIATE toma el lock de escritura AL INICIO, antes del SELECT. Sin
+    // esto, leer-el-último (lock de lectura) y luego insertar (subir a escritura)
+    // se interbloquea con otra conexión que hace lo mismo: ninguna puede subir.
+    sqlx::query("BEGIN IMMEDIATE").execute(&mut *conn).await?;
+    match insertar(&mut conn, evento, sk_hex).await {
+        Ok(()) => {
+            sqlx::query("COMMIT").execute(&mut *conn).await?;
+            Ok(())
+        }
+        Err(e) => {
+            let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+            Err(e)
+        }
+    }
+}
+
+/// Registra un acceso, encadenado al último y firmado si hay clave. Reintenta
+/// ante una carrera de escritura (SQLite es de escritor único): dos accesos
+/// concurrentes nunca bifurcan la cadena ni pierden un registro.
+pub async fn registrar(pool: &crate::Pool, evento: &Evento, sk_hex: Option<&str>) -> Result<(), sqlx::Error> {
+    for _ in 0..16 {
+        match intentar(pool, evento, sk_hex).await {
+            Ok(()) => return Ok(()),
+            Err(e) if es_conflicto(&e) => continue,
+            Err(e) => return Err(e),
+        }
+    }
+    // Un último intento: si vuelve a fallar, que el error suba.
+    intentar(pool, evento, sk_hex).await
+}
+
+/// Verifica la cadena entera: eslabones, hashes, firmas y contigüidad.
+///
+/// Con `vk_hex = Some`, EXIGE que cada eslabón esté firmado y valide — un evento
+/// sin firma (downgrade) se reporta como roto. Con `None`, comprueba solo el
+/// encadenamiento por hash (no hay con qué verificar firmas).
+pub async fn verificar(pool: &crate::Pool, vk_hex: Option<&str>) -> Result<Auditoria, sqlx::Error> {
+    let filas: Vec<(i64, String, String, String, String)> = sqlx::query_as(
+        "SELECT secuencia, hash_anterior, contenido, hash, firma FROM acceso ORDER BY secuencia ASC",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut entradas = Vec::with_capacity(filas.len());
+    for (sec, ha, cont, h, firma) in &filas {
+        entradas.push(Entrada {
+            secuencia: *sec as u64,
+            hash_anterior: de_hex32(ha).unwrap_or([1u8; 32]), // valor imposible → rompe eslabón si está corrupto
+            contenido: serde_json::from_str(cont).unwrap_or_default(),
+            hash: de_hex32(h).unwrap_or([1u8; 32]),
+            firma: firma.clone(),
+        });
+    }
+
+    let verif = |pre: &[u8], tok: &str| match vk_hex {
+        // Con clave: firma obligatoria y válida. Un eslabón sin firmar no cuela.
+        Some(vk) => !tok.is_empty() && guaca::firma::verificar(pre, tok, vk) == guaca::firma::Verificacion::Valida,
+        // Sin clave: solo el hash-encadenado (ya comprobado por verificar_con).
+        None => true,
+    };
+    Ok(auditoria::verificar_con(&entradas, verif))
+}
+
+/// `true` si el paciente existe y es visible para el ámbito. Mismo guard que usan
+/// historia y documento: la institución vive en `paciente`, no en la bitácora.
+/// Si `paciente_id` es visible desde `ambito`. Pública porque la usan las dos
+/// puntas: la LECTURA del rastro (para no enseñar el de un titular ajeno) y la
+/// ESCRITURA de un evento por titular (para no sellar uno que no ocurrió).
+pub async fn paciente_es_del_ambito(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    paciente_id: i64,
+) -> Result<bool, sqlx::Error> {
+    let fila: Option<(i64,)> = sqlx::query_as("SELECT institucion_id FROM paciente WHERE id = ?")
+        .bind(paciente_id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(fila.is_some_and(|(i,)| ambito.puede_ver(Some(i)) == Visibilidad::Si))
+}
+
+/// Cómo se nombra un ámbito dentro de un `Alcance`. Una sola escritura, para que
+/// el rastro no acabe con `"institucion:1"`, `"inst 1"` y `"1"` significando lo
+/// mismo y sin poder agruparse.
+pub fn describir_ambito(ambito: Ambito) -> String {
+    match ambito {
+        Ambito::Superadmin => "superadmin".into(),
+        Ambito::Institucion(id) => format!("institucion:{id}"),
+        Ambito::Ninguno => "ninguno".into(),
+    }
+}
+
+/// Lo que de un evento almacenado puede ver quien pregunta por el rastro de **un**
+/// paciente.
+///
+/// La lista `alcance.pacientes` de una exportación **no sale**: quien consulta el
+/// rastro del paciente 10 tiene derecho a saber que su dato se exportó, no a
+/// llevarse los ids de los otros que iban en el mismo archivo — que en una
+/// exportación de superadmin son de otras instituciones. Se sustituye por
+/// `pacientes_n`, que es el mismo dato agregado sin señalar a nadie.
+///
+/// **Lo devuelto ya no es el contenido sellado**, y por eso se distingue a
+/// simple vista: la cadena se verifica contra la columna `contenido`, no contra
+/// esto (ver [`verificar`]).
+///
+/// Un contenido que no parsea no se descarta en silencio —desaparecer del rastro
+/// del titular es justo lo que la bitácora existe para impedir—: sale marcado
+/// `ilegible` con su secuencia, que es lo que hay que ir a mirar.
+fn proyectar(secuencia: i64, contenido: &str) -> Value {
+    let Ok(mut v) = serde_json::from_str::<Value>(contenido) else {
+        return serde_json::json!({ "secuencia": secuencia, "ilegible": true });
+    };
+    if let Some(alcance) = v.get_mut("alcance").and_then(Value::as_object_mut) {
+        let cuantos = match alcance.remove("pacientes") {
+            Some(Value::Array(ids)) => Value::from(ids.len()),
+            // Estaba, pero no era una lista: no se puede contar y no se inventa.
+            Some(_) => Value::Null,
+            None => return v,
+        };
+        alcance.insert("pacientes_n".into(), cuantos);
+    }
+    v
+}
+
+/// El rastro de un paciente: sus accesos en orden. Para responder «¿quién vio mi
+/// historia?» (derecho del titular, Ley 1581). Devuelve cada evento **proyectado**
+/// por [`proyectar`] — sin los ids de los demás pacientes de una exportación.
+///
+/// Filtra por `ambito` en la propia capa de datos (defensa en profundidad, como
+/// el resto de consultas de paciente): un ámbito ajeno recibe vacío —
+/// indistinguible de «sin accesos»—, aunque el llamante olvide comprobarlo.
+///
+/// El rastro no puede quedarse corto por una fila ilegible: el índice de
+/// expresión de la migración 0015 impide almacenar un `contenido` que no sea
+/// JSON, y si aun así llegara uno, `json_extract` levanta «malformed JSON» y
+/// falla la consulta ENTERA en vez de saltarse la fila. Un rastro con un hueco
+/// se lee como completo, y el hueco lo elegiría quien manipuló la fila.
+pub async fn por_paciente(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    paciente_id: i64,
+) -> Result<Vec<Value>, sqlx::Error> {
+    if !paciente_es_del_ambito(pool, ambito, paciente_id).await? {
+        return Ok(Vec::new());
+    }
+    // El rastro incluye DOS maneras de haber tocado al paciente: el acceso a un
+    // recurso suyo (`paciente_id`) y la exportación que lo cubrió (su id dentro de
+    // `alcance.pacientes`). Un listado no lo incluye — no guarda ids. El coalesce
+    // a '[]' evita que `json_each` falle en los eventos sin alcance.
+    let filas: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT secuencia, contenido FROM acceso \
+         WHERE json_extract(contenido, '$.paciente_id') = ? \
+            OR EXISTS ( \
+                 SELECT 1 FROM json_each(coalesce(json_extract(contenido, '$.alcance.pacientes'), '[]')) \
+                 WHERE value = ? \
+               ) \
+         ORDER BY secuencia ASC",
+    )
+    .bind(paciente_id)
+    .bind(paciente_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(filas.into_iter().map(|(s, c)| proyectar(s, &c)).collect())
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    /// Cada test, su propia BD en memoria con caché COMPARTIDA — así las 8
+    /// conexiones del pool ven la misma base (a diferencia de `sqlite::memory:`,
+    /// que da una por conexión y rompería la prueba de concurrencia).
+    async fn base() -> crate::Pool {
+        static N: AtomicU64 = AtomicU64::new(0);
+        let id = N.fetch_add(1, Ordering::Relaxed);
+        let url = format!(
+            "sqlite:file:acceso_{}_{}?mode=memory&cache=shared",
+            std::process::id(),
+            id
+        );
+        crate::abrir(&url).await.unwrap()
+    }
+
+    fn evento(usuario: i64, paciente: i64, accion: &str) -> Evento {
+        Evento {
+            usuario_id: usuario,
+            rol: "medico".into(),
+            institucion_id: Some(1),
+            accion: accion.into(),
+            recurso: "historia".into(),
+            objeto: Objeto::Recurso {
+                paciente_id: paciente,
+                recurso_id: paciente,
+            },
+            ts: "2026-07-29T17:00:00Z".into(),
+        }
+    }
+
+    fn alcance_de(n: i64, pacientes: Vec<i64>) -> Alcance {
+        Alcance {
+            ambito: "institucion:1".into(),
+            filtro: Some("apellido=Ruiz".into()),
+            n,
+            pacientes,
+        }
+    }
+
+    /// Un acceso a una COLECCIÓN que atraviesa titulares. `pacientes` vacío =
+    /// listado; con ids = exportación.
+    fn coleccion(usuario: i64, accion: &str, recurso: &str, n: i64, pacientes: Vec<i64>) -> Evento {
+        Evento {
+            usuario_id: usuario,
+            rol: "medico".into(),
+            institucion_id: Some(1),
+            accion: accion.into(),
+            recurso: recurso.into(),
+            objeto: Objeto::Coleccion {
+                alcance: alcance_de(n, pacientes),
+            },
+            ts: "2026-07-29T17:00:00Z".into(),
+        }
+    }
+
+    /// Un listado acotado a UN titular: la tercera forma (#186.b).
+    fn de_un_titular(usuario: i64, paciente_id: i64, recurso: &str, n: i64) -> Evento {
+        Evento {
+            usuario_id: usuario,
+            rol: "medico".into(),
+            institucion_id: Some(1),
+            accion: "listar".into(),
+            recurso: recurso.into(),
+            objeto: Objeto::DeUnTitular {
+                paciente_id,
+                alcance: alcance_de(n, vec![]),
+            },
+            ts: "2026-07-29T17:00:00Z".into(),
+        }
+    }
+
+    async fn sembrar_paciente(pool: &crate::Pool, id: i64, institucion: i64) {
+        // La institución debe existir (FK); OR IGNORE para poder sembrar varios
+        // pacientes de la misma sin chocar.
+        sqlx::query("INSERT OR IGNORE INTO institucion (id,nombre,nit) VALUES (?,'Inst',?)")
+            .bind(institucion)
+            .bind(format!("900{institucion}"))
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO paciente (id,tipo_documento,numero_documento,nombre1,apellido1,\
+             fecha_nacimiento,sexo,institucion_id) VALUES (?,'CC',?,'Ana','Ruiz','1990-01-01','F',?)",
+        )
+        .bind(id)
+        .bind(format!("doc{id}"))
+        .bind(institucion)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn por_paciente_respeta_el_ambito() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        for i in 0..2 {
+            registrar(&pool, &evento(2, 10, &format!("ver_{i}")), None).await.unwrap();
+        }
+        // El ámbito dueño ve el rastro; el superadmin también.
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 2);
+        assert_eq!(por_paciente(&pool, Ambito::Superadmin, 10).await.unwrap().len(), 2);
+        // Un ámbito AJENO no ve nada, aunque conozca el id (indistinguible de
+        // «sin accesos»). Es la defensa en profundidad de #88.
+        assert!(por_paciente(&pool, Ambito::institucion(2), 10).await.unwrap().is_empty());
+        // Sin ámbito, nada.
+        assert!(por_paciente(&pool, Ambito::Ninguno, 10).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn una_cadena_de_accesos_verifica() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        for i in 0..3 {
+            registrar(&pool, &evento(2, 10, &format!("ver_{i}")), Some(&sk)).await.unwrap();
+        }
+        assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
+    }
+
+    #[tokio::test]
+    async fn alterar_un_evento_en_la_base_rompe_la_cadena() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        for _ in 0..3 {
+            registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        }
+        // Alguien edita el contenido del eslabón 1 por debajo de la app.
+        sqlx::query("UPDATE acceso SET contenido = json_set(contenido, '$.usuario_id', 999) WHERE secuencia = 1")
+            .execute(&pool).await.unwrap();
+        assert!(matches!(
+            verificar(&pool, Some(&vk)).await.unwrap(),
+            Auditoria::Rota { secuencia: 1, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn borrar_un_eslabon_intermedio_se_detecta() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        for _ in 0..3 {
+            registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        }
+        sqlx::query("DELETE FROM acceso WHERE secuencia = 1").execute(&pool).await.unwrap();
+        assert!(matches!(
+            verificar(&pool, Some(&vk)).await.unwrap(),
+            Auditoria::Rota { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn sin_clave_se_encadena_igual() {
+        let pool = base().await;
+        for _ in 0..3 {
+            registrar(&pool, &evento(2, 10, "ver"), None).await.unwrap();
+        }
+        // Sin clave: verifica por hash. Con clave, esos eventos sin firma NO cuelan.
+        assert_eq!(verificar(&pool, None).await.unwrap(), Auditoria::Intacta);
+        let (vk, _) = guaca::firma::generar_claves();
+        assert!(matches!(
+            verificar(&pool, Some(&vk)).await.unwrap(),
+            Auditoria::Rota { secuencia: 0, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn el_rastro_por_paciente_filtra() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 20, 1).await;
+        let (_, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        registrar(&pool, &evento(3, 20, "ver"), Some(&sk)).await.unwrap();
+        registrar(&pool, &evento(2, 10, "editar"), Some(&sk)).await.unwrap();
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 2);
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().len(), 1);
+    }
+
+    /// Un LISTADO no ensucia el rastro individual: se registra como colección
+    /// (sin ids) y no aparece en `por_paciente` de nadie, aunque los haya visto en
+    /// la lista. Solo el acceso directo al expediente cuenta como rastro del titular.
+    #[tokio::test]
+    async fn un_listado_no_ensucia_el_rastro_individual() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        let (_, sk) = guaca::firma::generar_claves();
+        // El usuario lista pacientes (5 resultados) y luego abre el expediente de uno.
+        registrar(&pool, &coleccion(2, "listar", "pacientes", 5, vec![]), Some(&sk)).await.unwrap();
+        registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        // El rastro del paciente 10 trae SOLO el acceso directo, no el listado.
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 1, "el listado no debe aparecer en el rastro individual");
+        assert_eq!(rastro[0]["accion"], Value::from("ver"));
+    }
+
+    /// El hueco de LECTURA que la ficha #186 dejó anotado: `por_paciente` devolvía
+    /// el evento entero, y con él **la lista completa de pacientes exportados**, a
+    /// cualquiera que fuese dueño de UNO. En una exportación de superadmin eso
+    /// entrega ids de otras instituciones. Prueba que discrimina: si vuelve a salir
+    /// la lista, `sin_otros_ids` falla.
+    #[tokio::test]
+    async fn el_rastro_no_entrega_los_ids_de_los_demas_exportados() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 77, 2).await; // de OTRA institución
+        // Superadmin: su exportación atraviesa instituciones, que es cuando el
+        // hueco entrega ids de un cliente a otro.
+        let mut export = coleccion(1, "exportar", "rips", 2, vec![10, 77]);
+        export.institucion_id = None;
+        export.rol = "superadmin".into();
+        if let Objeto::Coleccion { alcance } = &mut export.objeto {
+            alcance.ambito = describir_ambito(Ambito::Superadmin);
+        }
+        registrar(&pool, &export, None).await.unwrap();
+
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 1, "el titular debe ver que su dato salió");
+        let alcance = &rastro[0]["alcance"];
+        assert!(
+            alcance.get("pacientes").is_none(),
+            "la lista de exportados no puede salir en el rastro de uno: {alcance}"
+        );
+        assert_eq!(alcance["pacientes_n"], Value::from(2), "cuántos, sin decir quiénes");
+        // Y el agregado que sí es suyo sigue ahí: ámbito, filtro y n.
+        assert_eq!(alcance["n"], Value::from(2));
+        assert_eq!(alcance["ambito"], Value::from("superadmin"));
+        // El texto crudo tampoco puede llevar el 77 por ninguna otra vía.
+        let crudo = serde_json::to_string(&rastro[0]).unwrap();
+        assert!(!crudo.contains("77"), "el id ajeno se coló igualmente: {crudo}");
+    }
+
+    /// Y la proyección es SOLO de lectura: la fila almacenada conserva los ids,
+    /// que son los que hacen que el rastro del otro titular exista y los que
+    /// entraron en el hash. Si se proyectara al escribir, la cadena sellaría un
+    /// dato distinto del que se afirmó.
+    #[tokio::test]
+    async fn lo_almacenado_conserva_los_ids_y_sigue_verificando() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 77, 2).await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &coleccion(1, "exportar", "rips", 2, vec![10, 77]), Some(&sk))
+            .await
+            .unwrap();
+        let (cont,): (String,) = sqlx::query_as("SELECT contenido FROM acceso WHERE secuencia = 0")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(cont.contains("77"), "el almacén guarda a quién cubrió la exportación");
+        assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
+        // Y el otro titular ve su propia exportación por su lado.
+        assert_eq!(por_paciente(&pool, Ambito::institucion(2), 77).await.unwrap().len(), 1);
+    }
+
+    /// **La base no admite un `contenido` ilegible**, y eso no es un detalle: un
+    /// rastro al que le falta una fila se lee igual que uno completo, así que la
+    /// manera de acortarlo sería dejar una que no parsee.
+    ///
+    /// Medido, no supuesto — y el guardián no es una comprobación nuestra: el
+    /// índice de expresión `json_extract(contenido,'$.paciente_id')` de la
+    /// migración 0015 hay que EVALUARLO para escribir la fila, así que SQLite
+    /// rechaza el UPDATE con «malformed JSON». Sale gratis con el índice que ya
+    /// existía por rendimiento.
+    #[tokio::test]
+    async fn la_base_no_admite_un_contenido_ilegible() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        registrar(&pool, &evento(2, 10, "ver"), None).await.unwrap();
+        registrar(&pool, &evento(2, 10, "editar"), None).await.unwrap();
+
+        let r = sqlx::query("UPDATE acceso SET contenido = '{no es json' WHERE secuencia = 1")
+            .execute(&pool)
+            .await;
+        assert!(r.is_err(), "un contenido que no es JSON no debe poder almacenarse");
+
+        // Discrimina: el rechazo es por ilegible, no porque el UPDATE no pase —
+        // uno con JSON válido entra, y el rastro sigue completo con los dos.
+        sqlx::query("UPDATE acceso SET contenido = json_set(contenido,'$.accion','imprimir') WHERE secuencia = 1")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 2);
+        assert_eq!(rastro[1]["accion"], Value::from("imprimir"));
+    }
+
+    /// Y la red de abajo, por si algún día se escribiera por otra vía: un
+    /// contenido que serde no acepta sale marcado con su secuencia en vez de
+    /// desaparecer del rastro.
+    #[test]
+    fn una_fila_que_no_parsea_se_proyecta_marcada() {
+        let p = proyectar(7, "{no es json");
+        assert_eq!(p["ilegible"], Value::from(true));
+        assert_eq!(p["secuencia"], Value::from(7));
+    }
+
+    #[test]
+    fn el_ambito_se_describe_de_una_sola_manera() {
+        assert_eq!(describir_ambito(Ambito::Superadmin), "superadmin");
+        assert_eq!(describir_ambito(Ambito::institucion(7)), "institucion:7");
+        assert_eq!(describir_ambito(Ambito::Ninguno), "ninguno");
+    }
+
+    /// Una EXPORTACIÓN sí aparece en el rastro de CADA paciente que cubrió — el
+    /// dato salió y el titular tiene derecho a saberlo (Ley 1581) — y NO en el de
+    /// quien no cubrió. Prueba que discrimina (directiva #8).
+    #[tokio::test]
+    async fn una_exportacion_aparece_en_el_rastro_de_cada_afectado() {
+        let pool = base().await;
+        for p in [10, 20, 30] {
+            sembrar_paciente(&pool, p, 1).await;
+        }
+        let (_, sk) = guaca::firma::generar_claves();
+        // Se exportan 10 y 20 (no 30).
+        registrar(&pool, &coleccion(2, "exportar", "rips", 2, vec![10, 20]), Some(&sk)).await.unwrap();
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap().len(), 1);
+        assert_eq!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().len(), 1);
+        // 30 no se exportó: su rastro está vacío.
+        assert!(por_paciente(&pool, Ambito::institucion(1), 30).await.unwrap().is_empty());
+        // Y el export solo lo ve el ámbito dueño.
+        assert!(por_paciente(&pool, Ambito::institucion(2), 10).await.unwrap().is_empty());
+    }
+
+    /// El contenido de un recurso único no lleva la clave `alcance` y su
+    /// `paciente_id` es un número — la forma canónica de siempre, para que las
+    /// cadenas ya selladas antes de existir las colecciones sigan verificando.
+    #[tokio::test]
+    async fn el_recurso_unico_conserva_su_forma_canonica() {
+        let pool = base().await;
+        registrar(&pool, &evento(2, 10, "ver"), None).await.unwrap();
+        let (cont,): (String,) =
+            sqlx::query_as("SELECT contenido FROM acceso WHERE secuencia = 0")
+                .fetch_one(&pool).await.unwrap();
+        let v: Value = serde_json::from_str(&cont).unwrap();
+        assert!(v.get("alcance").is_none(), "un recurso único no debe insertar 'alcance'");
+        assert_eq!(v.get("paciente_id"), Some(&Value::from(10)));
+        assert_eq!(v.get("recurso_id"), Some(&Value::from(10)));
+    }
+
+    /// Una cadena que MEZCLA las tres formas del objeto verifica entera: conviven
+    /// bajo el mismo sellado.
+    #[tokio::test]
+    async fn una_cadena_mixta_verifica() {
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &evento(2, 10, "ver"), Some(&sk)).await.unwrap();
+        registrar(&pool, &coleccion(2, "listar", "pacientes", 5, vec![]), Some(&sk)).await.unwrap();
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), Some(&sk)).await.unwrap();
+        registrar(&pool, &coleccion(2, "exportar", "rips", 2, vec![10, 20]), Some(&sk)).await.unwrap();
+        assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
+    }
+
+    /// **El contrato de compatibilidad, congelado byte a byte.** El contenido de
+    /// un recurso único es lo que se selló en las cadenas de producción antes de
+    /// que existieran las colecciones y antes de que el objeto fuese un enum:
+    /// cambiar una clave, su orden o un `null` invalidaría todas las firmas ya
+    /// escritas, y la bitácora entera pasaría a reportarse ROTA.
+    ///
+    /// Por eso se fija la cadena literal y no «los campos esperados»: comparar
+    /// contra algo que se construye con el mismo código no comprueba nada.
+    #[test]
+    fn el_contenido_canonico_del_recurso_unico_esta_congelado() {
+        let cont = contenido_de(&evento(2, 10, "ver"));
+        assert_eq!(
+            serde_json::to_string(&cont).unwrap(),
+            r#"{"accion":"ver","institucion_id":1,"paciente_id":10,"recurso":"historia","recurso_id":10,"rol":"medico","ts":"2026-07-29T17:00:00Z","usuario_id":2,"v":1}"#,
+            "un recurso único NO lleva la clave `alcance` y sus claves van en este orden"
+        );
+    }
+
+    /// Y el de una colección, igual de congelado: los eventos de `capacidad_rol`
+    /// se sellan con esta forma desde julio.
+    #[test]
+    fn el_contenido_canonico_de_la_coleccion_esta_congelado() {
+        let cont = contenido_de(&coleccion(2, "listar", "pacientes", 5, vec![]));
+        assert_eq!(
+            serde_json::to_string(&cont).unwrap(),
+            r#"{"accion":"listar","alcance":{"ambito":"institucion:1","filtro":"apellido=Ruiz","n":5,"pacientes":[]},"institucion_id":1,"paciente_id":null,"recurso":"pacientes","recurso_id":null,"rol":"medico","ts":"2026-07-29T17:00:00Z","usuario_id":2,"v":1}"#
+        );
+    }
+
+    // === LA TERCERA FORMA (#186.b) ========================================
+
+    /// Lo que la tercera forma existe para arreglar: un listado acotado a un
+    /// paciente entra en SU rastro. Como `Coleccion` no entraba en el de nadie
+    /// —un listado no guarda ids—, y ese era el agujero: quien abría el
+    /// expediente entero de alguien por la vía de los listados no dejaba huella.
+    #[tokio::test]
+    async fn un_listado_de_un_titular_entra_en_su_rastro() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        sembrar_paciente(&pool, 20, 1).await;
+        let (_, sk) = guaca::firma::generar_claves();
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), Some(&sk)).await.unwrap();
+
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 1, "el titular tiene que ver quién listó su expediente");
+        assert_eq!(rastro[0]["accion"], Value::from("listar"));
+        assert_eq!(rastro[0]["recurso"], Value::from("documentos"));
+        assert_eq!(rastro[0]["alcance"]["n"], Value::from(4), "cuántos registros vio");
+        // No es un recurso único: no hay UN id, y no se inventa uno.
+        assert_eq!(rastro[0]["recurso_id"], Value::Null);
+        // Y no ensucia el de otro paciente de la misma institución.
+        assert!(por_paciente(&pool, Ambito::institucion(1), 20).await.unwrap().is_empty());
+    }
+
+    /// Y **no dice que el dato salió**. Esa es la razón de que sea una forma
+    /// propia y no una `Coleccion` con `pacientes = [10]`: en el rastro del
+    /// titular, `pacientes_n: 0` distingue a quien consultó de quien exportó.
+    /// Prueba que discrimina: si se cablease con el id dentro, el 0 sería 1.
+    #[tokio::test]
+    async fn un_listado_de_un_titular_no_dice_que_el_dato_salio() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), None).await.unwrap();
+        registrar(&pool, &coleccion(2, "exportar", "rips", 1, vec![10]), None).await.unwrap();
+
+        let rastro = por_paciente(&pool, Ambito::institucion(1), 10).await.unwrap();
+        assert_eq!(rastro.len(), 2);
+        assert_eq!(rastro[0]["alcance"]["pacientes_n"], Value::from(0), "consultó");
+        assert_eq!(rastro[1]["alcance"]["pacientes_n"], Value::from(1), "se lo llevó");
+    }
+
+    /// El ámbito manda también sobre la tercera forma: el rastro de un paciente
+    /// ajeno sigue siendo indistinguible de «sin accesos».
+    #[tokio::test]
+    async fn la_tercera_forma_respeta_el_ambito() {
+        let pool = base().await;
+        sembrar_paciente(&pool, 10, 1).await;
+        registrar(&pool, &de_un_titular(2, 10, "documentos", 4), None).await.unwrap();
+        assert!(por_paciente(&pool, Ambito::institucion(2), 10).await.unwrap().is_empty());
+        assert_eq!(por_paciente(&pool, Ambito::Superadmin, 10).await.unwrap().len(), 1);
+    }
+
+    /// Directiva #8: 100 accesos que compiten entre sí no bifurcan la cadena ni
+    /// pierden registros. Con timeout, para distinguir un interbloqueo de lentitud.
+    ///
+    /// **Ocho escritores a la vez, no cien**, y el número no es tímido: es el
+    /// tamaño del pool (`crate::abrir`). Lanzar las cien tareas de golpe NUNCA
+    /// produjo cien escritores concurrentes —SQLite tiene un solo escritor y el
+    /// pool, ocho conexiones—: las otras 92 hacían cola en `pool.acquire()`, que
+    /// trae un plazo POR DEFECTO de 30 s que nadie eligió. Medido el 2026-07-31,
+    /// esa cola tardaba 25,3 s en depuración, el 83 % del plazo; con la máquina
+    /// cargada lo pasaba y la prueba moría con `PoolTimedOut` — es decir,
+    /// anunciando que se había roto la cadena de auditoría cuando lo que faltó
+    /// fue una conexión. Dos plazos para la misma espera, y el que mandaba era
+    /// el que no estaba escrito.
+    ///
+    /// La carrera que aquí importa —dos escritores leen el mismo último eslabón
+    /// y ambos intentan insertar la secuencia N— se da con dos concurrentes y se
+    /// exprime con ocho. Los cien accesos siguen ocurriendo; lo que se quita es
+    /// la sala de espera de sqlx, que no forma parte de lo que se afirma.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn cien_accesos_con_ocho_escritores_a_la_vez_dejan_la_cadena_intacta() {
+        /// Tantos como conexiones tiene el pool: más solo harían cola.
+        const ESCRITORES: usize = 8;
+        const TOTAL: usize = 100;
+
+        let pool = base().await;
+        let (vk, sk) = guaca::firma::generar_claves();
+
+        let mut tareas = Vec::new();
+        for w in 0..ESCRITORES {
+            let p = pool.clone();
+            let s = sk.clone();
+            // Reparto exacto: los primeros `TOTAL % ESCRITORES` llevan uno más.
+            let cuantos = TOTAL / ESCRITORES + usize::from(w < TOTAL % ESCRITORES);
+            tareas.push(tokio::spawn(async move {
+                for i in 0..cuantos {
+                    registrar(&p, &evento(2, (i % 5) as i64, "ver"), Some(&s)).await?;
+                }
+                Ok::<(), sqlx::Error>(())
+            }));
+        }
+
+        let plazo = std::time::Duration::from_secs(60);
+        for t in tareas {
+            let r = tokio::time::timeout(plazo, t).await
+                .expect("un escritor no respondió a tiempo: ¿interbloqueo?")
+                .expect("la tarea no debía entrar en panic");
+            r.expect("cada acceso concurrente debe registrarse, con reintento si hubo carrera");
+        }
+
+        // 100 filas, secuencias 0..99 contiguas, cadena firmada íntegra.
+        let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM acceso").fetch_one(&pool).await.unwrap();
+        assert_eq!(n.0 as usize, TOTAL, "faltaron registros bajo concurrencia");
+        assert_eq!(verificar(&pool, Some(&vk)).await.unwrap(), Auditoria::Intacta);
+    }
+}

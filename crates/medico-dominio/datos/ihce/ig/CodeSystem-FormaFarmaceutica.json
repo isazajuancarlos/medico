@@ -1,0 +1,297 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "FormaFarmaceutica",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos FormaFarmaceutica</b></p><a name=\"FormaFarmaceutica\"> </a><a name=\"hcFormaFarmaceutica\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/FormaFarmaceutica</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">AR<a name=\"FormaFarmaceutica-AR\"> </a></td><td>AEROSOLES</td></tr><tr><td style=\"white-space:nowrap\">AS<a name=\"FormaFarmaceutica-AS\"> </a></td><td>AEROSOL Y SOLUCIÓN PARA INHALACIÓN</td></tr><tr><td style=\"white-space:nowrap\">CB<a name=\"FormaFarmaceutica-CB\"> </a></td><td>CAPSULA BLANDA</td></tr><tr><td style=\"white-space:nowrap\">CD<a name=\"FormaFarmaceutica-CD\"> </a></td><td>CAPSULA DURA</td></tr><tr><td style=\"white-space:nowrap\">CE<a name=\"FormaFarmaceutica-CE\"> </a></td><td>CAPSULAS DE LIBERACIÓN RETARDADA</td></tr><tr><td style=\"white-space:nowrap\">CM<a name=\"FormaFarmaceutica-CM\"> </a></td><td>CAPSULAS DE LIBERACIÓN PROLONGADA</td></tr><tr><td style=\"white-space:nowrap\">CR<a name=\"FormaFarmaceutica-CR\"> </a></td><td>COMPRIMIDO RECUBIERTO DE LIBERACIÓN PROLONGADA</td></tr><tr><td style=\"white-space:nowrap\">CT<a name=\"FormaFarmaceutica-CT\"> </a></td><td>CREMA TÓPICA</td></tr><tr><td style=\"white-space:nowrap\">DD<a name=\"FormaFarmaceutica-DD\"> </a></td><td>SISTEMAS TRANSDERMICO</td></tr><tr><td style=\"white-space:nowrap\">DI<a name=\"FormaFarmaceutica-DI\"> </a></td><td>DISPOSITIVOS INTRAUTERINOS</td></tr><tr><td style=\"white-space:nowrap\">DO<a name=\"FormaFarmaceutica-DO\"> </a></td><td>SISTEMA OCULAR</td></tr><tr><td style=\"white-space:nowrap\">DV<a name=\"FormaFarmaceutica-DV\"> </a></td><td>ANILLOS VAGINALES</td></tr><tr><td style=\"white-space:nowrap\">EM<a name=\"FormaFarmaceutica-EM\"> </a></td><td>EMULSIONES</td></tr><tr><td style=\"white-space:nowrap\">ES<a name=\"FormaFarmaceutica-ES\"> </a></td><td>POLVO ESTERIL PARA RECONSTRUIR A SOLUCIÓN PARA INFUSIÓN</td></tr><tr><td style=\"white-space:nowrap\">ET<a name=\"FormaFarmaceutica-ET\"> </a></td><td>CREMAS</td></tr><tr><td style=\"white-space:nowrap\">EY<a name=\"FormaFarmaceutica-EY\"> </a></td><td>EMULSIÓN INYECTABLE</td></tr><tr><td style=\"white-space:nowrap\">GA<a name=\"FormaFarmaceutica-GA\"> </a></td><td>GASES</td></tr><tr><td style=\"white-space:nowrap\">GB<a name=\"FormaFarmaceutica-GB\"> </a></td><td>GLOBULOS</td></tr><tr><td style=\"white-space:nowrap\">GE<a name=\"FormaFarmaceutica-GE\"> </a></td><td>GRANULADOS EFERVECENTES</td></tr><tr><td style=\"white-space:nowrap\">GJ<a name=\"FormaFarmaceutica-GJ\"> </a></td><td>GRAJEAS</td></tr><tr><td style=\"white-space:nowrap\">GL<a name=\"FormaFarmaceutica-GL\"> </a></td><td>ESPUMAS</td></tr><tr><td style=\"white-space:nowrap\">GN<a name=\"FormaFarmaceutica-GN\"> </a></td><td>GRANULADOS</td></tr><tr><td style=\"white-space:nowrap\">GS<a name=\"FormaFarmaceutica-GS\"> </a></td><td>GELES</td></tr><tr><td style=\"white-space:nowrap\">HS<a name=\"FormaFarmaceutica-HS\"> </a></td><td>SOLUCIÓN ESTERIL PARA HEMODIALISIS</td></tr><tr><td style=\"white-space:nowrap\">IP<a name=\"FormaFarmaceutica-IP\"> </a></td><td>IMPLANTES</td></tr><tr><td style=\"white-space:nowrap\">JA<a name=\"FormaFarmaceutica-JA\"> </a></td><td>JARABE</td></tr><tr><td style=\"white-space:nowrap\">MO<a name=\"FormaFarmaceutica-MO\"> </a></td><td>OVULOS</td></tr><tr><td style=\"white-space:nowrap\">MS<a name=\"FormaFarmaceutica-MS\"> </a></td><td>SUPOSITORIOS</td></tr><tr><td style=\"white-space:nowrap\">NB<a name=\"FormaFarmaceutica-NB\"> </a></td><td>MEDICAMENTOS CON DISPOSITIVO MECÁNICO PARA ADMIN  PRINC ACTIVO</td></tr><tr><td style=\"white-space:nowrap\">PA<a name=\"FormaFarmaceutica-PA\"> </a></td><td>POLVO PARA SOLUCIÓN INYECTABLE</td></tr><tr><td style=\"white-space:nowrap\">PE<a name=\"FormaFarmaceutica-PE\"> </a></td><td>POLVOS EFERVECENTES</td></tr><tr><td style=\"white-space:nowrap\">PL<a name=\"FormaFarmaceutica-PL\"> </a></td><td>POLVO LIOFILIZADO</td></tr><tr><td style=\"white-space:nowrap\">PO<a name=\"FormaFarmaceutica-PO\"> </a></td><td>POLVOS</td></tr><tr><td style=\"white-space:nowrap\">PSO<a name=\"FormaFarmaceutica-PSO\"> </a></td><td>POLVO PARA SUSPENSIÓN ORAL</td></tr><tr><td style=\"white-space:nowrap\">PT<a name=\"FormaFarmaceutica-PT\"> </a></td><td>SIN DESCRIPCIÓN</td></tr><tr><td style=\"white-space:nowrap\">SC<a name=\"FormaFarmaceutica-SC\"> </a></td><td>SIN CLASIFICAR</td></tr><tr><td style=\"white-space:nowrap\">SCL<a name=\"FormaFarmaceutica-SCL\"> </a></td><td>SIN CLASIFICAR</td></tr><tr><td style=\"white-space:nowrap\">SH<a name=\"FormaFarmaceutica-SH\"> </a></td><td>SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">SI<a name=\"FormaFarmaceutica-SI\"> </a></td><td>SUSPENSIONES  PARA NEBULIZADORES O INHALADORES</td></tr><tr><td style=\"white-space:nowrap\">SN<a name=\"FormaFarmaceutica-SN\"> </a></td><td>SOLUCIONES PARA NEBULIZADORES O INHALADORES</td></tr><tr><td style=\"white-space:nowrap\">SO<a name=\"FormaFarmaceutica-SO\"> </a></td><td>SOLUCIÓN OFTALMICA</td></tr><tr><td style=\"white-space:nowrap\">SP<a name=\"FormaFarmaceutica-SP\"> </a></td><td>SOLUCÓN POR INHALACIÓN</td></tr><tr><td style=\"white-space:nowrap\">SS<a name=\"FormaFarmaceutica-SS\"> </a></td><td>SUSPENSIONES</td></tr><tr><td style=\"white-space:nowrap\">ST<a name=\"FormaFarmaceutica-ST\"> </a></td><td>TINTURAS</td></tr><tr><td style=\"white-space:nowrap\">SV<a name=\"FormaFarmaceutica-SV\"> </a></td><td>SOLUCIÓN VAGINAL</td></tr><tr><td style=\"white-space:nowrap\">SY<a name=\"FormaFarmaceutica-SY\"> </a></td><td>SOLUCIÓN INYECTABLE</td></tr><tr><td style=\"white-space:nowrap\">TA<a name=\"FormaFarmaceutica-TA\"> </a></td><td>TABLETA</td></tr><tr><td style=\"white-space:nowrap\">TB<a name=\"FormaFarmaceutica-TB\"> </a></td><td>TABLETA RECUBIERTA</td></tr><tr><td style=\"white-space:nowrap\">TC<a name=\"FormaFarmaceutica-TC\"> </a></td><td>TABLETA DE LIBERACION CONTROLADA</td></tr><tr><td style=\"white-space:nowrap\">TD<a name=\"FormaFarmaceutica-TD\"> </a></td><td>TABLETA DISPERSABLE</td></tr><tr><td style=\"white-space:nowrap\">TE<a name=\"FormaFarmaceutica-TE\"> </a></td><td>TABLETA EFERVECENTE</td></tr><tr><td style=\"white-space:nowrap\">TI<a name=\"FormaFarmaceutica-TI\"> </a></td><td>TIRAS</td></tr><tr><td style=\"white-space:nowrap\">TM<a name=\"FormaFarmaceutica-TM\"> </a></td><td>TABLETA MASTICABLE</td></tr><tr><td style=\"white-space:nowrap\">TN<a name=\"FormaFarmaceutica-TN\"> </a></td><td>TABLETAS CON O SIN RECUBR  QUE NO MODIFIQUEN LIBERACIÓN FARMACO</td></tr><tr><td style=\"white-space:nowrap\">TO<a name=\"FormaFarmaceutica-TO\"> </a></td><td>TABLETA ORODISPERSABLE</td></tr><tr><td style=\"white-space:nowrap\">TP<a name=\"FormaFarmaceutica-TP\"> </a></td><td>TABLETA DE LIBERACIÓN PROLONGADA</td></tr><tr><td style=\"white-space:nowrap\">TR<a name=\"FormaFarmaceutica-TR\"> </a></td><td>TABLETAS DE LIBERACIÓN RETARDADA</td></tr><tr><td style=\"white-space:nowrap\">TS<a name=\"FormaFarmaceutica-TS\"> </a></td><td>TABLETAS DE LIBERACIÓN SOSTENIDA</td></tr><tr><td style=\"white-space:nowrap\">TV<a name=\"FormaFarmaceutica-TV\"> </a></td><td>TABLETA VAGINAL</td></tr><tr><td style=\"white-space:nowrap\">UN<a name=\"FormaFarmaceutica-UN\"> </a></td><td>UNGÜENTO</td></tr><tr><td style=\"white-space:nowrap\">UO<a name=\"FormaFarmaceutica-UO\"> </a></td><td>UNGÜENTO OFTALMICO</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/FormaFarmaceutica",
+  "version" : "1.0.0",
+  "name" : "FormaFarmaceutica",
+  "title" : "CodeSystem: Forma farmacéutica",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2020-07-08",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Código que indica forma farmacéutica del medicamento.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de la forma farmacéutica de los medicamentos en los recursos de FHIR que lo requieran.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2024+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 61,
+  "concept" : [{
+    "code" : "AR",
+    "display" : "AEROSOLES"
+  },
+  {
+    "code" : "AS",
+    "display" : "AEROSOL Y SOLUCIÓN PARA INHALACIÓN"
+  },
+  {
+    "code" : "CB",
+    "display" : "CAPSULA BLANDA"
+  },
+  {
+    "code" : "CD",
+    "display" : "CAPSULA DURA"
+  },
+  {
+    "code" : "CE",
+    "display" : "CAPSULAS DE LIBERACIÓN RETARDADA"
+  },
+  {
+    "code" : "CM",
+    "display" : "CAPSULAS DE LIBERACIÓN PROLONGADA"
+  },
+  {
+    "code" : "CR",
+    "display" : "COMPRIMIDO RECUBIERTO DE LIBERACIÓN PROLONGADA"
+  },
+  {
+    "code" : "CT",
+    "display" : "CREMA TÓPICA"
+  },
+  {
+    "code" : "DD",
+    "display" : "SISTEMAS TRANSDERMICO"
+  },
+  {
+    "code" : "DI",
+    "display" : "DISPOSITIVOS INTRAUTERINOS"
+  },
+  {
+    "code" : "DO",
+    "display" : "SISTEMA OCULAR"
+  },
+  {
+    "code" : "DV",
+    "display" : "ANILLOS VAGINALES"
+  },
+  {
+    "code" : "EM",
+    "display" : "EMULSIONES"
+  },
+  {
+    "code" : "ES",
+    "display" : "POLVO ESTERIL PARA RECONSTRUIR A SOLUCIÓN PARA INFUSIÓN"
+  },
+  {
+    "code" : "ET",
+    "display" : "CREMAS"
+  },
+  {
+    "code" : "EY",
+    "display" : "EMULSIÓN INYECTABLE"
+  },
+  {
+    "code" : "GA",
+    "display" : "GASES"
+  },
+  {
+    "code" : "GB",
+    "display" : "GLOBULOS"
+  },
+  {
+    "code" : "GE",
+    "display" : "GRANULADOS EFERVECENTES"
+  },
+  {
+    "code" : "GJ",
+    "display" : "GRAJEAS"
+  },
+  {
+    "code" : "GL",
+    "display" : "ESPUMAS"
+  },
+  {
+    "code" : "GN",
+    "display" : "GRANULADOS"
+  },
+  {
+    "code" : "GS",
+    "display" : "GELES"
+  },
+  {
+    "code" : "HS",
+    "display" : "SOLUCIÓN ESTERIL PARA HEMODIALISIS"
+  },
+  {
+    "code" : "IP",
+    "display" : "IMPLANTES"
+  },
+  {
+    "code" : "JA",
+    "display" : "JARABE"
+  },
+  {
+    "code" : "MO",
+    "display" : "OVULOS"
+  },
+  {
+    "code" : "MS",
+    "display" : "SUPOSITORIOS"
+  },
+  {
+    "code" : "NB",
+    "display" : "MEDICAMENTOS CON DISPOSITIVO MECÁNICO PARA ADMIN  PRINC ACTIVO"
+  },
+  {
+    "code" : "PA",
+    "display" : "POLVO PARA SOLUCIÓN INYECTABLE"
+  },
+  {
+    "code" : "PE",
+    "display" : "POLVOS EFERVECENTES"
+  },
+  {
+    "code" : "PL",
+    "display" : "POLVO LIOFILIZADO"
+  },
+  {
+    "code" : "PO",
+    "display" : "POLVOS"
+  },
+  {
+    "code" : "PSO",
+    "display" : "POLVO PARA SUSPENSIÓN ORAL"
+  },
+  {
+    "code" : "PT",
+    "display" : "SIN DESCRIPCIÓN"
+  },
+  {
+    "code" : "SC",
+    "display" : "SIN CLASIFICAR"
+  },
+  {
+    "code" : "SCL",
+    "display" : "SIN CLASIFICAR"
+  },
+  {
+    "code" : "SH",
+    "display" : "SOLUCIONES"
+  },
+  {
+    "code" : "SI",
+    "display" : "SUSPENSIONES  PARA NEBULIZADORES O INHALADORES"
+  },
+  {
+    "code" : "SN",
+    "display" : "SOLUCIONES PARA NEBULIZADORES O INHALADORES"
+  },
+  {
+    "code" : "SO",
+    "display" : "SOLUCIÓN OFTALMICA"
+  },
+  {
+    "code" : "SP",
+    "display" : "SOLUCÓN POR INHALACIÓN"
+  },
+  {
+    "code" : "SS",
+    "display" : "SUSPENSIONES"
+  },
+  {
+    "code" : "ST",
+    "display" : "TINTURAS"
+  },
+  {
+    "code" : "SV",
+    "display" : "SOLUCIÓN VAGINAL"
+  },
+  {
+    "code" : "SY",
+    "display" : "SOLUCIÓN INYECTABLE"
+  },
+  {
+    "code" : "TA",
+    "display" : "TABLETA"
+  },
+  {
+    "code" : "TB",
+    "display" : "TABLETA RECUBIERTA"
+  },
+  {
+    "code" : "TC",
+    "display" : "TABLETA DE LIBERACION CONTROLADA"
+  },
+  {
+    "code" : "TD",
+    "display" : "TABLETA DISPERSABLE"
+  },
+  {
+    "code" : "TE",
+    "display" : "TABLETA EFERVECENTE"
+  },
+  {
+    "code" : "TI",
+    "display" : "TIRAS"
+  },
+  {
+    "code" : "TM",
+    "display" : "TABLETA MASTICABLE"
+  },
+  {
+    "code" : "TN",
+    "display" : "TABLETAS CON O SIN RECUBR  QUE NO MODIFIQUEN LIBERACIÓN FARMACO"
+  },
+  {
+    "code" : "TO",
+    "display" : "TABLETA ORODISPERSABLE"
+  },
+  {
+    "code" : "TP",
+    "display" : "TABLETA DE LIBERACIÓN PROLONGADA"
+  },
+  {
+    "code" : "TR",
+    "display" : "TABLETAS DE LIBERACIÓN RETARDADA"
+  },
+  {
+    "code" : "TS",
+    "display" : "TABLETAS DE LIBERACIÓN SOSTENIDA"
+  },
+  {
+    "code" : "TV",
+    "display" : "TABLETA VAGINAL"
+  },
+  {
+    "code" : "UN",
+    "display" : "UNGÜENTO"
+  },
+  {
+    "code" : "UO",
+    "display" : "UNGÜENTO OFTALMICO"
+  }]
+}

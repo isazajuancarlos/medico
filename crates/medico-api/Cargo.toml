@@ -1,0 +1,125 @@
+[package]
+name = "medico-api"
+description = "El servidor HTTP de medico (axum) y la autenticación."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+medico-dominio = { path = "../medico-dominio" }
+medico-datos = { path = "../medico-datos" }
+medico-ihce = { path = "../medico-ihce" }
+medico-muv = { path = "../medico-muv" }
+guaca = { workspace = true }
+# La CADENA de esquemas de contraseña + upgrade oportunista (compare-and-swap al
+# entrar): absorbe lo que hacía tumbaga (Python), sobre el MISMO Argon2id de guaca
+# —mismo `rev` de guaca que la línea de arriba, un solo árbol—. El login la usa
+# para verificar y migrar; `claves.rs` es una fachada delgada sobre ella. La
+# feature `legado` (bcrypt verify-only) NO se activa: hoy no hay hashes bcrypt en
+# la base del binario Rust (demo sembrada con Argon2, sin instalación de cliente);
+# se enciende —una línea + `deny.toml`— el día que se importe una base que los
+# tenga. AL ENCENDERLA, ojo con `claves::verificar` (la comprobación de la clave
+# ACTUAL antes de cambiarla, en el flujo de cambio de contraseña): hoy va por
+# `guaca` puro y NO lee bcrypt, así que un usuario de legado que quisiera CAMBIAR
+# su clave recibiría «la actual no coincide». Habría que enrutarla también por la
+# `Cadena`. En el LOGIN no pasa: ese ya usa la cadena y migra al entrar.
+# Espejo local (protocolo solo-local); `deny.toml` lo declara en allow-git y
+# bachué está vendorizado en `vendor/` con su fuente en `.cargo/config.toml`.
+bachue-password = { git = "file:///home/juan/espejos/bachue.git", rev = "0b3522fceb2e311a9c60073b2f6162e56bf682d4" }
+axum = { workspace = true, features = ["multipart"] }
+tokio = { workspace = true, features = ["fs", "time"] }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+# La zona del prestador viaja en la config (`config.rs`).
+chrono-tz = { workspace = true }
+# Firma de la cookie de sesión: HMAC-SHA256, como en informes.
+hmac = "0.13"
+sha2 = "0.11"
+base64 = "0.23"
+# Compresión del expediente archivado (#758). `rust_backend` = miniz_oxide, Rust
+# puro, sin C — igual que medico-muv, sin dependencia de sistema nueva.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+# La pantalla, tejida EN EL SERVIDOR (directiva 26, cambiada el 2026-08-06).
+# Angular se retiró entero el 2026-08-08 (#547/#255/#333): el panel de `maud` es
+# el único frontal, y `/` redirige a `/panel`. La MISMA versión que nexus, chasqui
+# e informes. `rustc` compila las plantillas con los tipos del dominio dentro: una
+# plantilla rota es un error de compilación.
+maud = { version = "0.27", features = ["axum"] }
+# Lectura del maestro CUM del INVIMA (subcomando cargar-maestros). El export trae
+# comas dentro de campos entrecomillados; un parser a mano se rompe en silencio.
+csv = "1"
+# Decodificación de PÍXELES DICOM a una imagen que el navegador pinta (el módulo
+# de píxeles: una placa DICOM se mostraba solo como «descargar», el navegador no
+# la pinta). `dicom-pixeldata` con `native` = JPEG baseline + RLE + deflate, TODO
+# Rust puro, sin una línea de C (JPEG2000 vía openjpeg y JPEG-LS vía CharLS quedan
+# FUERA a propósito: el render se degrada a «descargar» para esos códecs, D20). Sin
+# `rayon` (un servidor no necesita su pool por petición). MIT/Apache, vendorizadas.
+dicom-object = "0.10"
+# Para leer `Tag`s del encabezado (filas/columnas/fotogramas) ANTES de decodificar:
+# el tope anti-bomba se comprueba sobre las dimensiones DECLARADAS, no tras asignar.
+dicom-core = "0.10"
+# SIN la feature `image` A PROPÓSITO: esa feature forzaba en la crate `image` los
+# códecs exr/webp/tiff/bmp que NO usamos, y `exr → pulp → paste` metía `paste`
+# (NO MANTENIDO, RUSTSEC-2024-0436) + una licencia fuera de lista en un binario
+# clínico. `pixeldata` igual DECODIFICA y aplica Modality+VOI LUT con `to_vec…`
+# (la parte difícil y mantenida); el PNG final lo escribe `png` (abajo). Así la
+# superficie de cadena de suministro baja ~15 crates y desaparece el no-mantenido.
+dicom-pixeldata = { version = "0.10", default-features = false, features = ["native"] }
+# Escritura del PNG de salida (escala de grises 8 bits): pequeña, Rust puro, sobre
+# `miniz_oxide`/`fdeflate`. Lo que medico sirve al navegador como vista previa.
+png = "0.17"
+
+[dev-dependencies]
+# SOLO para las pruebas del segundo factor: generar el código que el
+# autenticador enseñaría en este instante. El PRODUCTO no la necesita —solo
+# verifica, y eso lo hace `guaca::dosfactores`—, así que entra aquí y no en
+# `[dependencies]`: una dependencia de desarrollo no viaja en el binario que se
+# instala en el consultorio.
+totp-rs = { version = "5.7.2", default-features = false }
+# SOLO para las pruebas de la migración de contraseña (fase 2): construir un hash
+# Argon2 DÉBIL a mano y comprobar que el login lo renueva. El PRODUCTO ya no usa
+# `argon2` directo —hashea y verifica por bachué/guaca (ver `claves.rs`)—, así que
+# entra aquí y no en `[dependencies]`.
+argon2 = "0.5"
+# Para ejercer las rutas como las ejerce un cliente: una petición entra, una
+# respuesta sale. Hasta ahora se probaban las funciones y no los handlers, así
+# que el cableado —extractores, códigos de estado, cabeceras— no lo miraba nadie.
+tower = { version = "0.5", features = ["util"] }
+# SOLO para el E2E de navegador del módulo de píxeles: construir un DICOM sintético
+# que subir a una historia y comprobar que la miniatura se DIBUJA. Ya están en
+# `[dependencies]` y vendorizadas; una prueba de integración no ve las deps normales
+# del crate, así que se declaran también aquí (no viajan dos veces al binario).
+dicom-object = "0.10"
+dicom-core = "0.10"
+# El banco de navegador arranca el binario REAL con su base en una carpeta de
+# usar y tirar (directiva 28: una pantalla hay que DIBUJARLA).
+tempfile = "3"
+# EL ARNÉS DE NAVEGADOR, que hasta el 2026-08-13 vivía COPIADO aquí.
+#
+# `mirilla` se extrajo de este repositorio y de `informes` el 2026-08-10
+# precisamente para acabar con esa duplicación: se midió el código de las dos
+# copias y de ~309 líneas la única diferencia era la ruta de la entrada, que hoy
+# es su único parámetro. informes migró ese día; aquí se quedó la copia, y con
+# ella un defecto que mirilla ya tenía arreglado —el navegador no iba en su
+# propio grupo de procesos, así que cada corrida del banco dejaba un perfil de
+# Chromium huérfano en `/var/tmp`—.
+#
+# Se fija por `rev` contra el ESPEJO LOCAL, no contra GitHub: allí los commits
+# son huérfanos desde que se vaciaron los repositorios, y el día que el
+# recolector los recoja el build deja de compilar sin aviso.
+#
+# Es `dev-dependency`: no toca el binario que se instala en el consultorio.
+mirilla = { git = "file:///home/juan/espejos/mirilla.git", rev = "c7de2e8" }
+# `libc` SE FUE con la copia del arnés: era su único uso en todo el crate
+# —comprobado con `grep libc:: crates/medico-api/{src,tests}`— y `dup2` vive
+# ahora dentro de mirilla. Una dependencia que solo sostenía el código
+# duplicado se va con él; dejarla «por si acaso» es superficie sin dueño.
+
+[lints]
+workspace = true

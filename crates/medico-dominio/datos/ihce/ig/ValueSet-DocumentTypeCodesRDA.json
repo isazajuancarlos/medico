@@ -1,0 +1,167 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "DocumentTypeCodesRDA",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores DocumentTypeCodesRDA</b></p><a name=\"DocumentTypeCodesRDA\"> </a><a name=\"hcDocumentTypeCodesRDA\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><ul><li>Include these codes as defined in <a href=\"http://loinc.org\"><code>http://loinc.org</code></a><table class=\"none\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td><a href=\"https://loinc.org/60591-5/\">60591-5</a></td><td>Patient Summary Document</td></tr><tr><td><a href=\"https://loinc.org/18842-5/\">18842-5</a></td><td>Discharge summary</td></tr><tr><td><a href=\"https://loinc.org/11502-2/\">11502-2</a></td><td>Laboratory report</td></tr><tr><td><a href=\"https://loinc.org/18748-4/\">18748-4</a></td><td>Diagnostic imaging study</td></tr><tr><td><a href=\"https://loinc.org/11526-1/\">11526-1</a></td><td>Pathology study</td></tr><tr><td><a href=\"https://loinc.org/61358-8/\">61358-8</a></td><td>Patient Surgical operation consent</td></tr><tr><td><a href=\"https://loinc.org/34848-2/\">34848-2</a></td><td>Surgery Note</td></tr><tr><td><a href=\"https://loinc.org/34745-0/\">34745-0</a></td><td>Nurse Discharge summary</td></tr><tr><td><a href=\"https://loinc.org/34746-8/\">34746-8</a></td><td>Nurse Note</td></tr><tr><td><a href=\"https://loinc.org/59258-4/\">59258-4</a></td><td>Emergency department Discharge summary</td></tr><tr><td><a href=\"https://loinc.org/34105-7/\">34105-7</a></td><td>Hospital Discharge summary</td></tr><tr><td><a href=\"https://loinc.org/59284-0/\">59284-0</a></td><td>Patient Consent</td></tr><tr><td><a href=\"https://loinc.org/64300-7/\">64300-7</a></td><td>Organ donation consent</td></tr><tr><td><a href=\"https://loinc.org/64293-4/\">64293-4</a></td><td>Procedure consent</td></tr><tr><td><a href=\"https://loinc.org/64292-6/\">64292-6</a></td><td>Release of information consent</td></tr><tr><td><a href=\"https://loinc.org/34099-2/\">34099-2</a></td><td>Cardiology Consult note</td></tr><tr><td><a href=\"https://loinc.org/34896-1/\">34896-1</a></td><td>Cardiology Interventional procedure note</td></tr><tr><td><a href=\"https://loinc.org/52040-3/\">52040-3</a></td><td>Dental X-rays and other images (not DICOM)</td></tr><tr><td><a href=\"https://loinc.org/34756-7/\">34756-7</a></td><td>Dentistry Consult note</td></tr><tr><td><a href=\"https://loinc.org/29761-4/\">29761-4</a></td><td>Dentist Discharge summary</td></tr><tr><td><a href=\"https://loinc.org/68572-7/\">68572-7</a></td><td>Ophthalmology Discharge summary</td></tr><tr><td><a href=\"https://loinc.org/34808-6/\">34808-6</a></td><td>Ophthalmology Note</td></tr><tr><td><a href=\"https://loinc.org/34806-0/\">34806-0</a></td><td>Oncology Note</td></tr><tr><td><a href=\"https://loinc.org/28578-3/\">28578-3</a></td><td>Occupational therapy Note</td></tr><tr><td><a href=\"https://loinc.org/34802-9/\">34802-9</a></td><td>Occupational medicine Note</td></tr><tr><td><a href=\"https://loinc.org/34778-1/\">34778-1</a></td><td>Obstetrics and Gynecology Note</td></tr><tr><td><a href=\"https://loinc.org/34801-1/\">34801-1</a></td><td>Nutrition and dietetics Note</td></tr><tr><td><a href=\"https://loinc.org/102089-0/\">102089-0</a></td><td>FHIR resource patient medical record</td></tr></table></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/DocumentTypeCodesRDA",
+  "version" : "1.0.0",
+  "name" : "DocumentTypeCodesRDA",
+  "title" : "ValueSet: Document Type RDA",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación para la clasificación de los tipos de documentos electrónicos - RDA.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador colombiano de ámbito de realización del procedimiento (Ambulatorio, Hospitalización o Urgencias).",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "http://loinc.org",
+      "concept" : [{
+        "code" : "60591-5",
+        "display" : "Patient Summary Document"
+      },
+      {
+        "code" : "18842-5",
+        "display" : "Discharge summary"
+      },
+      {
+        "code" : "11502-2",
+        "display" : "Laboratory report"
+      },
+      {
+        "code" : "18748-4",
+        "display" : "Diagnostic imaging study"
+      },
+      {
+        "code" : "11526-1",
+        "display" : "Pathology study"
+      },
+      {
+        "code" : "61358-8",
+        "display" : "Patient Surgical operation consent"
+      },
+      {
+        "code" : "34848-2",
+        "display" : "Surgery Note"
+      },
+      {
+        "code" : "34745-0",
+        "display" : "Nurse Discharge summary"
+      },
+      {
+        "code" : "34746-8",
+        "display" : "Nurse Note"
+      },
+      {
+        "code" : "59258-4",
+        "display" : "Emergency department Discharge summary"
+      },
+      {
+        "code" : "34105-7",
+        "display" : "Hospital Discharge summary"
+      },
+      {
+        "code" : "59284-0",
+        "display" : "Patient Consent"
+      },
+      {
+        "code" : "64300-7",
+        "display" : "Organ donation consent"
+      },
+      {
+        "code" : "64293-4",
+        "display" : "Procedure consent"
+      },
+      {
+        "code" : "64292-6",
+        "display" : "Release of information consent"
+      },
+      {
+        "code" : "34099-2",
+        "display" : "Cardiology Consult note"
+      },
+      {
+        "code" : "34896-1",
+        "display" : "Cardiology Interventional procedure note"
+      },
+      {
+        "code" : "52040-3",
+        "display" : "Dental X-rays and other images (not DICOM)"
+      },
+      {
+        "code" : "34756-7",
+        "display" : "Dentistry Consult note"
+      },
+      {
+        "code" : "29761-4",
+        "display" : "Dentist Discharge summary"
+      },
+      {
+        "code" : "68572-7",
+        "display" : "Ophthalmology Discharge summary"
+      },
+      {
+        "code" : "34808-6",
+        "display" : "Ophthalmology Note"
+      },
+      {
+        "code" : "34806-0",
+        "display" : "Oncology Note"
+      },
+      {
+        "code" : "28578-3",
+        "display" : "Occupational therapy Note"
+      },
+      {
+        "code" : "34802-9",
+        "display" : "Occupational medicine Note"
+      },
+      {
+        "code" : "34778-1",
+        "display" : "Obstetrics and Gynecology Note"
+      },
+      {
+        "code" : "34801-1",
+        "display" : "Nutrition and dietetics Note"
+      },
+      {
+        "code" : "102089-0",
+        "display" : "FHIR resource patient medical record"
+      }]
+    }]
+  }
+}

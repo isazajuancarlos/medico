@@ -1,0 +1,20 @@
+# Operaciones IHCE — extraídas del ARTEFACTO, no del manual
+#
+# Fuente: «InteropAPI Minsalud Sandbox - Prestadores v 1.5», la colección
+# Postman que MinSalud publica sin registro. Se guarda este extracto —y no la
+# colección entera, 4 MB— porque es lo único que hace falta y porque una
+# afirmación sin artefacto caduca sin avisar (directiva 31).
+#
+# LA TRAMPA, y es la razón de que este archivo exista: el NOMBRE de la petición
+# y su URL NO COINCIDEN en consulta externa. La petición se llama
+# «enviar-rda-consulta-externa» y su URL es «$enviar-rda-consulta». El Manual de
+# Operaciones IHCE v01 §5.5 dice «-consulta-externa», y por eso TRANSPORTE.md lo
+# transcribió así. Manda la colección: es lo que responde el servidor.
+#
+# nombre-de-la-peticion | metodo | url
+
+enviar-rda-paciente | POST | {{APIMurl}}/Composition/$enviar-rda-paciente
+enviar-rda-hospitalizacion | POST | {{APIMurl}}/Composition/$enviar-rda-hospitalizacion
+enviar-rda-urgencias | POST | {{APIMurl}}/Composition/$enviar-rda-urgencias
+enviar-rda-consulta-externa | POST | {{APIMurl}}/Composition/$enviar-rda-consulta
+enviar-nota-aclaratoria | POST | {{APIMurl}}/Composition/<reemplazar-por-id-composition>/$enviar-nota-aclaratoria

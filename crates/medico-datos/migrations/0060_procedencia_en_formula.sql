@@ -1,0 +1,36 @@
+-- La procedencia (#84) llega al MEDICAMENTO. Hasta hoy solo la tenía `historia`.
+--
+-- # Por qué la fórmula y no las otras tres
+--
+-- El recolector audita la procedencia de los CINCO documentos del RIPS
+-- (`en_registro` en `ac.rs`, `ap.rs`, `am.rs`, `au.rs`, `ah.rs`), pero la capa
+-- de datos solo se la sabía leer al AC: en `rips.rs` las otras cuatro fuentes
+-- llevaban `procedencias: None` escrito a mano, y con `None` la auditoría se
+-- SALTA el registro entero. Eso es correcto por diseño mientras la captura no
+-- exista —marcar como «sin respaldo» lo que ninguna pantalla puede confirmar
+-- sería la alarma que nadie mira (directiva 23)—, pero deja de serlo en cuanto
+-- una pantalla SÍ captura el campo.
+--
+-- Medido antes de escribir esta migración, y es la razón del alcance:
+--   · AP (`orden`)               — la 0041 dice literalmente «hoy ninguna
+--     pantalla captura estos campos», y sigue siendo cierto.
+--   · AU (`atencion_urgencias`)  — la pantalla es la cola de triage: CERO
+--     formularios (control positivo: `farmacia` tiene 7 y `historias` 15).
+--   · AH (`hospitalizacion`)     — censo de camas, CERO formularios.
+--   · AM (`formula`)             — **sí**: el formulario «Añadir un
+--     medicamento» captura `codigo_cum` y `dias_tratamiento`, los dos campos
+--     que el AM exige de esta tabla.
+--
+-- O sea que la fórmula era el único sitio donde había un valor de verdad
+-- viajando al RIPS sin nadie que respondiera por él. Las otras tres se quedan
+-- en `None` a propósito, y su comentario en `rips.rs` dice por qué: cuando
+-- nazca su pantalla, nace con su procedencia.
+--
+-- # NULL y sin DEFAULT, como las 0038/0041/0042
+--
+-- Un `DEFAULT '{}'` haría que `en_registro` recibiera un JSON no vacío y
+-- ACTIVARA la auditoría de golpe sobre todas las fórmulas viejas, marcando cada
+-- CUM histórico como «sin respaldo». NULL significa «esta fila es anterior a la
+-- captura de procedencia», y el recolector la salta — el despliegue incremental
+-- que su propia documentación promete.
+ALTER TABLE formula ADD COLUMN procedencias TEXT;

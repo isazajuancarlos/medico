@@ -1,0 +1,54 @@
+{
+  "resourceType" : "SearchParameter",
+  "id" : "IdentifierHealthcareSearchParameter",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ParametroDeBusqueda IdentifierHealthcareSearchParameter</b></p><a name=\"IdentifierHealthcareSearchParameter\"> </a><a name=\"hcIdentifierHealthcareSearchParameter\"> </a><h2>IdentifierHealthcareSearchParameter</h2><p>Parameter <code>_identifier-healthcare</code>:<code>token</code></p><div><p>Parámetro de búsqueda para identificar organizaciones proveedoras de servicios de salud mediante su código de habilitación como prestador de servicios de salud (Healthcare Provider Identifier - HPI). Este parámetro permite buscar organizaciones utilizando su identificador único asignado por las autoridades de salud, facilitando la localización y gestión de datos relacionados con proveedores de atención médica en Colombia.</p>\n</div><table class=\"grid\"><tr><td>Resource</td><td><a href=\"http://hl7.org/fhir/R4/organization.html\">Organization</a></td></tr><tr><td>Expression</td><td><code>Organization.identifier.where(id='HealthcareProviderIdentifier-0').value</code></td></tr><tr><td>Multiples</td><td><ul><li>multipleAnd: The parameter may repeat in order to specify multiple values that must all be true</li><li>multipleOr: The parameter may have multiple values (separated by comma) where at least one must be true</li></ul></td></tr><tr><td>Comparators</td><td>Allowed: eq</td></tr><tr><td>Modifiers</td><td>Allowed: exact</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/SearchParameter/IdentifierHealthcareSearchParameter",
+  "version" : "1.0.0",
+  "name" : "IdentifierHealthcareSearchParameter",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2025-09-22",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Parámetro de búsqueda para identificar organizaciones proveedoras de servicios de salud mediante su código de habilitación como prestador de servicios de salud (Healthcare Provider Identifier - HPI). Este parámetro permite buscar organizaciones utilizando su identificador único asignado por las autoridades de salud, facilitando la localización y gestión de datos relacionados con proveedores de atención médica en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "code" : "_identifier-healthcare",
+  "base" : ["Organization"],
+  "type" : "token",
+  "expression" : "Organization.identifier.where(id='HealthcareProviderIdentifier-0').value",
+  "multipleOr" : true,
+  "multipleAnd" : true,
+  "comparator" : ["eq"],
+  "modifier" : ["exact"]
+}

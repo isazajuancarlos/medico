@@ -1,0 +1,56 @@
+{
+  "resourceType" : "SearchParameter",
+  "id" : "MedicationRequestBasedOnSearchParameter",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ParametroDeBusqueda MedicationRequestBasedOnSearchParameter</b></p><a name=\"MedicationRequestBasedOnSearchParameter\"> </a><a name=\"hcMedicationRequestBasedOnSearchParameter\"> </a><h2>MedicationRequestBasedOnSearchParameter</h2><p>Parameter <code>_based-on</code>:<code>reference</code></p><div><p>Parámetro de búsqueda de tipo referencia para localizar recursos MedicationRequest (Direccionamiento y Programación) mediante el elemento basedOn, siguiendo la referencia al recurso destino (CarePlan, MedicationRequest, ServiceRequest o ImmunizationRecommendation). A diferencia de MedicationRequestBasedOnIdentifierSearchParameter —que resuelve por el identificador lógico embebido sin resolver la referencia—, este parámetro permite encadenar prescripción → direccionamiento → programación resolviendo la referencia al recurso realmente almacenado en el servidor y habilita búsquedas encadenadas (chaining) sobre el recurso referenciado.</p>\n</div><table class=\"grid\"><tr><td>Resource</td><td><a href=\"http://hl7.org/fhir/R4/medicationrequest.html\">MedicationRequest</a></td></tr><tr><td>Expression</td><td><code>MedicationRequest.basedOn</code></td></tr><tr><td>Target Resources</td><td><a href=\"http://hl7.org/fhir/R4/careplan.html\">CarePlan</a>, <a href=\"http://hl7.org/fhir/R4/medicationrequest.html\">MedicationRequest</a>, <a href=\"http://hl7.org/fhir/R4/servicerequest.html\">ServiceRequest</a>, <a href=\"http://hl7.org/fhir/R4/immunizationrecommendation.html\">ImmunizationRecommendation</a></td></tr><tr><td>Multiples</td><td><ul><li>multipleAnd: The parameter may repeat in order to specify multiple values that must all be true</li><li>multipleOr: The parameter may have multiple values (separated by comma) where at least one must be true</li></ul></td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/SearchParameter/MedicationRequestBasedOnSearchParameter",
+  "version" : "1.0.0",
+  "name" : "MedicationRequestBasedOnSearchParameter",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-07-23",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Parámetro de búsqueda de tipo referencia para localizar recursos MedicationRequest (Direccionamiento y Programación) mediante el elemento basedOn, siguiendo la referencia al recurso destino (CarePlan, MedicationRequest, ServiceRequest o ImmunizationRecommendation). A diferencia de MedicationRequestBasedOnIdentifierSearchParameter —que resuelve por el identificador lógico embebido sin resolver la referencia—, este parámetro permite encadenar prescripción → direccionamiento → programación resolviendo la referencia al recurso realmente almacenado en el servidor y habilita búsquedas encadenadas (chaining) sobre el recurso referenciado.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "code" : "_based-on",
+  "base" : ["MedicationRequest"],
+  "type" : "reference",
+  "expression" : "MedicationRequest.basedOn",
+  "target" : ["CarePlan",
+  "MedicationRequest",
+  "ServiceRequest",
+  "ImmunizationRecommendation"],
+  "multipleOr" : true,
+  "multipleAnd" : true
+}

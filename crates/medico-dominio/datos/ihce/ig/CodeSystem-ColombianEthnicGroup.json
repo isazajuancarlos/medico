@@ -1,0 +1,81 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianEthnicGroup",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianEthnicGroup</b></p><a name=\"ColombianEthnicGroup\"> </a><a name=\"hcColombianEthnicGroup\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianEthnicGroup</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">1<a name=\"ColombianEthnicGroup-1\"> </a></td><td>Indigena</td></tr><tr><td style=\"white-space:nowrap\">2<a name=\"ColombianEthnicGroup-2\"> </a></td><td>ROM (Gitano)</td></tr><tr><td style=\"white-space:nowrap\">3<a name=\"ColombianEthnicGroup-3\"> </a></td><td>Raizal (Archipielago San Andrés y Providencia)</td></tr><tr><td style=\"white-space:nowrap\">4<a name=\"ColombianEthnicGroup-4\"> </a></td><td>Palenquero de San Basilio</td></tr><tr><td style=\"white-space:nowrap\">5<a name=\"ColombianEthnicGroup-5\"> </a></td><td>Negro(a) o mulato(a) o afrocolombiano(a) o afrodescendiente</td></tr><tr><td style=\"white-space:nowrap\">6<a name=\"ColombianEthnicGroup-6\"> </a></td><td>Otras etnias</td></tr><tr><td style=\"white-space:nowrap\">99<a name=\"ColombianEthnicGroup-99\"> </a></td><td>Ninguna de las anteriores</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianEthnicGroup",
+  "version" : "1.0.0",
+  "name" : "ColombianEthnicGroup",
+  "title" : "CodeSystem: Colombia Ethnic Group",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2016-11-04",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Codificación de clasificación general de grupos étnicos en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador general de grupos  étnicos en Colombia, utilizado en *Extensiones FHIR* asociadas con el recurso *Patient*.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 7,
+  "concept" : [{
+    "code" : "1",
+    "display" : "Indigena"
+  },
+  {
+    "code" : "2",
+    "display" : "ROM (Gitano)"
+  },
+  {
+    "code" : "3",
+    "display" : "Raizal (Archipielago San Andrés y Providencia)"
+  },
+  {
+    "code" : "4",
+    "display" : "Palenquero de San Basilio"
+  },
+  {
+    "code" : "5",
+    "display" : "Negro(a) o mulato(a) o afrocolombiano(a) o afrodescendiente"
+  },
+  {
+    "code" : "6",
+    "display" : "Otras etnias"
+  },
+  {
+    "code" : "99",
+    "display" : "Ninguna de las anteriores"
+  }]
+}

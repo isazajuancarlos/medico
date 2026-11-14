@@ -1,0 +1,114 @@
+[package]
+name = "dicom-transfer-syntax-registry"
+version = "0.10.1"
+authors = ["Eduardo Pinho <enet4mikeenet@gmail.com>"]
+description = "A registry of DICOM transfer syntaxes"
+edition = "2024"
+rust-version = "1.85.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Enet4/dicom-rs"
+keywords = ["dicom"]
+readme = "README.md"
+
+[features]
+default = ["rayon", "simd"]
+
+# inventory for compile time plugin-based transfer syntax registration
+inventory-registry = ['dicom-encoding/inventory-registry']
+
+# deflated transfer syntax reading and writing via flate2
+deflate = ["dep:flate2"]
+# natively implemented image encodings
+native = ["jpeg", "rle"]
+# (DEPRECATED) native implementations that work on Windows
+native_windows = ["jpeg", "rle"]
+# native JPEG support
+jpeg = ["jpeg-decoder", "jpeg-encoder"]
+
+
+# native JPEG XL decoding via jxl-oxide
+jxl-oxide = ["dep:jxl-oxide"]
+# native JPEG XL encoding via zune-jpegxl
+zune-jpegxl = ["dep:zune-jpegxl", "dep:zune-core"]
+
+jpegxl = ["jxl-oxide", "zune-jpegxl"]
+
+# JPEG 2000 support via the OpenJPEG Rust port,
+# works on Linux and a few other platforms
+openjp2 = ["dep:jpeg2k", "jpeg2k/openjp2"]
+# native RLE lossless support
+rle = []
+# enable Rayon for JPEG decoding
+rayon = ["jpeg-decoder?/rayon", "jxl-oxide?/rayon"]
+# enable SIMD operations for JPEG encoding
+simd = ["jpeg-encoder?/simd"]
+
+# JPEG 2000 support via the OpenJPEG native bindings,
+# conflicts with `openjp2`
+openjpeg-sys = ["dep:jpeg2k", "jpeg2k/openjpeg-sys"]
+
+# jpeg LS support via charls bindings
+charls = ["dep:charls"]
+
+# use vcpkg to build CharLS
+charls-vcpkg = ["charls?/vcpkg"]
+
+# build OpenJPEG with multithreading,
+# implies "openjpeg-sys" and "rayon"
+openjpeg-sys-threads = ["rayon", "openjpeg-sys", "jpeg2k?/threads"]
+
+# multithreading for JPEG XL encoding
+zune-jpegxl-threads = ["zune-jpegxl?/threads"]
+
+[dependencies]
+dicom-core = { path = "../core", version = "0.10.1" }
+dicom-encoding = { path = "../encoding", version = "0.10.1" }
+lazy_static = "1.2.0"
+byteordered = "0.6"
+tracing = "0.1.34"
+
+[dependencies.flate2]
+version = "1.0.28"
+optional = true
+
+[dependencies.jpeg2k]
+version = "0.10"
+optional = true
+default-features = false
+
+[dependencies.jpeg-decoder]
+version = "0.3.0"
+optional = true
+default-features = false
+
+[dependencies.jpeg-encoder]
+version = ">=0.6.1,<0.8.0"
+optional = true
+
+[dependencies.charls]
+version = "0.4.2"
+optional = true
+features = ["static"]
+
+[dependencies.jxl-oxide]
+version = "0.12.6"
+optional = true
+default-features = false
+
+[dependencies.zune-jpegxl]
+version = "0.5"
+optional = true
+default-features = false
+features = ["std"]
+
+[dependencies.zune-core]
+version = "0.5"
+optional = true
+default-features = false
+
+[package.metadata.docs.rs]
+features = ["native"]
+
+[dev-dependencies]
+dicom-test-files = "0.4"
+dicom-object = { path = "../object" }

@@ -1,0 +1,21 @@
+# Configuración de cargo-audit (RustSec) para medico. Cierra OWASP A03.
+#
+# El único ignore es preciso y justificado (nunca una categoría abierta):
+#
+# RUSTSEC-2023-0071 — Marvin Attack (canal lateral de tiempo en `rsa` 0.9.x).
+#   NO EXPLOTABLE aquí: medico usa sqlx SOLO con SQLite (default-features=false,
+#   features=[sqlite,…]). El crate `rsa` entra únicamente por `sqlx-macros-core`,
+#   que declara los tres backends para el macro `migrate!`; nunca se conecta a
+#   MySQL ni se ejecuta una operación RSA con clave privada, que es lo que el
+#   ataque necesita. Sin fix disponible aguas arriba. Revisar si algún día se
+#   habilita el backend MySQL (entonces deja de ser ignorable).
+#
+#   Medido 2026-11-01 (D16/D30): hoy `rsa` ni siquiera entra en el grafo de
+#   compilación —`cargo tree -i rsa --all-features --target all` sale VACÍO—, así
+#   que no se compila; queda como entrada HUÉRFANA del `Cargo.lock`, y cargo-audit
+#   la marca por leer el lock, no el binario. Control que discrimina (D33): el
+#   MISMO lock corrido SIN esta config (`cargo audit -f Cargo.lock` desde otro
+#   directorio) se pone ROJO en RUSTSEC-2023-0071, así que el `ignore` es quien lo
+#   cierra, no una ausencia del aviso.
+[advisories]
+ignore = ["RUSTSEC-2023-0071"]

@@ -1,0 +1,109 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ViaIngreso",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ViaIngreso</b></p><a name=\"ViaIngreso\"> </a><a name=\"hcViaIngreso\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ViaIngreso</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"ViaIngreso-01\"> </a></td><td>DEMANDA ESPONTANEA</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"ViaIngreso-02\"> </a></td><td>DERIVADO DE CONSULTA EXTERNA</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"ViaIngreso-03\"> </a></td><td>DERIVADO DE URGENCIAS</td></tr><tr><td style=\"white-space:nowrap\">04<a name=\"ViaIngreso-04\"> </a></td><td>DERIVADO DE HOSPITALIZACION</td></tr><tr><td style=\"white-space:nowrap\">05<a name=\"ViaIngreso-05\"> </a></td><td>DERIVADO DE SALA DE CIRUGIA</td></tr><tr><td style=\"white-space:nowrap\">06<a name=\"ViaIngreso-06\"> </a></td><td>DERIVADO DE SALA DE PARTOS</td></tr><tr><td style=\"white-space:nowrap\">07<a name=\"ViaIngreso-07\"> </a></td><td>RECIEN NACIDO EN LA INSTITUCION</td></tr><tr><td style=\"white-space:nowrap\">08<a name=\"ViaIngreso-08\"> </a></td><td>RECIEN NACIDO EN OTRA INSTITUCION</td></tr><tr><td style=\"white-space:nowrap\">09<a name=\"ViaIngreso-09\"> </a></td><td>DERIVADO O REFERIDO DE HOSPITALIZACION DOMICILIARIA</td></tr><tr><td style=\"white-space:nowrap\">10<a name=\"ViaIngreso-10\"> </a></td><td>DERIVADO DE ATENCION DOMICILIARIA</td></tr><tr><td style=\"white-space:nowrap\">11<a name=\"ViaIngreso-11\"> </a></td><td>DERIVADO DE TELEMEDICINA</td></tr><tr><td style=\"white-space:nowrap\">12<a name=\"ViaIngreso-12\"> </a></td><td>DERIVADO DE JORNADA DE SALUD</td></tr><tr><td style=\"white-space:nowrap\">13<a name=\"ViaIngreso-13\"> </a></td><td>REFERIDO DE OTRA INSTITUCION</td></tr><tr><td style=\"white-space:nowrap\">14<a name=\"ViaIngreso-14\"> </a></td><td>CONTRAREFERIDO DE OTRA INSTITUCION</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ViaIngreso",
+  "version" : "1.0.0",
+  "name" : "ViaIngreso",
+  "title" : "CodeSystem: Colombian Admit Source",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-08-16",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Código de clasificación del via de ingreso para un encuentro de hospitalización en Colombia (urgencias, remitido, consulta externa, etc.).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de ingreso de encuentros de hospitalización en Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2024+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 14,
+  "concept" : [{
+    "code" : "01",
+    "display" : "DEMANDA ESPONTANEA"
+  },
+  {
+    "code" : "02",
+    "display" : "DERIVADO DE CONSULTA EXTERNA"
+  },
+  {
+    "code" : "03",
+    "display" : "DERIVADO DE URGENCIAS"
+  },
+  {
+    "code" : "04",
+    "display" : "DERIVADO DE HOSPITALIZACION"
+  },
+  {
+    "code" : "05",
+    "display" : "DERIVADO DE SALA DE CIRUGIA"
+  },
+  {
+    "code" : "06",
+    "display" : "DERIVADO DE SALA DE PARTOS"
+  },
+  {
+    "code" : "07",
+    "display" : "RECIEN NACIDO EN LA INSTITUCION"
+  },
+  {
+    "code" : "08",
+    "display" : "RECIEN NACIDO EN OTRA INSTITUCION"
+  },
+  {
+    "code" : "09",
+    "display" : "DERIVADO O REFERIDO DE HOSPITALIZACION DOMICILIARIA"
+  },
+  {
+    "code" : "10",
+    "display" : "DERIVADO DE ATENCION DOMICILIARIA"
+  },
+  {
+    "code" : "11",
+    "display" : "DERIVADO DE TELEMEDICINA"
+  },
+  {
+    "code" : "12",
+    "display" : "DERIVADO DE JORNADA DE SALUD"
+  },
+  {
+    "code" : "13",
+    "display" : "REFERIDO DE OTRA INSTITUCION"
+  },
+  {
+    "code" : "14",
+    "display" : "CONTRAREFERIDO DE OTRA INSTITUCION"
+  }]
+}

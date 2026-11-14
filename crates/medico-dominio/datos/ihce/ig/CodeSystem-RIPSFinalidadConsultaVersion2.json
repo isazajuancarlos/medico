@@ -1,0 +1,189 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "RIPSFinalidadConsultaVersion2",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos RIPSFinalidadConsultaVersion2</b></p><a name=\"RIPSFinalidadConsultaVersion2\"> </a><a name=\"hcRIPSFinalidadConsultaVersion2\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/RIPSFinalidadConsultaVersion2</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">11<a name=\"RIPSFinalidadConsultaVersion2-11\"> </a></td><td>VALORACION INTEGRAL PARA LA PROMOCION Y MANTENIMIENTO</td></tr><tr><td style=\"white-space:nowrap\">12<a name=\"RIPSFinalidadConsultaVersion2-12\"> </a></td><td>DETECCION TEMPRANA DE ENFERMEDAD GENERAL</td></tr><tr><td style=\"white-space:nowrap\">13<a name=\"RIPSFinalidadConsultaVersion2-13\"> </a></td><td>DETECCION TEMPRANA DE ENFERMEDAD LABORAL</td></tr><tr><td style=\"white-space:nowrap\">14<a name=\"RIPSFinalidadConsultaVersion2-14\"> </a></td><td>PROTECCION ESPECIFICA</td></tr><tr><td style=\"white-space:nowrap\">15<a name=\"RIPSFinalidadConsultaVersion2-15\"> </a></td><td>DIAGNOSTICO</td></tr><tr><td style=\"white-space:nowrap\">16<a name=\"RIPSFinalidadConsultaVersion2-16\"> </a></td><td>TRATAMIENTO</td></tr><tr><td style=\"white-space:nowrap\">17<a name=\"RIPSFinalidadConsultaVersion2-17\"> </a></td><td>REHABILITACION</td></tr><tr><td style=\"white-space:nowrap\">18<a name=\"RIPSFinalidadConsultaVersion2-18\"> </a></td><td>PALIACION</td></tr><tr><td style=\"white-space:nowrap\">19<a name=\"RIPSFinalidadConsultaVersion2-19\"> </a></td><td>PLANIFICACION FAMILIAR Y ANTICONCEPCION</td></tr><tr><td style=\"white-space:nowrap\">20<a name=\"RIPSFinalidadConsultaVersion2-20\"> </a></td><td>PROMOCION Y APOYO A LA LACTANCIA MATERNA</td></tr><tr><td style=\"white-space:nowrap\">21<a name=\"RIPSFinalidadConsultaVersion2-21\"> </a></td><td>ATENCION BASICA DE ORIENTACION FAMILIAR</td></tr><tr><td style=\"white-space:nowrap\">22<a name=\"RIPSFinalidadConsultaVersion2-22\"> </a></td><td>ATENCION PARA EL CUIDADO PRECONCEPCIONAL</td></tr><tr><td style=\"white-space:nowrap\">23<a name=\"RIPSFinalidadConsultaVersion2-23\"> </a></td><td>ATENCION PARA EL CUIDADO PRENATAL</td></tr><tr><td style=\"white-space:nowrap\">24<a name=\"RIPSFinalidadConsultaVersion2-24\"> </a></td><td>INTERRUPCION VOLUNTARIA DEL EMBARAZO</td></tr><tr><td style=\"white-space:nowrap\">25<a name=\"RIPSFinalidadConsultaVersion2-25\"> </a></td><td>ATENCION DEL PARTO Y PUERPERIO</td></tr><tr><td style=\"white-space:nowrap\">26<a name=\"RIPSFinalidadConsultaVersion2-26\"> </a></td><td>ATENCION PARA EL CUIDADO DEL RECIEN NACIDO</td></tr><tr><td style=\"white-space:nowrap\">27<a name=\"RIPSFinalidadConsultaVersion2-27\"> </a></td><td>ATENCION PARA EL SEGUIMIENTO DEL RECIEN NACIDO</td></tr><tr><td style=\"white-space:nowrap\">28<a name=\"RIPSFinalidadConsultaVersion2-28\"> </a></td><td>PREPARACION PARA LA MATERNIDAD Y LA PATERNIDAD</td></tr><tr><td style=\"white-space:nowrap\">29<a name=\"RIPSFinalidadConsultaVersion2-29\"> </a></td><td>PROMOCION DE ACTIVIDAD FISICA</td></tr><tr><td style=\"white-space:nowrap\">30<a name=\"RIPSFinalidadConsultaVersion2-30\"> </a></td><td>PROMOCION DE LA CESACION DEL TABAQUISMO</td></tr><tr><td style=\"white-space:nowrap\">31<a name=\"RIPSFinalidadConsultaVersion2-31\"> </a></td><td>PREVENCION DEL CONSUMO DE SUSTANCIAS PSICOACTIVAS</td></tr><tr><td style=\"white-space:nowrap\">32<a name=\"RIPSFinalidadConsultaVersion2-32\"> </a></td><td>PROMOCION DE LA ALIMENTACION SALUDABLE</td></tr><tr><td style=\"white-space:nowrap\">33<a name=\"RIPSFinalidadConsultaVersion2-33\"> </a></td><td>PROMOCION PARA EL EJERCICIO DE LOS DERECHOS SEXUALES Y DERECHOS REPRODUCTIVOS</td></tr><tr><td style=\"white-space:nowrap\">34<a name=\"RIPSFinalidadConsultaVersion2-34\"> </a></td><td>PROMOCION PARA EL DESARROLLO DE HABILIDADES PARA LA VIDA</td></tr><tr><td style=\"white-space:nowrap\">35<a name=\"RIPSFinalidadConsultaVersion2-35\"> </a></td><td>PROMOCION PARA LA CONSTRUCCION DE ESTRATEGIAS DE AFRONTAMIENTO FRENTE A SUCESOS VITALES</td></tr><tr><td style=\"white-space:nowrap\">36<a name=\"RIPSFinalidadConsultaVersion2-36\"> </a></td><td>PROMOCION DE LA SANA CONVIVENCIA Y EL TEJIDO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">37<a name=\"RIPSFinalidadConsultaVersion2-37\"> </a></td><td>PROMOCION DE UN AMBIENTE SEGURO Y DE CUIDADO Y PROTECCION DEL AMBIENTE</td></tr><tr><td style=\"white-space:nowrap\">38<a name=\"RIPSFinalidadConsultaVersion2-38\"> </a></td><td>PROMOCION DEL EMPODERAMIENTO PARA EL EJERCICIO DEL DERECHO A LA SALUD</td></tr><tr><td style=\"white-space:nowrap\">39<a name=\"RIPSFinalidadConsultaVersion2-39\"> </a></td><td>PROMOCION PARA LA ADOPCION DE PRACTICAS DE CRIANZA Y CUIDADO PARA LA SALUD</td></tr><tr><td style=\"white-space:nowrap\">40<a name=\"RIPSFinalidadConsultaVersion2-40\"> </a></td><td>PROMOCION DE LA CAPACIDAD DE LA AGENCIA Y CUIDADO DE LA SALUD</td></tr><tr><td style=\"white-space:nowrap\">41<a name=\"RIPSFinalidadConsultaVersion2-41\"> </a></td><td>DESARROLLO DE HABILIDADES COGNITIVAS</td></tr><tr><td style=\"white-space:nowrap\">42<a name=\"RIPSFinalidadConsultaVersion2-42\"> </a></td><td>INTERVENCION COLECTIVA</td></tr><tr><td style=\"white-space:nowrap\">43<a name=\"RIPSFinalidadConsultaVersion2-43\"> </a></td><td>MODIFICACION DE LA ESTETICA CORPORAL FINES ESTETICOS</td></tr><tr><td style=\"white-space:nowrap\">44<a name=\"RIPSFinalidadConsultaVersion2-44\"> </a></td><td>OTRA</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RIPSFinalidadConsultaVersion2",
+  "version" : "1.0.0",
+  "name" : "RIPSFinalidadConsultaVersion2",
+  "title" : "CodeSystem: Colombian Encounter ReasonCode",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-08-27",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Codificación de clasificación de finalidad de la consulta",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de finalidad de la consulta.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 34,
+  "concept" : [{
+    "code" : "11",
+    "display" : "VALORACION INTEGRAL PARA LA PROMOCION Y MANTENIMIENTO"
+  },
+  {
+    "code" : "12",
+    "display" : "DETECCION TEMPRANA DE ENFERMEDAD GENERAL"
+  },
+  {
+    "code" : "13",
+    "display" : "DETECCION TEMPRANA DE ENFERMEDAD LABORAL"
+  },
+  {
+    "code" : "14",
+    "display" : "PROTECCION ESPECIFICA"
+  },
+  {
+    "code" : "15",
+    "display" : "DIAGNOSTICO"
+  },
+  {
+    "code" : "16",
+    "display" : "TRATAMIENTO"
+  },
+  {
+    "code" : "17",
+    "display" : "REHABILITACION"
+  },
+  {
+    "code" : "18",
+    "display" : "PALIACION"
+  },
+  {
+    "code" : "19",
+    "display" : "PLANIFICACION FAMILIAR Y ANTICONCEPCION"
+  },
+  {
+    "code" : "20",
+    "display" : "PROMOCION Y APOYO A LA LACTANCIA MATERNA"
+  },
+  {
+    "code" : "21",
+    "display" : "ATENCION BASICA DE ORIENTACION FAMILIAR"
+  },
+  {
+    "code" : "22",
+    "display" : "ATENCION PARA EL CUIDADO PRECONCEPCIONAL"
+  },
+  {
+    "code" : "23",
+    "display" : "ATENCION PARA EL CUIDADO PRENATAL"
+  },
+  {
+    "code" : "24",
+    "display" : "INTERRUPCION VOLUNTARIA DEL EMBARAZO"
+  },
+  {
+    "code" : "25",
+    "display" : "ATENCION DEL PARTO Y PUERPERIO"
+  },
+  {
+    "code" : "26",
+    "display" : "ATENCION PARA EL CUIDADO DEL RECIEN NACIDO"
+  },
+  {
+    "code" : "27",
+    "display" : "ATENCION PARA EL SEGUIMIENTO DEL RECIEN NACIDO"
+  },
+  {
+    "code" : "28",
+    "display" : "PREPARACION PARA LA MATERNIDAD Y LA PATERNIDAD"
+  },
+  {
+    "code" : "29",
+    "display" : "PROMOCION DE ACTIVIDAD FISICA"
+  },
+  {
+    "code" : "30",
+    "display" : "PROMOCION DE LA CESACION DEL TABAQUISMO"
+  },
+  {
+    "code" : "31",
+    "display" : "PREVENCION DEL CONSUMO DE SUSTANCIAS PSICOACTIVAS"
+  },
+  {
+    "code" : "32",
+    "display" : "PROMOCION DE LA ALIMENTACION SALUDABLE"
+  },
+  {
+    "code" : "33",
+    "display" : "PROMOCION PARA EL EJERCICIO DE LOS DERECHOS SEXUALES Y DERECHOS REPRODUCTIVOS"
+  },
+  {
+    "code" : "34",
+    "display" : "PROMOCION PARA EL DESARROLLO DE HABILIDADES PARA LA VIDA"
+  },
+  {
+    "code" : "35",
+    "display" : "PROMOCION PARA LA CONSTRUCCION DE ESTRATEGIAS DE AFRONTAMIENTO FRENTE A SUCESOS VITALES"
+  },
+  {
+    "code" : "36",
+    "display" : "PROMOCION DE LA SANA CONVIVENCIA Y EL TEJIDO SOCIAL"
+  },
+  {
+    "code" : "37",
+    "display" : "PROMOCION DE UN AMBIENTE SEGURO Y DE CUIDADO Y PROTECCION DEL AMBIENTE"
+  },
+  {
+    "code" : "38",
+    "display" : "PROMOCION DEL EMPODERAMIENTO PARA EL EJERCICIO DEL DERECHO A LA SALUD"
+  },
+  {
+    "code" : "39",
+    "display" : "PROMOCION PARA LA ADOPCION DE PRACTICAS DE CRIANZA Y CUIDADO PARA LA SALUD"
+  },
+  {
+    "code" : "40",
+    "display" : "PROMOCION DE LA CAPACIDAD DE LA AGENCIA Y CUIDADO DE LA SALUD"
+  },
+  {
+    "code" : "41",
+    "display" : "DESARROLLO DE HABILIDADES COGNITIVAS"
+  },
+  {
+    "code" : "42",
+    "display" : "INTERVENCION COLECTIVA"
+  },
+  {
+    "code" : "43",
+    "display" : "MODIFICACION DE LA ESTETICA CORPORAL FINES ESTETICOS"
+  },
+  {
+    "code" : "44",
+    "display" : "OTRA"
+  }]
+}

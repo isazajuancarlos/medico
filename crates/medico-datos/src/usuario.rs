@@ -1,0 +1,582 @@
+//! Usuarios: el acceso, y el origen del `Ambito` con el que todo lo demás filtra.
+//!
+//! A diferencia de `Paciente`, `Usuario` **no** deriva `Serialize`: lleva el
+//! `password_hash`, y un hash que se serializa por descuido termina en un JSON,
+//! un log o una respuesta. Lo que el resto del sistema necesita de un usuario
+//! —quién es y qué alcance tiene— se expone por métodos, no volcando la fila.
+
+use medico_dominio::{Ambito, RolUsuario};
+use serde::Serialize;
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct Usuario {
+    pub id: i64,
+    pub nombre: String,
+    pub email: String,
+    /// Argon2. Solo lo lee la capa de autenticación, para verificar; no viaja.
+    pub password_hash: String,
+    /// El rol tal como está en la base (snake_case). Se interpreta con
+    /// [`Usuario::rol`], no comparando cadenas por ahí.
+    pub rol: String,
+    /// `None` solo para el superadmin. `Usuario::ambito` es quien traduce ese
+    /// `None`, en un solo sitio, para que «sin institución» no se confunda con
+    /// «superadmin».
+    pub institucion_id: Option<i64>,
+    pub activo: bool,
+    /// Versión de sesión (M3). El token la lleva; `auth` rechaza el token con una
+    /// versión menor que esta. Subirla revoca todas las sesiones. Ver
+    /// [`revocar_sesiones`].
+    pub token_version: i64,
+    /// Un restablecimiento de contraseña por el administrador la deja en `true`:
+    /// el panel obliga a cambiarla antes de dar acceso a nada más (#538). La
+    /// limpia `cambiar_password_propia`. Va en la sesión —que ya relee el
+    /// usuario en cada petición— para no pagar una consulta por página.
+    pub requiere_cambio_password: bool,
+}
+
+const COLUMNAS: &str =
+    "id, nombre, email, password_hash, rol, institucion_id, activo, token_version, \
+     requiere_cambio_password";
+
+impl Usuario {
+    /// El rol tipado, o `None` si la cadena de la base no nombra un rol conocido.
+    pub fn rol(&self) -> Option<RolUsuario> {
+        RolUsuario::desde_str(&self.rol)
+    }
+
+    /// El ámbito de visibilidad de este usuario. **Falla cerrado**: un rol que
+    /// no se reconoce no ve nada (`Ninguno`), nunca lo ve todo. Un rol corrupto
+    /// es un problema de datos que se manifiesta como «este usuario no ve nada»
+    /// —visible y acotado—, no como una fuga.
+    pub fn ambito(&self) -> Ambito {
+        match self.rol() {
+            Some(rol) => rol.ambito(self.institucion_id),
+            None => Ambito::Ninguno,
+        }
+    }
+}
+
+/// Busca un usuario por su id. Lo usa cada petición autenticada para releer el
+/// usuario del token: rol e institución se leen de la base en cada petición, no
+/// se llevan en el token, porque un rol dentro del token sobrevive a que un
+/// administrador lo revoque.
+pub async fn por_id(pool: &crate::Pool, id: i64) -> Result<Option<Usuario>, sqlx::Error> {
+    sqlx::query_as::<_, Usuario>(&format!("SELECT {COLUMNAS} FROM usuario WHERE id = ?"))
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+}
+
+/// Busca un usuario por su correo (el camino del login). No lleva `Ambito`: es
+/// anterior a la autenticación —todavía no se sabe quién es—. Devuelve la fila
+/// esté activa o no; rechazar al inactivo y verificar la contraseña es trabajo
+/// de la capa de autenticación, no de esta. El correo es único, así que hay como
+/// mucho una.
+pub async fn por_email(pool: &crate::Pool, email: &str) -> Result<Option<Usuario>, sqlx::Error> {
+    sqlx::query_as::<_, Usuario>(&format!("SELECT {COLUMNAS} FROM usuario WHERE email = ?"))
+        .bind(email)
+        .fetch_optional(pool)
+        .await
+}
+
+/// Revoca TODAS las sesiones vivas de un usuario subiendo su `token_version` en
+/// uno: los tokens ya emitidos llevan la versión anterior y `auth::usuario_de` los
+/// rechaza en la siguiente petición. Es el "cerrar sesión en todos los
+/// dispositivos" y el sitio donde enganchar "invalidar sesiones tras cambiar la
+/// contraseña" cuando exista ese flujo. `false` si el usuario no existe (nada que
+/// revocar) — no se inventa un éxito sobre un id que no está.
+/// ¿Ese profesional es del ámbito de quien pregunta, y está activo?
+///
+/// Existe porque las escrituras clínicas validaban el PACIENTE contra el ámbito y
+/// no el MÉDICO. El `medico_id` llegaba en el cuerpo y se ataba al INSERT sin más
+/// freno que la clave foránea a `usuario(id)`, que abarca todas las instituciones
+/// del despliegue. Con eso, una institución podía:
+///
+///   - **enumerar la plantilla ajena**: un id que existe daba 201 y uno que no,
+///     error — un oráculo global de ids de usuario— y el listado devolvía después
+///     el NOMBRE del profesional por el `JOIN usuario`;
+///   - **atribuir un acto clínico a un médico de otra institución**, y cerrarlo
+///     con `firmar`, que pone una firma criptográfica sobre un contenido que
+///     nombra a quien nunca vio al paciente.
+///
+/// Se exige `activo`: crear un registro nuevo a nombre de alguien dado de baja no
+/// es un caso legítimo de nadie.
+pub async fn es_del_ambito(
+    pool: &crate::Pool,
+    ambito: Ambito,
+    usuario_id: i64,
+) -> Result<bool, sqlx::Error> {
+    // `Option<(Option<i64>,)>` y no `Option<(i64,)>`, y la diferencia importa:
+    // `institucion_id` es NULL en el superadmin, y con el tipo anterior el
+    // driver de SQLite decodificaba ese NULL como **0** en silencio en vez de
+    // fallar. Hoy el resultado es el correcto por casualidad —ninguna
+    // institución tiene id 0, así que `puede_ver(Some(0))` niega—, pero es
+    // exactamente el mecanismo que la directiva 20 prohíbe: el dato ausente
+    // sustituido por un valor. Basta una institución con `id = 0` para que
+    // conceda. Aquí el NULL se llama por su nombre y se niega a propósito.
+    let fila: Option<(Option<i64>, String)> =
+        sqlx::query_as("SELECT institucion_id, rol FROM usuario WHERE id = ? AND activo = 1")
+            .bind(usuario_id)
+            .fetch_optional(pool)
+            .await?;
+    // **EL ROL TAMBIÉN, y no solo la columna** (2026-08-06). Nada garantiza que
+    // un superadmin tenga la institución nula —no hay `CHECK`—, así que decidir
+    // solo por la columna deja al dueño del sistema administrable por el admin
+    // de la institución que le hubieran puesto. Lo cazó una revisión
+    // independiente sobre `feat/admin-en-rust`.
+    let fila = fila.filter(|(_, rol)| {
+        RolUsuario::desde_str(rol) != Some(RolUsuario::Superadmin)
+    });
+    Ok(match fila.map(|(i, _)| (i,)) {
+        // No existe, está inactivo, o es el superadmin.
+        None => false,
+        // Existe pero no pertenece a ninguna institución: es el superadmin. No
+        // es «de todas» a estos efectos — no se le agenda una cita ni se le hace
+        // agenda, porque no atiende pacientes en ninguna.
+        Some((None,)) => false,
+        Some((Some(inst),)) => ambito.puede_ver(Some(inst)) == medico_dominio::Visibilidad::Si,
+    })
+}
+
+pub async fn revocar_sesiones(pool: &crate::Pool, id: i64) -> Result<bool, sqlx::Error> {
+    let r = sqlx::query("UPDATE usuario SET token_version = token_version + 1 WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(r.rows_affected() > 0)
+}
+
+/// **Compare-and-swap del hash de contraseña.** Reescribe `password_hash` a
+/// `hash_nuevo` SOLO si en la base sigue siendo `hash_viejo` —el que se acaba de
+/// verificar al entrar—. Devuelve `true` si migró (1 fila), `false` si no tocó
+/// nada (0 filas: la contraseña cambió entre la lectura y esta escritura).
+///
+/// El `WHERE ... AND password_hash = ?` es el corazón del asunto y no un adorno:
+/// la migración oportunista abre una ventana de cientos de ms (lo que tarda un
+/// Argon2), y sin el guardián una migración rezagada escribiría el hash de la
+/// clave VIEJA encima del de la clave NUEVA que un cambio simultáneo acaba de
+/// fijar —revirtiendo la rotación en silencio—. Es el lost-update que informes
+/// aprendió a golpes. **No toca `token_version`**: no es un cambio de contraseña.
+pub async fn migrar_hash(
+    pool: &crate::Pool,
+    id: i64,
+    hash_viejo: &str,
+    hash_nuevo: &str,
+) -> Result<bool, sqlx::Error> {
+    let r = sqlx::query("UPDATE usuario SET password_hash = ? WHERE id = ? AND password_hash = ?")
+        .bind(hash_nuevo)
+        .bind(id)
+        .bind(hash_viejo)
+        .execute(pool)
+        .await?;
+    Ok(r.rows_affected() == 1)
+}
+
+/// Resumen de un usuario para listar. **No lleva `password_hash`** —ni siquiera
+/// se selecciona de la base—, así que es seguro serializarlo, a diferencia de
+/// [`Usuario`].
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct ResumenUsuario {
+    pub id: i64,
+    pub nombre: String,
+    pub email: String,
+    pub rol: String,
+    pub institucion_id: Option<i64>,
+    pub activo: bool,
+    /// P11/P12. Van en el LISTADO y no solo en el detalle porque la pregunta
+    /// que hay que poder responder de un vistazo es «¿a quién le falta?»: sin
+    /// ellos, la pantalla que existe para corregirlos no sabe a quién señalar
+    /// y habría que abrir uno por uno. No son dato sensible —es el documento
+    /// del profesional, que va impreso en cada fórmula que firma.
+    pub tipo_documento: Option<String>,
+    pub numero_documento: Option<String>,
+}
+
+/// Lista usuarios según el ámbito. Sin el hash: la consulta no lo trae.
+pub async fn listar(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<ResumenUsuario>, sqlx::Error> {
+    const COLS: &str =
+        "id, nombre, email, rol, institucion_id, activo, tipo_documento, numero_documento";
+    match ambito {
+        Ambito::Superadmin => {
+            sqlx::query_as::<_, ResumenUsuario>(&format!("SELECT {COLS} FROM usuario ORDER BY nombre"))
+                .fetch_all(pool)
+                .await
+        }
+        Ambito::Institucion(id) => {
+            sqlx::query_as::<_, ResumenUsuario>(&format!(
+                "SELECT {COLS} FROM usuario WHERE institucion_id = ? ORDER BY nombre"
+            ))
+            .bind(id)
+            .fetch_all(pool)
+            .await
+        }
+        Ambito::Ninguno => Ok(Vec::new()),
+    }
+}
+
+/// Los desenlaces de corregir el documento de un profesional.
+pub enum ResultadoDocumento {
+    Actualizado,
+    /// No existe, o no es del ámbito de quien pregunta. **Las dos cosas dan lo
+    /// mismo a propósito**: distinguirlas diría si el id existe en otra
+    /// institución, y con eso se enumera la plantilla del vecino.
+    NoEncontrado,
+    /// Ese documento ya es de otro profesional.
+    EnUso,
+}
+
+/// Pone —o quita— el documento de identidad de un profesional (P11/P12).
+///
+/// # Por qué una función que hace SOLO esto
+///
+/// La alternativa era un `actualizar` general de usuario, y sería la puerta por
+/// la que se cambia el rol o la clave de otro: `crear` tiene la regla de que
+/// solo un superadmin fabrica otro superadmin, y un actualizador general
+/// necesitaría esa regla y varias más, cada una una decisión aparte. Esta no
+/// puede hacer nada más que lo que dice su nombre.
+///
+/// `documento: None` **borra** los dos campos, y es deliberado: corregir un
+/// dedazo dejando la fila sin documento es mejor que dejarla con uno falso, que
+/// es justo lo que P11/P12 enseñó a no hacer. Sin él, el recolector vuelve a
+/// anotar la falta y el cierre del mes la enseña.
+pub async fn fijar_documento(
+    pool: &crate::Pool,
+    quien: Ambito,
+    usuario_id: i64,
+    documento: Option<(&str, &str)>,
+) -> Result<ResultadoDocumento, sqlx::Error> {
+    // El filtro del ámbito va DENTRO del UPDATE, no en una consulta previa: una
+    // comprobación separada deja una ventana entre el «es mío» y el «lo cambio».
+    let (tipo, numero) = match documento {
+        Some((t, n)) => (Some(t), Some(n)),
+        None => (None, None),
+    };
+    let sql = match quien {
+        Ambito::Superadmin => {
+            "UPDATE usuario SET tipo_documento = ?, numero_documento = ? WHERE id = ?"
+        }
+        Ambito::Institucion(_) => {
+            "UPDATE usuario SET tipo_documento = ?, numero_documento = ? \
+             WHERE id = ? AND institucion_id = ?"
+        }
+        Ambito::Ninguno => return Ok(ResultadoDocumento::NoEncontrado),
+    };
+    let mut q = sqlx::query(sql).bind(tipo).bind(numero).bind(usuario_id);
+    if let Ambito::Institucion(inst) = quien {
+        q = q.bind(inst);
+    }
+    match q.execute(pool).await {
+        Ok(r) if r.rows_affected() == 1 => Ok(ResultadoDocumento::Actualizado),
+        Ok(_) => Ok(ResultadoDocumento::NoEncontrado),
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Ok(ResultadoDocumento::EnUso),
+        Err(e) => Err(e),
+    }
+}
+
+/// Un médico para poblar selectores (agendar una cita, asignar). Sin datos
+/// sensibles: id y nombre.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct MedicoResumen {
+    pub id: i64,
+    pub nombre: String,
+}
+
+/// Los médicos ACTIVOS del ámbito. No lleva gate de rol: agendar una cita lo
+/// hace cualquier usuario, y para eso necesita la lista de médicos de su IPS.
+pub async fn medicos(pool: &crate::Pool, ambito: Ambito) -> Result<Vec<MedicoResumen>, sqlx::Error> {
+    match ambito {
+        Ambito::Superadmin => {
+            sqlx::query_as::<_, MedicoResumen>(
+                "SELECT id, nombre FROM usuario WHERE rol = 'medico' AND activo = 1 ORDER BY nombre",
+            )
+            .fetch_all(pool)
+            .await
+        }
+        Ambito::Institucion(id) => {
+            sqlx::query_as::<_, MedicoResumen>(
+                "SELECT id, nombre FROM usuario WHERE rol = 'medico' AND activo = 1 \
+                 AND institucion_id = ? ORDER BY nombre",
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await
+        }
+        Ambito::Ninguno => Ok(Vec::new()),
+    }
+}
+
+/// Datos para crear un usuario. La contraseña llega **ya hasheada**: esta capa
+/// nunca ve la clave en claro (la hashea la capa de API).
+pub struct UsuarioNuevo {
+    pub nombre: String,
+    pub email: String,
+    pub password_hash: String,
+    pub rol: String,
+    pub institucion_id: Option<i64>,
+    /// P11/P12 del RIPS: el documento de quien atiende. Opcional porque los
+    /// usuarios que ya existen no lo traen y **no se inventa** — sin él, el
+    /// recolector anota la falta y el cierre del mes la enseña. Van los dos o
+    /// ninguno; medio documento no identifica a nadie.
+    pub documento: Option<(String, String)>,
+}
+
+/// Los cuatro desenlaces reales de crear un usuario.
+pub enum ResultadoCrear {
+    Creado(i64),
+    SinPermiso,
+    EmailEnUso,
+    /// Ese documento ya es de otro profesional.
+    DocumentoEnUso,
+}
+
+/// Crea un usuario. La institución del nuevo la fija QUIÉN crea: un admin lo crea
+/// en SU institución (el `institucion_id` que venga se ignora); el superadmin la
+/// elige (para dar de alta el primer admin de una IPS nueva, o incluso otro
+/// superadmin con `None`). El correo es único en todo el sistema.
+pub async fn crear(
+    pool: &crate::Pool,
+    quien: Ambito,
+    nuevo: &UsuarioNuevo,
+) -> Result<ResultadoCrear, sqlx::Error> {
+    let institucion_id = match quien {
+        Ambito::Institucion(id) => Some(id),
+        Ambito::Superadmin => nuevo.institucion_id,
+        Ambito::Ninguno => return Ok(ResultadoCrear::SinPermiso),
+    };
+    if por_email(pool, &nuevo.email).await?.is_some() {
+        return Ok(ResultadoCrear::EmailEnUso);
+    }
+    let (tipo_doc, num_doc) = match &nuevo.documento {
+        Some((t, n)) => (Some(t.as_str()), Some(n.as_str())),
+        None => (None, None),
+    };
+    let r = sqlx::query(
+        "INSERT INTO usuario (nombre, email, password_hash, rol, institucion_id, activo, \
+         tipo_documento, numero_documento) \
+         VALUES (?,?,?,?,?,1,?,?)",
+    )
+    .bind(&nuevo.nombre)
+    .bind(&nuevo.email)
+    .bind(&nuevo.password_hash)
+    .bind(&nuevo.rol)
+    .bind(institucion_id)
+    .bind(tipo_doc)
+    .bind(num_doc)
+    .execute(pool)
+    .await;
+    match r {
+        Ok(r) => Ok(ResultadoCrear::Creado(r.last_insert_rowid())),
+        // El choque lo detecta `ux_usuario_documento`, y se lee del error en vez
+        // de consultarlo antes a propósito: un SELECT previo deja una ventana
+        // entre la comprobación y el INSERT, y es el índice —no nosotros— quien
+        // decide. Misma razón por la que el correo sí se consulta antes: aquel
+        // `UNIQUE` es de la tabla y este es un índice parcial, pero lo que
+        // manda en los dos casos es la base.
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
+            Ok(ResultadoCrear::DocumentoEnUso)
+        }
+        Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    /// Base con una institución y tres usuarios: superadmin (sin institución),
+    /// un médico de la 1, y uno con un rol que no existe.
+    async fn base() -> crate::Pool {
+        let pool = crate::abrir("sqlite::memory:").await.unwrap();
+        sqlx::query("INSERT INTO institucion (id, nombre, nit) VALUES (1,'Uno','900'),(2,'Dos','901')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO usuario (id, nombre, email, password_hash, rol, institucion_id, activo)
+             VALUES (1,'Root','root@x.co','h-root','superadmin',NULL,1),
+                    (2,'Dra Ruiz','ruiz@x.co','h-ruiz','medico',1,1),
+                    (3,'Raro','raro@x.co','h-raro','dios',1,1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn por_email_trae_al_usuario_con_su_hash() {
+        let pool = base().await;
+        let u = por_email(&pool, "ruiz@x.co").await.unwrap().unwrap();
+        assert_eq!(u.id, 2);
+        assert_eq!(u.password_hash, "h-ruiz", "el hash tiene que llegar para verificarlo");
+    }
+
+    #[tokio::test]
+    async fn por_email_desconocido_es_none() {
+        let pool = base().await;
+        assert!(por_email(&pool, "nadie@x.co").await.unwrap().is_none());
+    }
+
+    /// **El compare-and-swap discrimina (directiva 33).** `migrar_hash` reescribe
+    /// SOLO si el hash guardado sigue siendo el que se pasa como viejo; con un
+    /// viejo que ya no coincide (la contraseña cambió entretanto) NO toca nada y
+    /// devuelve `false`. Sin el `AND password_hash = ?`, la segunda llamada pisaría
+    /// el hash nuevo con uno rezagado —el lost-update que revierte una rotación—.
+    #[tokio::test]
+    async fn migrar_hash_reescribe_si_el_viejo_coincide_y_no_si_cambio() {
+        let pool = base().await; // usuario 2 con 'h-ruiz'
+
+        // El viejo coincide → migra, y la base queda con el nuevo.
+        assert!(
+            migrar_hash(&pool, 2, "h-ruiz", "h-nuevo").await.unwrap(),
+            "con el hash viejo correcto, migra"
+        );
+        let ahora = por_email(&pool, "ruiz@x.co").await.unwrap().unwrap().password_hash;
+        assert_eq!(ahora, "h-nuevo", "el hash quedó reescrito");
+
+        // El viejo YA no coincide (simula una rotación concurrente) → no toca nada.
+        assert!(
+            !migrar_hash(&pool, 2, "h-ruiz", "h-rezagado").await.unwrap(),
+            "con un hash viejo que ya cambió, NO reescribe (0 filas)"
+        );
+        let sigue = por_email(&pool, "ruiz@x.co").await.unwrap().unwrap().password_hash;
+        assert_eq!(sigue, "h-nuevo", "el CAS protegió el hash nuevo de ser pisado");
+    }
+
+    #[tokio::test]
+    async fn el_superadmin_sin_institucion_ve_todo() {
+        let pool = base().await;
+        let u = por_email(&pool, "root@x.co").await.unwrap().unwrap();
+        assert_eq!(u.ambito(), Ambito::Superadmin);
+    }
+
+    #[tokio::test]
+    async fn el_medico_queda_acotado_a_su_institucion() {
+        let pool = base().await;
+        let u = por_email(&pool, "ruiz@x.co").await.unwrap().unwrap();
+        assert_eq!(u.ambito(), Ambito::Institucion(1));
+    }
+
+    /// El rol corrupto falla CERRADO: no ve nada, aunque tenga institución.
+    #[tokio::test]
+    async fn un_rol_desconocido_no_ve_nada() {
+        let pool = base().await;
+        let u = por_email(&pool, "raro@x.co").await.unwrap().unwrap();
+        assert_eq!(u.rol(), None);
+        assert_eq!(u.ambito(), Ambito::Ninguno, "un rol corrupto no puede conceder acceso");
+    }
+
+    #[tokio::test]
+    async fn listar_es_scoped_y_no_trae_el_hash() {
+        let bd = base().await;
+        // El superadmin ve los tres; la institución 1, sus tres (root es NULL,
+        // no de la 1) → en realidad la 1 ve a Ruiz y Raro (2), no a root.
+        assert_eq!(listar(&bd, Ambito::Superadmin).await.unwrap().len(), 3);
+        assert_eq!(listar(&bd, Ambito::institucion(1)).await.unwrap().len(), 2);
+        assert!(listar(&bd, Ambito::Ninguno).await.unwrap().is_empty());
+        // El ResumenUsuario ni siquiera tiene campo de hash: es imposible filtrarlo.
+    }
+
+    #[tokio::test]
+    async fn revocar_sesiones_sube_la_version_solo_del_usuario() {
+        let pool = base().await;
+        assert_eq!(por_id(&pool, 2).await.unwrap().unwrap().token_version, 0, "de fábrica es 0");
+        assert!(revocar_sesiones(&pool, 2).await.unwrap(), "el usuario existe");
+        assert_eq!(por_id(&pool, 2).await.unwrap().unwrap().token_version, 1);
+        // No tocó a otro usuario.
+        assert_eq!(por_id(&pool, 1).await.unwrap().unwrap().token_version, 0);
+        // Revocar un id que no existe no inventa un éxito.
+        assert!(!revocar_sesiones(&pool, 999).await.unwrap());
+    }
+
+    fn nuevo(email: &str, inst: Option<i64>) -> UsuarioNuevo {
+        UsuarioNuevo {
+            nombre: "Nuevo".into(),
+            email: email.into(),
+            password_hash: "h-nuevo".into(),
+            rol: "medico".into(),
+            institucion_id: inst,
+            documento: None,
+        }
+    }
+
+    /// El mismo, con el documento del profesional puesto.
+    fn nuevo_con_documento(email: &str, tipo: &str, numero: &str) -> UsuarioNuevo {
+        UsuarioNuevo {
+            documento: Some((tipo.into(), numero.into())),
+            ..nuevo(email, Some(1))
+        }
+    }
+
+    #[tokio::test]
+    async fn un_admin_crea_en_su_institucion_ignorando_lo_que_pidan() {
+        let bd = base().await;
+        // Pide institución 2, pero como el ámbito es de la 1, se crea en la 1.
+        let r = crear(&bd, Ambito::institucion(1), &nuevo("n1@x.co", Some(2))).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)));
+        let u = por_email(&bd, "n1@x.co").await.unwrap().unwrap();
+        assert_eq!(u.institucion_id, Some(1), "un admin no crea usuarios en otra institución");
+    }
+
+    #[tokio::test]
+    async fn el_superadmin_coloca_al_usuario_donde_indica() {
+        let bd = base().await;
+        let r = crear(&bd, Ambito::Superadmin, &nuevo("n2@x.co", Some(2))).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)));
+        assert_eq!(por_email(&bd, "n2@x.co").await.unwrap().unwrap().institucion_id, Some(2));
+    }
+
+    #[tokio::test]
+    async fn sin_ambito_no_crea_y_el_correo_repetido_se_rechaza() {
+        let bd = base().await;
+        assert!(matches!(crear(&bd, Ambito::Ninguno, &nuevo("n3@x.co", Some(1))).await.unwrap(), ResultadoCrear::SinPermiso));
+        // 'ruiz@x.co' ya existe.
+        assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("ruiz@x.co", None)).await.unwrap(), ResultadoCrear::EmailEnUso));
+    }
+
+    /// P11/P12: el documento se guarda, y no se repite entre profesionales.
+    ///
+    /// El índice es `ux_usuario_documento` (migración 0039). Se comprueban las
+    /// dos mitades: que el choque se rechaza **y** que los usuarios sin
+    /// documento se siguen pudiendo crear — que es lo que de verdad se rompería
+    /// si a alguien se le ocurriera hacer las columnas obligatorias para
+    /// «arreglar» el hueco del RIPS.
+    ///
+    /// Medido, y va escrito porque contradice lo que yo había supuesto: quitar
+    /// el `WHERE` del índice **no** cambia el comportamiento. En SQL dos NULL no
+    /// son iguales, así que tampoco colisionan en un índice único sin filtro. El
+    /// `WHERE` deja el índice más pequeño y dice a qué filas se refiere; no es
+    /// lo que permite que convivan los usuarios sin documento.
+    #[tokio::test]
+    async fn el_documento_del_profesional_se_guarda_y_no_se_repite() {
+        let bd = base().await;
+
+        let r = crear(&bd, Ambito::institucion(1), &nuevo_con_documento("d1@x.co", "CC", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)), "el documento no impide crear");
+        let guardado: (Option<String>, Option<String>) =
+            sqlx::query_as("SELECT tipo_documento, numero_documento FROM usuario WHERE email='d1@x.co'")
+                .fetch_one(&bd)
+                .await
+                .unwrap();
+        assert_eq!(guardado, (Some("CC".into()), Some("71234567".into())), "y se guarda de verdad");
+
+        // El mismo documento otra vez, con otro correo: lo para el índice.
+        let r = crear(&bd, Ambito::institucion(1), &nuevo_con_documento("d2@x.co", "CC", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::DocumentoEnUso), "dos profesionales no comparten documento");
+
+        // Y no lo para por institución: el de la 2 tampoco puede repetirlo,
+        // porque una persona es la misma persona en las dos IPS.
+        let r = crear(&bd, Ambito::institucion(2), &nuevo_con_documento("d3@x.co", "CC", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::DocumentoEnUso), "el documento es único en todo el sistema");
+
+        // Mismo número con OTRO tipo sí entra: la clave son los dos campos.
+        let r = crear(&bd, Ambito::institucion(1), &nuevo_con_documento("d4@x.co", "CE", "71234567")).await.unwrap();
+        assert!(matches!(r, ResultadoCrear::Creado(_)));
+
+        // Y lo que sostiene todo lo anterior: los que NO traen documento no
+        // chocan entre sí. `base()` ya dejó tres así, y estos dos son dos más.
+        assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("s1@x.co", Some(1))).await.unwrap(), ResultadoCrear::Creado(_)));
+        assert!(matches!(crear(&bd, Ambito::institucion(1), &nuevo("s2@x.co", Some(1))).await.unwrap(), ResultadoCrear::Creado(_)),
+                "dos usuarios sin documento conviven: es el estado de TODOS los que ya existen");
+    }
+}

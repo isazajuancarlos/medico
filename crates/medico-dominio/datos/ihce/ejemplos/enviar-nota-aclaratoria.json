@@ -1,0 +1,155 @@
+{
+  "resourceType" : "Bundle",
+  "type" : "transaction",
+  "entry" : [
+    {
+      "resource" : {
+        "resourceType" : "Observation",
+        "id" : "Observation-1",
+        "meta": {
+            "profile": [
+                "https://fhir.minsalud.gov.co/rda/StructureDefinition/ObservationClarificationNoteRDA"
+            ]
+        },
+        "status" : "final",
+        "code" : {
+          "coding" : [
+            {
+              "system" : "http://snomed.info/sct",
+              "code" : "445664008",
+              "display" : "informe enmendado"
+            }
+          ],
+          "text" : "Nota aclaratoria"
+        },
+        "subject" : {
+          "reference" : "Patient/d756d466-0ca1-877b-f7aa-5a79da6511fc"
+        },
+        "focus" : [
+          {
+            "id" : "CompositionRDA",
+            "reference" : "Composition/0be4fb3d-2173-44f8-a1c1-bfdbf8573bff"
+          }
+        ],
+        "encounter" : {
+          "reference" : "Encounter/a82a6eee-fee0-4d0f-9979-12419162894a"
+        },
+        "effectiveDateTime" : "2025-12-18T10:30:00+00:00",
+        "performer" : [
+          {
+            "reference" : "#CC-111111"
+          }
+        ],
+        "valueString" : "Se aclara que el diagnóstico prevido de Intoxicación alimentaria bacteriana (A05.9), corresponde a un cuadro leve autolimitado, sin complicaciones, que no requirió hospitalización ni tratamiento específico."
+      },
+      "request" : {
+        "method" : "POST",
+        "url" : "Observation"
+      }
+    },
+    {
+      "resource" : {
+        "resourceType" : "Observation",
+        "id" : "Observation-0",
+        "meta": {
+            "profile": [
+                "https://fhir.minsalud.gov.co/rda/StructureDefinition/ObservationClarificationNoteRDA"
+            ]
+        },
+        "status" : "final",
+        "code" : {
+          "coding" : [
+            {
+              "system" : "http://snomed.info/sct",
+              "code" : "445664008",
+              "display" : "informe enmendado"
+            }
+          ],
+          "text" : "Nota aclaratoria"
+        },
+        "subject" : {
+          "reference" : "Patient/d756d466-0ca1-877b-f7aa-5a79da6511fc"
+        },
+        "focus" : [
+          {
+            "id" : "CompositionRDA",
+            "reference" : "Composition/0be4fb3d-2173-44f8-a1c1-bfdbf8573bff"
+          }
+        ],
+        "encounter" : {
+          "reference" : "Encounter/a82a6eee-fee0-4d0f-9979-12419162894a"
+        },
+        "effectiveDateTime" : "2025-12-18T10:30:00+00:00",
+        "performer" : [
+          {
+            "reference" : "#CC-111111"
+          }
+        ],
+        "valueString" : "Se aclara que no es el medicamento recetado, se da nueva orden para otro medicamento"
+      },
+      "request" : {
+        "method" : "POST",
+        "url" : "Observation"
+      }
+    },
+    {
+      "resource": {
+    "resourceType": "Practitioner",
+    "id": "CC-111111",
+    "meta": {
+        "profile": [
+            "https://fhir.minsalud.gov.co/rda/StructureDefinition/PractitionerRDA"
+        ]
+    },
+    "identifier": [
+        {
+            "id": "NationalPersonIdentifier-0",
+            "use": "official",
+            "type": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                        "code": "PN",
+                        "display": "Person number"
+                    },
+                    {
+                        "system": "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianPersonIdentifier",
+                        "code": "CC",
+                        "display": "Cédula ciudadanía"
+                    }
+                ]
+            },
+            "value": "111111"
+        }
+    ],
+    "active": true,
+    "name": [
+        {
+            "use": "official",
+            "family": "APELLIDOS PROFESIONAL DE LA SALUD",
+            "_family": {
+                "extension": [
+                    {
+                        "url": "https://fhir.minsalud.gov.co/rda/StructureDefinition/ExtensionFathersFamilyName",
+                        "valueString": "PRIMER APELLIDO"
+                    },
+                    {
+                        "url": "https://fhir.minsalud.gov.co/rda/StructureDefinition/ExtensionMothersFamilyName",
+                        "valueString": "SEGUNDO APELLIDO"
+                    }
+                ]
+            },
+            "given": [
+                "PRIMER NOMBRE",
+                "SEGUNDO NOMBRE"
+            ]
+        }
+    ]
+},
+      "request" : {
+        "method" : "GET",
+        "url" : "#CC-111111"
+      }
+    }
+  ]
+}

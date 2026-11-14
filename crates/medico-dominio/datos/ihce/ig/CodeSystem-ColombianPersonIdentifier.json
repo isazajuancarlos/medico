@@ -1,0 +1,133 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianPersonIdentifier",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianPersonIdentifier</b></p><a name=\"ColombianPersonIdentifier\"> </a><a name=\"hcColombianPersonIdentifier\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianPersonIdentifier</code> defines the following codes in an undefined hierarchy:</p><table class=\"codes\"><tr><td><b>Lvl</b></td><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td>1</td><td style=\"white-space:nowrap\">RNEC<a name=\"ColombianPersonIdentifier-RNEC\"> </a></td><td>Registraduría Nacional del Estado Civil</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0CN<a name=\"ColombianPersonIdentifier-CN\"> </a></td><td>Certificado de nacido vivo</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0RC<a name=\"ColombianPersonIdentifier-RC\"> </a></td><td>Registro civil</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0TI<a name=\"ColombianPersonIdentifier-TI\"> </a></td><td>Tarjeta de Identidad</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0CC<a name=\"ColombianPersonIdentifier-CC\"> </a></td><td>Cédula ciudadanía</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">CANCILLERIA<a name=\"ColombianPersonIdentifier-CANCILLERIA\"> </a></td><td>Cancillería</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0PA<a name=\"ColombianPersonIdentifier-PA\"> </a></td><td>Pasaporte</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0CD<a name=\"ColombianPersonIdentifier-CD\"> </a></td><td>Carné diplomático</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0CE<a name=\"ColombianPersonIdentifier-CE\"> </a></td><td>Cédula de extranjería</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0SC<a name=\"ColombianPersonIdentifier-SC\"> </a></td><td>Salvoconducto de permanencia</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0PE<a name=\"ColombianPersonIdentifier-PE\"> </a></td><td>Permiso Especial de Permanencia</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0PT<a name=\"ColombianPersonIdentifier-PT\"> </a></td><td>Permiso Temporal de Permanencia</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0PPT<a name=\"ColombianPersonIdentifier-PPT\"> </a></td><td>Permiso por protección temporal</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0DE<a name=\"ColombianPersonIdentifier-DE\"> </a></td><td>Documento Extranjero</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">DIAN<a name=\"ColombianPersonIdentifier-DIAN\"> </a></td><td>Dirección de Impuestos y Aduanas Nacionales</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0RUT<a name=\"ColombianPersonIdentifier-RUT\"> </a></td><td>Registro Único Tributario</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">OTROS<a name=\"ColombianPersonIdentifier-OTROS\"> </a></td><td>Otras identificaciones</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0AS<a name=\"ColombianPersonIdentifier-AS\"> </a></td><td>Adulto sin identificar</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0MS<a name=\"ColombianPersonIdentifier-MS\"> </a></td><td>Menor sin identificar</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0SI<a name=\"ColombianPersonIdentifier-SI\"> </a></td><td>Sin identificación</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianPersonIdentifier",
+  "version" : "1.0.0",
+  "name" : "ColombianPersonIdentifier",
+  "title" : "CodeSystem: Colombian Person Identifiers",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Codificación de tipos de identificaciones para personas en Colombia",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de tipos de identificadores para personas en Colombia, utilizado en elementos de recursos FHIR como: *Patient.identifier.type*, *Practitioner.identifier.type*, *Person.identifier.type* y *RelatedPerson.identifier.type*.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0, 2024+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 20,
+  "concept" : [{
+    "code" : "RNEC",
+    "display" : "Registraduría Nacional del Estado Civil",
+    "concept" : [{
+      "code" : "CN",
+      "display" : "Certificado de nacido vivo"
+    },
+    {
+      "code" : "RC",
+      "display" : "Registro civil"
+    },
+    {
+      "code" : "TI",
+      "display" : "Tarjeta de Identidad"
+    },
+    {
+      "code" : "CC",
+      "display" : "Cédula ciudadanía"
+    }]
+  },
+  {
+    "code" : "CANCILLERIA",
+    "display" : "Cancillería",
+    "concept" : [{
+      "code" : "PA",
+      "display" : "Pasaporte"
+    },
+    {
+      "code" : "CD",
+      "display" : "Carné diplomático"
+    },
+    {
+      "code" : "CE",
+      "display" : "Cédula de extranjería"
+    },
+    {
+      "code" : "SC",
+      "display" : "Salvoconducto de permanencia"
+    },
+    {
+      "code" : "PE",
+      "display" : "Permiso Especial de Permanencia"
+    },
+    {
+      "code" : "PT",
+      "display" : "Permiso Temporal de Permanencia"
+    },
+    {
+      "code" : "PPT",
+      "display" : "Permiso por protección temporal"
+    },
+    {
+      "code" : "DE",
+      "display" : "Documento Extranjero"
+    }]
+  },
+  {
+    "code" : "DIAN",
+    "display" : "Dirección de Impuestos y Aduanas Nacionales",
+    "concept" : [{
+      "code" : "RUT",
+      "display" : "Registro Único Tributario"
+    }]
+  },
+  {
+    "code" : "OTROS",
+    "display" : "Otras identificaciones",
+    "concept" : [{
+      "code" : "AS",
+      "display" : "Adulto sin identificar"
+    },
+    {
+      "code" : "MS",
+      "display" : "Menor sin identificar"
+    },
+    {
+      "code" : "SI",
+      "display" : "Sin identificación"
+    }]
+  }]
+}

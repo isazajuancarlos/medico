@@ -1,0 +1,73 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "GrupoServicios",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos GrupoServicios</b></p><a name=\"GrupoServicios\"> </a><a name=\"hcGrupoServicios\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/GrupoServicios</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"GrupoServicios-01\"> </a></td><td>Consulta externa</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"GrupoServicios-02\"> </a></td><td>Apoyo diagnóstico y complementación terapéutica</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"GrupoServicios-03\"> </a></td><td>Internación</td></tr><tr><td style=\"white-space:nowrap\">04<a name=\"GrupoServicios-04\"> </a></td><td>Quirúrgico</td></tr><tr><td style=\"white-space:nowrap\">05<a name=\"GrupoServicios-05\"> </a></td><td>Atención inmediata</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/GrupoServicios",
+  "version" : "1.0.0",
+  "name" : "GrupoServicios",
+  "title" : "CodeSystem: Grupo de Servicios",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2022-06-16",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de grupo de servicio o ámbito de prescripción o administración de una tecnología en salud.]",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de grupo de servicio o ámbito de prescripción o administración de una tecnología en salud.]",
+  "copyright" : "SISPRO, CCBY4.0 2022+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 5,
+  "concept" : [{
+    "code" : "01",
+    "display" : "Consulta externa"
+  },
+  {
+    "code" : "02",
+    "display" : "Apoyo diagnóstico y complementación terapéutica"
+  },
+  {
+    "code" : "03",
+    "display" : "Internación"
+  },
+  {
+    "code" : "04",
+    "display" : "Quirúrgico"
+  },
+  {
+    "code" : "05",
+    "display" : "Atención inmediata"
+  }]
+}

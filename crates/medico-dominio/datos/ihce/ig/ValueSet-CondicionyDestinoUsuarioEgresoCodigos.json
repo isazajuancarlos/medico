@@ -1,0 +1,55 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "CondicionyDestinoUsuarioEgresoCodigos",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores CondicionyDestinoUsuarioEgresoCodigos</b></p><a name=\"CondicionyDestinoUsuarioEgresoCodigos\"> </a><a name=\"hcCondicionyDestinoUsuarioEgresoCodigos\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><ul><li>Include all codes defined in <a href=\"CodeSystem-CondicionyDestinoUsuarioEgreso.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/CondicionyDestinoUsuarioEgreso</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/CondicionyDestinoUsuarioEgresoCodigos",
+  "version" : "1.0.0",
+  "name" : "CondicionyDestinoUsuarioEgresoCodigos",
+  "title" : "ValueSet: Condicion y Destino Usuario Egreso",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Condición y destino del usuario al momento del egreso de una atención en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de condición y destino del usuario al egreso de una atención en Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CondicionyDestinoUsuarioEgreso"
+    }]
+  }
+}

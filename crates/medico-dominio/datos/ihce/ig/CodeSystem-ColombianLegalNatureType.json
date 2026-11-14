@@ -1,0 +1,69 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianLegalNatureType",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianLegalNatureType</b></p><a name=\"ColombianLegalNatureType\"> </a><a name=\"hcColombianLegalNatureType\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianLegalNatureType</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">PRIV<a name=\"ColombianLegalNatureType-PRIV\"> </a></td><td>Privada</td></tr><tr><td style=\"white-space:nowrap\">PUB<a name=\"ColombianLegalNatureType-PUB\"> </a></td><td>Pública</td></tr><tr><td style=\"white-space:nowrap\">ESE<a name=\"ColombianLegalNatureType-ESE\"> </a></td><td>Empresa Social del Estado</td></tr><tr><td style=\"white-space:nowrap\">MIX<a name=\"ColombianLegalNatureType-MIX\"> </a></td><td>Mixta</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianLegalNatureType",
+  "version" : "1.0.0",
+  "name" : "ColombianLegalNatureType",
+  "title" : "CodeSystem: Colombian Legal Nature Type",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de naturaleza jurídica de organizaiciones en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de tipo de naturaleza jurídica de organizaciones en Colombia (privada, pública, empresa social del estado, mixta), según la información registrada en el REPS.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0, 2024+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 4,
+  "concept" : [{
+    "code" : "PRIV",
+    "display" : "Privada"
+  },
+  {
+    "code" : "PUB",
+    "display" : "Pública"
+  },
+  {
+    "code" : "ESE",
+    "display" : "Empresa Social del Estado"
+  },
+  {
+    "code" : "MIX",
+    "display" : "Mixta"
+  }]
+}

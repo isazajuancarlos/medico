@@ -1,0 +1,1437 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "RETHUSqualification",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos RETHUSqualification</b></p><a name=\"RETHUSqualification\"> </a><a name=\"hcRETHUSqualification\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">000<a name=\"RETHUSqualification-000\"> </a></td><td>Bacteriología</td><td/></tr><tr><td style=\"white-space:nowrap\">001<a name=\"RETHUSqualification-001\"> </a></td><td>Enfermería</td><td/></tr><tr><td style=\"white-space:nowrap\">002<a name=\"RETHUSqualification-002\"> </a></td><td>Instrumentación quirúrgica</td><td/></tr><tr><td style=\"white-space:nowrap\">003<a name=\"RETHUSqualification-003\"> </a></td><td>Medicina</td><td/></tr><tr><td style=\"white-space:nowrap\">004<a name=\"RETHUSqualification-004\"> </a></td><td>Nutrición y dietética</td><td/></tr><tr><td style=\"white-space:nowrap\">005<a name=\"RETHUSqualification-005\"> </a></td><td>Odontología</td><td/></tr><tr><td style=\"white-space:nowrap\">006<a name=\"RETHUSqualification-006\"> </a></td><td>Optometría</td><td/></tr><tr><td style=\"white-space:nowrap\">007<a name=\"RETHUSqualification-007\"> </a></td><td>Salud ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">008<a name=\"RETHUSqualification-008\"> </a></td><td>Fisioterapia</td><td/></tr><tr><td style=\"white-space:nowrap\">009<a name=\"RETHUSqualification-009\"> </a></td><td>Terapia respiratoria</td><td/></tr><tr><td style=\"white-space:nowrap\">010<a name=\"RETHUSqualification-010\"> </a></td><td>Fonoaudiología</td><td/></tr><tr><td style=\"white-space:nowrap\">011<a name=\"RETHUSqualification-011\"> </a></td><td>Terapia ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">012<a name=\"RETHUSqualification-012\"> </a></td><td>Técnica profesional en fisioterapia</td><td/></tr><tr><td style=\"white-space:nowrap\">013<a name=\"RETHUSqualification-013\"> </a></td><td>Técnica profesional en fonoaudiología</td><td/></tr><tr><td style=\"white-space:nowrap\">014<a name=\"RETHUSqualification-014\"> </a></td><td>Tecnología en radiología e imágenes diagnósticas</td><td/></tr><tr><td style=\"white-space:nowrap\">015<a name=\"RETHUSqualification-015\"> </a></td><td>Tecnología en terapia del lenguaje</td><td/></tr><tr><td style=\"white-space:nowrap\">016<a name=\"RETHUSqualification-016\"> </a></td><td>Tecnología en terapia ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">017<a name=\"RETHUSqualification-017\"> </a></td><td>Tecnología en terapia respiratoria</td><td/></tr><tr><td style=\"white-space:nowrap\">018<a name=\"RETHUSqualification-018\"> </a></td><td>Técnica profesional en atención prehospitalaria</td><td/></tr><tr><td style=\"white-space:nowrap\">019<a name=\"RETHUSqualification-019\"> </a></td><td>Técnica profesional en enfermería</td><td/></tr><tr><td style=\"white-space:nowrap\">020<a name=\"RETHUSqualification-020\"> </a></td><td>Técnica profesional en salud pública</td><td/></tr><tr><td style=\"white-space:nowrap\">021<a name=\"RETHUSqualification-021\"> </a></td><td>Técnica profesional en salud oral</td><td/></tr><tr><td style=\"white-space:nowrap\">022<a name=\"RETHUSqualification-022\"> </a></td><td>Técnica profesional en citohistología</td><td/></tr><tr><td style=\"white-space:nowrap\">024<a name=\"RETHUSqualification-024\"> </a></td><td>Técnica profesional en salud ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">025<a name=\"RETHUSqualification-025\"> </a></td><td>Técnica profesional en instrumentación quirúrgica</td><td/></tr><tr><td style=\"white-space:nowrap\">027<a name=\"RETHUSqualification-027\"> </a></td><td>Técnico profesional en mecánica dental</td><td/></tr><tr><td style=\"white-space:nowrap\">030<a name=\"RETHUSqualification-030\"> </a></td><td>Técnica profesional en radiología e imag diag</td><td/></tr><tr><td style=\"white-space:nowrap\">031<a name=\"RETHUSqualification-031\"> </a></td><td>Técnica profesional en saneamiento ambiental</td><td/></tr><tr><td style=\"white-space:nowrap\">037<a name=\"RETHUSqualification-037\"> </a></td><td>Tecnología en mecánica dental</td><td/></tr><tr><td style=\"white-space:nowrap\">039<a name=\"RETHUSqualification-039\"> </a></td><td>Tecnología en instrumentación quirúrgica</td><td/></tr><tr><td style=\"white-space:nowrap\">040<a name=\"RETHUSqualification-040\"> </a></td><td>Tecnología en citohistología</td><td/></tr><tr><td style=\"white-space:nowrap\">041<a name=\"RETHUSqualification-041\"> </a></td><td>Tecnología en atención prehospitalaria</td><td/></tr><tr><td style=\"white-space:nowrap\">044<a name=\"RETHUSqualification-044\"> </a></td><td>Tecnología en salud ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">045<a name=\"RETHUSqualification-045\"> </a></td><td>Tecnología en regencia de farmacia</td><td/></tr><tr><td style=\"white-space:nowrap\">049<a name=\"RETHUSqualification-049\"> </a></td><td>Auxiliar en enfermería</td><td/></tr><tr><td style=\"white-space:nowrap\">050<a name=\"RETHUSqualification-050\"> </a></td><td>Auxiliar en salud pública</td><td/></tr><tr><td style=\"white-space:nowrap\">051<a name=\"RETHUSqualification-051\"> </a></td><td>Auxiliar en salud oral</td><td/></tr><tr><td style=\"white-space:nowrap\">052<a name=\"RETHUSqualification-052\"> </a></td><td>Auxiliar en servicios farmacéuticos</td><td/></tr><tr><td style=\"white-space:nowrap\">053<a name=\"RETHUSqualification-053\"> </a></td><td>Auxiliar administrativo en salud</td><td/></tr><tr><td style=\"white-space:nowrap\">054<a name=\"RETHUSqualification-054\"> </a></td><td>Auxiliar de droguería</td><td/></tr><tr><td style=\"white-space:nowrap\">055<a name=\"RETHUSqualification-055\"> </a></td><td>Auxiliar de enfermería</td><td/></tr><tr><td style=\"white-space:nowrap\">056<a name=\"RETHUSqualification-056\"> </a></td><td>Auxiliar de consultorio odontológico</td><td/></tr><tr><td style=\"white-space:nowrap\">057<a name=\"RETHUSqualification-057\"> </a></td><td>Auxiliar de higiene oral</td><td/></tr><tr><td style=\"white-space:nowrap\">058<a name=\"RETHUSqualification-058\"> </a></td><td>Promotor de saneamiento ambiental</td><td/></tr><tr><td style=\"white-space:nowrap\">059<a name=\"RETHUSqualification-059\"> </a></td><td>Promotor de salud</td><td/></tr><tr><td style=\"white-space:nowrap\">060<a name=\"RETHUSqualification-060\"> </a></td><td>Auxiliar de salud familiar y comunitaria</td><td/></tr><tr><td style=\"white-space:nowrap\">061<a name=\"RETHUSqualification-061\"> </a></td><td>Auxiliar de gerontología</td><td/></tr><tr><td style=\"white-space:nowrap\">062<a name=\"RETHUSqualification-062\"> </a></td><td>Auxiliar de laboratorio clínico</td><td/></tr><tr><td style=\"white-space:nowrap\">064<a name=\"RETHUSqualification-064\"> </a></td><td>Auxiliar de radiología e imágenes diagnósticas</td><td/></tr><tr><td style=\"white-space:nowrap\">065<a name=\"RETHUSqualification-065\"> </a></td><td>Auxiliar en salud ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">067<a name=\"RETHUSqualification-067\"> </a></td><td>Auxiliar en urgencias médicas</td><td/></tr><tr><td style=\"white-space:nowrap\">068<a name=\"RETHUSqualification-068\"> </a></td><td>Psicología</td><td/></tr><tr><td style=\"white-space:nowrap\">070<a name=\"RETHUSqualification-070\"> </a></td><td>Química farmacéutica</td><td/></tr><tr><td style=\"white-space:nowrap\">076<a name=\"RETHUSqualification-076\"> </a></td><td>Técnica profesional en regencia de farmacia</td><td/></tr><tr><td style=\"white-space:nowrap\">077<a name=\"RETHUSqualification-077\"> </a></td><td>Técnica profesional en terapia ocupacional</td><td/></tr><tr><td style=\"white-space:nowrap\">543<a name=\"RETHUSqualification-543\"> </a></td><td>Tecnología en gerontología</td><td/></tr><tr><td style=\"white-space:nowrap\">544<a name=\"RETHUSqualification-544\"> </a></td><td>Gerontología</td><td/></tr><tr><td style=\"white-space:nowrap\">545<a name=\"RETHUSqualification-545\"> </a></td><td>Técnica profesional en saneamiento básico</td><td/></tr><tr><td style=\"white-space:nowrap\">546<a name=\"RETHUSqualification-546\"> </a></td><td>Tecnología en radiodiagnóstico y radioterapia</td><td/></tr><tr><td style=\"white-space:nowrap\">999999<a name=\"RETHUSqualification-999999\"> </a></td><td>NO APLICA</td><td/></tr><tr><td style=\"white-space:nowrap\">A01<a name=\"RETHUSqualification-A01\"> </a></td><td>Auxiliar administrativo en salud</td><td>Auxiliar</td></tr><tr><td style=\"white-space:nowrap\">A02<a name=\"RETHUSqualification-A02\"> </a></td><td>Auxiliar en enfermería</td><td>Auxiliar</td></tr><tr><td style=\"white-space:nowrap\">A03<a name=\"RETHUSqualification-A03\"> </a></td><td>Auxiliar en salud oral</td><td>Auxiliar</td></tr><tr><td style=\"white-space:nowrap\">A04<a name=\"RETHUSqualification-A04\"> </a></td><td>Auxiliar en salud publica</td><td>Auxiliar</td></tr><tr><td style=\"white-space:nowrap\">A05<a name=\"RETHUSqualification-A05\"> </a></td><td>Auxiliar en servicios farmacéuticos</td><td>Auxiliar</td></tr><tr><td style=\"white-space:nowrap\">D01<a name=\"RETHUSqualification-D01\"> </a></td><td>Medicina Nuclear</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D02<a name=\"RETHUSqualification-D02\"> </a></td><td>Patología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0201<a name=\"RETHUSqualification-D0201\"> </a></td><td>Especialización en Hematopatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0202<a name=\"RETHUSqualification-D0202\"> </a></td><td>Dermatopatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D03<a name=\"RETHUSqualification-D03\"> </a></td><td>Radiología e Imágenes Diagnósticas</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0301<a name=\"RETHUSqualification-D0301\"> </a></td><td>Imagen Corporal</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0302<a name=\"RETHUSqualification-D0302\"> </a></td><td>Imagenología Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0303<a name=\"RETHUSqualification-D0303\"> </a></td><td>Neuroradiología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0304<a name=\"RETHUSqualification-D0304\"> </a></td><td>Radiología Intervencionista</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0305<a name=\"RETHUSqualification-D0305\"> </a></td><td>Especialización en Radio Oncologia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">D0306<a name=\"RETHUSqualification-D0306\"> </a></td><td>Especialización en Ultrasonido Diagnostico</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">DA01<a name=\"RETHUSqualification-DA01\"> </a></td><td>DOCTORADO EN CIENCIAS DE LA SALUD</td><td>Doctorado</td></tr><tr><td style=\"white-space:nowrap\">DA99<a name=\"RETHUSqualification-DA99\"> </a></td><td>Doctorado</td><td>Doctorado</td></tr><tr><td style=\"white-space:nowrap\">E01<a name=\"RETHUSqualification-E01\"> </a></td><td>Salud familiar y comunitaria</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">E02<a name=\"RETHUSqualification-E02\"> </a></td><td>Salud ocupacional</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">E03<a name=\"RETHUSqualification-E03\"> </a></td><td>Enfermería en cuidado a las personas con heridas y ostomías</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">E05<a name=\"RETHUSqualification-E05\"> </a></td><td>ESPECIALIZACION EN ENFERMERIA EN CUIDADO CRITICO</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">E06<a name=\"RETHUSqualification-E06\"> </a></td><td>ESPECIALIZACION DE ENFERMERÍA CARDIOVASCULAR</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">E07<a name=\"RETHUSqualification-E07\"> </a></td><td>Especialización de Enfermería Oncologica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M01<a name=\"RETHUSqualification-M01\"> </a></td><td>Alergología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0101<a name=\"RETHUSqualification-M0101\"> </a></td><td>Alergología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M02<a name=\"RETHUSqualification-M02\"> </a></td><td>Anestesiología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0201<a name=\"RETHUSqualification-M0201\"> </a></td><td>Anestesiología Cardiovascular</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0202<a name=\"RETHUSqualification-M0202\"> </a></td><td>Dolor y Cuidados Paliativos</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0203<a name=\"RETHUSqualification-M0203\"> </a></td><td>Especialización en Anestesiologia Pediatrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M03<a name=\"RETHUSqualification-M03\"> </a></td><td>Dermatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0301<a name=\"RETHUSqualification-M0301\"> </a></td><td>Dermatología Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0302<a name=\"RETHUSqualification-M0302\"> </a></td><td>Dermatología y Cirugia Dermatologica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0303<a name=\"RETHUSqualification-M0303\"> </a></td><td>Inmunodermatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M0304<a name=\"RETHUSqualification-M0304\"> </a></td><td>Dermatología pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M04<a name=\"RETHUSqualification-M04\"> </a></td><td>Genética Médica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M05<a name=\"RETHUSqualification-M05\"> </a></td><td>Medicina Aeroespacial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M06<a name=\"RETHUSqualification-M06\"> </a></td><td>Medicina de Urgencias</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M07<a name=\"RETHUSqualification-M07\"> </a></td><td>Medicina del Deporte</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M08<a name=\"RETHUSqualification-M08\"> </a></td><td>Medicina del dolor y cuidados paliativos</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M09<a name=\"RETHUSqualification-M09\"> </a></td><td>Medicina del Trabajo</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M10<a name=\"RETHUSqualification-M10\"> </a></td><td>Medicina Estética</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M11<a name=\"RETHUSqualification-M11\"> </a></td><td>Medicina Familiar</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M12<a name=\"RETHUSqualification-M12\"> </a></td><td>Medicina Física y Rehabilitación</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1201<a name=\"RETHUSqualification-M1201\"> </a></td><td>Rehabilitación Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1202<a name=\"RETHUSqualification-M1202\"> </a></td><td>Rehabilitación pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1203<a name=\"RETHUSqualification-M1203\"> </a></td><td>Especialización en Marcapaso y Electrofisiología Invasiva</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M13<a name=\"RETHUSqualification-M13\"> </a></td><td>Medicina Interna</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1301<a name=\"RETHUSqualification-M1301\"> </a></td><td>Cardiología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M130101<a name=\"RETHUSqualification-M130101\"> </a></td><td>Cardiología Intervencionista y hemodinamia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M13010101<a name=\"RETHUSqualification-M13010101\"> </a></td><td>Especialista en Cardiología Intervencionista Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M13010102<a name=\"RETHUSqualification-M13010102\"> </a></td><td>CARDIOLOGIA INTERVENCIONISTA Y HEMODINAMIA PEDIATRICA</td><td/></tr><tr><td style=\"white-space:nowrap\">M130102<a name=\"RETHUSqualification-M130102\"> </a></td><td>Especialización en Electrofisiología Cardiaca</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1302<a name=\"RETHUSqualification-M1302\"> </a></td><td>Cuidados Intensivos</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1303<a name=\"RETHUSqualification-M1303\"> </a></td><td>Endocrinología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1304<a name=\"RETHUSqualification-M1304\"> </a></td><td>Enfermedades infecciosas</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M130401<a name=\"RETHUSqualification-M130401\"> </a></td><td>Especializacion en Microbiologia y Parasitologia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1305<a name=\"RETHUSqualification-M1305\"> </a></td><td>Gastroenterología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1306<a name=\"RETHUSqualification-M1306\"> </a></td><td>Geriatría</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1307<a name=\"RETHUSqualification-M1307\"> </a></td><td>Hematología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M130701<a name=\"RETHUSqualification-M130701\"> </a></td><td>Especialización Hematología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1308<a name=\"RETHUSqualification-M1308\"> </a></td><td>Hematología y Oncología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1309<a name=\"RETHUSqualification-M1309\"> </a></td><td>Medicina Vascular</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1310<a name=\"RETHUSqualification-M1310\"> </a></td><td>Nefrología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1311<a name=\"RETHUSqualification-M1311\"> </a></td><td>Neumología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1312<a name=\"RETHUSqualification-M1312\"> </a></td><td>Oncología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M131201<a name=\"RETHUSqualification-M131201\"> </a></td><td>Especialización en Oncología Radioterápica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M131202<a name=\"RETHUSqualification-M131202\"> </a></td><td>Cirugia Oncologica Pediatrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1313<a name=\"RETHUSqualification-M1313\"> </a></td><td>Reumatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1314<a name=\"RETHUSqualification-M1314\"> </a></td><td>Hepatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M14<a name=\"RETHUSqualification-M14\"> </a></td><td>Neurología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1401<a name=\"RETHUSqualification-M1401\"> </a></td><td>Neurofisiología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1402<a name=\"RETHUSqualification-M1402\"> </a></td><td>Neurología Oncologica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1403<a name=\"RETHUSqualification-M1403\"> </a></td><td>EPILEPTOLOGÍA</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M15<a name=\"RETHUSqualification-M15\"> </a></td><td>Pediatría</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1501<a name=\"RETHUSqualification-M1501\"> </a></td><td>Cardiología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1502<a name=\"RETHUSqualification-M1502\"> </a></td><td>Hematología y Oncología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1503<a name=\"RETHUSqualification-M1503\"> </a></td><td>Infectología pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1504<a name=\"RETHUSqualification-M1504\"> </a></td><td>Nefrología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1505<a name=\"RETHUSqualification-M1505\"> </a></td><td>Neonatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1506<a name=\"RETHUSqualification-M1506\"> </a></td><td>Neumología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1507<a name=\"RETHUSqualification-M1507\"> </a></td><td>Neurología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1508<a name=\"RETHUSqualification-M1508\"> </a></td><td>Oncología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1509<a name=\"RETHUSqualification-M1509\"> </a></td><td>Cuidado Intensivo Pediátrico</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1510<a name=\"RETHUSqualification-M1510\"> </a></td><td>Gastroenterología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1511<a name=\"RETHUSqualification-M1511\"> </a></td><td>Reumatología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1512<a name=\"RETHUSqualification-M1512\"> </a></td><td>Endocrinología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1513<a name=\"RETHUSqualification-M1513\"> </a></td><td>ALERGOLOGIA E INMUNOLOGIA CLINICA PEDIATRICA</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M16<a name=\"RETHUSqualification-M16\"> </a></td><td>Psiquiatría</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1601<a name=\"RETHUSqualification-M1601\"> </a></td><td>Psiquiatría de Enlace</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1602<a name=\"RETHUSqualification-M1602\"> </a></td><td>Psiquiatría pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1603<a name=\"RETHUSqualification-M1603\"> </a></td><td>Psiquiatría geriátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M1604<a name=\"RETHUSqualification-M1604\"> </a></td><td>Neuropsiquiatría</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M17<a name=\"RETHUSqualification-M17\"> </a></td><td>Toxicología Clínica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M18<a name=\"RETHUSqualification-M18\"> </a></td><td>Medicina forense</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M19<a name=\"RETHUSqualification-M19\"> </a></td><td>Radioterapia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M20<a name=\"RETHUSqualification-M20\"> </a></td><td>Medicina Homeopática</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">M21<a name=\"RETHUSqualification-M21\"> </a></td><td>Especialización en Farmacología Clínica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">MA01<a name=\"RETHUSqualification-MA01\"> </a></td><td>Maestría en Medicina Alternativa</td><td>Maestría</td></tr><tr><td style=\"white-space:nowrap\">MA09<a name=\"RETHUSqualification-MA09\"> </a></td><td>MAESTRIA EN SALUD PÚBLICA</td><td>Maestría</td></tr><tr><td style=\"white-space:nowrap\">MA15<a name=\"RETHUSqualification-MA15\"> </a></td><td>MAESTRÍA EN EPIDEMIOLOGÍA</td><td>Maestría</td></tr><tr><td style=\"white-space:nowrap\">MA20<a name=\"RETHUSqualification-MA20\"> </a></td><td>MAESTRÍA EN BIOLOGÍA Y CLINICA DEL CANCER</td><td>Maestría</td></tr><tr><td style=\"white-space:nowrap\">MA99<a name=\"RETHUSqualification-MA99\"> </a></td><td>Maestria</td><td>Maestría</td></tr><tr><td style=\"white-space:nowrap\">OD01<a name=\"RETHUSqualification-OD01\"> </a></td><td>Ortodoncia y Ortopedia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0101<a name=\"RETHUSqualification-OD0101\"> </a></td><td>Ortopedia Maxilar</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0102<a name=\"RETHUSqualification-OD0102\"> </a></td><td>Operatoria Dental Estética</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0103<a name=\"RETHUSqualification-OD0103\"> </a></td><td>Maestría en ciencias en enfasis en ortodoncia</td><td>Maestría</td></tr><tr><td style=\"white-space:nowrap\">OD02<a name=\"RETHUSqualification-OD02\"> </a></td><td>Rehabilitación Oral</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD03<a name=\"RETHUSqualification-OD03\"> </a></td><td>Odontopediatría</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD04<a name=\"RETHUSqualification-OD04\"> </a></td><td>Endodoncia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD05<a name=\"RETHUSqualification-OD05\"> </a></td><td>Periodoncia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0501<a name=\"RETHUSqualification-OD0501\"> </a></td><td>Periodoncia e Implantologia Oral</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD06<a name=\"RETHUSqualification-OD06\"> </a></td><td>Cirugía Oral</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD07<a name=\"RETHUSqualification-OD07\"> </a></td><td>Cirugía Maxilofacial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0701<a name=\"RETHUSqualification-OD0701\"> </a></td><td>Cirugia Oncologica Maxilofacial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0702<a name=\"RETHUSqualification-OD0702\"> </a></td><td>Cirugía oral y maxilofacial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD08<a name=\"RETHUSqualification-OD08\"> </a></td><td>Radiología Oral</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0801<a name=\"RETHUSqualification-OD0801\"> </a></td><td>Radiología Dento Maxilofacial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD09<a name=\"RETHUSqualification-OD09\"> </a></td><td>Estomatologia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD0901<a name=\"RETHUSqualification-OD0901\"> </a></td><td>Estomatologia y Cirugia Oral</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD10<a name=\"RETHUSqualification-OD10\"> </a></td><td>Implantologia Oral y Reconstructiva</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD11<a name=\"RETHUSqualification-OD11\"> </a></td><td>Operatoria Dental Estética</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD12<a name=\"RETHUSqualification-OD12\"> </a></td><td>Odontología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD13<a name=\"RETHUSqualification-OD13\"> </a></td><td>Especialista en protesis maxilofacial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">OD14<a name=\"RETHUSqualification-OD14\"> </a></td><td>Especialista en prostodoncia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">P01<a name=\"RETHUSqualification-P01\"> </a></td><td>Bacteriología</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P02<a name=\"RETHUSqualification-P02\"> </a></td><td>Microbiología y bioanálisis</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P03<a name=\"RETHUSqualification-P03\"> </a></td><td>Enfermería</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P0301<a name=\"RETHUSqualification-P0301\"> </a></td><td>Perfusion y Circulacion Extracorporea</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">P04<a name=\"RETHUSqualification-P04\"> </a></td><td>Fisioterapia</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P0401<a name=\"RETHUSqualification-P0401\"> </a></td><td>Doctora en Fisioterapia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">P05<a name=\"RETHUSqualification-P05\"> </a></td><td>Fonoaudiología</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P0501<a name=\"RETHUSqualification-P0501\"> </a></td><td>Trastorno del Lenguaje y del Habla</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">P06<a name=\"RETHUSqualification-P06\"> </a></td><td>Instrumentación quirúrgica</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P07<a name=\"RETHUSqualification-P07\"> </a></td><td>Medicina</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P08<a name=\"RETHUSqualification-P08\"> </a></td><td>Nutrición y dietética</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P09<a name=\"RETHUSqualification-P09\"> </a></td><td>Odontología</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P0901<a name=\"RETHUSqualification-P0901\"> </a></td><td>Doctor en odontología</td><td>Doctorado</td></tr><tr><td style=\"white-space:nowrap\">P10<a name=\"RETHUSqualification-P10\"> </a></td><td>Optometría</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P11<a name=\"RETHUSqualification-P11\"> </a></td><td>Psicología</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P12<a name=\"RETHUSqualification-P12\"> </a></td><td>Seguridad y salud en el trabajo</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P13<a name=\"RETHUSqualification-P13\"> </a></td><td>Terapia ocupacional</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P14<a name=\"RETHUSqualification-P14\"> </a></td><td>Terapia respiratoria</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P15<a name=\"RETHUSqualification-P15\"> </a></td><td>Terapia psicosocial</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P16<a name=\"RETHUSqualification-P16\"> </a></td><td>Gerontología</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P17<a name=\"RETHUSqualification-P17\"> </a></td><td>Química Farmacéutica</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">P1701<a name=\"RETHUSqualification-P1701\"> </a></td><td>Doctorado en Bioquímica clinica, nutrición y patología molecular</td><td>Doctorado</td></tr><tr><td style=\"white-space:nowrap\">P1702<a name=\"RETHUSqualification-P1702\"> </a></td><td>Especialista en Análisis Clínicos</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">P18<a name=\"RETHUSqualification-P18\"> </a></td><td>ORTOPTISTA</td><td>Universitaria</td></tr><tr><td style=\"white-space:nowrap\">Q01<a name=\"RETHUSqualification-Q01\"> </a></td><td>Cirugía General</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0101<a name=\"RETHUSqualification-Q0101\"> </a></td><td>Cirugía Cardiovascular</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0102<a name=\"RETHUSqualification-Q0102\"> </a></td><td>Cirugía de Cabeza y Cuello</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0103<a name=\"RETHUSqualification-Q0103\"> </a></td><td>Cirugía de Mama y tumores de Tejidos Blandos</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0104<a name=\"RETHUSqualification-Q0104\"> </a></td><td>Cirugía de Tórax</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0105<a name=\"RETHUSqualification-Q0105\"> </a></td><td>Cirugía Gastrointestinal</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0106<a name=\"RETHUSqualification-Q0106\"> </a></td><td>Cirugía Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q010601<a name=\"RETHUSqualification-Q010601\"> </a></td><td>Cirugía Oncológica de Cabeza y Cuello</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0107<a name=\"RETHUSqualification-Q0107\"> </a></td><td>Coloproctología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0108<a name=\"RETHUSqualification-Q0108\"> </a></td><td>Cirugía de Trasplantes</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0109<a name=\"RETHUSqualification-Q0109\"> </a></td><td>Cirugía vascular y angiología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0110<a name=\"RETHUSqualification-Q0110\"> </a></td><td>Cirugía vascular periférica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0111<a name=\"RETHUSqualification-Q0111\"> </a></td><td>Cirugía Endoscópica Gastrointestinal</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0112<a name=\"RETHUSqualification-Q0112\"> </a></td><td>Cirugía Cardiovascular Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0113<a name=\"RETHUSqualification-Q0113\"> </a></td><td>Cirugía Laparoscópica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q02<a name=\"RETHUSqualification-Q02\"> </a></td><td>Cirugía Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q03<a name=\"RETHUSqualification-Q03\"> </a></td><td>Cirugía Plástica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0301<a name=\"RETHUSqualification-Q0301\"> </a></td><td>Cirugía Plástica Facial</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0302<a name=\"RETHUSqualification-Q0302\"> </a></td><td>Cirugía Plástica Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0303<a name=\"RETHUSqualification-Q0303\"> </a></td><td>Cirugía plástica de mano</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0304<a name=\"RETHUSqualification-Q0304\"> </a></td><td>Cirugía Plástica Reconstructiva y Estética</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q030401<a name=\"RETHUSqualification-Q030401\"> </a></td><td>Especialista en Microcirugía General y Reconstructiva</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q04<a name=\"RETHUSqualification-Q04\"> </a></td><td>Ginecología y Obstetricia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0401<a name=\"RETHUSqualification-Q0401\"> </a></td><td>Ginecología Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0402<a name=\"RETHUSqualification-Q0402\"> </a></td><td>Medicina Materno Fetal</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0403<a name=\"RETHUSqualification-Q0403\"> </a></td><td>Medicina reproductiva</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0404<a name=\"RETHUSqualification-Q0404\"> </a></td><td>Mastología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q05<a name=\"RETHUSqualification-Q05\"> </a></td><td>Neurocirugía</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q06<a name=\"RETHUSqualification-Q06\"> </a></td><td>Oftalmología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0601<a name=\"RETHUSqualification-Q0601\"> </a></td><td>Oftalmología Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0602<a name=\"RETHUSqualification-Q0602\"> </a></td><td>Oftalmología pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0603<a name=\"RETHUSqualification-Q0603\"> </a></td><td>Retina y vitreo</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0604<a name=\"RETHUSqualification-Q0604\"> </a></td><td>Especializacion en Cornea y Cirugia Refractiva</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0605<a name=\"RETHUSqualification-Q0605\"> </a></td><td>Oculoplastia, Orbita y Via Lagrimal</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q07<a name=\"RETHUSqualification-Q07\"> </a></td><td>Ortopedia y Traumatología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0701<a name=\"RETHUSqualification-Q0701\"> </a></td><td>Cirugía de pie y tobillo</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0702<a name=\"RETHUSqualification-Q0702\"> </a></td><td>Cirugía de Columna</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0703<a name=\"RETHUSqualification-Q0703\"> </a></td><td>Cirugía de cadera y rodilla</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0704<a name=\"RETHUSqualification-Q0704\"> </a></td><td>Cirugía de Mano</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0705<a name=\"RETHUSqualification-Q0705\"> </a></td><td>Ortopedia Infantil</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0706<a name=\"RETHUSqualification-Q0706\"> </a></td><td>Ortopedia Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q08<a name=\"RETHUSqualification-Q08\"> </a></td><td>Otorrinolaringología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0801<a name=\"RETHUSqualification-Q0801\"> </a></td><td>Laringología y Vía Superior</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0802<a name=\"RETHUSqualification-Q0802\"> </a></td><td>Otología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0803<a name=\"RETHUSqualification-Q0803\"> </a></td><td>Especialización en Cirugía Otológica de Cabeza y Cuello</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0804<a name=\"RETHUSqualification-Q0804\"> </a></td><td>Especialización en Otologia y Otoneurologia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0805<a name=\"RETHUSqualification-Q0805\"> </a></td><td>Neurotologia</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0806<a name=\"RETHUSqualification-Q0806\"> </a></td><td>ESPECIALISTA EN OTORRINOLARINGOLOGÍA PEDIÁTRICA</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q09<a name=\"RETHUSqualification-Q09\"> </a></td><td>Urología</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0901<a name=\"RETHUSqualification-Q0901\"> </a></td><td>Urología Pediátrica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">Q0902<a name=\"RETHUSqualification-Q0902\"> </a></td><td>Urología Oncológica</td><td>Especialización</td></tr><tr><td style=\"white-space:nowrap\">T01<a name=\"RETHUSqualification-T01\"> </a></td><td>Tecnología  en mecánica dental</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T02<a name=\"RETHUSqualification-T02\"> </a></td><td>Tecnología en atención prehospitalaria</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T03<a name=\"RETHUSqualification-T03\"> </a></td><td>Tecnología en citohistología</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T04<a name=\"RETHUSqualification-T04\"> </a></td><td>Tecnología en desarrollo y adaptación de prótesis y ortesis</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T05<a name=\"RETHUSqualification-T05\"> </a></td><td>Tecnología en seguridad y salud en el trabajo</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T06<a name=\"RETHUSqualification-T06\"> </a></td><td>Tecnología en laboratorio de prótesis dental</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T07<a name=\"RETHUSqualification-T07\"> </a></td><td>Tecnología en laboratorio de rehabilitación dental</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T08<a name=\"RETHUSqualification-T08\"> </a></td><td>Tecnología en laboratorio dental</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T09<a name=\"RETHUSqualification-T09\"> </a></td><td>Tecnología en manejo de fuentes abiertas de uso diagnóstico y terapéutico</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T10<a name=\"RETHUSqualification-T10\"> </a></td><td>Tecnología en mecánica dental</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T11<a name=\"RETHUSqualification-T11\"> </a></td><td>Tecnología en promoción de la salud</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T12<a name=\"RETHUSqualification-T12\"> </a></td><td>Tecnología en radiodiagnóstico y radioterapia</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T13<a name=\"RETHUSqualification-T13\"> </a></td><td>Tecnología en radiología e imágenes diagnósticas</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T14<a name=\"RETHUSqualification-T14\"> </a></td><td>Tecnología en regencia de farmacia</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T15<a name=\"RETHUSqualification-T15\"> </a></td><td>Tecnología en sanidad naval</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T16<a name=\"RETHUSqualification-T16\"> </a></td><td>Tecnología en radioterapia</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">T17<a name=\"RETHUSqualification-T17\"> </a></td><td>Tecnología en Nutrición y Dietética</td><td>Tecnología</td></tr><tr><td style=\"white-space:nowrap\">TC01<a name=\"RETHUSqualification-TC01\"> </a></td><td>Técnico profesional en atención prehospitalaria</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC02<a name=\"RETHUSqualification-TC02\"> </a></td><td>Técnico profesional en seguridad y salud en el trabajo</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC03<a name=\"RETHUSqualification-TC03\"> </a></td><td>Técnico profesional en laboratorio de prótesis dental</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC04<a name=\"RETHUSqualification-TC04\"> </a></td><td>Técnico profesional en mecánica dental</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC05<a name=\"RETHUSqualification-TC05\"> </a></td><td>Técnico profesional en saneamiento básico</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC06<a name=\"RETHUSqualification-TC06\"> </a></td><td>Técnico profesional en tanatopraxia</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC07<a name=\"RETHUSqualification-TC07\"> </a></td><td>Técnico profesional en citohistología</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC08<a name=\"RETHUSqualification-TC08\"> </a></td><td>Técnico profesional en salud oral</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC09<a name=\"RETHUSqualification-TC09\"> </a></td><td>Tecnico Profesional en Terapia Ocupacional</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC10<a name=\"RETHUSqualification-TC10\"> </a></td><td>Tecnico Profesional en Fisioterapia</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">TC11<a name=\"RETHUSqualification-TC11\"> </a></td><td>Tecnico Profesional en Laboratorio</td><td>Técnico profesional</td></tr><tr><td style=\"white-space:nowrap\">V04<a name=\"RETHUSqualification-V04\"> </a></td><td>ESPECIALIZACIÓN EN SEGURIDAD DEL PACIENTE</td><td>Especialización</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification",
+  "version" : "1.0.0",
+  "name" : "RETHUSqualification",
+  "title" : "CodeSystem: RETHUS Qualification",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Code system for qualification of professional or technical competencies of healthcare practitioners.\r\n\r\n[ES: Sistema de codificación de cualificación de las competencias de los profesionales de salud.]",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "This code system is used as a nomenclature of qualification of professional or technical competencies of healthcare practitioners (taken from Mipres Version 3 - Sispro).\r\n\r\n[ES: Este sistema de codificación se utiliza como nomenclador de cualificación de las competencias de los profesionales de salud (tomado de la versión 3 de Mipres - Sispro).]",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 289,
+  "concept" : [{
+    "code" : "000",
+    "display" : "Bacteriología"
+  },
+  {
+    "code" : "001",
+    "display" : "Enfermería"
+  },
+  {
+    "code" : "002",
+    "display" : "Instrumentación quirúrgica"
+  },
+  {
+    "code" : "003",
+    "display" : "Medicina"
+  },
+  {
+    "code" : "004",
+    "display" : "Nutrición y dietética"
+  },
+  {
+    "code" : "005",
+    "display" : "Odontología"
+  },
+  {
+    "code" : "006",
+    "display" : "Optometría"
+  },
+  {
+    "code" : "007",
+    "display" : "Salud ocupacional"
+  },
+  {
+    "code" : "008",
+    "display" : "Fisioterapia"
+  },
+  {
+    "code" : "009",
+    "display" : "Terapia respiratoria"
+  },
+  {
+    "code" : "010",
+    "display" : "Fonoaudiología"
+  },
+  {
+    "code" : "011",
+    "display" : "Terapia ocupacional"
+  },
+  {
+    "code" : "012",
+    "display" : "Técnica profesional en fisioterapia"
+  },
+  {
+    "code" : "013",
+    "display" : "Técnica profesional en fonoaudiología"
+  },
+  {
+    "code" : "014",
+    "display" : "Tecnología en radiología e imágenes diagnósticas"
+  },
+  {
+    "code" : "015",
+    "display" : "Tecnología en terapia del lenguaje"
+  },
+  {
+    "code" : "016",
+    "display" : "Tecnología en terapia ocupacional"
+  },
+  {
+    "code" : "017",
+    "display" : "Tecnología en terapia respiratoria"
+  },
+  {
+    "code" : "018",
+    "display" : "Técnica profesional en atención prehospitalaria"
+  },
+  {
+    "code" : "019",
+    "display" : "Técnica profesional en enfermería"
+  },
+  {
+    "code" : "020",
+    "display" : "Técnica profesional en salud pública"
+  },
+  {
+    "code" : "021",
+    "display" : "Técnica profesional en salud oral"
+  },
+  {
+    "code" : "022",
+    "display" : "Técnica profesional en citohistología"
+  },
+  {
+    "code" : "024",
+    "display" : "Técnica profesional en salud ocupacional"
+  },
+  {
+    "code" : "025",
+    "display" : "Técnica profesional en instrumentación quirúrgica"
+  },
+  {
+    "code" : "027",
+    "display" : "Técnico profesional en mecánica dental"
+  },
+  {
+    "code" : "030",
+    "display" : "Técnica profesional en radiología e imag diag"
+  },
+  {
+    "code" : "031",
+    "display" : "Técnica profesional en saneamiento ambiental"
+  },
+  {
+    "code" : "037",
+    "display" : "Tecnología en mecánica dental"
+  },
+  {
+    "code" : "039",
+    "display" : "Tecnología en instrumentación quirúrgica"
+  },
+  {
+    "code" : "040",
+    "display" : "Tecnología en citohistología"
+  },
+  {
+    "code" : "041",
+    "display" : "Tecnología en atención prehospitalaria"
+  },
+  {
+    "code" : "044",
+    "display" : "Tecnología en salud ocupacional"
+  },
+  {
+    "code" : "045",
+    "display" : "Tecnología en regencia de farmacia"
+  },
+  {
+    "code" : "049",
+    "display" : "Auxiliar en enfermería"
+  },
+  {
+    "code" : "050",
+    "display" : "Auxiliar en salud pública"
+  },
+  {
+    "code" : "051",
+    "display" : "Auxiliar en salud oral"
+  },
+  {
+    "code" : "052",
+    "display" : "Auxiliar en servicios farmacéuticos"
+  },
+  {
+    "code" : "053",
+    "display" : "Auxiliar administrativo en salud"
+  },
+  {
+    "code" : "054",
+    "display" : "Auxiliar de droguería"
+  },
+  {
+    "code" : "055",
+    "display" : "Auxiliar de enfermería"
+  },
+  {
+    "code" : "056",
+    "display" : "Auxiliar de consultorio odontológico"
+  },
+  {
+    "code" : "057",
+    "display" : "Auxiliar de higiene oral"
+  },
+  {
+    "code" : "058",
+    "display" : "Promotor de saneamiento ambiental"
+  },
+  {
+    "code" : "059",
+    "display" : "Promotor de salud"
+  },
+  {
+    "code" : "060",
+    "display" : "Auxiliar de salud familiar y comunitaria"
+  },
+  {
+    "code" : "061",
+    "display" : "Auxiliar de gerontología"
+  },
+  {
+    "code" : "062",
+    "display" : "Auxiliar de laboratorio clínico"
+  },
+  {
+    "code" : "064",
+    "display" : "Auxiliar de radiología e imágenes diagnósticas"
+  },
+  {
+    "code" : "065",
+    "display" : "Auxiliar en salud ocupacional"
+  },
+  {
+    "code" : "067",
+    "display" : "Auxiliar en urgencias médicas"
+  },
+  {
+    "code" : "068",
+    "display" : "Psicología"
+  },
+  {
+    "code" : "070",
+    "display" : "Química farmacéutica"
+  },
+  {
+    "code" : "076",
+    "display" : "Técnica profesional en regencia de farmacia"
+  },
+  {
+    "code" : "077",
+    "display" : "Técnica profesional en terapia ocupacional"
+  },
+  {
+    "code" : "543",
+    "display" : "Tecnología en gerontología"
+  },
+  {
+    "code" : "544",
+    "display" : "Gerontología"
+  },
+  {
+    "code" : "545",
+    "display" : "Técnica profesional en saneamiento básico"
+  },
+  {
+    "code" : "546",
+    "display" : "Tecnología en radiodiagnóstico y radioterapia"
+  },
+  {
+    "code" : "999999",
+    "display" : "NO APLICA"
+  },
+  {
+    "code" : "A01",
+    "display" : "Auxiliar administrativo en salud",
+    "definition" : "Auxiliar"
+  },
+  {
+    "code" : "A02",
+    "display" : "Auxiliar en enfermería",
+    "definition" : "Auxiliar"
+  },
+  {
+    "code" : "A03",
+    "display" : "Auxiliar en salud oral",
+    "definition" : "Auxiliar"
+  },
+  {
+    "code" : "A04",
+    "display" : "Auxiliar en salud publica",
+    "definition" : "Auxiliar"
+  },
+  {
+    "code" : "A05",
+    "display" : "Auxiliar en servicios farmacéuticos",
+    "definition" : "Auxiliar"
+  },
+  {
+    "code" : "D01",
+    "display" : "Medicina Nuclear",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D02",
+    "display" : "Patología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0201",
+    "display" : "Especialización en Hematopatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0202",
+    "display" : "Dermatopatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D03",
+    "display" : "Radiología e Imágenes Diagnósticas",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0301",
+    "display" : "Imagen Corporal",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0302",
+    "display" : "Imagenología Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0303",
+    "display" : "Neuroradiología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0304",
+    "display" : "Radiología Intervencionista",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0305",
+    "display" : "Especialización en Radio Oncologia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "D0306",
+    "display" : "Especialización en Ultrasonido Diagnostico",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "DA01",
+    "display" : "DOCTORADO EN CIENCIAS DE LA SALUD",
+    "definition" : "Doctorado"
+  },
+  {
+    "code" : "DA99",
+    "display" : "Doctorado",
+    "definition" : "Doctorado"
+  },
+  {
+    "code" : "E01",
+    "display" : "Salud familiar y comunitaria",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "E02",
+    "display" : "Salud ocupacional",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "E03",
+    "display" : "Enfermería en cuidado a las personas con heridas y ostomías",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "E05",
+    "display" : "ESPECIALIZACION EN ENFERMERIA EN CUIDADO CRITICO",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "E06",
+    "display" : "ESPECIALIZACION DE ENFERMERÍA CARDIOVASCULAR",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "E07",
+    "display" : "Especialización de Enfermería Oncologica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M01",
+    "display" : "Alergología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0101",
+    "display" : "Alergología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M02",
+    "display" : "Anestesiología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0201",
+    "display" : "Anestesiología Cardiovascular",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0202",
+    "display" : "Dolor y Cuidados Paliativos",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0203",
+    "display" : "Especialización en Anestesiologia Pediatrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M03",
+    "display" : "Dermatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0301",
+    "display" : "Dermatología Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0302",
+    "display" : "Dermatología y Cirugia Dermatologica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0303",
+    "display" : "Inmunodermatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M0304",
+    "display" : "Dermatología pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M04",
+    "display" : "Genética Médica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M05",
+    "display" : "Medicina Aeroespacial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M06",
+    "display" : "Medicina de Urgencias",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M07",
+    "display" : "Medicina del Deporte",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M08",
+    "display" : "Medicina del dolor y cuidados paliativos",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M09",
+    "display" : "Medicina del Trabajo",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M10",
+    "display" : "Medicina Estética",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M11",
+    "display" : "Medicina Familiar",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M12",
+    "display" : "Medicina Física y Rehabilitación",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1201",
+    "display" : "Rehabilitación Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1202",
+    "display" : "Rehabilitación pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1203",
+    "display" : "Especialización en Marcapaso y Electrofisiología Invasiva",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M13",
+    "display" : "Medicina Interna",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1301",
+    "display" : "Cardiología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M130101",
+    "display" : "Cardiología Intervencionista y hemodinamia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M13010101",
+    "display" : "Especialista en Cardiología Intervencionista Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M13010102",
+    "display" : "CARDIOLOGIA INTERVENCIONISTA Y HEMODINAMIA PEDIATRICA"
+  },
+  {
+    "code" : "M130102",
+    "display" : "Especialización en Electrofisiología Cardiaca",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1302",
+    "display" : "Cuidados Intensivos",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1303",
+    "display" : "Endocrinología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1304",
+    "display" : "Enfermedades infecciosas",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M130401",
+    "display" : "Especializacion en Microbiologia y Parasitologia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1305",
+    "display" : "Gastroenterología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1306",
+    "display" : "Geriatría",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1307",
+    "display" : "Hematología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M130701",
+    "display" : "Especialización Hematología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1308",
+    "display" : "Hematología y Oncología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1309",
+    "display" : "Medicina Vascular",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1310",
+    "display" : "Nefrología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1311",
+    "display" : "Neumología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1312",
+    "display" : "Oncología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M131201",
+    "display" : "Especialización en Oncología Radioterápica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M131202",
+    "display" : "Cirugia Oncologica Pediatrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1313",
+    "display" : "Reumatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1314",
+    "display" : "Hepatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M14",
+    "display" : "Neurología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1401",
+    "display" : "Neurofisiología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1402",
+    "display" : "Neurología Oncologica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1403",
+    "display" : "EPILEPTOLOGÍA",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M15",
+    "display" : "Pediatría",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1501",
+    "display" : "Cardiología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1502",
+    "display" : "Hematología y Oncología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1503",
+    "display" : "Infectología pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1504",
+    "display" : "Nefrología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1505",
+    "display" : "Neonatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1506",
+    "display" : "Neumología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1507",
+    "display" : "Neurología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1508",
+    "display" : "Oncología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1509",
+    "display" : "Cuidado Intensivo Pediátrico",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1510",
+    "display" : "Gastroenterología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1511",
+    "display" : "Reumatología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1512",
+    "display" : "Endocrinología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1513",
+    "display" : "ALERGOLOGIA E INMUNOLOGIA CLINICA PEDIATRICA",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M16",
+    "display" : "Psiquiatría",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1601",
+    "display" : "Psiquiatría de Enlace",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1602",
+    "display" : "Psiquiatría pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1603",
+    "display" : "Psiquiatría geriátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M1604",
+    "display" : "Neuropsiquiatría",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M17",
+    "display" : "Toxicología Clínica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M18",
+    "display" : "Medicina forense",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M19",
+    "display" : "Radioterapia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M20",
+    "display" : "Medicina Homeopática",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "M21",
+    "display" : "Especialización en Farmacología Clínica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "MA01",
+    "display" : "Maestría en Medicina Alternativa",
+    "definition" : "Maestría"
+  },
+  {
+    "code" : "MA09",
+    "display" : "MAESTRIA EN SALUD PÚBLICA",
+    "definition" : "Maestría"
+  },
+  {
+    "code" : "MA15",
+    "display" : "MAESTRÍA EN EPIDEMIOLOGÍA",
+    "definition" : "Maestría"
+  },
+  {
+    "code" : "MA20",
+    "display" : "MAESTRÍA EN BIOLOGÍA Y CLINICA DEL CANCER",
+    "definition" : "Maestría"
+  },
+  {
+    "code" : "MA99",
+    "display" : "Maestria",
+    "definition" : "Maestría"
+  },
+  {
+    "code" : "OD01",
+    "display" : "Ortodoncia y Ortopedia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0101",
+    "display" : "Ortopedia Maxilar",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0102",
+    "display" : "Operatoria Dental Estética",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0103",
+    "display" : "Maestría en ciencias en enfasis en ortodoncia",
+    "definition" : "Maestría"
+  },
+  {
+    "code" : "OD02",
+    "display" : "Rehabilitación Oral",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD03",
+    "display" : "Odontopediatría",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD04",
+    "display" : "Endodoncia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD05",
+    "display" : "Periodoncia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0501",
+    "display" : "Periodoncia e Implantologia Oral",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD06",
+    "display" : "Cirugía Oral",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD07",
+    "display" : "Cirugía Maxilofacial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0701",
+    "display" : "Cirugia Oncologica Maxilofacial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0702",
+    "display" : "Cirugía oral y maxilofacial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD08",
+    "display" : "Radiología Oral",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0801",
+    "display" : "Radiología Dento Maxilofacial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD09",
+    "display" : "Estomatologia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD0901",
+    "display" : "Estomatologia y Cirugia Oral",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD10",
+    "display" : "Implantologia Oral y Reconstructiva",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD11",
+    "display" : "Operatoria Dental Estética",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD12",
+    "display" : "Odontología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD13",
+    "display" : "Especialista en protesis maxilofacial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "OD14",
+    "display" : "Especialista en prostodoncia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "P01",
+    "display" : "Bacteriología",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P02",
+    "display" : "Microbiología y bioanálisis",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P03",
+    "display" : "Enfermería",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P0301",
+    "display" : "Perfusion y Circulacion Extracorporea",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "P04",
+    "display" : "Fisioterapia",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P0401",
+    "display" : "Doctora en Fisioterapia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "P05",
+    "display" : "Fonoaudiología",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P0501",
+    "display" : "Trastorno del Lenguaje y del Habla",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "P06",
+    "display" : "Instrumentación quirúrgica",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P07",
+    "display" : "Medicina",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P08",
+    "display" : "Nutrición y dietética",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P09",
+    "display" : "Odontología",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P0901",
+    "display" : "Doctor en odontología",
+    "definition" : "Doctorado"
+  },
+  {
+    "code" : "P10",
+    "display" : "Optometría",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P11",
+    "display" : "Psicología",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P12",
+    "display" : "Seguridad y salud en el trabajo",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P13",
+    "display" : "Terapia ocupacional",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P14",
+    "display" : "Terapia respiratoria",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P15",
+    "display" : "Terapia psicosocial",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P16",
+    "display" : "Gerontología",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P17",
+    "display" : "Química Farmacéutica",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "P1701",
+    "display" : "Doctorado en Bioquímica clinica, nutrición y patología molecular",
+    "definition" : "Doctorado"
+  },
+  {
+    "code" : "P1702",
+    "display" : "Especialista en Análisis Clínicos",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "P18",
+    "display" : "ORTOPTISTA",
+    "definition" : "Universitaria"
+  },
+  {
+    "code" : "Q01",
+    "display" : "Cirugía General",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0101",
+    "display" : "Cirugía Cardiovascular",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0102",
+    "display" : "Cirugía de Cabeza y Cuello",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0103",
+    "display" : "Cirugía de Mama y tumores de Tejidos Blandos",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0104",
+    "display" : "Cirugía de Tórax",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0105",
+    "display" : "Cirugía Gastrointestinal",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0106",
+    "display" : "Cirugía Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q010601",
+    "display" : "Cirugía Oncológica de Cabeza y Cuello",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0107",
+    "display" : "Coloproctología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0108",
+    "display" : "Cirugía de Trasplantes",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0109",
+    "display" : "Cirugía vascular y angiología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0110",
+    "display" : "Cirugía vascular periférica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0111",
+    "display" : "Cirugía Endoscópica Gastrointestinal",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0112",
+    "display" : "Cirugía Cardiovascular Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0113",
+    "display" : "Cirugía Laparoscópica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q02",
+    "display" : "Cirugía Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q03",
+    "display" : "Cirugía Plástica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0301",
+    "display" : "Cirugía Plástica Facial",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0302",
+    "display" : "Cirugía Plástica Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0303",
+    "display" : "Cirugía plástica de mano",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0304",
+    "display" : "Cirugía Plástica Reconstructiva y Estética",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q030401",
+    "display" : "Especialista en Microcirugía General y Reconstructiva",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q04",
+    "display" : "Ginecología y Obstetricia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0401",
+    "display" : "Ginecología Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0402",
+    "display" : "Medicina Materno Fetal",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0403",
+    "display" : "Medicina reproductiva",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0404",
+    "display" : "Mastología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q05",
+    "display" : "Neurocirugía",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q06",
+    "display" : "Oftalmología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0601",
+    "display" : "Oftalmología Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0602",
+    "display" : "Oftalmología pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0603",
+    "display" : "Retina y vitreo",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0604",
+    "display" : "Especializacion en Cornea y Cirugia Refractiva",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0605",
+    "display" : "Oculoplastia, Orbita y Via Lagrimal",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q07",
+    "display" : "Ortopedia y Traumatología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0701",
+    "display" : "Cirugía de pie y tobillo",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0702",
+    "display" : "Cirugía de Columna",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0703",
+    "display" : "Cirugía de cadera y rodilla",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0704",
+    "display" : "Cirugía de Mano",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0705",
+    "display" : "Ortopedia Infantil",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0706",
+    "display" : "Ortopedia Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q08",
+    "display" : "Otorrinolaringología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0801",
+    "display" : "Laringología y Vía Superior",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0802",
+    "display" : "Otología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0803",
+    "display" : "Especialización en Cirugía Otológica de Cabeza y Cuello",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0804",
+    "display" : "Especialización en Otologia y Otoneurologia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0805",
+    "display" : "Neurotologia",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0806",
+    "display" : "ESPECIALISTA EN OTORRINOLARINGOLOGÍA PEDIÁTRICA",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q09",
+    "display" : "Urología",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0901",
+    "display" : "Urología Pediátrica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "Q0902",
+    "display" : "Urología Oncológica",
+    "definition" : "Especialización"
+  },
+  {
+    "code" : "T01",
+    "display" : "Tecnología  en mecánica dental",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T02",
+    "display" : "Tecnología en atención prehospitalaria",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T03",
+    "display" : "Tecnología en citohistología",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T04",
+    "display" : "Tecnología en desarrollo y adaptación de prótesis y ortesis",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T05",
+    "display" : "Tecnología en seguridad y salud en el trabajo",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T06",
+    "display" : "Tecnología en laboratorio de prótesis dental",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T07",
+    "display" : "Tecnología en laboratorio de rehabilitación dental",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T08",
+    "display" : "Tecnología en laboratorio dental",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T09",
+    "display" : "Tecnología en manejo de fuentes abiertas de uso diagnóstico y terapéutico",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T10",
+    "display" : "Tecnología en mecánica dental",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T11",
+    "display" : "Tecnología en promoción de la salud",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T12",
+    "display" : "Tecnología en radiodiagnóstico y radioterapia",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T13",
+    "display" : "Tecnología en radiología e imágenes diagnósticas",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T14",
+    "display" : "Tecnología en regencia de farmacia",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T15",
+    "display" : "Tecnología en sanidad naval",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T16",
+    "display" : "Tecnología en radioterapia",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "T17",
+    "display" : "Tecnología en Nutrición y Dietética",
+    "definition" : "Tecnología"
+  },
+  {
+    "code" : "TC01",
+    "display" : "Técnico profesional en atención prehospitalaria",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC02",
+    "display" : "Técnico profesional en seguridad y salud en el trabajo",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC03",
+    "display" : "Técnico profesional en laboratorio de prótesis dental",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC04",
+    "display" : "Técnico profesional en mecánica dental",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC05",
+    "display" : "Técnico profesional en saneamiento básico",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC06",
+    "display" : "Técnico profesional en tanatopraxia",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC07",
+    "display" : "Técnico profesional en citohistología",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC08",
+    "display" : "Técnico profesional en salud oral",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC09",
+    "display" : "Tecnico Profesional en Terapia Ocupacional",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC10",
+    "display" : "Tecnico Profesional en Fisioterapia",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "TC11",
+    "display" : "Tecnico Profesional en Laboratorio",
+    "definition" : "Técnico profesional"
+  },
+  {
+    "code" : "V04",
+    "display" : "ESPECIALIZACIÓN EN SEGURIDAD DEL PACIENTE",
+    "definition" : "Especialización"
+  }]
+}

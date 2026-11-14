@@ -1,0 +1,209 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresDoseForm",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresDoseForm</b></p><a name=\"MipresDoseForm\"> </a><a name=\"hcMipresDoseForm\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresDoseForm</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">C28944<a name=\"MipresDoseForm-C28944\"> </a></td><td>CREMA</td></tr><tr><td style=\"white-space:nowrap\">C29167<a name=\"MipresDoseForm-C29167\"> </a></td><td>LOCION</td></tr><tr><td style=\"white-space:nowrap\">C29269<a name=\"MipresDoseForm-C29269\"> </a></td><td>ENJUAGUE</td></tr><tr><td style=\"white-space:nowrap\">C42887<a name=\"MipresDoseForm-C42887\"> </a></td><td>AEROSOL</td></tr><tr><td style=\"white-space:nowrap\">C42909<a name=\"MipresDoseForm-C42909\"> </a></td><td>GRANULOS EFERVESCENTES</td></tr><tr><td style=\"white-space:nowrap\">C42912<a name=\"MipresDoseForm-C42912\"> </a></td><td>ELIXIR</td></tr><tr><td style=\"white-space:nowrap\">C42932<a name=\"MipresDoseForm-C42932\"> </a></td><td>CINTA ADHESIVA / PELICULA</td></tr><tr><td style=\"white-space:nowrap\">C42933<a name=\"MipresDoseForm-C42933\"> </a></td><td>GAS</td></tr><tr><td style=\"white-space:nowrap\">C42938<a name=\"MipresDoseForm-C42938\"> </a></td><td>GRANULOS CONVENCIONALES</td></tr><tr><td style=\"white-space:nowrap\">C42941<a name=\"MipresDoseForm-C42941\"> </a></td><td>GOMA</td></tr><tr><td style=\"white-space:nowrap\">C42942<a name=\"MipresDoseForm-C42942\"> </a></td><td>IMPLANTE</td></tr><tr><td style=\"white-space:nowrap\">C42948<a name=\"MipresDoseForm-C42948\"> </a></td><td>GELES y JALEAS</td></tr><tr><td style=\"white-space:nowrap\">C42953<a name=\"MipresDoseForm-C42953\"> </a></td><td>LIQUIDO (Diferentes a soluciones)</td></tr><tr><td style=\"white-space:nowrap\">C42966<a name=\"MipresDoseForm-C42966\"> </a></td><td>UNGUENTO</td></tr><tr><td style=\"white-space:nowrap\">C42967<a name=\"MipresDoseForm-C42967\"> </a></td><td>PASTA</td></tr><tr><td style=\"white-space:nowrap\">C42968<a name=\"MipresDoseForm-C42968\"> </a></td><td>SISTEMAS TRASNDERMICOS</td></tr><tr><td style=\"white-space:nowrap\">C42969<a name=\"MipresDoseForm-C42969\"> </a></td><td>PELLETS</td></tr><tr><td style=\"white-space:nowrap\">C42983<a name=\"MipresDoseForm-C42983\"> </a></td><td>JABONES Y CHAMPU</td></tr><tr><td style=\"white-space:nowrap\">C42989<a name=\"MipresDoseForm-C42989\"> </a></td><td>ESPRAY</td></tr><tr><td style=\"white-space:nowrap\">C42993<a name=\"MipresDoseForm-C42993\"> </a></td><td>SUPOSITORIO / OVULO</td></tr><tr><td style=\"white-space:nowrap\">C42994<a name=\"MipresDoseForm-C42994\"> </a></td><td>SUSPENSION</td></tr><tr><td style=\"white-space:nowrap\">C42996<a name=\"MipresDoseForm-C42996\"> </a></td><td>JARABE</td></tr><tr><td style=\"white-space:nowrap\">C43000<a name=\"MipresDoseForm-C43000\"> </a></td><td>TINTURA</td></tr><tr><td style=\"white-space:nowrap\">C47913<a name=\"MipresDoseForm-C47913\"> </a></td><td>EMPLASTO</td></tr><tr><td style=\"white-space:nowrap\">C47914<a name=\"MipresDoseForm-C47914\"> </a></td><td>TIRA</td></tr><tr><td style=\"white-space:nowrap\">C47915<a name=\"MipresDoseForm-C47915\"> </a></td><td>SISTEMAS INTRAUTERINOS</td></tr><tr><td style=\"white-space:nowrap\">C64898<a name=\"MipresDoseForm-C64898\"> </a></td><td>ESPUMA</td></tr><tr><td style=\"white-space:nowrap\">C69031<a name=\"MipresDoseForm-C69031\"> </a></td><td>SISTEMAS OCULARES</td></tr><tr><td style=\"white-space:nowrap\">C91199<a name=\"MipresDoseForm-C91199\"> </a></td><td>SISTEMAS DE ANILLOS VAGINALES</td></tr><tr><td style=\"white-space:nowrap\">COLFF001<a name=\"MipresDoseForm-COLFF001\"> </a></td><td>TABLETAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">COLFF002<a name=\"MipresDoseForm-COLFF002\"> </a></td><td>POLVOS PARA NO RECONSTITUIR</td></tr><tr><td style=\"white-space:nowrap\">COLFF003<a name=\"MipresDoseForm-COLFF003\"> </a></td><td>POLVOS PARA RECONSTITUIR</td></tr><tr><td style=\"white-space:nowrap\">COLFF004<a name=\"MipresDoseForm-COLFF004\"> </a></td><td>OTRAS SOLUCIONES</td></tr><tr><td style=\"white-space:nowrap\">COLFF005<a name=\"MipresDoseForm-COLFF005\"> </a></td><td>OTRAS EMULSIONES</td></tr><tr><td style=\"white-space:nowrap\">COLFF006<a name=\"MipresDoseForm-COLFF006\"> </a></td><td>CAPSULAS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">COLFF007<a name=\"MipresDoseForm-COLFF007\"> </a></td><td>CAPSULAS DE LIBERACION MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">COLFF008<a name=\"MipresDoseForm-COLFF008\"> </a></td><td>TABLETAS DE LIBERACION MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">COLFF009<a name=\"MipresDoseForm-COLFF009\"> </a></td><td>GRANULOS DE LIBERACION NO MODIFICADA</td></tr><tr><td style=\"white-space:nowrap\">COLFF010<a name=\"MipresDoseForm-COLFF010\"> </a></td><td>GRANULOS DE LIBERACION MODIFICADA</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresDoseForm",
+  "version" : "1.0.0",
+  "name" : "MipresDoseForm",
+  "title" : "CodeSystem: Mipres Medication Dose Form",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación para la forma farmacéutica de administración de las dosis de un medicamento.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de forma farmacéutica de administración de dosis de un medicamento.",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 39,
+  "concept" : [{
+    "code" : "C28944",
+    "display" : "CREMA"
+  },
+  {
+    "code" : "C29167",
+    "display" : "LOCION"
+  },
+  {
+    "code" : "C29269",
+    "display" : "ENJUAGUE"
+  },
+  {
+    "code" : "C42887",
+    "display" : "AEROSOL"
+  },
+  {
+    "code" : "C42909",
+    "display" : "GRANULOS EFERVESCENTES"
+  },
+  {
+    "code" : "C42912",
+    "display" : "ELIXIR"
+  },
+  {
+    "code" : "C42932",
+    "display" : "CINTA ADHESIVA / PELICULA"
+  },
+  {
+    "code" : "C42933",
+    "display" : "GAS"
+  },
+  {
+    "code" : "C42938",
+    "display" : "GRANULOS CONVENCIONALES"
+  },
+  {
+    "code" : "C42941",
+    "display" : "GOMA"
+  },
+  {
+    "code" : "C42942",
+    "display" : "IMPLANTE"
+  },
+  {
+    "code" : "C42948",
+    "display" : "GELES y JALEAS"
+  },
+  {
+    "code" : "C42953",
+    "display" : "LIQUIDO (Diferentes a soluciones)"
+  },
+  {
+    "code" : "C42966",
+    "display" : "UNGUENTO"
+  },
+  {
+    "code" : "C42967",
+    "display" : "PASTA"
+  },
+  {
+    "code" : "C42968",
+    "display" : "SISTEMAS TRASNDERMICOS"
+  },
+  {
+    "code" : "C42969",
+    "display" : "PELLETS"
+  },
+  {
+    "code" : "C42983",
+    "display" : "JABONES Y CHAMPU"
+  },
+  {
+    "code" : "C42989",
+    "display" : "ESPRAY"
+  },
+  {
+    "code" : "C42993",
+    "display" : "SUPOSITORIO / OVULO"
+  },
+  {
+    "code" : "C42994",
+    "display" : "SUSPENSION"
+  },
+  {
+    "code" : "C42996",
+    "display" : "JARABE"
+  },
+  {
+    "code" : "C43000",
+    "display" : "TINTURA"
+  },
+  {
+    "code" : "C47913",
+    "display" : "EMPLASTO"
+  },
+  {
+    "code" : "C47914",
+    "display" : "TIRA"
+  },
+  {
+    "code" : "C47915",
+    "display" : "SISTEMAS INTRAUTERINOS"
+  },
+  {
+    "code" : "C64898",
+    "display" : "ESPUMA"
+  },
+  {
+    "code" : "C69031",
+    "display" : "SISTEMAS OCULARES"
+  },
+  {
+    "code" : "C91199",
+    "display" : "SISTEMAS DE ANILLOS VAGINALES"
+  },
+  {
+    "code" : "COLFF001",
+    "display" : "TABLETAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "COLFF002",
+    "display" : "POLVOS PARA NO RECONSTITUIR"
+  },
+  {
+    "code" : "COLFF003",
+    "display" : "POLVOS PARA RECONSTITUIR"
+  },
+  {
+    "code" : "COLFF004",
+    "display" : "OTRAS SOLUCIONES"
+  },
+  {
+    "code" : "COLFF005",
+    "display" : "OTRAS EMULSIONES"
+  },
+  {
+    "code" : "COLFF006",
+    "display" : "CAPSULAS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "COLFF007",
+    "display" : "CAPSULAS DE LIBERACION MODIFICADA"
+  },
+  {
+    "code" : "COLFF008",
+    "display" : "TABLETAS DE LIBERACION MODIFICADA"
+  },
+  {
+    "code" : "COLFF009",
+    "display" : "GRANULOS DE LIBERACION NO MODIFICADA"
+  },
+  {
+    "code" : "COLFF010",
+    "display" : "GRANULOS DE LIBERACION MODIFICADA"
+  }]
+}

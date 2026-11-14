@@ -1,0 +1,102 @@
+# Environment variables (CRITICAL - Contains sensitive credentials)
+.env
+.env.local
+.env.*.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv
+
+# NiceGUI storage (user sessions)
+.nicegui/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Almacenamiento de imágenes diagnósticas (dato de paciente — NUNCA se versiona)
+storage/
+
+# Logs
+*.log
+logs/
+
+# Uploads (images, documents) - Comment out if you want to track uploads
+uploads/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Node (el grueso del peso del repo)
+frontend/.angular/
+backend/.venv/
+backend/*.db
+
+# Artefactos del validador FEV-RIPS: los entrega MinSalud al prestador, no son
+# públicos y no nos corresponde redistribuirlos. Ver muv/README.md.
+muv/sqlserver/artefactos/
+muv/api/FVE1/
+
+# Compose del validador FEV-RIPS de MinSalud: llevan DENTRO la credencial de
+# extracción del registro de Azure, la clave del SA y la del certificado.
+# El repo es privado, pero eso protege de quien no tiene acceso, no de un
+# `git add -A`. Ver muv/README.md.
+apilocal-dockercompose.*.yml
+*.pfx
+
+# Rust
+/target/
+crates/*/target/
+
+# La interfaz Angular compilada se empotra en el binario; no se versiona.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `vendor/` ENTRA ENTERO, PASE LO QUE PASE
+# ─────────────────────────────────────────────────────────────────────────────
+# Las reglas de arriba están escritas para NUESTRO árbol y se comen archivos
+# del ajeno. Medido aquí el 2026-08-14, antes de esta línea: **5 archivos**
+# desaparecían, y dos de ellos son `build.rs` —código que se ejecuta al
+# compilar—:
+#
+#     vendor/rustversion/build/build.rs   <- regla `build/`
+#     vendor/rustversion/build/rustc.rs   <- regla `build/`
+#     vendor/thiserror/build/probe.rs     <- regla `build/`
+#     vendor/sqlx/tests/.env              <- regla `.env`
+#     vendor/sqlx/tests/sqlite/sqlite.db  <- regla `*.db`
+#
+# Y el fallo NO SE VE: `git status` no lista lo ignorado, así que el commit sale
+# limpio, aquí compila —el árbol de trabajo tiene los archivos— y **revienta en
+# el clon** con un checksum que no casa. Solo se descubre clonando.
+#
+# No se arregla afinando las reglas de arriba: mañana entra un crate con un
+# `out/`, un `*.so` o un `dist/`. Se cierra por el otro lado, negando el
+# subárbol entero.
+!vendor/**

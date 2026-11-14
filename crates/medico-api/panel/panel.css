@@ -1,0 +1,369 @@
+/* SPDX-License-Identifier: LicenseRef-Propietario
+ * Copyright (c) 2026 Juan Carlos Isaza
+ *
+ * CSS propio, con variables y sin framework (directiva 26). Sustituye a
+ * `@angular/material`, y lo que aquél daba gratis —tabla, formularios, foco
+ * visible— se hace aquí a mano: es el coste real del cambio de estándar y se
+ * mira de frente, no se descubre en la tercera pantalla.
+ *
+ * El VOCABULARIO de variables es el mismo que el de nexus, chasqui e informes
+ * (`--fondo`, `--texto`, `--borde`, `--acento`, `--radio`), a propósito: el
+ * estándar pide CSS propio, no CSS común, pero compartir los nombres es lo que
+ * permitirá extraer la base el día que la directiva 9 lo pida. Los VALORES sí
+ * son de medico.
+ *
+ * Sin tipografías de fuera. Esto se instala en el portátil de un consultorio que
+ * trabaja sin internet: una @font-face a un CDN no cargaría y la pantalla
+ * saldría rara sin un solo error. Se usa la pila del sistema.
+ *
+ * Y aquí NO se copia el problema que costó una tarde en Angular: aquel tema
+ * traía 30 tokens con `Roboto` dentro y Roboto no viajaba en el binario.
+ */
+
+:root {
+  color-scheme: light;
+  --fondo: #ffffff;
+  --fondo-2: #f5f7f9;
+  --texto: #16191d;
+  --texto-2: #5a6472;
+  --borde: #d8dee5;
+  /* Verde azulado: es el color que el producto ya usa (`color_primario` de
+     `institucion`, #008080), para que el panel nuevo no parezca otro sistema. */
+  --acento: #00696b;
+  --acento-texto: #ffffff;
+  --alerta: #b3261e;
+  --alerta-fondo: #fdecea;
+  --ok-fondo: #e6f4ea;
+  --ok-borde: #1e8e3e;
+  --averia-fondo: #fff4e5;
+  --averia-borde: #b26a00;
+  --radio: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fondo: #13161a;
+    --fondo-2: #1c2025;
+    --texto: #e6eaee;
+    --texto-2: #98a3af;
+    --borde: #2e343b;
+    --acento: #4fd1d3;
+    --acento-texto: #0c1214;
+    --alerta: #f2837c;
+    --alerta-fondo: #3a1f1d;
+    --ok-fondo: #12301c;
+    --ok-borde: #4ec36f;
+    --averia-fondo: #33260f;
+    --averia-borde: #d99a2b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  background: var(--fondo-2);
+  color: var(--texto);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 1100px;
+}
+
+/* ── Menú ─────────────────────────────────────────────────────────────── */
+
+.menu {
+  width: 15rem;
+  flex-shrink: 0;
+  background: var(--fondo);
+  border-right: 1px solid var(--borde);
+  padding: 1rem .75rem;
+}
+
+.menu .marca {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--acento);
+  text-decoration: none;
+  padding: .25rem .5rem 1rem;
+}
+
+.menu ul { list-style: none; margin: 0 0 1rem; padding: 0; }
+
+.menu a {
+  display: block;
+  padding: .45rem .5rem;
+  border-radius: var(--radio);
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.menu a:hover { background: var(--fondo-2); }
+
+/* La página en la que estás. `aria-current` es el dato real —lo lee un lector
+   de pantalla— y el color cuelga de él, en vez de una clase paralela que se
+   desincroniza. */
+.menu a[aria-current="page"] {
+  background: var(--acento);
+  color: var(--acento-texto);
+}
+
+.menu-titulo {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--texto-2);
+  margin: 1rem .5rem .25rem;
+}
+
+.menu-viejo a { color: var(--texto-2); font-size: .95rem; }
+
+.menu-salir { margin-top: 1.5rem; padding: 0 .5rem; }
+
+/* ── Tarjetas y texto ─────────────────────────────────────────────────── */
+
+.tarjeta {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.estrecha { max-width: 26rem; margin-inline: auto; }
+.sutil { color: var(--texto-2); font-size: .92rem; }
+.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+.vacio { text-align: center; color: var(--texto-2); }
+
+h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+
+.titulo-seccion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.migas { margin-bottom: .75rem; }
+.migas a { color: var(--texto-2); text-decoration: none; }
+
+/* ── Avisos ───────────────────────────────────────────────────────────── */
+
+.aviso {
+  border-radius: var(--radio);
+  padding: .7rem .9rem;
+  margin: .75rem 0;
+  border-left: 4px solid;
+}
+
+.aviso-ok { background: var(--ok-fondo); border-color: var(--ok-borde); }
+.aviso-error { background: var(--alerta-fondo); border-color: var(--alerta); }
+/* La avería se ve DISTINTA del error del usuario a propósito: uno lo corrige
+   quien está delante y el otro no. Con el mismo color, quien recibe un 503
+   vuelve a teclear su contraseña. */
+.aviso-averia { background: var(--averia-fondo); border-color: var(--averia-borde); }
+
+/* ── Formularios ──────────────────────────────────────────────────────── */
+
+.apilado { display: flex; flex-direction: column; gap: .35rem; }
+.apilado label { font-size: .9rem; color: var(--texto-2); margin-top: .5rem; }
+
+input, select, textarea, button {
+  font: inherit;
+  color: inherit;
+}
+
+input, select, textarea {
+  padding: .55rem .65rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+}
+
+/* El foco VISIBLE es obligatorio, no decorativo: sin él, quien navega con el
+   teclado no sabe dónde está. Material lo daba gratis y aquí hay que ponerlo. */
+:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+button {
+  cursor: pointer;
+  padding: .55rem .9rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+}
+
+button.principal,
+.boton {
+  margin-top: 1rem;
+  background: var(--acento);
+  color: var(--acento-texto);
+  border-color: var(--acento);
+  text-decoration: none;
+  display: inline-block;
+  padding: .55rem .9rem;
+  border-radius: var(--radio);
+}
+
+button.enlace {
+  border: 0;
+  background: none;
+  color: var(--texto-2);
+  padding: .25rem .5rem;
+  text-decoration: underline;
+}
+
+.buscador { display: flex; gap: .5rem; }
+
+/* Sólo para lectores de pantalla: la etiqueta existe aunque no se vea. Un
+   `<input>` sin `<label>` es invisible para quien no ve el `placeholder`. */
+.oculto {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Pastillas de estado ──────────────────────────────────────────────── */
+
+/* El color sale de la FAMILIA del estado, no de cada pantalla: el mismo estado
+   se ve igual en las seis que lo muestran. Lo que no se sabe clasificar sale
+   neutro — pintar de verde un estado nuevo diría que va bien sin que nadie lo
+   haya decidido. */
+.pastilla {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  font-size: .82rem;
+  border: 1px solid var(--borde);
+  background: var(--fondo-2);
+}
+.pastilla-ok { background: var(--ok-fondo); border-color: var(--ok-borde); }
+.pastilla-mal { background: var(--alerta-fondo); border-color: var(--alerta); }
+.pastilla-curso { background: var(--averia-fondo); border-color: var(--averia-borde); }
+
+/* Un dato que FALTA y hace falta. Se marca en vez de dejar la celda en blanco:
+   un hueco silencioso en una columna es lo que hizo que el documento del
+   profesional (P11/P12) pasara meses vacío sin que nadie lo viera. */
+.falta {
+  color: var(--alerta);
+  font-style: italic;
+  font-family: inherit;
+}
+
+/* La barra de avance ya NO vive aquí: se dibuja en SVG (`piezas::barra`), porque
+   la CSP cerró `style-src 'unsafe-inline'` el 2026-08-08 y su ancho necesitaba un
+   `style="width:X%"` que bajo esa CSP no se aplica. Las reglas `.barra` y
+   `.barra-relleno` quedaron huérfanas al migrar rehabilitación (#613) y se
+   retiraron con ella (directiva 22). */
+
+/* ── Triage ───────────────────────────────────────────────────────────── */
+
+/* Escala PROPIA, no la de las pastillas de estado: aquí el I es lo más grave y
+   el V lo más leve, al revés que en el resto del panel, donde lo verde es lo
+   bueno. Con la misma paleta, el que puede esperar saldría en rojo. */
+.triage {
+  display: inline-block;
+  min-width: 2.2rem;
+  text-align: center;
+  padding: .15rem .45rem;
+  border-radius: var(--radio);
+  font-weight: 700;
+  border: 1px solid var(--borde);
+}
+.triage-1 { background: #b3261e; color: #fff; border-color: #b3261e; }
+.triage-2 { background: #e8710a; color: #fff; border-color: #e8710a; }
+.triage-3 { background: #f9ab00; color: #1a1a1a; border-color: #f9ab00; }
+.triage-4 { background: #1e8e3e; color: #fff; border-color: #1e8e3e; }
+.triage-5 { background: var(--fondo-2); color: var(--texto-2); }
+
+/* El filtro que está puesto se VE. Una lista filtrada sin avisar se lee como la
+   lista entera, y entonces «no hay» significa dos cosas distintas. */
+.enlace-activo {
+  background: var(--acento);
+  color: var(--acento-texto);
+  border-radius: var(--radio);
+  padding: .35rem .7rem;
+  text-decoration: none;
+}
+.buscador a { align-self: center; padding: .35rem .7rem; color: var(--texto-2); }
+
+/* ── Resumen de cifras ────────────────────────────────────────────────── */
+
+.resumen { display: flex; flex-wrap: wrap; gap: 1.5rem 2.5rem; }
+.resumen > div { display: flex; flex-direction: column; }
+.resumen .cifra { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+
+.enlace-sutil { color: var(--texto-2); align-self: center; }
+
+/* ── Tablas ───────────────────────────────────────────────────────────── */
+
+/* La tabla desborda en horizontal DENTRO de su envoltura, no arrastrando la
+   página: un padrón con documentos largos en un portátil de consultorio. */
+.tabla-envoltura { overflow-x: auto; }
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.tabla th, .tabla td {
+  text-align: left;
+  padding: .55rem .7rem;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+.tabla th {
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--texto-2);
+  background: var(--fondo-2);
+}
+
+.tabla tbody tr:last-child td { border-bottom: 0; }
+.tabla tbody tr:hover { background: var(--fondo-2); }
+
+.datos { display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; margin: 0; }
+.datos dt { color: var(--texto-2); font-size: .9rem; }
+.datos dd { margin: 0; }
+
+/* ── Pantallas estrechas ──────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  body { flex-direction: column; }
+  .menu { width: auto; border-right: 0; border-bottom: 1px solid var(--borde); }
+  main { padding: 1rem; }
+}
+
+/* Miniatura de la vista previa DICOM en la lista de adjuntos (módulo de píxeles).
+   Acota el PNG renderizado a un tamaño de miniatura; el enlace alrededor abre el
+   original. `alt` visible si el navegador no la carga (códec no soportado). */
+.miniatura-dicom {
+  display: block;
+  max-width: 160px;
+  max-height: 160px;
+  width: auto;
+  height: auto;
+  margin-bottom: 0.25rem;
+  border: 1px solid var(--borde);
+  background: #000;
+  object-fit: contain;
+}

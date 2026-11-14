@@ -1,0 +1,440 @@
+{
+ "fuente": "PESOTALLA1.DBF del sistema en Visual FoxPro (/mnt/data/aprograms/medico/data), transcrita por herramientas/generar_talla_ideal.py",
+ "advertencia": "En el original esta tabla NUNCA se consultó: el formulario abre PESOTALLA, que no tiene columna EDAD ni ese índice, así que el SEEK no puede acertar y la talla ideal sale siempre en 0. No hay número del prestador con el que cuadrar.",
+ "filas": [
+  {
+   "edad": 1,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 0.75,
+   "peso_ideal_kg": 9.0
+  },
+  {
+   "edad": 2,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 0.86,
+   "peso_ideal_kg": 12.0
+  },
+  {
+   "edad": 3,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 0.94,
+   "peso_ideal_kg": 14.0
+  },
+  {
+   "edad": 4,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.01,
+   "peso_ideal_kg": 16.0
+  },
+  {
+   "edad": 5,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.06,
+   "peso_ideal_kg": 18.0
+  },
+  {
+   "edad": 6,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.14,
+   "peso_ideal_kg": 20.0
+  },
+  {
+   "edad": 7,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.21,
+   "peso_ideal_kg": 22.0
+  },
+  {
+   "edad": 8,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.27,
+   "peso_ideal_kg": 25.0
+  },
+  {
+   "edad": 9,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.32,
+   "peso_ideal_kg": 29.0
+  },
+  {
+   "edad": 10,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.37,
+   "peso_ideal_kg": 32.0
+  },
+  {
+   "edad": 11,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.43,
+   "peso_ideal_kg": 37.0
+  },
+  {
+   "edad": 12,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.49,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 13,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.56,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 14,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.63,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 15,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.67,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 16,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.68,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 17,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.69,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 18,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.69,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 19,
+   "unidad": "anios",
+   "sexo": "F",
+   "talla_ideal_m": 1.7,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 1,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 0.8,
+   "peso_ideal_kg": 10.0
+  },
+  {
+   "edad": 2,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 0.87,
+   "peso_ideal_kg": 13.0
+  },
+  {
+   "edad": 3,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 0.95,
+   "peso_ideal_kg": 15.0
+  },
+  {
+   "edad": 4,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.02,
+   "peso_ideal_kg": 17.0
+  },
+  {
+   "edad": 5,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.09,
+   "peso_ideal_kg": 19.0
+  },
+  {
+   "edad": 6,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.15,
+   "peso_ideal_kg": 21.0
+  },
+  {
+   "edad": 7,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.22,
+   "peso_ideal_kg": 23.0
+  },
+  {
+   "edad": 8,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.28,
+   "peso_ideal_kg": 26.0
+  },
+  {
+   "edad": 9,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.33,
+   "peso_ideal_kg": 28.0
+  },
+  {
+   "edad": 10,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.38,
+   "peso_ideal_kg": 32.0
+  },
+  {
+   "edad": 11,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.44,
+   "peso_ideal_kg": 35.0
+  },
+  {
+   "edad": 12,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.51,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 13,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.57,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 14,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.6,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 15,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.63,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 16,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.63,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 17,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.64,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 18,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.64,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 19,
+   "unidad": "anios",
+   "sexo": "M",
+   "talla_ideal_m": 1.65,
+   "peso_ideal_kg": 0.0
+  },
+  {
+   "edad": 0,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.48,
+   "peso_ideal_kg": 2.0
+  },
+  {
+   "edad": 1,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.51,
+   "peso_ideal_kg": 3.4
+  },
+  {
+   "edad": 2,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.53,
+   "peso_ideal_kg": 4.0
+  },
+  {
+   "edad": 3,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.55,
+   "peso_ideal_kg": 4.5
+  },
+  {
+   "edad": 4,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.57,
+   "peso_ideal_kg": 5.0
+  },
+  {
+   "edad": 5,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.59,
+   "peso_ideal_kg": 5.5
+  },
+  {
+   "edad": 6,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.61,
+   "peso_ideal_kg": 6.0
+  },
+  {
+   "edad": 7,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.63,
+   "peso_ideal_kg": 6.0
+  },
+  {
+   "edad": 8,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.65,
+   "peso_ideal_kg": 7.0
+  },
+  {
+   "edad": 9,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.67,
+   "peso_ideal_kg": 7.5
+  },
+  {
+   "edad": 10,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.69,
+   "peso_ideal_kg": 8.0
+  },
+  {
+   "edad": 11,
+   "unidad": "meses",
+   "sexo": "F",
+   "talla_ideal_m": 0.71,
+   "peso_ideal_kg": 8.5
+  },
+  {
+   "edad": 0,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.5,
+   "peso_ideal_kg": 3.0
+  },
+  {
+   "edad": 1,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.52,
+   "peso_ideal_kg": 3.6
+  },
+  {
+   "edad": 2,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.54,
+   "peso_ideal_kg": 4.2
+  },
+  {
+   "edad": 3,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.56,
+   "peso_ideal_kg": 4.8
+  },
+  {
+   "edad": 4,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.58,
+   "peso_ideal_kg": 5.4
+  },
+  {
+   "edad": 5,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.6,
+   "peso_ideal_kg": 6.0
+  },
+  {
+   "edad": 6,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.62,
+   "peso_ideal_kg": 6.6
+  },
+  {
+   "edad": 7,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.65,
+   "peso_ideal_kg": 7.2
+  },
+  {
+   "edad": 8,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.68,
+   "peso_ideal_kg": 7.8
+  },
+  {
+   "edad": 9,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.71,
+   "peso_ideal_kg": 8.4
+  },
+  {
+   "edad": 10,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.74,
+   "peso_ideal_kg": 9.0
+  },
+  {
+   "edad": 11,
+   "unidad": "meses",
+   "sexo": "M",
+   "talla_ideal_m": 0.77,
+   "peso_ideal_kg": 9.6
+  }
+ ]
+}

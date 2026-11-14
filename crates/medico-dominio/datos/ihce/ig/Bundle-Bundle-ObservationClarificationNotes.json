@@ -1,0 +1,220 @@
+{
+  "resourceType" : "Bundle",
+  "id" : "Bundle-ObservationClarificationNotes",
+  "type" : "transaction",
+  "entry" : [{
+    "resource" : {
+      "resourceType" : "Observation",
+      "id" : "Observation-1",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"Observation_Observation-1\"> </a><p class=\"res-header-id\"><b>Generated Narrative: Observación Observation-1</b></p><a name=\"Observation-1\"> </a><a name=\"hcObservation-1\"> </a><p><b>status</b>: Final</p><p><b>code</b>: <span title=\"Codes:{http://snomed.info/sct 445664008}\">Nota aclaratoria</span></p><p><b>subject</b>: <a href=\"Patient-92a8e277-af20-4854-a3fb-02cbe9fb8d49.html\">Mónica María Mora Jaramillo (official) Female, DoB: 1995-04-05 ( Person number: 324283476\u00a0(use:\u00a0official,\u00a0))</a></p><p><b>focus</b>: </p><ul><li><a href=\"Composition/1a5f3f3e-1c3b-4e2e-9f4a-1c4e4f5b6d7e\">Composition/1a5f3f3e-1c3b-4e2e-9f4a-1c4e4f5b6d7e</a></li><li><a href=\"Condition-072d9e24-f388-4a3f-ab82-e8b7a81e4459.html\">Condition Intoxicación alimentaria bacteriana</a></li></ul><p><b>encounter</b>: <a href=\"Encounter/47b7e0b5-25cc-43d3-a3a8-ee34ff1687fe\">Encounter/47b7e0b5-25cc-43d3-a3a8-ee34ff1687fe</a></p><p><b>effective</b>: 2025-12-18 10:30:00+0000</p><p><b>performer</b>: <a href=\"Practitioner-feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a.html\">Practitioner Gregorio José Casas Hernández (official)</a></p><p><b>value</b>: Se aclara que el diagnóstico previo de Intoxicación alimentaria bacteriana (A05.9), corresponde a un cuadro leve autolimitado, sin complicaciones, que no requirió hospitalización ni tratamiento específico.</p></div>"
+      },
+      "status" : "final",
+      "code" : {
+        "coding" : [{
+          "system" : "http://snomed.info/sct",
+          "code" : "445664008",
+          "display" : "informe enmendado"
+        }],
+        "text" : "Nota aclaratoria"
+      },
+      "subject" : {
+        "reference" : "Patient/92a8e277-af20-4854-a3fb-02cbe9fb8d49"
+      },
+      "focus" : [{
+        "id" : "CompositionRDA",
+        "reference" : "Composition/1a5f3f3e-1c3b-4e2e-9f4a-1c4e4f5b6d7e"
+      },
+      {
+        "id" : "Resource-1",
+        "reference" : "Condition/072d9e24-f388-4a3f-ab82-e8b7a81e4459"
+      }],
+      "encounter" : {
+        "reference" : "Encounter/47b7e0b5-25cc-43d3-a3a8-ee34ff1687fe"
+      },
+      "effectiveDateTime" : "2025-12-18T10:30:00+00:00",
+      "performer" : [{
+        "reference" : "Practitioner/feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a"
+      }],
+      "valueString" : "Se aclara que el diagnóstico previo de Intoxicación alimentaria bacteriana (A05.9), corresponde a un cuadro leve autolimitado, sin complicaciones, que no requirió hospitalización ni tratamiento específico."
+    },
+    "request" : {
+      "method" : "POST",
+      "url" : "Observation"
+    }
+  },
+  {
+    "resource" : {
+      "resourceType" : "Observation",
+      "id" : "Observation-2",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"Observation_Observation-2\"> </a><p class=\"res-header-id\"><b>Generated Narrative: Observación Observation-2</b></p><a name=\"Observation-2\"> </a><a name=\"hcObservation-2\"> </a><p><b>status</b>: Final</p><p><b>code</b>: <span title=\"Codes:{http://snomed.info/sct 445664008}\">Nota aclaratoria</span></p><p><b>subject</b>: <a href=\"Patient-92a8e277-af20-4854-a3fb-02cbe9fb8d49.html\">Mónica María Mora Jaramillo (official) Female, DoB: 1995-04-05 ( Person number: 324283476\u00a0(use:\u00a0official,\u00a0))</a></p><p><b>focus</b>: <a href=\"Composition/1a5f3f3e-1c3b-4e2e-9f4a-1c4e4f5b6d7e\">Composition/1a5f3f3e-1c3b-4e2e-9f4a-1c4e4f5b6d7e</a></p><p><b>effective</b>: 2025-12-18 10:30:00+0000</p><p><b>performer</b>: <a href=\"Practitioner-feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a.html\">Practitioner Gregorio José Casas Hernández (official)</a></p><p><b>value</b>: Pariatur irure proident eiusmod esse dolor occaecat exercitation ullamco deserunt dolore  consectetur occaecat Lorem ipsum. Ipsum consectetur eu consequat nulla magna ut est nulla. Eu sunt enim laboris in Lorem commodo elit sit labore. Officia sunt reprehenderit duis eiusmod commodo est excepteur tempor laboris culpa nisi reprehenderit. Eiusmod irure incididunt esse elit ut et minim tempor occaecat reprehenderit eiusmod minim do.</p></div>"
+      },
+      "status" : "final",
+      "code" : {
+        "coding" : [{
+          "system" : "http://snomed.info/sct",
+          "code" : "445664008",
+          "display" : "informe enmendado"
+        }],
+        "text" : "Nota aclaratoria"
+      },
+      "subject" : {
+        "reference" : "Patient/92a8e277-af20-4854-a3fb-02cbe9fb8d49"
+      },
+      "focus" : [{
+        "id" : "CompositionRDA",
+        "reference" : "Composition/1a5f3f3e-1c3b-4e2e-9f4a-1c4e4f5b6d7e"
+      }],
+      "effectiveDateTime" : "2025-12-18T10:30:00+00:00",
+      "performer" : [{
+        "reference" : "Practitioner/feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a"
+      }],
+      "valueString" : "Pariatur irure proident eiusmod esse dolor occaecat exercitation ullamco deserunt dolore  consectetur occaecat Lorem ipsum. Ipsum consectetur eu consequat nulla magna ut est nulla. Eu sunt enim laboris in Lorem commodo elit sit labore. Officia sunt reprehenderit duis eiusmod commodo est excepteur tempor laboris culpa nisi reprehenderit. Eiusmod irure incididunt esse elit ut et minim tempor occaecat reprehenderit eiusmod minim do."
+    },
+    "request" : {
+      "method" : "POST",
+      "url" : "Observation"
+    }
+  },
+  {
+    "resource" : {
+      "resourceType" : "Practitioner",
+      "id" : "feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a",
+      "meta" : {
+        "profile" : ["https://fhir.minsalud.gov.co/rda/StructureDefinition/PractitionerRDA"]
+      },
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"Practitioner_feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a\"> </a><p class=\"res-header-id\"><b>Generated Narrative: Practicante / Profesional feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a</b></p><a name=\"feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a\"> </a><a name=\"hcfeb1e63b-d4ed-4b53-9d1f-8d9efa339b0a\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\"/><p style=\"margin-bottom: 0px\">Profile: <a href=\"StructureDefinition-PractitionerRDA.html\">Profesional de salud (Practitioner) RDA</a></p></div><p><b>identifier</b>: Person number/25709065\u00a0(use:\u00a0official,\u00a0)</p><p><b>active</b>: true</p><p><b>name</b>: Gregorio José Casas Hernández (Official)</p><p><b>address</b>: Cl. 7 #40 00, Chapinero(work)</p><p><b>gender</b>: Female</p><p><b>birthDate</b>: 1982-11-19</p><blockquote><p><b>qualification</b></p><p><b>identifier</b>: License number/25709065\u00a0(use:\u00a0official,\u00a0)</p><p><b>code</b>: <span title=\"Codes:{https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification M1304}\">Enfermedades infecciosas</span></p><p><b>period</b>: 2013-02-14 --&gt; (ongoing)</p></blockquote><blockquote><p><b>qualification</b></p><p><b>identifier</b>: Training License Number/25709065\u00a0(use:\u00a0official,\u00a0)</p><p><b>code</b>: <span title=\"Codes:{https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification M1304}\">Enfermedades infecciosas</span></p><p><b>period</b>: 2013-02-14 --&gt; (ongoing)</p></blockquote></div>"
+      },
+      "identifier" : [{
+        "id" : "NationalPersonIdentifier-0",
+        "use" : "official",
+        "type" : {
+          "coding" : [{
+            "system" : "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "code" : "PN",
+            "display" : "Person number"
+          },
+          {
+            "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianPersonIdentifier",
+            "code" : "CC",
+            "display" : "Cédula ciudadanía"
+          }]
+        },
+        "system" : "https://fhir.minsalud.gov.co/rda/NamingSystem/RNEC",
+        "value" : "25709065"
+      }],
+      "active" : true,
+      "name" : [{
+        "use" : "official",
+        "family" : "Casas Hernández",
+        "_family" : {
+          "extension" : [{
+            "url" : "https://fhir.minsalud.gov.co/rda/StructureDefinition/ExtensionFathersFamilyName",
+            "valueString" : "Casas"
+          },
+          {
+            "url" : "https://fhir.minsalud.gov.co/rda/StructureDefinition/ExtensionMothersFamilyName",
+            "valueString" : "Hernández"
+          }]
+        },
+        "given" : ["Gregorio",
+        "José"]
+      }],
+      "address" : [{
+        "use" : "work",
+        "type" : "physical",
+        "text" : "Cl. 7 #40 00, Chapinero",
+        "city" : "Bogotá D.C.",
+        "_city" : {
+          "extension" : [{
+            "url" : "https://fhir.minsalud.gov.co/rda/StructureDefinition/ExtensionDivipolaMunicipality",
+            "valueCoding" : {
+              "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/DIVIPOLA",
+              "code" : "11001"
+            }
+          }]
+        },
+        "district" : "Chapinero",
+        "state" : "Bogotá D.C.",
+        "_state" : {
+          "extension" : [{
+            "url" : "https://fhir.minsalud.gov.co/rda/StructureDefinition/ExtensionDivipolaDepartment",
+            "valueCoding" : {
+              "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/DIVIPOLA",
+              "code" : "11"
+            }
+          }]
+        },
+        "postalCode" : "11001",
+        "country" : "CO"
+      }],
+      "gender" : "female",
+      "birthDate" : "1982-11-19",
+      "qualification" : [{
+        "identifier" : [{
+          "use" : "official",
+          "type" : {
+            "coding" : [{
+              "system" : "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code" : "LN",
+              "display" : "License number"
+            }]
+          },
+          "system" : "https://fhir.minsalud.gov.co/rda/NamingSystem/RETHUS",
+          "value" : "25709065",
+          "assigner" : {
+            "type" : "Organization",
+            "display" : "MinSalud"
+          }
+        }],
+        "code" : {
+          "coding" : [{
+            "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification",
+            "code" : "M1304",
+            "display" : "Enfermedades infecciosas"
+          }]
+        },
+        "period" : {
+          "start" : "2013-02-14"
+        }
+      },
+      {
+        "identifier" : [{
+          "use" : "official",
+          "type" : {
+            "coding" : [{
+              "system" : "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code" : "TRL",
+              "display" : "Training License Number"
+            }]
+          },
+          "system" : "https://fhir.minsalud.gov.co/rda/NamingSystem/SSO",
+          "value" : "25709065",
+          "assigner" : {
+            "type" : "Organization",
+            "display" : "MinSalud"
+          }
+        }],
+        "code" : {
+          "coding" : [{
+            "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RETHUSqualification",
+            "code" : "M1304",
+            "display" : "Enfermedades infecciosas"
+          }]
+        },
+        "period" : {
+          "start" : "2013-02-14"
+        }
+      }]
+    },
+    "request" : {
+      "method" : "GET",
+      "url" : "Practitioner/feb1e63b-d4ed-4b53-9d1f-8d9efa339b0a"
+    }
+  }]
+}

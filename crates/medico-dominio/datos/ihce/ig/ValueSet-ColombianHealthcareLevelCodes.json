@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ColombianHealthcareLevelCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ColombianHealthcareLevelCodes</b></p><a name=\"ColombianHealthcareLevelCodes\"> </a><a name=\"hcColombianHealthcareLevelCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-ColombianHealthcareLevel.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianHealthcareLevel</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianHealthcareLevelCodes",
+  "version" : "1.0.0",
+  "name" : "ColombianHealthcareLevel",
+  "title" : "ValueSet: Colombian Healthcare Level",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de de complejidad de prestación de servicios de salud en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza para registrar el nivel de complejidad de atención de las instituciones prestadoras de salud en Colombia (I, II, III, IV), según la información registrada en el REPS.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0, 2024+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianHealthcareLevel"
+    }]
+  }
+}

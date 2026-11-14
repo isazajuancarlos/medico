@@ -1,0 +1,20 @@
+-- El token del primer paso, de UN SOLO USO y comprobado en el servidor (#212).
+--
+-- Hasta ahora el pendiente era un HMAC autocontenido de cinco minutos, y al
+-- fallar el código se «quemaba» mandando `Set-Cookie: medico_pendiente=;
+-- Max-Age=0`. Eso lo cumple un navegador; **un cliente que hable HTTP a secas
+-- ignora esa cabecera y reenvía el mismo valor crudo** hasta que caduque la
+-- firma. Con la contraseña en la mano, eso son cientos de intentos de código por
+-- cada token, contra un espacio de un millón con tres válidos a la vez.
+--
+-- Lo encontró la revisión en la nube del 2026-08-12. El freno cerrado ese mismo
+-- día lo limita mucho —cinco fallos y a esperar—, pero es una ESPERA por
+-- (correo, origen): quien rote direcciones recupera presupuesto. Esto lo cierra
+-- por otra vía y sin depender de ella: un pendiente sirve UNA vez y punto.
+--
+-- El contador se incrementa al EMITIR y se consume al VERIFICAR, en el mismo
+-- `UPDATE` que comprueba que nadie se adelantó (`rows_affected`), que es el
+-- patrón que `totp_ultimo_contador` ya usa para el antirreplay del código.
+-- Efecto lateral querido: pedir un pendiente nuevo invalida el anterior, así que
+-- solo hay uno vivo por cuenta.
+ALTER TABLE usuario ADD COLUMN pendiente_version INTEGER NOT NULL DEFAULT 0;

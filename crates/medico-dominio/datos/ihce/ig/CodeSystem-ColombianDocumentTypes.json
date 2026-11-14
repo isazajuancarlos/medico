@@ -1,0 +1,113 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianDocumentTypes",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianDocumentTypes</b></p><a name=\"ColombianDocumentTypes\"> </a><a name=\"hcColombianDocumentTypes\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDocumentTypes</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">HEV<a name=\"ColombianDocumentTypes-HEV\"> </a></td><td>Resumen de atención u hoja de evolución</td></tr><tr><td style=\"white-space:nowrap\">EPI<a name=\"ColombianDocumentTypes-EPI\"> </a></td><td>Epicrisis</td></tr><tr><td style=\"white-space:nowrap\">PDX<a name=\"ColombianDocumentTypes-PDX\"> </a></td><td>Resultado de los procedimientos de apoyó diagnóstico</td></tr><tr><td style=\"white-space:nowrap\">DQX<a name=\"ColombianDocumentTypes-DQX\"> </a></td><td>Descripción quirúrgica</td></tr><tr><td style=\"white-space:nowrap\">RAN<a name=\"ColombianDocumentTypes-RAN\"> </a></td><td>Registro de anestesia</td></tr><tr><td style=\"white-space:nowrap\">CRC<a name=\"ColombianDocumentTypes-CRC\"> </a></td><td>Comprobante de recibido del usuario</td></tr><tr><td style=\"white-space:nowrap\">TAP<a name=\"ColombianDocumentTypes-TAP\"> </a></td><td>Traslado asistencial de pacientes</td></tr><tr><td style=\"white-space:nowrap\">TNA<a name=\"ColombianDocumentTypes-TNA\"> </a></td><td>Transporte no asistencial ambulatorio de la persona</td></tr><tr><td style=\"white-space:nowrap\">FAT<a name=\"ColombianDocumentTypes-FAT\"> </a></td><td>Factura de venta por el cobro a la aseguradora SOAT, la ADRES o la entidad que haga sus veces</td></tr><tr><td style=\"white-space:nowrap\">FMO<a name=\"ColombianDocumentTypes-FMO\"> </a></td><td>Factura de venta del material de osteosíntesis expedida por el proveedor</td></tr><tr><td style=\"white-space:nowrap\">OPF<a name=\"ColombianDocumentTypes-OPF\"> </a></td><td>Orden o prescripción facultativa</td></tr><tr><td style=\"white-space:nowrap\">LDP<a name=\"ColombianDocumentTypes-LDP\"> </a></td><td>Lista de precios</td></tr><tr><td style=\"white-space:nowrap\">HAU<a name=\"ColombianDocumentTypes-HAU\"> </a></td><td>Hoja de atención de urgencia</td></tr><tr><td style=\"white-space:nowrap\">HAO<a name=\"ColombianDocumentTypes-HAO\"> </a></td><td>Hoja de administración de medicamentos</td></tr><tr><td style=\"white-space:nowrap\">HAM<a name=\"ColombianDocumentTypes-HAM\"> </a></td><td>Hoja de administración de medicamentos</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDocumentTypes",
+  "version" : "1.0.0",
+  "name" : "ColombianDocumentTypes",
+  "title" : "CodeSystem: Tipos de documentos de soporte de atención en Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-12-28",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Código de clasificación de tipos de documentos de soporte de atención en Colombia, de acuerdo con la resolución 2284 de 2023 (Ministerio de Salud y Protección Social)",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de tipos de documentos de soporte de atención en Colombia, de acuerdo con la resolución 2284 de 2023 (Ministerio de Salud y Protección Social)",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2024+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 15,
+  "concept" : [{
+    "code" : "HEV",
+    "display" : "Resumen de atención u hoja de evolución"
+  },
+  {
+    "code" : "EPI",
+    "display" : "Epicrisis"
+  },
+  {
+    "code" : "PDX",
+    "display" : "Resultado de los procedimientos de apoyó diagnóstico"
+  },
+  {
+    "code" : "DQX",
+    "display" : "Descripción quirúrgica"
+  },
+  {
+    "code" : "RAN",
+    "display" : "Registro de anestesia"
+  },
+  {
+    "code" : "CRC",
+    "display" : "Comprobante de recibido del usuario"
+  },
+  {
+    "code" : "TAP",
+    "display" : "Traslado asistencial de pacientes"
+  },
+  {
+    "code" : "TNA",
+    "display" : "Transporte no asistencial ambulatorio de la persona"
+  },
+  {
+    "code" : "FAT",
+    "display" : "Factura de venta por el cobro a la aseguradora SOAT, la ADRES o la entidad que haga sus veces"
+  },
+  {
+    "code" : "FMO",
+    "display" : "Factura de venta del material de osteosíntesis expedida por el proveedor"
+  },
+  {
+    "code" : "OPF",
+    "display" : "Orden o prescripción facultativa"
+  },
+  {
+    "code" : "LDP",
+    "display" : "Lista de precios"
+  },
+  {
+    "code" : "HAU",
+    "display" : "Hoja de atención de urgencia"
+  },
+  {
+    "code" : "HAO",
+    "display" : "Hoja de administración de medicamentos"
+  },
+  {
+    "code" : "HAM",
+    "display" : "Hoja de administración de medicamentos"
+  }]
+}

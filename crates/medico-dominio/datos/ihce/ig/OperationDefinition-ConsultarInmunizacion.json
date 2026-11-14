@@ -1,0 +1,91 @@
+{
+  "resourceType" : "OperationDefinition",
+  "id" : "ConsultarInmunizacion",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: DefinicionDeOperacion ConsultarInmunizacion</b></p><a name=\"ConsultarInmunizacion\"> </a><a name=\"hcConsultarInmunizacion\"> </a><p>URL: [base]/Immunization/$consultar-inmunizacion</p><h3>Parameters</h3><table class=\"grid\"><tr><td><b>Use</b></td><td><b>Name</b></td><td><b>Scope</b></td><td><b>Cardinality</b></td><td><b>Type</b></td><td><b>Binding</b></td><td><b>Documentation</b></td></tr><tr><td>IN</td><td>PatientIdentifier</td><td/><td>1..1</td><td/><td/><td><div><p>Identificación del paciente, cuya información de inmunización se desea consultar.</p>\n</div></td></tr><tr><td>IN</td><td>PatientIdentifier.type</td><td/><td>1..1</td><td><a href=\"http://hl7.org/fhir/R4/datatypes.html#string\">string</a></td><td/><td><div><p>Código del tipo de identificación del paciente (por ejemplo, RC, TI, CC, PA, etc.).</p>\n</div></td></tr><tr><td>IN</td><td>PatientIdentifier.value</td><td/><td>1..1</td><td><a href=\"http://hl7.org/fhir/R4/datatypes.html#string\">string</a></td><td/><td><div><p>Número o cadena de caracteres que representa la identificación del paciente.</p>\n</div></td></tr><tr><td>IN</td><td>humanuser</td><td/><td>1..1</td><td/><td/><td><div><p>Identificación del profesional de la salud que realiza la consulta de inmunización.</p>\n</div></td></tr><tr><td>IN</td><td>humanuser.value</td><td/><td>1..1</td><td><a href=\"http://hl7.org/fhir/R4/datatypes.html#string\">string</a></td><td/><td><div><p>Tipo de identificación del profesional de salud y número o cadena de caracteres que representa la identificación del profesional de salud.</p>\n</div></td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda//OperationDefinition/ConsultarInmunizacion",
+  "version" : "1.0.0",
+  "name" : "ConsultarInmunizacion",
+  "title" : "Consultar Inmunización",
+  "status" : "active",
+  "kind" : "operation",
+  "date" : "2025-12-29",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Operación para consultar la información de inmunización de un paciente, utilizando su identificación y la del profesional de salud que realiza la consulta.\n\n## Parámetros de entrada:\n\nPara realizar la consulta de inmunización, se requieren enviar un recurso tipo `Parameters`, mediante el método POST con los siguientes parámetros:\n\n- Parameters.name: `identifier`\n  - part.name: `type` (string) - Código del tipo de identificación del paciente (por ejemplo, RC, TI, CC, PA, etc.).\n  - part.name: `value` (string) - Número o cadena de caracteres que representa la identificación del paciente.\n- Parameters.name: `humanuser`\n    - part.name: `value` (string) - Tipo de documento - Número o cadena de caracteres que representa la identificación del profesional de salud.\n\n## Ejemplo de recurso Parameters de entrada (input) para la operación Consultar Inmunización:\n\n[Ver ejemplo](Parameters-ConsultarInmunizacion-Input.html).\n\n```json\n{\n    \"resourceType\": \"Parameters\",\n    \"parameter\": [\n        {\n            \"name\": \"identifier\",\n            \"part\": [\n                {\n                    \"name\": \"type\",\n                    \"valueString\": \"CC\"\n                },\n                {\n                    \"name\": \"value\",\n                    \"valueString\": \"324283476\"\n                }\n            ]\n        },\n        {\n            \"name\": \"humanuser\",           \n            \"valueString\": \"CC-123123\"                \n        }\n    ]\n}\n```\n\n## Ejemplo de recurso Bundle de salida (output) para la operación ConsultarInmunizacion:\n\n[Ver ejemplo](Bundle-Output-ConsultarInmunizacion.html).\n\n```json\n{\n    \"resourceType\": \"Bundle\",\n    \"type\": \"collection\",\n    \"entry\": [\n        {\n            \"resource\": {\n                \"resourceType\": \"Immunization\",\n                \"id\": \"Immunization-0\",\n                \"meta\": {\n                    \"profile\": [\n                        \"https://fhir.minsalud.gov.co/rda/StructureDefinition/ImmunizationRDA\"\n                    ]\n                },\n                \"status\": \"completed\",\n                \"vaccineCode\": {\n                    \"text\": \"Fiebre amarilla\"\n                },\n                \"patient\": {\n                    \"reference\": \"#CC-123456789\"\n                    },\n                \"occurrenceDateTime\": \"2015-03-14\",\n                \"manufacturer\": {\n                    \"display\": \"Fiebre Amarilla - SANOFI PASTEUR\"\n                },\n                \"lotNumber\": \"K5321\",\n                \"performer\": [\n                    {\n                        \"actor\": {\n                            \"type\": \"Organization\",\n                            \"display\": \"Centro de Salud Terminal Aéreo\"\n                        }\n                    },\n                    {\n                        \"actor\": {\n                            \"type\": \"Practitioner\",\n                            \"display\": \"   \"\n                        }\n                    }\n                ],\n                \"protocolApplied\": [\n                    {\n                        \"doseNumberString\": \"Primera dosis\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resource\": {\n                \"resourceType\": \"Immunization\",\n                \"id\": \"a5b6743a-debb-4b67-b156-cdd02570d7f9\",\n                \"meta\": {\n                    \"profile\": [\n                        \"https://fhir.minsalud.gov.co/rda/StructureDefinition/ImmunizationRDA\"\n                    ]\n                },\n                \"vaccineCode\": {\n                    \"text\": \"COVID SINOVAC\"\n                },\n                \"manufacturer\": {\n                    \"display\": \"Sinovac\"\n                },\n                \"performer\": [\n                    {\n                        \"actor\": {\n                            \"type\": \"Organization\",\n                            \"display\": \"FACATATIVA CLINICA SANTA ANA\"\n                        }\n                    },\n                    {\n                        \"actor\": {\n                            \"type\": \"Practitioner\",\n                            \"display\": \"SUGEY DAYANA VILLARRAGA GOMEZ\"\n                        }\n                    }\n                ],\n                \"protocolApplied\": [\n                    {\n                        \"doseNumberString\": \"Segunda\"\n                    }\n                ],\n                \"status\": \"completed\",\n                \"patient\": {\n                    \"reference\": \"Patient/92a8e277-af20-4854-a3fb-02cbe9fb8d49\"\n                },\n                \"occurrenceDateTime\": \"2022-11-15\",\n                \"lotNumber\": \"C2021085\"\n            }\n        },\n        {\n            \"resource\": {\n                \"resourceType\": \"Patient\",\n                \"id\": \"92a8e277-af20-4854-a3fb-02cbe9fb8d49\",\n                ...\n                \"identifier\": [\n                    {\n                        ...\n                        \"value\": \"324283476\"\n                    }\n                ],\n                \"active\": true,\n                ...\n                \"name\": [\n                    {\n                        \"given\": [\n                            \"Mónica\",\n                            \"María\"\n                        ],\n                        \"use\": \"official\",\n                        \"family\": \"Mora Jaramillo\"\n                    }\n                ],\n                ...\n                \"gender\": \"female\",\n                \"birthDate\": \"1995-04-05\"\n            }\n        }\n    ]\n}\n```\n",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Esta operación permite consultar la información de inmunización de un paciente en el sistema de salud, garantizando que solo profesionales de salud autorizados puedan acceder a estos datos durante el proceso de atención.",
+  "code" : "consultar-inmunizacion",
+  "resource" : ["Immunization"],
+  "system" : false,
+  "type" : true,
+  "instance" : false,
+  "parameter" : [{
+    "name" : "PatientIdentifier",
+    "use" : "in",
+    "min" : 1,
+    "max" : "1",
+    "documentation" : "Identificación del paciente, cuya información de inmunización se desea consultar.",
+    "part" : [{
+      "name" : "type",
+      "use" : "in",
+      "min" : 1,
+      "max" : "1",
+      "documentation" : "Código del tipo de identificación del paciente (por ejemplo, RC, TI, CC, PA, etc.).",
+      "type" : "string"
+    },
+    {
+      "name" : "value",
+      "use" : "in",
+      "min" : 1,
+      "max" : "1",
+      "documentation" : "Número o cadena de caracteres que representa la identificación del paciente.",
+      "type" : "string"
+    }]
+  },
+  {
+    "name" : "humanuser",
+    "use" : "in",
+    "min" : 1,
+    "max" : "1",
+    "documentation" : "Identificación del profesional de la salud que realiza la consulta de inmunización.",
+    "part" : [{
+      "name" : "value",
+      "use" : "in",
+      "min" : 1,
+      "max" : "1",
+      "documentation" : "Tipo de identificación del profesional de salud y número o cadena de caracteres que representa la identificación del profesional de salud.",
+      "type" : "string"
+    }]
+  }]
+}

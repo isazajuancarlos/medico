@@ -1,0 +1,1048 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ISO31661N",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ISO31661N</b></p><a name=\"ISO31661N\"> </a><a name=\"hcISO31661N\"> </a><ul><li>Include these codes as defined in <a href=\"CodeSystem-ISO31661.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ISO31661</code></a><table class=\"none\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-004\">004</a></td><td>Afghanistan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-008\">008</a></td><td>Albania</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-010\">010</a></td><td>Antarctica</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-012\">012</a></td><td>Algeria</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-016\">016</a></td><td>American Samoa</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-020\">020</a></td><td>Andorra</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-024\">024</a></td><td>Angola</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-028\">028</a></td><td>Antigua and Barbuda</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-031\">031</a></td><td>Azerbaijan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-032\">032</a></td><td>Argentina</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-036\">036</a></td><td>Australia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-040\">040</a></td><td>Austria</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-044\">044</a></td><td>Bahamas</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-048\">048</a></td><td>Bahrain</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-050\">050</a></td><td>Bangladesh</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-051\">051</a></td><td>Armenia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-052\">052</a></td><td>Barbados</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-056\">056</a></td><td>Belgium</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-060\">060</a></td><td>Bermuda</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-064\">064</a></td><td>Bhutan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-068\">068</a></td><td>Bolivia, Plurinational State of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-070\">070</a></td><td>Bosnia and Herzegovina</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-072\">072</a></td><td>Botswana</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-074\">074</a></td><td>Bouvet Island</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-076\">076</a></td><td>Brazil</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-084\">084</a></td><td>Belize</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-086\">086</a></td><td>British Indian Ocean Territory</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-090\">090</a></td><td>Solomon Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-092\">092</a></td><td>Virgin Islands, British</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-096\">096</a></td><td>Brunei Darussalam</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-100\">100</a></td><td>Bulgaria</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-104\">104</a></td><td>Myanmar</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-108\">108</a></td><td>Burundi</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-112\">112</a></td><td>Belarus</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-116\">116</a></td><td>Cambodia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-120\">120</a></td><td>Cameroon</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-124\">124</a></td><td>Canada</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-132\">132</a></td><td>Cabo Verde</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-136\">136</a></td><td>Cayman Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-140\">140</a></td><td>Central African Republic</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-144\">144</a></td><td>Sri Lanka</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-148\">148</a></td><td>Chad</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-152\">152</a></td><td>Chile</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-156\">156</a></td><td>China</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-158\">158</a></td><td>Taiwan, Province of China</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-162\">162</a></td><td>Christmas Island</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-166\">166</a></td><td>Cocos (Keeling) Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-170\">170</a></td><td>Colombia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-174\">174</a></td><td>Comoros</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-175\">175</a></td><td>Mayotte</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-178\">178</a></td><td>Congo</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-180\">180</a></td><td>Congo, the Democratic Republic of the</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-184\">184</a></td><td>Cook Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-188\">188</a></td><td>Costa Rica</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-191\">191</a></td><td>Croatia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-192\">192</a></td><td>Cuba</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-196\">196</a></td><td>Cyprus</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-203\">203</a></td><td>Czechia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-204\">204</a></td><td>Benin</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-208\">208</a></td><td>Denmark</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-212\">212</a></td><td>Dominica</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-214\">214</a></td><td>Dominican Republic</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-218\">218</a></td><td>Ecuador</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-222\">222</a></td><td>El Salvador</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-226\">226</a></td><td>Equatorial Guinea</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-231\">231</a></td><td>Ethiopia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-232\">232</a></td><td>Eritrea</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-233\">233</a></td><td>Estonia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-234\">234</a></td><td>Faroe Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-238\">238</a></td><td>Falkland Islands (Malvinas)</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-239\">239</a></td><td>South Georgia and the South Sandwich Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-242\">242</a></td><td>Fiji</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-246\">246</a></td><td>Finland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-248\">248</a></td><td>Åland Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-250\">250</a></td><td>France</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-254\">254</a></td><td>French Guiana</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-258\">258</a></td><td>French Polynesia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-260\">260</a></td><td>French Southern Territories</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-262\">262</a></td><td>Djibouti</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-266\">266</a></td><td>Gabon</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-268\">268</a></td><td>Georgia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-270\">270</a></td><td>Gambia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-275\">275</a></td><td>Palestine, State of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-276\">276</a></td><td>Germany</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-288\">288</a></td><td>Ghana</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-292\">292</a></td><td>Gibraltar</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-296\">296</a></td><td>Kiribati</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-300\">300</a></td><td>Greece</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-304\">304</a></td><td>Greenland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-308\">308</a></td><td>Grenada</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-312\">312</a></td><td>Guadeloupe</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-316\">316</a></td><td>Guam</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-320\">320</a></td><td>Guatemala</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-324\">324</a></td><td>Guinea</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-328\">328</a></td><td>Guyana</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-332\">332</a></td><td>Haiti</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-334\">334</a></td><td>Heard Island and McDonald Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-336\">336</a></td><td>Holy See</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-340\">340</a></td><td>Honduras</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-344\">344</a></td><td>Hong Kong</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-348\">348</a></td><td>Hungary</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-352\">352</a></td><td>Iceland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-356\">356</a></td><td>India</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-360\">360</a></td><td>Indonesia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-364\">364</a></td><td>Iran, Islamic Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-368\">368</a></td><td>Iraq</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-372\">372</a></td><td>Ireland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-376\">376</a></td><td>Israel</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-380\">380</a></td><td>Italy</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-384\">384</a></td><td>Côte d'Ivoire</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-388\">388</a></td><td>Jamaica</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-392\">392</a></td><td>Japan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-398\">398</a></td><td>Kazakhstan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-400\">400</a></td><td>Jordan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-404\">404</a></td><td>Kenya</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-408\">408</a></td><td>Korea, Democratic People's Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-410\">410</a></td><td>Korea, Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-414\">414</a></td><td>Kuwait</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-417\">417</a></td><td>Kyrgyzstan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-418\">418</a></td><td>Lao People's Democratic Republic</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-422\">422</a></td><td>Lebanon</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-426\">426</a></td><td>Lesotho</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-428\">428</a></td><td>Latvia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-430\">430</a></td><td>Liberia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-434\">434</a></td><td>Libya</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-438\">438</a></td><td>Liechtenstein</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-440\">440</a></td><td>Lithuania</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-442\">442</a></td><td>Luxembourg</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-446\">446</a></td><td>Macao</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-450\">450</a></td><td>Madagascar</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-454\">454</a></td><td>Malawi</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-458\">458</a></td><td>Malaysia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-462\">462</a></td><td>Maldives</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-466\">466</a></td><td>Mali</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-470\">470</a></td><td>Malta</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-474\">474</a></td><td>Martinique</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-478\">478</a></td><td>Mauritania</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-480\">480</a></td><td>Mauritius</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-484\">484</a></td><td>Mexico</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-492\">492</a></td><td>Monaco</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-496\">496</a></td><td>Mongolia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-498\">498</a></td><td>Moldova, Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-499\">499</a></td><td>Montenegro</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-500\">500</a></td><td>Montserrat</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-504\">504</a></td><td>Morocco</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-508\">508</a></td><td>Mozambique</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-512\">512</a></td><td>Oman</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-516\">516</a></td><td>Namibia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-520\">520</a></td><td>Nauru</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-524\">524</a></td><td>Nepal</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-528\">528</a></td><td>Netherlands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-531\">531</a></td><td>Curaçao</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-533\">533</a></td><td>Aruba</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-534\">534</a></td><td>Sint Maarten (Dutch part)</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-535\">535</a></td><td>Bonaire, Sint Eustatius and Saba</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-540\">540</a></td><td>New Caledonia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-548\">548</a></td><td>Vanuatu</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-554\">554</a></td><td>New Zealand</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-558\">558</a></td><td>Nicaragua</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-562\">562</a></td><td>Niger</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-566\">566</a></td><td>Nigeria</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-570\">570</a></td><td>Niue</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-574\">574</a></td><td>Norfolk Island</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-578\">578</a></td><td>Norway</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-580\">580</a></td><td>Northern Mariana Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-581\">581</a></td><td>United States Minor Outlying Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-583\">583</a></td><td>Micronesia, Federated States of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-584\">584</a></td><td>Marshall Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-585\">585</a></td><td>Palau</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-586\">586</a></td><td>Pakistan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-591\">591</a></td><td>Panama</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-598\">598</a></td><td>Papua New Guinea</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-600\">600</a></td><td>Paraguay</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-604\">604</a></td><td>Peru</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-608\">608</a></td><td>Philippines</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-612\">612</a></td><td>Pitcairn</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-616\">616</a></td><td>Poland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-620\">620</a></td><td>Portugal</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-624\">624</a></td><td>Guinea-Bissau</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-626\">626</a></td><td>Timor-Leste</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-630\">630</a></td><td>Puerto Rico</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-634\">634</a></td><td>Qatar</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-638\">638</a></td><td>Réunion</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-642\">642</a></td><td>Romania</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-643\">643</a></td><td>Russian Federation</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-646\">646</a></td><td>Rwanda</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-652\">652</a></td><td>Saint Barthélemy</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-654\">654</a></td><td>Saint Helena, Ascension and Tristan da Cunha</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-659\">659</a></td><td>Saint Kitts and Nevis</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-660\">660</a></td><td>Anguilla</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-662\">662</a></td><td>Saint Lucia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-663\">663</a></td><td>Saint Martin (French part)</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-666\">666</a></td><td>Saint Pierre and Miquelon</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-670\">670</a></td><td>Saint Vincent and the Grenadines</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-674\">674</a></td><td>San Marino</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-678\">678</a></td><td>Sao Tome and Principe</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-682\">682</a></td><td>Saudi Arabia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-686\">686</a></td><td>Senegal</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-688\">688</a></td><td>Serbia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-690\">690</a></td><td>Seychelles</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-694\">694</a></td><td>Sierra Leone</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-702\">702</a></td><td>Singapore</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-703\">703</a></td><td>Slovakia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-704\">704</a></td><td>Viet Nam</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-705\">705</a></td><td>Slovenia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-706\">706</a></td><td>Somalia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-710\">710</a></td><td>South Africa</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-716\">716</a></td><td>Zimbabwe</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-724\">724</a></td><td>Spain</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-728\">728</a></td><td>South Sudan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-729\">729</a></td><td>Sudan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-732\">732</a></td><td>Western Sahara</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-740\">740</a></td><td>Suriname</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-744\">744</a></td><td>Svalbard and Jan Mayen</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-748\">748</a></td><td>Swaziland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-752\">752</a></td><td>Sweden</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-756\">756</a></td><td>Switzerland</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-760\">760</a></td><td>Syrian Arab Republic</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-762\">762</a></td><td>Tajikistan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-764\">764</a></td><td>Thailand</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-768\">768</a></td><td>Togo</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-772\">772</a></td><td>Tokelau</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-776\">776</a></td><td>Tonga</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-780\">780</a></td><td>Trinidad and Tobago</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-784\">784</a></td><td>United Arab Emirates</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-788\">788</a></td><td>Tunisia</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-792\">792</a></td><td>Turkey</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-795\">795</a></td><td>Turkmenistan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-796\">796</a></td><td>Turks and Caicos Islands</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-798\">798</a></td><td>Tuvalu</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-800\">800</a></td><td>Uganda</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-804\">804</a></td><td>Ukraine</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-807\">807</a></td><td>Macedonia, the former Yugoslav Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-818\">818</a></td><td>Egypt</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-826\">826</a></td><td>United Kingdom</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-831\">831</a></td><td>Guernsey</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-832\">832</a></td><td>Jersey</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-833\">833</a></td><td>Isle of Man</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-834\">834</a></td><td>Tanzania, United Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-840\">840</a></td><td>United States of America</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-850\">850</a></td><td>Virgin Islands, U.S.</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-854\">854</a></td><td>Burkina Faso</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-858\">858</a></td><td>Uruguay</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-860\">860</a></td><td>Uzbekistan</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-862\">862</a></td><td>Venezuela, Bolivarian Republic of</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-876\">876</a></td><td>Wallis and Futuna</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-882\">882</a></td><td>Samoa</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-887\">887</a></td><td>Yemen</td></tr><tr><td><a href=\"CodeSystem-ISO31661.html#ISO31661-894\">894</a></td><td>Zambia</td></tr></table></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ISO31661N",
+  "version" : "1.0.0",
+  "name" : "Iso31661N",
+  "title" : "ValueSet: Iso 3166 Part 1 Numeric Codes",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-08-05T03:44:55+00:00",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "This value set defines the ISO 3166 Part 1 Numeric codes",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ISO31661",
+      "concept" : [{
+        "code" : "004",
+        "display" : "Afghanistan"
+      },
+      {
+        "code" : "008",
+        "display" : "Albania"
+      },
+      {
+        "code" : "010",
+        "display" : "Antarctica"
+      },
+      {
+        "code" : "012",
+        "display" : "Algeria"
+      },
+      {
+        "code" : "016",
+        "display" : "American Samoa"
+      },
+      {
+        "code" : "020",
+        "display" : "Andorra"
+      },
+      {
+        "code" : "024",
+        "display" : "Angola"
+      },
+      {
+        "code" : "028",
+        "display" : "Antigua and Barbuda"
+      },
+      {
+        "code" : "031",
+        "display" : "Azerbaijan"
+      },
+      {
+        "code" : "032",
+        "display" : "Argentina"
+      },
+      {
+        "code" : "036",
+        "display" : "Australia"
+      },
+      {
+        "code" : "040",
+        "display" : "Austria"
+      },
+      {
+        "code" : "044",
+        "display" : "Bahamas"
+      },
+      {
+        "code" : "048",
+        "display" : "Bahrain"
+      },
+      {
+        "code" : "050",
+        "display" : "Bangladesh"
+      },
+      {
+        "code" : "051",
+        "display" : "Armenia"
+      },
+      {
+        "code" : "052",
+        "display" : "Barbados"
+      },
+      {
+        "code" : "056",
+        "display" : "Belgium"
+      },
+      {
+        "code" : "060",
+        "display" : "Bermuda"
+      },
+      {
+        "code" : "064",
+        "display" : "Bhutan"
+      },
+      {
+        "code" : "068",
+        "display" : "Bolivia, Plurinational State of"
+      },
+      {
+        "code" : "070",
+        "display" : "Bosnia and Herzegovina"
+      },
+      {
+        "code" : "072",
+        "display" : "Botswana"
+      },
+      {
+        "code" : "074",
+        "display" : "Bouvet Island"
+      },
+      {
+        "code" : "076",
+        "display" : "Brazil"
+      },
+      {
+        "code" : "084",
+        "display" : "Belize"
+      },
+      {
+        "code" : "086",
+        "display" : "British Indian Ocean Territory"
+      },
+      {
+        "code" : "090",
+        "display" : "Solomon Islands"
+      },
+      {
+        "code" : "092",
+        "display" : "Virgin Islands, British"
+      },
+      {
+        "code" : "096",
+        "display" : "Brunei Darussalam"
+      },
+      {
+        "code" : "100",
+        "display" : "Bulgaria"
+      },
+      {
+        "code" : "104",
+        "display" : "Myanmar"
+      },
+      {
+        "code" : "108",
+        "display" : "Burundi"
+      },
+      {
+        "code" : "112",
+        "display" : "Belarus"
+      },
+      {
+        "code" : "116",
+        "display" : "Cambodia"
+      },
+      {
+        "code" : "120",
+        "display" : "Cameroon"
+      },
+      {
+        "code" : "124",
+        "display" : "Canada"
+      },
+      {
+        "code" : "132",
+        "display" : "Cabo Verde"
+      },
+      {
+        "code" : "136",
+        "display" : "Cayman Islands"
+      },
+      {
+        "code" : "140",
+        "display" : "Central African Republic"
+      },
+      {
+        "code" : "144",
+        "display" : "Sri Lanka"
+      },
+      {
+        "code" : "148",
+        "display" : "Chad"
+      },
+      {
+        "code" : "152",
+        "display" : "Chile"
+      },
+      {
+        "code" : "156",
+        "display" : "China"
+      },
+      {
+        "code" : "158",
+        "display" : "Taiwan, Province of China"
+      },
+      {
+        "code" : "162",
+        "display" : "Christmas Island"
+      },
+      {
+        "code" : "166",
+        "display" : "Cocos (Keeling) Islands"
+      },
+      {
+        "code" : "170",
+        "display" : "Colombia"
+      },
+      {
+        "code" : "174",
+        "display" : "Comoros"
+      },
+      {
+        "code" : "175",
+        "display" : "Mayotte"
+      },
+      {
+        "code" : "178",
+        "display" : "Congo"
+      },
+      {
+        "code" : "180",
+        "display" : "Congo, the Democratic Republic of the"
+      },
+      {
+        "code" : "184",
+        "display" : "Cook Islands"
+      },
+      {
+        "code" : "188",
+        "display" : "Costa Rica"
+      },
+      {
+        "code" : "191",
+        "display" : "Croatia"
+      },
+      {
+        "code" : "192",
+        "display" : "Cuba"
+      },
+      {
+        "code" : "196",
+        "display" : "Cyprus"
+      },
+      {
+        "code" : "203",
+        "display" : "Czechia"
+      },
+      {
+        "code" : "204",
+        "display" : "Benin"
+      },
+      {
+        "code" : "208",
+        "display" : "Denmark"
+      },
+      {
+        "code" : "212",
+        "display" : "Dominica"
+      },
+      {
+        "code" : "214",
+        "display" : "Dominican Republic"
+      },
+      {
+        "code" : "218",
+        "display" : "Ecuador"
+      },
+      {
+        "code" : "222",
+        "display" : "El Salvador"
+      },
+      {
+        "code" : "226",
+        "display" : "Equatorial Guinea"
+      },
+      {
+        "code" : "231",
+        "display" : "Ethiopia"
+      },
+      {
+        "code" : "232",
+        "display" : "Eritrea"
+      },
+      {
+        "code" : "233",
+        "display" : "Estonia"
+      },
+      {
+        "code" : "234",
+        "display" : "Faroe Islands"
+      },
+      {
+        "code" : "238",
+        "display" : "Falkland Islands (Malvinas)"
+      },
+      {
+        "code" : "239",
+        "display" : "South Georgia and the South Sandwich Islands"
+      },
+      {
+        "code" : "242",
+        "display" : "Fiji"
+      },
+      {
+        "code" : "246",
+        "display" : "Finland"
+      },
+      {
+        "code" : "248",
+        "display" : "Åland Islands"
+      },
+      {
+        "code" : "250",
+        "display" : "France"
+      },
+      {
+        "code" : "254",
+        "display" : "French Guiana"
+      },
+      {
+        "code" : "258",
+        "display" : "French Polynesia"
+      },
+      {
+        "code" : "260",
+        "display" : "French Southern Territories"
+      },
+      {
+        "code" : "262",
+        "display" : "Djibouti"
+      },
+      {
+        "code" : "266",
+        "display" : "Gabon"
+      },
+      {
+        "code" : "268",
+        "display" : "Georgia"
+      },
+      {
+        "code" : "270",
+        "display" : "Gambia"
+      },
+      {
+        "code" : "275",
+        "display" : "Palestine, State of"
+      },
+      {
+        "code" : "276",
+        "display" : "Germany"
+      },
+      {
+        "code" : "288",
+        "display" : "Ghana"
+      },
+      {
+        "code" : "292",
+        "display" : "Gibraltar"
+      },
+      {
+        "code" : "296",
+        "display" : "Kiribati"
+      },
+      {
+        "code" : "300",
+        "display" : "Greece"
+      },
+      {
+        "code" : "304",
+        "display" : "Greenland"
+      },
+      {
+        "code" : "308",
+        "display" : "Grenada"
+      },
+      {
+        "code" : "312",
+        "display" : "Guadeloupe"
+      },
+      {
+        "code" : "316",
+        "display" : "Guam"
+      },
+      {
+        "code" : "320",
+        "display" : "Guatemala"
+      },
+      {
+        "code" : "324",
+        "display" : "Guinea"
+      },
+      {
+        "code" : "328",
+        "display" : "Guyana"
+      },
+      {
+        "code" : "332",
+        "display" : "Haiti"
+      },
+      {
+        "code" : "334",
+        "display" : "Heard Island and McDonald Islands"
+      },
+      {
+        "code" : "336",
+        "display" : "Holy See"
+      },
+      {
+        "code" : "340",
+        "display" : "Honduras"
+      },
+      {
+        "code" : "344",
+        "display" : "Hong Kong"
+      },
+      {
+        "code" : "348",
+        "display" : "Hungary"
+      },
+      {
+        "code" : "352",
+        "display" : "Iceland"
+      },
+      {
+        "code" : "356",
+        "display" : "India"
+      },
+      {
+        "code" : "360",
+        "display" : "Indonesia"
+      },
+      {
+        "code" : "364",
+        "display" : "Iran, Islamic Republic of"
+      },
+      {
+        "code" : "368",
+        "display" : "Iraq"
+      },
+      {
+        "code" : "372",
+        "display" : "Ireland"
+      },
+      {
+        "code" : "376",
+        "display" : "Israel"
+      },
+      {
+        "code" : "380",
+        "display" : "Italy"
+      },
+      {
+        "code" : "384",
+        "display" : "Côte d'Ivoire"
+      },
+      {
+        "code" : "388",
+        "display" : "Jamaica"
+      },
+      {
+        "code" : "392",
+        "display" : "Japan"
+      },
+      {
+        "code" : "398",
+        "display" : "Kazakhstan"
+      },
+      {
+        "code" : "400",
+        "display" : "Jordan"
+      },
+      {
+        "code" : "404",
+        "display" : "Kenya"
+      },
+      {
+        "code" : "408",
+        "display" : "Korea, Democratic People's Republic of"
+      },
+      {
+        "code" : "410",
+        "display" : "Korea, Republic of"
+      },
+      {
+        "code" : "414",
+        "display" : "Kuwait"
+      },
+      {
+        "code" : "417",
+        "display" : "Kyrgyzstan"
+      },
+      {
+        "code" : "418",
+        "display" : "Lao People's Democratic Republic"
+      },
+      {
+        "code" : "422",
+        "display" : "Lebanon"
+      },
+      {
+        "code" : "426",
+        "display" : "Lesotho"
+      },
+      {
+        "code" : "428",
+        "display" : "Latvia"
+      },
+      {
+        "code" : "430",
+        "display" : "Liberia"
+      },
+      {
+        "code" : "434",
+        "display" : "Libya"
+      },
+      {
+        "code" : "438",
+        "display" : "Liechtenstein"
+      },
+      {
+        "code" : "440",
+        "display" : "Lithuania"
+      },
+      {
+        "code" : "442",
+        "display" : "Luxembourg"
+      },
+      {
+        "code" : "446",
+        "display" : "Macao"
+      },
+      {
+        "code" : "450",
+        "display" : "Madagascar"
+      },
+      {
+        "code" : "454",
+        "display" : "Malawi"
+      },
+      {
+        "code" : "458",
+        "display" : "Malaysia"
+      },
+      {
+        "code" : "462",
+        "display" : "Maldives"
+      },
+      {
+        "code" : "466",
+        "display" : "Mali"
+      },
+      {
+        "code" : "470",
+        "display" : "Malta"
+      },
+      {
+        "code" : "474",
+        "display" : "Martinique"
+      },
+      {
+        "code" : "478",
+        "display" : "Mauritania"
+      },
+      {
+        "code" : "480",
+        "display" : "Mauritius"
+      },
+      {
+        "code" : "484",
+        "display" : "Mexico"
+      },
+      {
+        "code" : "492",
+        "display" : "Monaco"
+      },
+      {
+        "code" : "496",
+        "display" : "Mongolia"
+      },
+      {
+        "code" : "498",
+        "display" : "Moldova, Republic of"
+      },
+      {
+        "code" : "499",
+        "display" : "Montenegro"
+      },
+      {
+        "code" : "500",
+        "display" : "Montserrat"
+      },
+      {
+        "code" : "504",
+        "display" : "Morocco"
+      },
+      {
+        "code" : "508",
+        "display" : "Mozambique"
+      },
+      {
+        "code" : "512",
+        "display" : "Oman"
+      },
+      {
+        "code" : "516",
+        "display" : "Namibia"
+      },
+      {
+        "code" : "520",
+        "display" : "Nauru"
+      },
+      {
+        "code" : "524",
+        "display" : "Nepal"
+      },
+      {
+        "code" : "528",
+        "display" : "Netherlands"
+      },
+      {
+        "code" : "531",
+        "display" : "Curaçao"
+      },
+      {
+        "code" : "533",
+        "display" : "Aruba"
+      },
+      {
+        "code" : "534",
+        "display" : "Sint Maarten (Dutch part)"
+      },
+      {
+        "code" : "535",
+        "display" : "Bonaire, Sint Eustatius and Saba"
+      },
+      {
+        "code" : "540",
+        "display" : "New Caledonia"
+      },
+      {
+        "code" : "548",
+        "display" : "Vanuatu"
+      },
+      {
+        "code" : "554",
+        "display" : "New Zealand"
+      },
+      {
+        "code" : "558",
+        "display" : "Nicaragua"
+      },
+      {
+        "code" : "562",
+        "display" : "Niger"
+      },
+      {
+        "code" : "566",
+        "display" : "Nigeria"
+      },
+      {
+        "code" : "570",
+        "display" : "Niue"
+      },
+      {
+        "code" : "574",
+        "display" : "Norfolk Island"
+      },
+      {
+        "code" : "578",
+        "display" : "Norway"
+      },
+      {
+        "code" : "580",
+        "display" : "Northern Mariana Islands"
+      },
+      {
+        "code" : "581",
+        "display" : "United States Minor Outlying Islands"
+      },
+      {
+        "code" : "583",
+        "display" : "Micronesia, Federated States of"
+      },
+      {
+        "code" : "584",
+        "display" : "Marshall Islands"
+      },
+      {
+        "code" : "585",
+        "display" : "Palau"
+      },
+      {
+        "code" : "586",
+        "display" : "Pakistan"
+      },
+      {
+        "code" : "591",
+        "display" : "Panama"
+      },
+      {
+        "code" : "598",
+        "display" : "Papua New Guinea"
+      },
+      {
+        "code" : "600",
+        "display" : "Paraguay"
+      },
+      {
+        "code" : "604",
+        "display" : "Peru"
+      },
+      {
+        "code" : "608",
+        "display" : "Philippines"
+      },
+      {
+        "code" : "612",
+        "display" : "Pitcairn"
+      },
+      {
+        "code" : "616",
+        "display" : "Poland"
+      },
+      {
+        "code" : "620",
+        "display" : "Portugal"
+      },
+      {
+        "code" : "624",
+        "display" : "Guinea-Bissau"
+      },
+      {
+        "code" : "626",
+        "display" : "Timor-Leste"
+      },
+      {
+        "code" : "630",
+        "display" : "Puerto Rico"
+      },
+      {
+        "code" : "634",
+        "display" : "Qatar"
+      },
+      {
+        "code" : "638",
+        "display" : "Réunion"
+      },
+      {
+        "code" : "642",
+        "display" : "Romania"
+      },
+      {
+        "code" : "643",
+        "display" : "Russian Federation"
+      },
+      {
+        "code" : "646",
+        "display" : "Rwanda"
+      },
+      {
+        "code" : "652",
+        "display" : "Saint Barthélemy"
+      },
+      {
+        "code" : "654",
+        "display" : "Saint Helena, Ascension and Tristan da Cunha"
+      },
+      {
+        "code" : "659",
+        "display" : "Saint Kitts and Nevis"
+      },
+      {
+        "code" : "660",
+        "display" : "Anguilla"
+      },
+      {
+        "code" : "662",
+        "display" : "Saint Lucia"
+      },
+      {
+        "code" : "663",
+        "display" : "Saint Martin (French part)"
+      },
+      {
+        "code" : "666",
+        "display" : "Saint Pierre and Miquelon"
+      },
+      {
+        "code" : "670",
+        "display" : "Saint Vincent and the Grenadines"
+      },
+      {
+        "code" : "674",
+        "display" : "San Marino"
+      },
+      {
+        "code" : "678",
+        "display" : "Sao Tome and Principe"
+      },
+      {
+        "code" : "682",
+        "display" : "Saudi Arabia"
+      },
+      {
+        "code" : "686",
+        "display" : "Senegal"
+      },
+      {
+        "code" : "688",
+        "display" : "Serbia"
+      },
+      {
+        "code" : "690",
+        "display" : "Seychelles"
+      },
+      {
+        "code" : "694",
+        "display" : "Sierra Leone"
+      },
+      {
+        "code" : "702",
+        "display" : "Singapore"
+      },
+      {
+        "code" : "703",
+        "display" : "Slovakia"
+      },
+      {
+        "code" : "704",
+        "display" : "Viet Nam"
+      },
+      {
+        "code" : "705",
+        "display" : "Slovenia"
+      },
+      {
+        "code" : "706",
+        "display" : "Somalia"
+      },
+      {
+        "code" : "710",
+        "display" : "South Africa"
+      },
+      {
+        "code" : "716",
+        "display" : "Zimbabwe"
+      },
+      {
+        "code" : "724",
+        "display" : "Spain"
+      },
+      {
+        "code" : "728",
+        "display" : "South Sudan"
+      },
+      {
+        "code" : "729",
+        "display" : "Sudan"
+      },
+      {
+        "code" : "732",
+        "display" : "Western Sahara"
+      },
+      {
+        "code" : "740",
+        "display" : "Suriname"
+      },
+      {
+        "code" : "744",
+        "display" : "Svalbard and Jan Mayen"
+      },
+      {
+        "code" : "748",
+        "display" : "Swaziland"
+      },
+      {
+        "code" : "752",
+        "display" : "Sweden"
+      },
+      {
+        "code" : "756",
+        "display" : "Switzerland"
+      },
+      {
+        "code" : "760",
+        "display" : "Syrian Arab Republic"
+      },
+      {
+        "code" : "762",
+        "display" : "Tajikistan"
+      },
+      {
+        "code" : "764",
+        "display" : "Thailand"
+      },
+      {
+        "code" : "768",
+        "display" : "Togo"
+      },
+      {
+        "code" : "772",
+        "display" : "Tokelau"
+      },
+      {
+        "code" : "776",
+        "display" : "Tonga"
+      },
+      {
+        "code" : "780",
+        "display" : "Trinidad and Tobago"
+      },
+      {
+        "code" : "784",
+        "display" : "United Arab Emirates"
+      },
+      {
+        "code" : "788",
+        "display" : "Tunisia"
+      },
+      {
+        "code" : "792",
+        "display" : "Turkey"
+      },
+      {
+        "code" : "795",
+        "display" : "Turkmenistan"
+      },
+      {
+        "code" : "796",
+        "display" : "Turks and Caicos Islands"
+      },
+      {
+        "code" : "798",
+        "display" : "Tuvalu"
+      },
+      {
+        "code" : "800",
+        "display" : "Uganda"
+      },
+      {
+        "code" : "804",
+        "display" : "Ukraine"
+      },
+      {
+        "code" : "807",
+        "display" : "Macedonia, the former Yugoslav Republic of"
+      },
+      {
+        "code" : "818",
+        "display" : "Egypt"
+      },
+      {
+        "code" : "826",
+        "display" : "United Kingdom"
+      },
+      {
+        "code" : "831",
+        "display" : "Guernsey"
+      },
+      {
+        "code" : "832",
+        "display" : "Jersey"
+      },
+      {
+        "code" : "833",
+        "display" : "Isle of Man"
+      },
+      {
+        "code" : "834",
+        "display" : "Tanzania, United Republic of"
+      },
+      {
+        "code" : "840",
+        "display" : "United States of America"
+      },
+      {
+        "code" : "850",
+        "display" : "Virgin Islands, U.S."
+      },
+      {
+        "code" : "854",
+        "display" : "Burkina Faso"
+      },
+      {
+        "code" : "858",
+        "display" : "Uruguay"
+      },
+      {
+        "code" : "860",
+        "display" : "Uzbekistan"
+      },
+      {
+        "code" : "862",
+        "display" : "Venezuela, Bolivarian Republic of"
+      },
+      {
+        "code" : "876",
+        "display" : "Wallis and Futuna"
+      },
+      {
+        "code" : "882",
+        "display" : "Samoa"
+      },
+      {
+        "code" : "887",
+        "display" : "Yemen"
+      },
+      {
+        "code" : "894",
+        "display" : "Zambia"
+      }]
+    }]
+  }
+}

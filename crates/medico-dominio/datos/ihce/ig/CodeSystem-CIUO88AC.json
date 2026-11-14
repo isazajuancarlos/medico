@@ -1,0 +1,2301 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "CIUO88AC",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos CIUO88AC</b></p><a name=\"CIUO88AC\"> </a><a name=\"hcCIUO88AC\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/CIUO88AC</code> defines the following codes in an undefined hierarchy:</p><table class=\"codes\"><tr><td><b>Lvl</b></td><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td>1</td><td style=\"white-space:nowrap\">0<a name=\"CIUO88AC-0\"> </a></td><td>FUERZA PÚBLICA</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a001<a name=\"CIUO88AC-01\"> </a></td><td>FUERZAS MILITARES (EJÉRCITO,  ARMADA  Y FUERZA AÉREA)</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0011<a name=\"CIUO88AC-011\"> </a></td><td>OFICIALES DE LAS FUERZAS MILITARES</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00110<a name=\"CIUO88AC-0110\"> </a></td><td>Oficiales de las Fuerzas Militares</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0012<a name=\"CIUO88AC-012\"> </a></td><td>Suboficiales de las Fuerzas Militares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00120<a name=\"CIUO88AC-0120\"> </a></td><td>Suboficiales de las Fuerzas Militares</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0013<a name=\"CIUO88AC-013\"> </a></td><td>Soldados de las Fuerzas Militares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00130<a name=\"CIUO88AC-0130\"> </a></td><td>Soldados de las Fuerzas Militares</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a002<a name=\"CIUO88AC-02\"> </a></td><td>POLICÍA NACIONAL</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0021<a name=\"CIUO88AC-021\"> </a></td><td>Oficiales de la Policía Nacional</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00210<a name=\"CIUO88AC-0210\"> </a></td><td>Oficiales de la Policía Nacional</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0022<a name=\"CIUO88AC-022\"> </a></td><td>Suboficiales de la Policía Nacional</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00220<a name=\"CIUO88AC-0220\"> </a></td><td>Suboficiales de la Policía Nacional</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0023<a name=\"CIUO88AC-023\"> </a></td><td>Agentes de la Policía Nacional</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00230<a name=\"CIUO88AC-0230\"> </a></td><td>Agentes de la Policía Nacional</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0024<a name=\"CIUO88AC-024\"> </a></td><td>Auxiliares de la Policía Nacional</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a00240<a name=\"CIUO88AC-0240\"> </a></td><td>Auxiliares de la Policía Nacional</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">1<a name=\"CIUO88AC-1\"> </a></td><td>MIEMBROS DEL PODER EJECUTIVO, DE LOS CUERPOS LEGISLATIVOS Y PERSONAL DIRECTIVO DE LA ADMINISTRACIÓN PÚBLICA Y DE EMPRESAS</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a011<a name=\"CIUO88AC-11\"> </a></td><td>MIEMBROS DEL PODER EJECUTIVO, DE LOS CUERPOS LEGISLATIVOS Y PERSONAL DIRECTIVO DE LA ADMINISTRACIÓN PÚBLICA</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0111<a name=\"CIUO88AC-111\"> </a></td><td>Miembros del Poder Ejecutivo y de los cuerpos legislativos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01110<a name=\"CIUO88AC-1110\"> </a></td><td>Miembros del Poder Ejecutivo y de los cuerpos legislativos</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0112<a name=\"CIUO88AC-112\"> </a></td><td>Directores generales, de regionales,  sucursales, oficinas y afines de la administración pública</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01121<a name=\"CIUO88AC-1121\"> </a></td><td>Directores generales, de empresas o entidades de la administración pública</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01122<a name=\"CIUO88AC-1122\"> </a></td><td>Directores de regionales, sucursales, oficinas y afines de la administración pública</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0113<a name=\"CIUO88AC-113\"> </a></td><td>Jefes de comunidades indígenas, etnias especiales y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01130<a name=\"CIUO88AC-1130\"> </a></td><td>Jefes de comunidades indígenas, etnias especiales y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0114<a name=\"CIUO88AC-114\"> </a></td><td>Dirigentes y administradores de  partidos políticos, sindicatos y organizaciones especializadas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01141<a name=\"CIUO88AC-1141\"> </a></td><td>Dirigentes y administradores de partidos políticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01142<a name=\"CIUO88AC-1142\"> </a></td><td>Dirigentes y administradores de organizaciones de empleadores, de trabajadores y de otras de interés socioeconómico</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01143<a name=\"CIUO88AC-1143\"> </a></td><td>Dirigentes y administradores de organizaciones humanitarias y de otras organizaciones especializadas</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a012<a name=\"CIUO88AC-12\"> </a></td><td>DIRECTORES Y GERENTES GENERALES DE EMPRESAS PRIVADAS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0121<a name=\"CIUO88AC-121\"> </a></td><td>Directores generales, de regionales, sucursales, oficinas y afines de empresas privadas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01211<a name=\"CIUO88AC-1211\"> </a></td><td>Directores y gerentes generales de empresas privadas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01212<a name=\"CIUO88AC-1212\"> </a></td><td>Directores de regionales, sucursales, oficinas y afines de empresas privadas</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a013<a name=\"CIUO88AC-13\"> </a></td><td>DIRECTORES DE DEPARTAMENTOS PÚBLICOS Y PRIVADOS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0131<a name=\"CIUO88AC-131\"> </a></td><td>Directores de departamentos de producción y operaciones</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01311<a name=\"CIUO88AC-1311\"> </a></td><td>Directores de departamentos de producción y operaciones en agricultura, ganaderia, silvicultura, caza y pesca</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01312<a name=\"CIUO88AC-1312\"> </a></td><td>Directores de departamentos de producción y operaciones en industrias manufactureras y extractivas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01313<a name=\"CIUO88AC-1313\"> </a></td><td>Directores de departamentos de producción y operaciones en construcción y obras públicas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01314<a name=\"CIUO88AC-1314\"> </a></td><td>Directores de departamentos de producción y operaciones en comercio mayorista y minorista</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01315<a name=\"CIUO88AC-1315\"> </a></td><td>Directores de departamentos de producción y operaciones en restaurantes, hoteles y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01316<a name=\"CIUO88AC-1316\"> </a></td><td>Directores de departamentos de producción y operaciones en transporte, almacenamiento y comunicaciones</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01317<a name=\"CIUO88AC-1317\"> </a></td><td>Directores de departamentos de producción y operaciones en empresas de intermediación financiera y servicios a empresas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01318<a name=\"CIUO88AC-1318\"> </a></td><td>Directores de departamentos de producción y operaciones en servicios de salud, educación y recreación</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01319<a name=\"CIUO88AC-1319\"> </a></td><td>Directores de departamentos de producción y operaciones, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0132<a name=\"CIUO88AC-132\"> </a></td><td>Otros directores de departamentos, públicos y privados</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01321<a name=\"CIUO88AC-1321\"> </a></td><td>Directores de departamentos financieros y administrativos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01322<a name=\"CIUO88AC-1322\"> </a></td><td>Directores de departamentos de personal y de relaciones laborales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01323<a name=\"CIUO88AC-1323\"> </a></td><td>Directores de departamentos de ventas y comercialización</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01324<a name=\"CIUO88AC-1324\"> </a></td><td>Directores de departamentos de publicidad y de relaciones públicas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01325<a name=\"CIUO88AC-1325\"> </a></td><td>Directores de departamentos de abastecimiento y distribución</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01326<a name=\"CIUO88AC-1326\"> </a></td><td>Directores de departamentos de servicios de informática</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01327<a name=\"CIUO88AC-1327\"> </a></td><td>Directores de departamentos de investigaciones y desarrollo</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01329<a name=\"CIUO88AC-1329\"> </a></td><td>Otros directores de departamentos públicos y privados, no clasificados bajo otros epígrafes</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a014<a name=\"CIUO88AC-14\"> </a></td><td>COORDINADORES Y SUPERVISORES EN MANDOS MEDIOS DE EMPRESAS PÚBLICAS Y PRIVADAS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0141<a name=\"CIUO88AC-141\"> </a></td><td>Coordinadores y supervisores en mandos medios administrativos, comerciales y de servicios de empresas públicas y privadas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01411<a name=\"CIUO88AC-1411\"> </a></td><td>Coordinadores y supervisores financieros y administrativos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01412<a name=\"CIUO88AC-1412\"> </a></td><td>Coordinadores y supervisores de  ventas y comercialización</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01413<a name=\"CIUO88AC-1413\"> </a></td><td>Coordinadores y supervisores de publicidad, información, relaciones públicas y servicio al cliente</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01414<a name=\"CIUO88AC-1414\"> </a></td><td>Coordinadores y supervisores de  almacenamiento, abastecimiento y distribución</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01415<a name=\"CIUO88AC-1415\"> </a></td><td>Coordinadores y supervisores de informática,  investigación y desarrollo</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01416<a name=\"CIUO88AC-1416\"> </a></td><td>Coordinadores y supervisores de servicios sociales, educación y salud</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01419<a name=\"CIUO88AC-1419\"> </a></td><td>Otros coordinadores y supervisores en mandos medios de empresas administrativos, comerciales y de servicios de empresas públicas y privadas, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0142<a name=\"CIUO88AC-142\"> </a></td><td>Coordinadores y supervisores en mandos medios de producción y operaciones de empresas publicas y privadas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01421<a name=\"CIUO88AC-1421\"> </a></td><td>Coordinadores y supervisores de producción y operaciones en aprovechamiento agrícola, pecuario y silvícola</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01422<a name=\"CIUO88AC-1422\"> </a></td><td>Coordinadores y supervisores de producción y operaciones en explotación procesamiento y transporte de minerales, petróleo y gas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01423<a name=\"CIUO88AC-1423\"> </a></td><td>Coordinadores y supervisores de producción y operaciones en  procesamiento, fabricación y ensamble</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01424<a name=\"CIUO88AC-1424\"> </a></td><td>Coordinadores y supervisores de  producción y operaciones en construcción y obras públicas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01425<a name=\"CIUO88AC-1425\"> </a></td><td>Coordinadores y supervisores de producción y operaciones en  instalación, mantenimiento y reparación mecánica, eléctrica y electrónica</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01426<a name=\"CIUO88AC-1426\"> </a></td><td>Coordinadores y supervisores de  producción y operaciones en restaurantes, hoteles hospitales y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01427<a name=\"CIUO88AC-1427\"> </a></td><td>Coordinadores y supervisores de producción y operaciones  en transporte y comunicaciones</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01428<a name=\"CIUO88AC-1428\"> </a></td><td>Coordinadores y supervisores de producción y operaciones en cuidados personales, limpieza y servicios similares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a01429<a name=\"CIUO88AC-1429\"> </a></td><td>Coordinadores y supervisores  en mandos medios de producción y operaciones en empresas públicas y privadas, no clasificados bajo otros epígrafes</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">2<a name=\"CIUO88AC-2\"> </a></td><td>PROFESIONALES UNIVERSITARIOS, CIENTÍFICOS E INTELECTUALES</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a021<a name=\"CIUO88AC-21\"> </a></td><td>PROFESIONALES DE LAS CIENCIAS FÍSICAS, QUÍMICAS, MATEMÁTICAS Y DE LA INGENIERÍA</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0211<a name=\"CIUO88AC-211\"> </a></td><td>Físicos, químicos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02111<a name=\"CIUO88AC-2111\"> </a></td><td>Físicos y astrónomos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02112<a name=\"CIUO88AC-2112\"> </a></td><td>Meteorólogos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02113<a name=\"CIUO88AC-2113\"> </a></td><td>Químicos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02114<a name=\"CIUO88AC-2114\"> </a></td><td>Geólogos y geofísicos</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0212<a name=\"CIUO88AC-212\"> </a></td><td>Matemáticos, estadísticos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02121<a name=\"CIUO88AC-2121\"> </a></td><td>Matemáticos y actuarios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02122<a name=\"CIUO88AC-2122\"> </a></td><td>Estadísticos</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0213<a name=\"CIUO88AC-213\"> </a></td><td>Profesionales de la informática</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02130<a name=\"CIUO88AC-2130\"> </a></td><td>Profesionales de la informática</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0214<a name=\"CIUO88AC-214\"> </a></td><td>Arquitectos, ingenieros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02141<a name=\"CIUO88AC-2141\"> </a></td><td>Arquitectos y urbanistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02142<a name=\"CIUO88AC-2142\"> </a></td><td>Ingenieros civiles, ingenieros de transporte y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02143<a name=\"CIUO88AC-2143\"> </a></td><td>Ingenieros eléctricos, ingenieros electrónicos, de telecomunicaciones y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02144<a name=\"CIUO88AC-2144\"> </a></td><td>Ingenieros mecánicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02145<a name=\"CIUO88AC-2145\"> </a></td><td>Ingenieros industriales y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02146<a name=\"CIUO88AC-2146\"> </a></td><td>Ingenieros químicos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02147<a name=\"CIUO88AC-2147\"> </a></td><td>Ingenieros de minas, ingenieros metalúrgicos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02148<a name=\"CIUO88AC-2148\"> </a></td><td>Ingenieros catastrales, ingenieros geógrafos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02149<a name=\"CIUO88AC-2149\"> </a></td><td>Arquitectos, ingenieros y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a022<a name=\"CIUO88AC-22\"> </a></td><td>PROFESIONALES DE LAS CIENCIAS BIOLÓGICAS, LA MEDICINA Y LA SALUD</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0221<a name=\"CIUO88AC-221\"> </a></td><td>Profesionales en ciencias biológicas y otras disciplinas relativas a los seres orgánicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02211<a name=\"CIUO88AC-2211\"> </a></td><td>Biólogos, botánicos, zoólogos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02212<a name=\"CIUO88AC-2212\"> </a></td><td>Patólogos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02213<a name=\"CIUO88AC-2213\"> </a></td><td>Agrónomos y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0222<a name=\"CIUO88AC-222\"> </a></td><td>Médicos, profesionales en ciencias de la salud y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02221<a name=\"CIUO88AC-2221\"> </a></td><td>Médicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02222<a name=\"CIUO88AC-2222\"> </a></td><td>Odontólogos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02223<a name=\"CIUO88AC-2223\"> </a></td><td>Médicos veterinarios y zootecnistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02224<a name=\"CIUO88AC-2224\"> </a></td><td>Optómetras</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02225<a name=\"CIUO88AC-2225\"> </a></td><td>Fonoaudiólogos, fisioterapeutas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02226<a name=\"CIUO88AC-2226\"> </a></td><td>Enfermeros(as) profesionales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02227<a name=\"CIUO88AC-2227\"> </a></td><td>Nutricionistas y dietistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02229<a name=\"CIUO88AC-2229\"> </a></td><td>Médicos, profesionales en ciencias de la salud y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a023<a name=\"CIUO88AC-23\"> </a></td><td>PROFESIONALES DE LA EDUCACIÓN</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0231<a name=\"CIUO88AC-231\"> </a></td><td>Profesores y docentes en educación formal</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02311<a name=\"CIUO88AC-2311\"> </a></td><td>Profesores de universidades y otros establecimientos de educación superior</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02312<a name=\"CIUO88AC-2312\"> </a></td><td>Profesores de educación secundaria</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02313<a name=\"CIUO88AC-2313\"> </a></td><td>Profesores de educación  primaria</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02314<a name=\"CIUO88AC-2314\"> </a></td><td>Profesores de educación preescolar</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0232<a name=\"CIUO88AC-232\"> </a></td><td>Profesores e instructores de educación especial</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02320<a name=\"CIUO88AC-2320\"> </a></td><td>Profesores e instructores de educación especial</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0233<a name=\"CIUO88AC-233\"> </a></td><td>Otros profesionales de la educación</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02331<a name=\"CIUO88AC-2331\"> </a></td><td>Especialistas en métodos pedagógicos y material didáctico</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02332<a name=\"CIUO88AC-2332\"> </a></td><td>Inspectores de la educación</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02333<a name=\"CIUO88AC-2333\"> </a></td><td>Consejeros educativos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02339<a name=\"CIUO88AC-2339\"> </a></td><td>Otros profesionales de la educación, no clasificados bajo otros epígrafes</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a024<a name=\"CIUO88AC-24\"> </a></td><td>OTROS PROFESIONALES CIENTÍFICOS E INTELECTUALES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0241<a name=\"CIUO88AC-241\"> </a></td><td>Profesionales en organización, administración de empresas, análisis financiero y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02411<a name=\"CIUO88AC-2411\"> </a></td><td>Contadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02412<a name=\"CIUO88AC-2412\"> </a></td><td>Especialistas en políticas, servicios de personal y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02413<a name=\"CIUO88AC-2413\"> </a></td><td>Analistas y agentes financieros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02419<a name=\"CIUO88AC-2419\"> </a></td><td>Profesionales en organización, administración de empresas, análisis financiero y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0242<a name=\"CIUO88AC-242\"> </a></td><td>Profesionales del derecho</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02421<a name=\"CIUO88AC-2421\"> </a></td><td>Abogados</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02422<a name=\"CIUO88AC-2422\"> </a></td><td>Jueces</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02429<a name=\"CIUO88AC-2429\"> </a></td><td>Profesionales del derecho, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0243<a name=\"CIUO88AC-243\"> </a></td><td>Catalogadores, bibliotecarios, documentalistas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02431<a name=\"CIUO88AC-2431\"> </a></td><td>Catalogadores de piezas de museos, archivos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02432<a name=\"CIUO88AC-2432\"> </a></td><td>Bibliotecarios, documentalistas y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0244<a name=\"CIUO88AC-244\"> </a></td><td>Profesionales en ciencias económicas, sociales y humanas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02441<a name=\"CIUO88AC-2441\"> </a></td><td>Economistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02442<a name=\"CIUO88AC-2442\"> </a></td><td>Sociólogos, antropólogos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02443<a name=\"CIUO88AC-2443\"> </a></td><td>Filósofos, historiadores y especialistas en ciencias políticas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02444<a name=\"CIUO88AC-2444\"> </a></td><td>Filólogos, traductores e intérpretes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02445<a name=\"CIUO88AC-2445\"> </a></td><td>Psicólogos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02446<a name=\"CIUO88AC-2446\"> </a></td><td>Trabajadores sociales y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02449<a name=\"CIUO88AC-2449\"> </a></td><td>Profesionales en ciencias económicas, sociales y humanas no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0245<a name=\"CIUO88AC-245\"> </a></td><td>Escritores, artistas creativos y ejecutantes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02451<a name=\"CIUO88AC-2451\"> </a></td><td>Escritores, periodistas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02452<a name=\"CIUO88AC-2452\"> </a></td><td>Escultores, pintores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02453<a name=\"CIUO88AC-2453\"> </a></td><td>Compositores, músicos y cantantes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02454<a name=\"CIUO88AC-2454\"> </a></td><td>Coreógrafos y bailarines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02455<a name=\"CIUO88AC-2455\"> </a></td><td>Actores y directores de cine, radio, teatro, televisión y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02456<a name=\"CIUO88AC-2456\"> </a></td><td>Publicistas y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0246<a name=\"CIUO88AC-246\"> </a></td><td>Sacerdotes y religiosos de distintas doctrinas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a02460<a name=\"CIUO88AC-2460\"> </a></td><td>Sacerdotes y religiosos de distintas doctrinas</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">3<a name=\"CIUO88AC-3\"> </a></td><td>TÉCNICOS, POSTSECUNDARIOS NO UNIVERSITARIOS Y ASISTENTES</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a031<a name=\"CIUO88AC-31\"> </a></td><td>TÉCNICOS Y POSTSECUNDARIOS NO UNIVERSITARIOS DE LAS CIENCIAS FÍSICAS, QUÍMICAS, LA INGENIERÍA Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0311<a name=\"CIUO88AC-311\"> </a></td><td>Técnicos y postsecundarios no universitarios en ciencias físicas, químicas e ingeniería</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03111<a name=\"CIUO88AC-3111\"> </a></td><td>Técnicos y postsecundarios no universitarios en ciencias físicas, químicas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03112<a name=\"CIUO88AC-3112\"> </a></td><td>Técnicos y postsecundarios no universitarios en ingeniería civil, arquitectura, agrimensores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03113<a name=\"CIUO88AC-3113\"> </a></td><td>Electrotécnicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03114<a name=\"CIUO88AC-3114\"> </a></td><td>Técnicos y postsecundarios no universitarios en electrónica y telecomunicaciones</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03115<a name=\"CIUO88AC-3115\"> </a></td><td>Técnicos y postsecundarios no universitarios en mecánica y construcción mecánica</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03116<a name=\"CIUO88AC-3116\"> </a></td><td>Técnicos y postsecundarios no universitarios en ingeniería  industrial y química industrial</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03117<a name=\"CIUO88AC-3117\"> </a></td><td>Técnicos y postsecundarios no universitarios en ingeniería de minas y metalurgia</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03118<a name=\"CIUO88AC-3118\"> </a></td><td>Delineantes y dibujantes técnicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03119<a name=\"CIUO88AC-3119\"> </a></td><td>Técnicos y postsecundarios no universitarios en ciencias físicas, químicas e ingenierías, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0312<a name=\"CIUO88AC-312\"> </a></td><td>Técnicos en programación y control informáticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03121<a name=\"CIUO88AC-3121\"> </a></td><td>Analistas de sistemas informáticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03122<a name=\"CIUO88AC-3122\"> </a></td><td>Técnicos en programación informática</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03123<a name=\"CIUO88AC-3123\"> </a></td><td>Técnicos en control de equipos informáticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03124<a name=\"CIUO88AC-3124\"> </a></td><td>Técnicos en control de robots industriales</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0313<a name=\"CIUO88AC-313\"> </a></td><td>Operadores de equipos ópticos y electrónicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03131<a name=\"CIUO88AC-3131\"> </a></td><td>Fotógrafos y operadores de equipos de grabación de imagen y sonido</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03132<a name=\"CIUO88AC-3132\"> </a></td><td>Operadores de equipos de radiodifusión, televisión y telecomunicaciones</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03133<a name=\"CIUO88AC-3133\"> </a></td><td>Operadores de aparatos de diagnóstico y tratamiento médicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03139<a name=\"CIUO88AC-3139\"> </a></td><td>Operadores de equipos ópticos y electrónicos, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0314<a name=\"CIUO88AC-314\"> </a></td><td>Técnicos en navegación marítima y aeronáutica</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03141<a name=\"CIUO88AC-3141\"> </a></td><td>Oficiales maquinistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03142<a name=\"CIUO88AC-3142\"> </a></td><td>Capitanes, oficiales de cubierta y prácticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03143<a name=\"CIUO88AC-3143\"> </a></td><td>Pilotos de aviación y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03144<a name=\"CIUO88AC-3144\"> </a></td><td>Controladores de tráfico aéreo y marítimo</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03145<a name=\"CIUO88AC-3145\"> </a></td><td>Técnicos en seguridad aeronáutica</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0315<a name=\"CIUO88AC-315\"> </a></td><td>Inspectores de obras, seguridad y salud y control de calidad</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03151<a name=\"CIUO88AC-3151\"> </a></td><td>Inspectores de edificios y de prevención e investigación de incendios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03152<a name=\"CIUO88AC-3152\"> </a></td><td>Inspectores de seguridad y salud y control de calidad</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a032<a name=\"CIUO88AC-32\"> </a></td><td>TÉCNICOS Y POSTSECUNDARIOS NO UNIVERSITARIOS DE LAS CIENCIAS BIOLÓGICAS, LA MEDICINA Y LA SALUD</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0321<a name=\"CIUO88AC-321\"> </a></td><td>Técnicos y postsecundarios no universitarios en ciencias biológicas, agronomía, zootecnia y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03211<a name=\"CIUO88AC-3211\"> </a></td><td>Técnicos en ciencias biológicas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03212<a name=\"CIUO88AC-3212\"> </a></td><td>Técnicos en agronomía, zootecnia y silvicultura</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0322<a name=\"CIUO88AC-322\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de la medicina moderna y la salud (excepto el personal de partería)</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03221<a name=\"CIUO88AC-3221\"> </a></td><td>Practicantes y asistentes médicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03222<a name=\"CIUO88AC-3222\"> </a></td><td>Higienistas y promotores de salud</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03223<a name=\"CIUO88AC-3223\"> </a></td><td>Técnicos en optometría y ópticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03224<a name=\"CIUO88AC-3224\"> </a></td><td>Técnicos e higienistas dentales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03225<a name=\"CIUO88AC-3225\"> </a></td><td>Técnicos terapeutas, quiroprácticos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03226<a name=\"CIUO88AC-3226\"> </a></td><td>Técnicos y asistentes veterinarios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03227<a name=\"CIUO88AC-3227\"> </a></td><td>Técnicos y asistentes en farmacia</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03229<a name=\"CIUO88AC-3229\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de la medicina moderna y la salud (excepto el personal de partería), no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0323<a name=\"CIUO88AC-323\"> </a></td><td>Practicantes de la medicina tradicional y curanderos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03231<a name=\"CIUO88AC-3231\"> </a></td><td>Practicantes de la medicina tradicional</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03232<a name=\"CIUO88AC-3232\"> </a></td><td>Curanderos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03233<a name=\"CIUO88AC-3233\"> </a></td><td>Parteras</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a033<a name=\"CIUO88AC-33\"> </a></td><td>ASISTENTES DE ENSEÑANZA E INSTRUCTORES DE EDUCACIÓN FORMAL, ESPECIAL Y VOCACIONAL</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0331<a name=\"CIUO88AC-331\"> </a></td><td>Asistentes de enseñanza en educación formal (superior, media, básica y preescolar)</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03311<a name=\"CIUO88AC-3311\"> </a></td><td>Asistentes de enseñanza en educación  superior, secundaria y primaria</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03312<a name=\"CIUO88AC-3312\"> </a></td><td>Asistentes de enseñanza en educación preescolar</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0332<a name=\"CIUO88AC-332\"> </a></td><td>Asistentes de educación especial</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03320<a name=\"CIUO88AC-3320\"> </a></td><td>Asistentes de educación especial</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0333<a name=\"CIUO88AC-333\"> </a></td><td>Instructores de educación no formal, vocacional y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03331<a name=\"CIUO88AC-3331\"> </a></td><td>Instructores de educación vocacional artística y técnica</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03332<a name=\"CIUO88AC-3332\"> </a></td><td>Instructores de educación vocacional artesanal</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03333<a name=\"CIUO88AC-3333\"> </a></td><td>Instructores medios de transporte y afines</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a034<a name=\"CIUO88AC-34\"> </a></td><td>OTROS TÉCNICOS, POSTSECUNDARIOS NO UNIVERSITARIOS Y ASISTENTES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0341<a name=\"CIUO88AC-341\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes en operaciones comerciales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03411<a name=\"CIUO88AC-3411\"> </a></td><td>Agentes de seguros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03412<a name=\"CIUO88AC-3412\"> </a></td><td>Agentes inmobiliarios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03413<a name=\"CIUO88AC-3413\"> </a></td><td>Agentes de viajes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03414<a name=\"CIUO88AC-3414\"> </a></td><td>Representantes comerciales y técnicos de ventas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03415<a name=\"CIUO88AC-3415\"> </a></td><td>Compradores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03416<a name=\"CIUO88AC-3416\"> </a></td><td>Tasadores y subastadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03419<a name=\"CIUO88AC-3419\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes en operaciones comerciales, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0342<a name=\"CIUO88AC-342\"> </a></td><td>Agentes comerciales y corredores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03421<a name=\"CIUO88AC-3421\"> </a></td><td>Agentes de compras, intermediarios y consignatarios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03422<a name=\"CIUO88AC-3422\"> </a></td><td>Asistentes de comercio exterior</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03423<a name=\"CIUO88AC-3423\"> </a></td><td>Agentes públicos y privados de colocación y contratistas de mano de obra</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03429<a name=\"CIUO88AC-3429\"> </a></td><td>Agentes comerciales y corredores, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0343<a name=\"CIUO88AC-343\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de servicios de administración</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03431<a name=\"CIUO88AC-3431\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de servicios administrativos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03432<a name=\"CIUO88AC-3432\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes del derecho y servicios legales y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03433<a name=\"CIUO88AC-3433\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de servicios financieros, contables y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03434<a name=\"CIUO88AC-3434\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de servicios estadísticos, matemáticos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03439<a name=\"CIUO88AC-3439\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de servicios de administración, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0344<a name=\"CIUO88AC-344\"> </a></td><td>Agentes de la administración publica en aduanas, impuestos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03441<a name=\"CIUO88AC-3441\"> </a></td><td>Agentes de aduana e inspectores de fronteras</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03442<a name=\"CIUO88AC-3442\"> </a></td><td>Funcionarios del fisco</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03443<a name=\"CIUO88AC-3443\"> </a></td><td>Funcionarios de servicios de seguridad social</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03444<a name=\"CIUO88AC-3444\"> </a></td><td>Funcionarios de servicios de expedición de licencias y permisos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03449<a name=\"CIUO88AC-3449\"> </a></td><td>Agentes de la administración pública en aduanas, impuestos y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0345<a name=\"CIUO88AC-345\"> </a></td><td>Inspectores de policía, detectives y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03450<a name=\"CIUO88AC-3450\"> </a></td><td>Inspectores de policía, detectives y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0346<a name=\"CIUO88AC-346\"> </a></td><td>Asistentes en trabajo social y comunitario</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03460<a name=\"CIUO88AC-3460\"> </a></td><td>Asistentes en trabajo social y comunitario</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0347<a name=\"CIUO88AC-347\"> </a></td><td>Técnicos, postsecundarios no universitarios y asistentes de actividades artísticas, espectáculos y deportes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03471<a name=\"CIUO88AC-3471\"> </a></td><td>Técnicos en diseño y decoradores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03472<a name=\"CIUO88AC-3472\"> </a></td><td>Locutores de radio, televisión y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03473<a name=\"CIUO88AC-3473\"> </a></td><td>Músicos, cantantes y bailarines callejeros, de cabaret y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03474<a name=\"CIUO88AC-3474\"> </a></td><td>Recreadores, payasos, acróbatas, prestidigitadores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03475<a name=\"CIUO88AC-3475\"> </a></td><td>Atletas, deportistas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03476<a name=\"CIUO88AC-3476\"> </a></td><td>Asistentes de cine, teatro, televisión y artes escénicas</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0348<a name=\"CIUO88AC-348\"> </a></td><td>Auxiliares laicos de los cultos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a03480<a name=\"CIUO88AC-3480\"> </a></td><td>Auxiliares laicos de los cultos</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">4<a name=\"CIUO88AC-4\"> </a></td><td>EMPLEADOS DE OFICINA</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a041<a name=\"CIUO88AC-41\"> </a></td><td>OFICINISTAS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0411<a name=\"CIUO88AC-411\"> </a></td><td>Secretarios y operadores de máquinas de oficina</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04111<a name=\"CIUO88AC-4111\"> </a></td><td>Mecanógrafos, transcriptores de textos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04112<a name=\"CIUO88AC-4112\"> </a></td><td>Operadores de calculadoras y entrada de datos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04113<a name=\"CIUO88AC-4113\"> </a></td><td>Secretarios(as)</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0412<a name=\"CIUO88AC-412\"> </a></td><td>Auxiliares contables, estadísticos, administrativos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04121<a name=\"CIUO88AC-4121\"> </a></td><td>Auxiliares de contabilidad y cálculo de costos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04122<a name=\"CIUO88AC-4122\"> </a></td><td>Auxiliares de servicios estadísticos y financieros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04123<a name=\"CIUO88AC-4123\"> </a></td><td>Auxiliares administrativos y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0413<a name=\"CIUO88AC-413\"> </a></td><td>Encargados del registro de materiales y de transportes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04131<a name=\"CIUO88AC-4131\"> </a></td><td>Encargados de control de abastecimientos e inventario</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04132<a name=\"CIUO88AC-4132\"> </a></td><td>Encargados de servicios de apoyo a la producción</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04133<a name=\"CIUO88AC-4133\"> </a></td><td>Encargados de servicios de transporte</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0414<a name=\"CIUO88AC-414\"> </a></td><td>Empleados de bibliotecas, servicios de correo y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04141<a name=\"CIUO88AC-4141\"> </a></td><td>Empleados de bibliotecas y archivos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04142<a name=\"CIUO88AC-4142\"> </a></td><td>Empleados de servicios de correo</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04143<a name=\"CIUO88AC-4143\"> </a></td><td>Codificadores de datos, correctores de pruebas de imprenta y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04144<a name=\"CIUO88AC-4144\"> </a></td><td>Escribientes públicos y afines</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a042<a name=\"CIUO88AC-42\"> </a></td><td>EMPLEADOS DE TRATO DIRECTO CON EL PÚBLICO</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0421<a name=\"CIUO88AC-421\"> </a></td><td>Cajeros, taquilleros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04211<a name=\"CIUO88AC-4211\"> </a></td><td>Cajeros y expendedores de billetes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04212<a name=\"CIUO88AC-4212\"> </a></td><td>Taquilleros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04213<a name=\"CIUO88AC-4213\"> </a></td><td>Receptores de apuestas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04214<a name=\"CIUO88AC-4214\"> </a></td><td>Prestamistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04215<a name=\"CIUO88AC-4215\"> </a></td><td>Cobradores y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0422<a name=\"CIUO88AC-422\"> </a></td><td>Empleados de servicios de información a clientes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04221<a name=\"CIUO88AC-4221\"> </a></td><td>Empleados de servicios de líneas de viajes aéreas, marítimas y terrestres</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04222<a name=\"CIUO88AC-4222\"> </a></td><td>Recepcionistas, empleados de información y servicio al cliente</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a04223<a name=\"CIUO88AC-4223\"> </a></td><td>Empleados telefonistas y de servicios de internet</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">5<a name=\"CIUO88AC-5\"> </a></td><td>TRABAJADORES DE LOS SERVICIOS Y VENDEDORES</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a051<a name=\"CIUO88AC-51\"> </a></td><td>TRABAJADORES DE LOS SERVICIOS PERSONALES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0511<a name=\"CIUO88AC-511\"> </a></td><td>Personal al servicio directo de los pasajeros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05111<a name=\"CIUO88AC-5111\"> </a></td><td>Personal de servicio a pasajeros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05112<a name=\"CIUO88AC-5112\"> </a></td><td>Revisores, guardas y cobradores de los servicios de transporte</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05113<a name=\"CIUO88AC-5113\"> </a></td><td>Guías</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0512<a name=\"CIUO88AC-512\"> </a></td><td>Personal de servicios de restaurantes, alimentos y bebidas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05121<a name=\"CIUO88AC-5121\"> </a></td><td>Cocineros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05122<a name=\"CIUO88AC-5122\"> </a></td><td>Meseros, taberneros y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0513<a name=\"CIUO88AC-513\"> </a></td><td>Trabajadores de los cuidados personales y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05131<a name=\"CIUO88AC-5131\"> </a></td><td>Niñeras y cuidadoras infantiles</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05132<a name=\"CIUO88AC-5132\"> </a></td><td>Auxiliares de enfermería y odontología</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05139<a name=\"CIUO88AC-5139\"> </a></td><td>Trabajadores de los cuidados personales y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0514<a name=\"CIUO88AC-514\"> </a></td><td>Otros trabajadores de servicios personales a particulares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05141<a name=\"CIUO88AC-5141\"> </a></td><td>Peluqueros, especialistas en tratamientos de belleza y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05142<a name=\"CIUO88AC-5142\"> </a></td><td>Acompañantes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05143<a name=\"CIUO88AC-5143\"> </a></td><td>Personal de pompas fúnebres y embalsamadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05149<a name=\"CIUO88AC-5149\"> </a></td><td>Otros trabajadores de servicios personales a particulares, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0515<a name=\"CIUO88AC-515\"> </a></td><td>Astrólogos, adivinadores, quirománticos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05150<a name=\"CIUO88AC-5150\"> </a></td><td>Astrólogos, adivinadores, quirománticos y afines</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a052<a name=\"CIUO88AC-52\"> </a></td><td>PERSONAL DE LOS SERVICIOS DE PROTECCIÓN Y SEGURIDAD</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0521<a name=\"CIUO88AC-521\"> </a></td><td>Personal de los servicios de protección y seguridad</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05211<a name=\"CIUO88AC-5211\"> </a></td><td>Bomberos y rescatistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05212<a name=\"CIUO88AC-5212\"> </a></td><td>Agentes y policías de transito</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05213<a name=\"CIUO88AC-5213\"> </a></td><td>Guardianes de prisión</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05219<a name=\"CIUO88AC-5219\"> </a></td><td>Personal de los servicios de protección y seguridad, no clasificado bajo otros epígrafes</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a053<a name=\"CIUO88AC-53\"> </a></td><td>MODELOS, VENDEDORES Y DEMOSTRADORES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0531<a name=\"CIUO88AC-531\"> </a></td><td>Modelos de modas, arte y publicidad</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05310<a name=\"CIUO88AC-5310\"> </a></td><td>Modelos de modas, arte y publicidad</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0532<a name=\"CIUO88AC-532\"> </a></td><td>Vendedores y demostradores de tiendas, almacenes y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05320<a name=\"CIUO88AC-5320\"> </a></td><td>Vendedores y demostradores de tiendas, almacenes y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0533<a name=\"CIUO88AC-533\"> </a></td><td>Vendedores en quioscos y puestos fijos de mercado</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05330<a name=\"CIUO88AC-5330\"> </a></td><td>Vendedores en quioscos y puestos fijos de mercado</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0534<a name=\"CIUO88AC-534\"> </a></td><td>Vendedores ambulantes, a domicilio y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05341<a name=\"CIUO88AC-5341\"> </a></td><td>Vendedores ambulantes</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a05342<a name=\"CIUO88AC-5342\"> </a></td><td>Vendedores a domicilio y por teléfono</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">6<a name=\"CIUO88AC-6\"> </a></td><td>AGRICULTORES, TRABAJADORES Y OBREROS AGROPECUARIOS, FORESTALES Y PESQUEROS</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a061<a name=\"CIUO88AC-61\"> </a></td><td>AGRICULTORES Y TRABAJADORES FORESTALES, PECUARIOS Y PESQUEROS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0611<a name=\"CIUO88AC-611\"> </a></td><td>Agricultores, trabajadores forestales y agropecuarios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06111<a name=\"CIUO88AC-6111\"> </a></td><td>Agricultores de cultivos transitorios</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06112<a name=\"CIUO88AC-6112\"> </a></td><td>Agricultores de cultivos permanentes (plantaciones de árboles y arbustos)</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06113<a name=\"CIUO88AC-6113\"> </a></td><td>Trabajadores de huertas, invernaderos, viveros y jardines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06114<a name=\"CIUO88AC-6114\"> </a></td><td>Trabajadores forestales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06115<a name=\"CIUO88AC-6115\"> </a></td><td>Trabajadores agropecuarios</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0612<a name=\"CIUO88AC-612\"> </a></td><td>Trabajadores pecuarios, avicultores, criadores de insectos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06121<a name=\"CIUO88AC-6121\"> </a></td><td>Criadores de ganado y trabajadores de la cría de animales domésticos diversos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06122<a name=\"CIUO88AC-6122\"> </a></td><td>Avicultores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06123<a name=\"CIUO88AC-6123\"> </a></td><td>Criadores de insectos, apicultores, sericicultores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06129<a name=\"CIUO88AC-6129\"> </a></td><td>Trabajadores pecuarios, avicultores, criadores de insectos y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0613<a name=\"CIUO88AC-613\"> </a></td><td>Pescadores, cazadores y tramperos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06131<a name=\"CIUO88AC-6131\"> </a></td><td>Criadores de especies acuáticas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06132<a name=\"CIUO88AC-6132\"> </a></td><td>Pescadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06133<a name=\"CIUO88AC-6133\"> </a></td><td>Cazadores y tramperos</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a062<a name=\"CIUO88AC-62\"> </a></td><td>OBREROS Y PEONES AGROPECUARIOS, FORESTALES, PESQUEROS Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0621<a name=\"CIUO88AC-621\"> </a></td><td>Obreros y peones agropecuarios, forestales, pesqueros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06211<a name=\"CIUO88AC-6211\"> </a></td><td>Obreros y peones agropecuarios de labranza y de invernadero</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06212<a name=\"CIUO88AC-6212\"> </a></td><td>Obreros forestales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a06213<a name=\"CIUO88AC-6213\"> </a></td><td>Obreros de pesca, caza y trampa</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">7<a name=\"CIUO88AC-7\"> </a></td><td>OFICIALES, OPERARIOS, ARTESANOS Y TRABAJADORES DE LA INDUSTRIA MANUFACTURERA, DE LA CONSTRUCCIÓN Y DE LA MINERÍA</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a071<a name=\"CIUO88AC-71\"> </a></td><td>OFICIALES Y OPERARIOS DE LA INDUSTRIA EXTRACTIVA</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0711<a name=\"CIUO88AC-711\"> </a></td><td>Mineros, canteros, pegadores y labrantes de piedra</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07111<a name=\"CIUO88AC-7111\"> </a></td><td>Mineros y canteros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07112<a name=\"CIUO88AC-7112\"> </a></td><td>Pegadores cargas explosivas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07113<a name=\"CIUO88AC-7113\"> </a></td><td>Tronzadores, labrantes y grabadores de piedra</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a072<a name=\"CIUO88AC-72\"> </a></td><td>OFICIALES Y OPERARIOS DE LA CONSTRUCCIÓN</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0721<a name=\"CIUO88AC-721\"> </a></td><td>Oficiales y operarios de la construcción en obra negra y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07211<a name=\"CIUO88AC-7211\"> </a></td><td>Albañiles, mamposteros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07212<a name=\"CIUO88AC-7212\"> </a></td><td>Operarios en cemento armado, enfoscadores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07213<a name=\"CIUO88AC-7213\"> </a></td><td>Carpinteros de armar y de blanco</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07219<a name=\"CIUO88AC-7219\"> </a></td><td>Oficiales y operarios de la construcción en obra negra y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0722<a name=\"CIUO88AC-722\"> </a></td><td>Oficiales y operarios de la construcción en trabajos de acabado y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07221<a name=\"CIUO88AC-7221\"> </a></td><td>Techadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07222<a name=\"CIUO88AC-7222\"> </a></td><td>Parqueteros y colocadores de suelos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07223<a name=\"CIUO88AC-7223\"> </a></td><td>Instaladores de material aislante y de insonorización</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07224<a name=\"CIUO88AC-7224\"> </a></td><td>Cristaleros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07225<a name=\"CIUO88AC-7225\"> </a></td><td>Fontaneros e instaladores de tuberías</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07226<a name=\"CIUO88AC-7226\"> </a></td><td>Electricistas de obras y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0723<a name=\"CIUO88AC-723\"> </a></td><td>Revocadores, pintores, limpiadores de fachada y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07231<a name=\"CIUO88AC-7231\"> </a></td><td>Revocadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07232<a name=\"CIUO88AC-7232\"> </a></td><td>Pintores, empapeladores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07233<a name=\"CIUO88AC-7233\"> </a></td><td>Limpiadores de fachadas y deshollinadores</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a073<a name=\"CIUO88AC-73\"> </a></td><td>OPERARIOS DE LA METALURGIA Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0731<a name=\"CIUO88AC-731\"> </a></td><td>Moldeadores, soldadores, chapistas, caldereros, montadores de estructuras metálicas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07311<a name=\"CIUO88AC-7311\"> </a></td><td>Moldeadores y macheros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07312<a name=\"CIUO88AC-7312\"> </a></td><td>Soldadores y oxicortadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07313<a name=\"CIUO88AC-7313\"> </a></td><td>Chapistas y caldereros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07314<a name=\"CIUO88AC-7314\"> </a></td><td>Montadores de estructuras metálicas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07315<a name=\"CIUO88AC-7315\"> </a></td><td>Aparejadores y empalmadores de cables</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07316<a name=\"CIUO88AC-7316\"> </a></td><td>Pintores,  barnizadores y enlacadores de artículos metálicos y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0732<a name=\"CIUO88AC-732\"> </a></td><td>Herreros, herramentistas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07321<a name=\"CIUO88AC-7321\"> </a></td><td>Herreros y forjadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07322<a name=\"CIUO88AC-7322\"> </a></td><td>Herramentistas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07323<a name=\"CIUO88AC-7323\"> </a></td><td>Pulidores de metales y afiladores de herramientas</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a074<a name=\"CIUO88AC-74\"> </a></td><td>MECÁNICOS Y AJUSTADORES DE MAQUINAS Y EQUIPOS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0741<a name=\"CIUO88AC-741\"> </a></td><td>Mecánicos y ajustadores de máquinas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07411<a name=\"CIUO88AC-7411\"> </a></td><td>Mecánicos y ajustadores de vehículos de motor</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07412<a name=\"CIUO88AC-7412\"> </a></td><td>Mecánicos y ajustadores de motores de avión</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07413<a name=\"CIUO88AC-7413\"> </a></td><td>Mecánicos y ajustadores de máquinas agrícolas e industriales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07414<a name=\"CIUO88AC-7414\"> </a></td><td>Mecánicos y ajustadores de máquinas herramientas</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0742<a name=\"CIUO88AC-742\"> </a></td><td>Mecánicos y ajustadores de equipos eléctricos y electrónicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07421<a name=\"CIUO88AC-7421\"> </a></td><td>Mecánicos y ajustadores eléctricos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07422<a name=\"CIUO88AC-7422\"> </a></td><td>Mecánicos, reparadores y ajustadores de aparatos electrónicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07423<a name=\"CIUO88AC-7423\"> </a></td><td>Instaladores y reparadores de telégrafos, teléfonos y líneas electricas</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a075<a name=\"CIUO88AC-75\"> </a></td><td>MECÁNICOS DE PRECISIÓN, OPERARIOS DE LAS ARTES GRAFICAS Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0751<a name=\"CIUO88AC-751\"> </a></td><td>Mecánicos de precisión en metales y materiales similares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07511<a name=\"CIUO88AC-7511\"> </a></td><td>Mecánicos y reparadores de instrumentos de precisión</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07512<a name=\"CIUO88AC-7512\"> </a></td><td>Fabricantes y afinadores de instrumentos musicales</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0752<a name=\"CIUO88AC-752\"> </a></td><td>Oficiales y operarios de las artes graficas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07521<a name=\"CIUO88AC-7521\"> </a></td><td>Cajistas, tipógrafos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07522<a name=\"CIUO88AC-7522\"> </a></td><td>Estereotipistas y galvanotipistas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07523<a name=\"CIUO88AC-7523\"> </a></td><td>Grabadores de imprenta y fotograbadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07524<a name=\"CIUO88AC-7524\"> </a></td><td>Operarios de la fotografía y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07525<a name=\"CIUO88AC-7525\"> </a></td><td>Encuadernadores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07526<a name=\"CIUO88AC-7526\"> </a></td><td>Impresores de sericigrafía y estampadores a la plancha y en textiles</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a076<a name=\"CIUO88AC-76\"> </a></td><td>ARTESANOS</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0761<a name=\"CIUO88AC-761\"> </a></td><td>Alfareros, operarios de cristalerías y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07611<a name=\"CIUO88AC-7611\"> </a></td><td>Alfareros y afines (barro, arcilla y abrasivos)</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07612<a name=\"CIUO88AC-7612\"> </a></td><td>Sopladores, modeladores, laminadores, cortadores y pulidores de vidrio</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07613<a name=\"CIUO88AC-7613\"> </a></td><td>Grabadores de vidrio</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07614<a name=\"CIUO88AC-7614\"> </a></td><td>Pintores decoradores de vidrio, cerámica y otros materiales</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0762<a name=\"CIUO88AC-762\"> </a></td><td>Artesanos de la madera</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07621<a name=\"CIUO88AC-7621\"> </a></td><td>Cesteros, bruceros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07622<a name=\"CIUO88AC-7622\"> </a></td><td>Artesanos de la madera y materiales similares</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0763<a name=\"CIUO88AC-763\"> </a></td><td>Artesanos de los tejidos y bordadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07631<a name=\"CIUO88AC-7631\"> </a></td><td>Artesanos de los tejidos, el cuero y materiales similares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07632<a name=\"CIUO88AC-7632\"> </a></td><td>Bordadores y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0764<a name=\"CIUO88AC-764\"> </a></td><td>Otros artesanos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07641<a name=\"CIUO88AC-7641\"> </a></td><td>Joyeros, orfebres y plateros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07642<a name=\"CIUO88AC-7642\"> </a></td><td>Floristas y arreglistas florales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07649<a name=\"CIUO88AC-7649\"> </a></td><td>Otros artesanos, no clasificados bajo otros epígrafes</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a077<a name=\"CIUO88AC-77\"> </a></td><td>OPERARIOS DE ALIMENTOS, TEXTILES, PIELES, MADERAS Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0771<a name=\"CIUO88AC-771\"> </a></td><td>Operarios del procesamiento de alimentos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07711<a name=\"CIUO88AC-7711\"> </a></td><td>Carniceros, pescaderos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07712<a name=\"CIUO88AC-7712\"> </a></td><td>Panaderos, pasteleros y confiteros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07713<a name=\"CIUO88AC-7713\"> </a></td><td>Operarios de la elaboración de productos lácteos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07714<a name=\"CIUO88AC-7714\"> </a></td><td>Operarios de la conservación de frutas, legumbres, verduras y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07715<a name=\"CIUO88AC-7715\"> </a></td><td>Catadores y clasificadores de alimentos y bebidas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07716<a name=\"CIUO88AC-7716\"> </a></td><td>Preparadores y elaboradores de tabaco y sus productos</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0772<a name=\"CIUO88AC-772\"> </a></td><td>Operarios de los textiles y de la confección y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07721<a name=\"CIUO88AC-7721\"> </a></td><td>Preparadores de fibras</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07722<a name=\"CIUO88AC-7722\"> </a></td><td>Tejedores con telares o de tejidos de punto y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07723<a name=\"CIUO88AC-7723\"> </a></td><td>Sastres, modistos costureros, sombrereros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07724<a name=\"CIUO88AC-7724\"> </a></td><td>Peleteros y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07725<a name=\"CIUO88AC-7725\"> </a></td><td>Tapiceros, colchoneros y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0773<a name=\"CIUO88AC-773\"> </a></td><td>Operarios de pieles, cuero y calzado</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07731<a name=\"CIUO88AC-7731\"> </a></td><td>Apelambradores, pellejeros y curtidores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07732<a name=\"CIUO88AC-7732\"> </a></td><td>Zapateros y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0774<a name=\"CIUO88AC-774\"> </a></td><td>Operarios de la madera</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07741<a name=\"CIUO88AC-7741\"> </a></td><td>Operarios del tratamiento de la madera</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07742<a name=\"CIUO88AC-7742\"> </a></td><td>Ebanistas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a07743<a name=\"CIUO88AC-7743\"> </a></td><td>Ajustadores y operadores de máquinas de labrar madera</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">8<a name=\"CIUO88AC-8\"> </a></td><td>OPERADORES DE INSTALACIONES, DE MÁQUINAS Y ENSAMBLADORES</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a081<a name=\"CIUO88AC-81\"> </a></td><td>OPERADORES DE INSTALACIONES FIJAS Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0811<a name=\"CIUO88AC-811\"> </a></td><td>Operadores de instalaciones mineras y de extracción y procesamiento de minerales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08111<a name=\"CIUO88AC-8111\"> </a></td><td>Operadores de instalaciones mineras</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08112<a name=\"CIUO88AC-8112\"> </a></td><td>Operadores de instalaciones de procesamiento de minerales y rocas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08113<a name=\"CIUO88AC-8113\"> </a></td><td>Perforadores y sondistas de pozos y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0812<a name=\"CIUO88AC-812\"> </a></td><td>Operadores de instalaciones de procesamiento de metales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08121<a name=\"CIUO88AC-8121\"> </a></td><td>Operadores de hornos de minerales y de hornos de primera fusión de metales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08122<a name=\"CIUO88AC-8122\"> </a></td><td>Operadores de hornos de segunda fusión, máquinas de colar y moldear metales y trenes de laminación</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08123<a name=\"CIUO88AC-8123\"> </a></td><td>Operadores de instalaciones de tratamiento térmico de metales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08124<a name=\"CIUO88AC-8124\"> </a></td><td>Operadores de máquinas trefiladoras y estiradoras de metales</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0813<a name=\"CIUO88AC-813\"> </a></td><td>Operadores de instalaciones de vidriería, cerámica y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08131<a name=\"CIUO88AC-8131\"> </a></td><td>Operadores de mezcladoras, de hornos de vidriería  y máquinas afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08132<a name=\"CIUO88AC-8132\"> </a></td><td>Operadores de mezcladoras, de  hornos de cerámica y máqinas afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08139<a name=\"CIUO88AC-8139\"> </a></td><td>Operadores de instalaciones de vidriería, cerámica y afines, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0814<a name=\"CIUO88AC-814\"> </a></td><td>Operadores de instalaciones de procesamiento de la madera y de la fabricación de papel</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08141<a name=\"CIUO88AC-8141\"> </a></td><td>Operadores de instalaciones de procesamiento de la madera</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08142<a name=\"CIUO88AC-8142\"> </a></td><td>Operadores de instalaciones para la preparación de pasta o pulpa de papel</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08143<a name=\"CIUO88AC-8143\"> </a></td><td>Operadores de instalaciones para la fabricación de papel</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0815<a name=\"CIUO88AC-815\"> </a></td><td>Operadores de instalaciones de tratamientos químicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08151<a name=\"CIUO88AC-8151\"> </a></td><td>Operadores de instalaciones quebrantadoras, trituradoras y mezcladoras de sustancias químicas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08152<a name=\"CIUO88AC-8152\"> </a></td><td>Operadores de instalaciones de tratamiento químico térmico</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08153<a name=\"CIUO88AC-8153\"> </a></td><td>Operadores de equipos de filtración y separación de sustancias químicas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08154<a name=\"CIUO88AC-8154\"> </a></td><td>Operadores de equipos de destilación y de reacción química (excepto petróleo y gas natural)</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08155<a name=\"CIUO88AC-8155\"> </a></td><td>Operadores de instalaciones de refinación de petróleo y gas natural</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08159<a name=\"CIUO88AC-8159\"> </a></td><td>Operadores de instalaciones de tratamientos químicos, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0816<a name=\"CIUO88AC-816\"> </a></td><td>Operadores de instalaciones de producción de energía, incineradores, refrigeración  y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08161<a name=\"CIUO88AC-8161\"> </a></td><td>Operadores de instalaciones de producción de energía</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08162<a name=\"CIUO88AC-8162\"> </a></td><td>Operadores de máquinas de vapor y calderas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08163<a name=\"CIUO88AC-8163\"> </a></td><td>Operadores de incineradores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08164<a name=\"CIUO88AC-8164\"> </a></td><td>Operadores de instalaciones de tratamiento de agua y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08165<a name=\"CIUO88AC-8165\"> </a></td><td>Operadores de instalaciones de refrigeración, calefacción y ventilación</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0817<a name=\"CIUO88AC-817\"> </a></td><td>Operadores de cadenas de montaje automatizadas, instalaciones mecánicas y de robots industriales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08170<a name=\"CIUO88AC-8170\"> </a></td><td>Operadores de cadenas de montaje automatizadas e instalaciones mecánicas y de robots industriales</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a082<a name=\"CIUO88AC-82\"> </a></td><td>OPERADORES DE MÁQUINAS Y ENSAMBLADORES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0821<a name=\"CIUO88AC-821\"> </a></td><td>Operadores de máquinas para trabajar metales y productos minerales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08211<a name=\"CIUO88AC-8211\"> </a></td><td>Operadores de máquinas herramientas y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08212<a name=\"CIUO88AC-8212\"> </a></td><td>Operadores de máquinas para fabricar productos de cemento y otros productos minerales</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0822<a name=\"CIUO88AC-822\"> </a></td><td>Operadores de máquinas para fabricar productos químicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08221<a name=\"CIUO88AC-8221\"> </a></td><td>Operadores de máquinas para fabricar productos farmacéuticos y cosméticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08222<a name=\"CIUO88AC-8222\"> </a></td><td>Operadores de máquinas para fabricar municiones y explosivos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08223<a name=\"CIUO88AC-8223\"> </a></td><td>Operadores de máquinas pulidoras, galvanizadoras y recubridoras de metales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08229<a name=\"CIUO88AC-8229\"> </a></td><td>Operadores de máquinas para fabricar productos químicos, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0823<a name=\"CIUO88AC-823\"> </a></td><td>Operadores de máquinas para fabricar productos de caucho y de plástico</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08231<a name=\"CIUO88AC-8231\"> </a></td><td>Operadores de máquinas para fabricar productos de caucho</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08232<a name=\"CIUO88AC-8232\"> </a></td><td>Operadores de máquinas para fabricar productos de plástico</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0824<a name=\"CIUO88AC-824\"> </a></td><td>Operadores de máquinas para fabricar productos de madera</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08240<a name=\"CIUO88AC-8240\"> </a></td><td>Operadores de máquinas para fabricar productos de madera</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0825<a name=\"CIUO88AC-825\"> </a></td><td>Operadores de máquinas de imprenta, encuadernación y fabricación de productos de papel</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08251<a name=\"CIUO88AC-8251\"> </a></td><td>Operadores de máquinas de imprenta, reproducción fotográfica y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08252<a name=\"CIUO88AC-8252\"> </a></td><td>Operadores de máquinas de encuadernación</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08253<a name=\"CIUO88AC-8253\"> </a></td><td>Operadores de máquinas para fabricar productos de papel y afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0826<a name=\"CIUO88AC-826\"> </a></td><td>Operadores de máquinas para fabricar productos textiles y artículos de piel y cuero</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08261<a name=\"CIUO88AC-8261\"> </a></td><td>Operadores de máquinas de preparación de fibras, hilado y devanado</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08262<a name=\"CIUO88AC-8262\"> </a></td><td>Operadores de telares y otras máquinas tejedoras</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08263<a name=\"CIUO88AC-8263\"> </a></td><td>Operadores de máquinas para coser</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08264<a name=\"CIUO88AC-8264\"> </a></td><td>Operadores de máquinas de blanqueo, teñido y tintura</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08265<a name=\"CIUO88AC-8265\"> </a></td><td>Operadores de máquinas de tratamiento de pieles y cueros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08266<a name=\"CIUO88AC-8266\"> </a></td><td>Operadores de máquinas para la fabricación de calzado y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08267<a name=\"CIUO88AC-8267\"> </a></td><td>Patronistas, cortadores de tela, cuero y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08269<a name=\"CIUO88AC-8269\"> </a></td><td>Operadores de máquinas para fabricar productos textiles y artículos de piel y cuero, no clasificados bajo otros epígrafes</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0827<a name=\"CIUO88AC-827\"> </a></td><td>Operadores de máquinas para elaborar o procesar alimentos y productos afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08271<a name=\"CIUO88AC-8271\"> </a></td><td>Operadores de máquinas para procesar carne, pescado y mariscos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08272<a name=\"CIUO88AC-8272\"> </a></td><td>Operadores de máquinas para elaborar productos lácteos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08273<a name=\"CIUO88AC-8273\"> </a></td><td>Operadores de máquinas para moler cereales y especias</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08274<a name=\"CIUO88AC-8274\"> </a></td><td>Operadores de máquinas para procesar cereales, productos de panadería, repostería y confitería</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08275<a name=\"CIUO88AC-8275\"> </a></td><td>Operadores de máquinas para procesar frutos húmedos, secos y hortalizas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08276<a name=\"CIUO88AC-8276\"> </a></td><td>Operadores de máquinas para fabricar azúcares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08277<a name=\"CIUO88AC-8277\"> </a></td><td>Operadores de máquinas para elaborar té, café y cacao</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08278<a name=\"CIUO88AC-8278\"> </a></td><td>Operadores de máquinas para elaborar cerveza, vinos y otras bebidas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08279<a name=\"CIUO88AC-8279\"> </a></td><td>Operadores de máquinas para elaborar productos del tabaco</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0828<a name=\"CIUO88AC-828\"> </a></td><td>Ensambladores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08281<a name=\"CIUO88AC-8281\"> </a></td><td>Ensambladores de mecanismos y elementos mecánicos de máquinas</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08282<a name=\"CIUO88AC-8282\"> </a></td><td>Ensambladores de equipos eléctricos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08283<a name=\"CIUO88AC-8283\"> </a></td><td>Ensambladores de equipos electrónicos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08284<a name=\"CIUO88AC-8284\"> </a></td><td>Ensambladores de productos metálicos, de caucho y plástico</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08285<a name=\"CIUO88AC-8285\"> </a></td><td>Ensambladores de productos de madera y materiales afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08286<a name=\"CIUO88AC-8286\"> </a></td><td>Ensambladores de productos de cartón, textiles y materiales afines</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0829<a name=\"CIUO88AC-829\"> </a></td><td>Otros operadores de máquinas y ensambladores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08290<a name=\"CIUO88AC-8290\"> </a></td><td>Otros operadores de máquinas y ensambladores</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a083<a name=\"CIUO88AC-83\"> </a></td><td>CONDUCTORES DE VEHÍCULOS Y OPERADORES DE EQUIPOS PESADOS MÓVILES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0831<a name=\"CIUO88AC-831\"> </a></td><td>Maquinistas de vehículos por riel y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08311<a name=\"CIUO88AC-8311\"> </a></td><td>Maquinistas de vehículos por riel</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08312<a name=\"CIUO88AC-8312\"> </a></td><td>Guardafrenos, guardagujas y agentes de maniobras</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0832<a name=\"CIUO88AC-832\"> </a></td><td>Conductores de vehículos de motor</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08321<a name=\"CIUO88AC-8321\"> </a></td><td>Conductores de camionetas y vehículos livianos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08322<a name=\"CIUO88AC-8322\"> </a></td><td>Conductores de taxis</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08323<a name=\"CIUO88AC-8323\"> </a></td><td>Conductores de buses, microbuses y colectivos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08324<a name=\"CIUO88AC-8324\"> </a></td><td>Conductores de camiones y vehículos pesados</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0833<a name=\"CIUO88AC-833\"> </a></td><td>Operadores de maquinaria agrícola móvil y de otras máquinas móviles</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08331<a name=\"CIUO88AC-8331\"> </a></td><td>Operadores de maquinaria agrícola y forestal motorizada</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08332<a name=\"CIUO88AC-8332\"> </a></td><td>Operadores de máquinas de movimiento de tierras, construcción vías y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08333<a name=\"CIUO88AC-8333\"> </a></td><td>Operadores de grúas, de aparatos elevadores y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08334<a name=\"CIUO88AC-8334\"> </a></td><td>Operadores de carretillas elevadoras</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0834<a name=\"CIUO88AC-834\"> </a></td><td>Marineros de cubierta y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a08340<a name=\"CIUO88AC-8340\"> </a></td><td>Marineros de cubierta y afines</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">9<a name=\"CIUO88AC-9\"> </a></td><td>TRABAJADORES NO CALIFICADOS</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a091<a name=\"CIUO88AC-91\"> </a></td><td>TRABAJADORES NO CALIFICADOS DE SERVICIOS (EXCEPTO EL PERSONAL DOMÉSTICO Y AFINES)</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0911<a name=\"CIUO88AC-911\"> </a></td><td>Ayudantes de mecánica</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09111<a name=\"CIUO88AC-9111\"> </a></td><td>Ayudante de taller, mecánica, vehículos de motor y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09112<a name=\"CIUO88AC-9112\"> </a></td><td>Ayudantes en reparación y mecánica en general (excepto vehículos de motor)</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0912<a name=\"CIUO88AC-912\"> </a></td><td>Limpiabotas y otros trabajadores callejeros</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09120<a name=\"CIUO88AC-9120\"> </a></td><td>Limpiabotas y otros trabajadores callejeros</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0913<a name=\"CIUO88AC-913\"> </a></td><td>Mensajeros, porteros, conserjes, vigilantes y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09131<a name=\"CIUO88AC-9131\"> </a></td><td>Mensajeros, porteadores y repartidores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09132<a name=\"CIUO88AC-9132\"> </a></td><td>Porteros , conserjes y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09133<a name=\"CIUO88AC-9133\"> </a></td><td>Vigilantes y celadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09134<a name=\"CIUO88AC-9134\"> </a></td><td>Recolectores y surtidores de aparatos automáticos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09135<a name=\"CIUO88AC-9135\"> </a></td><td>Lectores de medidores</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0914<a name=\"CIUO88AC-914\"> </a></td><td>Recolectores de basura y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09141<a name=\"CIUO88AC-9141\"> </a></td><td>Recolectores de basura</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09142<a name=\"CIUO88AC-9142\"> </a></td><td>Barrenderos y afines</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09143<a name=\"CIUO88AC-9143\"> </a></td><td>Recolectores de material reciclable</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a092<a name=\"CIUO88AC-92\"> </a></td><td>PERSONAL DOMÉSTICO, ASEADORES, LAVANDEROS, PLANCHADORES Y AFINES</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0921<a name=\"CIUO88AC-921\"> </a></td><td>Personal doméstico</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09210<a name=\"CIUO88AC-9210\"> </a></td><td>Personal doméstico</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0922<a name=\"CIUO88AC-922\"> </a></td><td>Aseadores, lavanderos y planchadores</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09221<a name=\"CIUO88AC-9221\"> </a></td><td>Aseadores y fumigadores de oficinas, hoteles y otros establecimientos</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09222<a name=\"CIUO88AC-9222\"> </a></td><td>Lavanderos y planchadores manuales</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09223<a name=\"CIUO88AC-9223\"> </a></td><td>Lavadores de vehículos, ventanas y afines</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a093<a name=\"CIUO88AC-93\"> </a></td><td>OBREROS DE LA MINERÍA, LA CONSTRUCCIÓN, LA INDUSTRIA MANUFACTURERA Y EL TRANSPORTE</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0931<a name=\"CIUO88AC-931\"> </a></td><td>Obreros de la minería y la construcción</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09311<a name=\"CIUO88AC-9311\"> </a></td><td>Obreros de minas y canteras</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09312<a name=\"CIUO88AC-9312\"> </a></td><td>Obreros de obras públicas y mantenimiento: carreteras, presas y obras similares</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09313<a name=\"CIUO88AC-9313\"> </a></td><td>Obreros de la construcción de edificios</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0932<a name=\"CIUO88AC-932\"> </a></td><td>Obreros de la industria manufacturera</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09321<a name=\"CIUO88AC-9321\"> </a></td><td>Obreros de ensamble</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09322<a name=\"CIUO88AC-9322\"> </a></td><td>Embaladores manuales y otros obreros de la industria manufacturera</td></tr><tr><td>3</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0933<a name=\"CIUO88AC-933\"> </a></td><td>Obreros del transporte</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09331<a name=\"CIUO88AC-9331\"> </a></td><td>Conductores de vehículos accionados a pedal o a brazo</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09332<a name=\"CIUO88AC-9332\"> </a></td><td>Conductores de vehículos de tracción animal</td></tr><tr><td>4</td><td style=\"white-space:nowrap\">\u00a0\u00a0\u00a0\u00a0\u00a0\u00a09333<a name=\"CIUO88AC-9333\"> </a></td><td>Obreros de carga</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CIUO88AC",
+  "version" : "1.0.0",
+  "name" : "CIUO88AC",
+  "title" : "CodeSystem: CIUO-88 A.C.",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Clasificación Internacional Uniforme de Ocupaciones Adaptada para Colombia (CIUO-88 A.C.).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador jerárquico de ocupaciones en Colombia, adaptado a partir de la Clasificación Internacional Uniforme de Ocupaciones (CIUO-88).",
+  "copyright" : "DANE, CC-BY-4.0 2005+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 562,
+  "concept" : [{
+    "code" : "0",
+    "display" : "FUERZA PÚBLICA",
+    "concept" : [{
+      "code" : "01",
+      "display" : "FUERZAS MILITARES (EJÉRCITO,  ARMADA  Y FUERZA AÉREA)",
+      "concept" : [{
+        "code" : "011",
+        "display" : "OFICIALES DE LAS FUERZAS MILITARES",
+        "concept" : [{
+          "code" : "0110",
+          "display" : "Oficiales de las Fuerzas Militares"
+        }]
+      },
+      {
+        "code" : "012",
+        "display" : "Suboficiales de las Fuerzas Militares",
+        "concept" : [{
+          "code" : "0120",
+          "display" : "Suboficiales de las Fuerzas Militares"
+        }]
+      },
+      {
+        "code" : "013",
+        "display" : "Soldados de las Fuerzas Militares",
+        "concept" : [{
+          "code" : "0130",
+          "display" : "Soldados de las Fuerzas Militares"
+        }]
+      }]
+    },
+    {
+      "code" : "02",
+      "display" : "POLICÍA NACIONAL",
+      "concept" : [{
+        "code" : "021",
+        "display" : "Oficiales de la Policía Nacional",
+        "concept" : [{
+          "code" : "0210",
+          "display" : "Oficiales de la Policía Nacional"
+        }]
+      },
+      {
+        "code" : "022",
+        "display" : "Suboficiales de la Policía Nacional",
+        "concept" : [{
+          "code" : "0220",
+          "display" : "Suboficiales de la Policía Nacional"
+        }]
+      },
+      {
+        "code" : "023",
+        "display" : "Agentes de la Policía Nacional",
+        "concept" : [{
+          "code" : "0230",
+          "display" : "Agentes de la Policía Nacional"
+        }]
+      },
+      {
+        "code" : "024",
+        "display" : "Auxiliares de la Policía Nacional",
+        "concept" : [{
+          "code" : "0240",
+          "display" : "Auxiliares de la Policía Nacional"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "1",
+    "display" : "MIEMBROS DEL PODER EJECUTIVO, DE LOS CUERPOS LEGISLATIVOS Y PERSONAL DIRECTIVO DE LA ADMINISTRACIÓN PÚBLICA Y DE EMPRESAS",
+    "concept" : [{
+      "code" : "11",
+      "display" : "MIEMBROS DEL PODER EJECUTIVO, DE LOS CUERPOS LEGISLATIVOS Y PERSONAL DIRECTIVO DE LA ADMINISTRACIÓN PÚBLICA",
+      "concept" : [{
+        "code" : "111",
+        "display" : "Miembros del Poder Ejecutivo y de los cuerpos legislativos",
+        "concept" : [{
+          "code" : "1110",
+          "display" : "Miembros del Poder Ejecutivo y de los cuerpos legislativos"
+        }]
+      },
+      {
+        "code" : "112",
+        "display" : "Directores generales, de regionales,  sucursales, oficinas y afines de la administración pública",
+        "concept" : [{
+          "code" : "1121",
+          "display" : "Directores generales, de empresas o entidades de la administración pública"
+        },
+        {
+          "code" : "1122",
+          "display" : "Directores de regionales, sucursales, oficinas y afines de la administración pública"
+        }]
+      },
+      {
+        "code" : "113",
+        "display" : "Jefes de comunidades indígenas, etnias especiales y afines",
+        "concept" : [{
+          "code" : "1130",
+          "display" : "Jefes de comunidades indígenas, etnias especiales y afines"
+        }]
+      },
+      {
+        "code" : "114",
+        "display" : "Dirigentes y administradores de  partidos políticos, sindicatos y organizaciones especializadas",
+        "concept" : [{
+          "code" : "1141",
+          "display" : "Dirigentes y administradores de partidos políticos"
+        },
+        {
+          "code" : "1142",
+          "display" : "Dirigentes y administradores de organizaciones de empleadores, de trabajadores y de otras de interés socioeconómico"
+        },
+        {
+          "code" : "1143",
+          "display" : "Dirigentes y administradores de organizaciones humanitarias y de otras organizaciones especializadas"
+        }]
+      }]
+    },
+    {
+      "code" : "12",
+      "display" : "DIRECTORES Y GERENTES GENERALES DE EMPRESAS PRIVADAS",
+      "concept" : [{
+        "code" : "121",
+        "display" : "Directores generales, de regionales, sucursales, oficinas y afines de empresas privadas",
+        "concept" : [{
+          "code" : "1211",
+          "display" : "Directores y gerentes generales de empresas privadas"
+        },
+        {
+          "code" : "1212",
+          "display" : "Directores de regionales, sucursales, oficinas y afines de empresas privadas"
+        }]
+      }]
+    },
+    {
+      "code" : "13",
+      "display" : "DIRECTORES DE DEPARTAMENTOS PÚBLICOS Y PRIVADOS",
+      "concept" : [{
+        "code" : "131",
+        "display" : "Directores de departamentos de producción y operaciones",
+        "concept" : [{
+          "code" : "1311",
+          "display" : "Directores de departamentos de producción y operaciones en agricultura, ganaderia, silvicultura, caza y pesca"
+        },
+        {
+          "code" : "1312",
+          "display" : "Directores de departamentos de producción y operaciones en industrias manufactureras y extractivas"
+        },
+        {
+          "code" : "1313",
+          "display" : "Directores de departamentos de producción y operaciones en construcción y obras públicas"
+        },
+        {
+          "code" : "1314",
+          "display" : "Directores de departamentos de producción y operaciones en comercio mayorista y minorista"
+        },
+        {
+          "code" : "1315",
+          "display" : "Directores de departamentos de producción y operaciones en restaurantes, hoteles y afines"
+        },
+        {
+          "code" : "1316",
+          "display" : "Directores de departamentos de producción y operaciones en transporte, almacenamiento y comunicaciones"
+        },
+        {
+          "code" : "1317",
+          "display" : "Directores de departamentos de producción y operaciones en empresas de intermediación financiera y servicios a empresas"
+        },
+        {
+          "code" : "1318",
+          "display" : "Directores de departamentos de producción y operaciones en servicios de salud, educación y recreación"
+        },
+        {
+          "code" : "1319",
+          "display" : "Directores de departamentos de producción y operaciones, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "132",
+        "display" : "Otros directores de departamentos, públicos y privados",
+        "concept" : [{
+          "code" : "1321",
+          "display" : "Directores de departamentos financieros y administrativos"
+        },
+        {
+          "code" : "1322",
+          "display" : "Directores de departamentos de personal y de relaciones laborales"
+        },
+        {
+          "code" : "1323",
+          "display" : "Directores de departamentos de ventas y comercialización"
+        },
+        {
+          "code" : "1324",
+          "display" : "Directores de departamentos de publicidad y de relaciones públicas"
+        },
+        {
+          "code" : "1325",
+          "display" : "Directores de departamentos de abastecimiento y distribución"
+        },
+        {
+          "code" : "1326",
+          "display" : "Directores de departamentos de servicios de informática"
+        },
+        {
+          "code" : "1327",
+          "display" : "Directores de departamentos de investigaciones y desarrollo"
+        },
+        {
+          "code" : "1329",
+          "display" : "Otros directores de departamentos públicos y privados, no clasificados bajo otros epígrafes"
+        }]
+      }]
+    },
+    {
+      "code" : "14",
+      "display" : "COORDINADORES Y SUPERVISORES EN MANDOS MEDIOS DE EMPRESAS PÚBLICAS Y PRIVADAS",
+      "concept" : [{
+        "code" : "141",
+        "display" : "Coordinadores y supervisores en mandos medios administrativos, comerciales y de servicios de empresas públicas y privadas",
+        "concept" : [{
+          "code" : "1411",
+          "display" : "Coordinadores y supervisores financieros y administrativos"
+        },
+        {
+          "code" : "1412",
+          "display" : "Coordinadores y supervisores de  ventas y comercialización"
+        },
+        {
+          "code" : "1413",
+          "display" : "Coordinadores y supervisores de publicidad, información, relaciones públicas y servicio al cliente"
+        },
+        {
+          "code" : "1414",
+          "display" : "Coordinadores y supervisores de  almacenamiento, abastecimiento y distribución"
+        },
+        {
+          "code" : "1415",
+          "display" : "Coordinadores y supervisores de informática,  investigación y desarrollo"
+        },
+        {
+          "code" : "1416",
+          "display" : "Coordinadores y supervisores de servicios sociales, educación y salud"
+        },
+        {
+          "code" : "1419",
+          "display" : "Otros coordinadores y supervisores en mandos medios de empresas administrativos, comerciales y de servicios de empresas públicas y privadas, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "142",
+        "display" : "Coordinadores y supervisores en mandos medios de producción y operaciones de empresas publicas y privadas",
+        "concept" : [{
+          "code" : "1421",
+          "display" : "Coordinadores y supervisores de producción y operaciones en aprovechamiento agrícola, pecuario y silvícola"
+        },
+        {
+          "code" : "1422",
+          "display" : "Coordinadores y supervisores de producción y operaciones en explotación procesamiento y transporte de minerales, petróleo y gas"
+        },
+        {
+          "code" : "1423",
+          "display" : "Coordinadores y supervisores de producción y operaciones en  procesamiento, fabricación y ensamble"
+        },
+        {
+          "code" : "1424",
+          "display" : "Coordinadores y supervisores de  producción y operaciones en construcción y obras públicas"
+        },
+        {
+          "code" : "1425",
+          "display" : "Coordinadores y supervisores de producción y operaciones en  instalación, mantenimiento y reparación mecánica, eléctrica y electrónica"
+        },
+        {
+          "code" : "1426",
+          "display" : "Coordinadores y supervisores de  producción y operaciones en restaurantes, hoteles hospitales y afines"
+        },
+        {
+          "code" : "1427",
+          "display" : "Coordinadores y supervisores de producción y operaciones  en transporte y comunicaciones"
+        },
+        {
+          "code" : "1428",
+          "display" : "Coordinadores y supervisores de producción y operaciones en cuidados personales, limpieza y servicios similares"
+        },
+        {
+          "code" : "1429",
+          "display" : "Coordinadores y supervisores  en mandos medios de producción y operaciones en empresas públicas y privadas, no clasificados bajo otros epígrafes"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "2",
+    "display" : "PROFESIONALES UNIVERSITARIOS, CIENTÍFICOS E INTELECTUALES",
+    "concept" : [{
+      "code" : "21",
+      "display" : "PROFESIONALES DE LAS CIENCIAS FÍSICAS, QUÍMICAS, MATEMÁTICAS Y DE LA INGENIERÍA",
+      "concept" : [{
+        "code" : "211",
+        "display" : "Físicos, químicos y afines",
+        "concept" : [{
+          "code" : "2111",
+          "display" : "Físicos y astrónomos"
+        },
+        {
+          "code" : "2112",
+          "display" : "Meteorólogos"
+        },
+        {
+          "code" : "2113",
+          "display" : "Químicos y afines"
+        },
+        {
+          "code" : "2114",
+          "display" : "Geólogos y geofísicos"
+        }]
+      },
+      {
+        "code" : "212",
+        "display" : "Matemáticos, estadísticos y afines",
+        "concept" : [{
+          "code" : "2121",
+          "display" : "Matemáticos y actuarios"
+        },
+        {
+          "code" : "2122",
+          "display" : "Estadísticos"
+        }]
+      },
+      {
+        "code" : "213",
+        "display" : "Profesionales de la informática",
+        "concept" : [{
+          "code" : "2130",
+          "display" : "Profesionales de la informática"
+        }]
+      },
+      {
+        "code" : "214",
+        "display" : "Arquitectos, ingenieros y afines",
+        "concept" : [{
+          "code" : "2141",
+          "display" : "Arquitectos y urbanistas"
+        },
+        {
+          "code" : "2142",
+          "display" : "Ingenieros civiles, ingenieros de transporte y afines"
+        },
+        {
+          "code" : "2143",
+          "display" : "Ingenieros eléctricos, ingenieros electrónicos, de telecomunicaciones y afines"
+        },
+        {
+          "code" : "2144",
+          "display" : "Ingenieros mecánicos"
+        },
+        {
+          "code" : "2145",
+          "display" : "Ingenieros industriales y afines"
+        },
+        {
+          "code" : "2146",
+          "display" : "Ingenieros químicos y afines"
+        },
+        {
+          "code" : "2147",
+          "display" : "Ingenieros de minas, ingenieros metalúrgicos y afines"
+        },
+        {
+          "code" : "2148",
+          "display" : "Ingenieros catastrales, ingenieros geógrafos y afines"
+        },
+        {
+          "code" : "2149",
+          "display" : "Arquitectos, ingenieros y afines, no clasificados bajo otros epígrafes"
+        }]
+      }]
+    },
+    {
+      "code" : "22",
+      "display" : "PROFESIONALES DE LAS CIENCIAS BIOLÓGICAS, LA MEDICINA Y LA SALUD",
+      "concept" : [{
+        "code" : "221",
+        "display" : "Profesionales en ciencias biológicas y otras disciplinas relativas a los seres orgánicos",
+        "concept" : [{
+          "code" : "2211",
+          "display" : "Biólogos, botánicos, zoólogos y afines"
+        },
+        {
+          "code" : "2212",
+          "display" : "Patólogos y afines"
+        },
+        {
+          "code" : "2213",
+          "display" : "Agrónomos y afines"
+        }]
+      },
+      {
+        "code" : "222",
+        "display" : "Médicos, profesionales en ciencias de la salud y afines",
+        "concept" : [{
+          "code" : "2221",
+          "display" : "Médicos"
+        },
+        {
+          "code" : "2222",
+          "display" : "Odontólogos"
+        },
+        {
+          "code" : "2223",
+          "display" : "Médicos veterinarios y zootecnistas"
+        },
+        {
+          "code" : "2224",
+          "display" : "Optómetras"
+        },
+        {
+          "code" : "2225",
+          "display" : "Fonoaudiólogos, fisioterapeutas y afines"
+        },
+        {
+          "code" : "2226",
+          "display" : "Enfermeros(as) profesionales"
+        },
+        {
+          "code" : "2227",
+          "display" : "Nutricionistas y dietistas"
+        },
+        {
+          "code" : "2229",
+          "display" : "Médicos, profesionales en ciencias de la salud y afines, no clasificados bajo otros epígrafes"
+        }]
+      }]
+    },
+    {
+      "code" : "23",
+      "display" : "PROFESIONALES DE LA EDUCACIÓN",
+      "concept" : [{
+        "code" : "231",
+        "display" : "Profesores y docentes en educación formal",
+        "concept" : [{
+          "code" : "2311",
+          "display" : "Profesores de universidades y otros establecimientos de educación superior"
+        },
+        {
+          "code" : "2312",
+          "display" : "Profesores de educación secundaria"
+        },
+        {
+          "code" : "2313",
+          "display" : "Profesores de educación  primaria"
+        },
+        {
+          "code" : "2314",
+          "display" : "Profesores de educación preescolar"
+        }]
+      },
+      {
+        "code" : "232",
+        "display" : "Profesores e instructores de educación especial",
+        "concept" : [{
+          "code" : "2320",
+          "display" : "Profesores e instructores de educación especial"
+        }]
+      },
+      {
+        "code" : "233",
+        "display" : "Otros profesionales de la educación",
+        "concept" : [{
+          "code" : "2331",
+          "display" : "Especialistas en métodos pedagógicos y material didáctico"
+        },
+        {
+          "code" : "2332",
+          "display" : "Inspectores de la educación"
+        },
+        {
+          "code" : "2333",
+          "display" : "Consejeros educativos"
+        },
+        {
+          "code" : "2339",
+          "display" : "Otros profesionales de la educación, no clasificados bajo otros epígrafes"
+        }]
+      }]
+    },
+    {
+      "code" : "24",
+      "display" : "OTROS PROFESIONALES CIENTÍFICOS E INTELECTUALES",
+      "concept" : [{
+        "code" : "241",
+        "display" : "Profesionales en organización, administración de empresas, análisis financiero y afines",
+        "concept" : [{
+          "code" : "2411",
+          "display" : "Contadores"
+        },
+        {
+          "code" : "2412",
+          "display" : "Especialistas en políticas, servicios de personal y afines"
+        },
+        {
+          "code" : "2413",
+          "display" : "Analistas y agentes financieros"
+        },
+        {
+          "code" : "2419",
+          "display" : "Profesionales en organización, administración de empresas, análisis financiero y afines, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "242",
+        "display" : "Profesionales del derecho",
+        "concept" : [{
+          "code" : "2421",
+          "display" : "Abogados"
+        },
+        {
+          "code" : "2422",
+          "display" : "Jueces"
+        },
+        {
+          "code" : "2429",
+          "display" : "Profesionales del derecho, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "243",
+        "display" : "Catalogadores, bibliotecarios, documentalistas y afines",
+        "concept" : [{
+          "code" : "2431",
+          "display" : "Catalogadores de piezas de museos, archivos y afines"
+        },
+        {
+          "code" : "2432",
+          "display" : "Bibliotecarios, documentalistas y afines"
+        }]
+      },
+      {
+        "code" : "244",
+        "display" : "Profesionales en ciencias económicas, sociales y humanas",
+        "concept" : [{
+          "code" : "2441",
+          "display" : "Economistas"
+        },
+        {
+          "code" : "2442",
+          "display" : "Sociólogos, antropólogos y afines"
+        },
+        {
+          "code" : "2443",
+          "display" : "Filósofos, historiadores y especialistas en ciencias políticas"
+        },
+        {
+          "code" : "2444",
+          "display" : "Filólogos, traductores e intérpretes"
+        },
+        {
+          "code" : "2445",
+          "display" : "Psicólogos"
+        },
+        {
+          "code" : "2446",
+          "display" : "Trabajadores sociales y afines"
+        },
+        {
+          "code" : "2449",
+          "display" : "Profesionales en ciencias económicas, sociales y humanas no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "245",
+        "display" : "Escritores, artistas creativos y ejecutantes",
+        "concept" : [{
+          "code" : "2451",
+          "display" : "Escritores, periodistas y afines"
+        },
+        {
+          "code" : "2452",
+          "display" : "Escultores, pintores y afines"
+        },
+        {
+          "code" : "2453",
+          "display" : "Compositores, músicos y cantantes"
+        },
+        {
+          "code" : "2454",
+          "display" : "Coreógrafos y bailarines"
+        },
+        {
+          "code" : "2455",
+          "display" : "Actores y directores de cine, radio, teatro, televisión y afines"
+        },
+        {
+          "code" : "2456",
+          "display" : "Publicistas y afines"
+        }]
+      },
+      {
+        "code" : "246",
+        "display" : "Sacerdotes y religiosos de distintas doctrinas",
+        "concept" : [{
+          "code" : "2460",
+          "display" : "Sacerdotes y religiosos de distintas doctrinas"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "3",
+    "display" : "TÉCNICOS, POSTSECUNDARIOS NO UNIVERSITARIOS Y ASISTENTES",
+    "concept" : [{
+      "code" : "31",
+      "display" : "TÉCNICOS Y POSTSECUNDARIOS NO UNIVERSITARIOS DE LAS CIENCIAS FÍSICAS, QUÍMICAS, LA INGENIERÍA Y AFINES",
+      "concept" : [{
+        "code" : "311",
+        "display" : "Técnicos y postsecundarios no universitarios en ciencias físicas, químicas e ingeniería",
+        "concept" : [{
+          "code" : "3111",
+          "display" : "Técnicos y postsecundarios no universitarios en ciencias físicas, químicas y afines"
+        },
+        {
+          "code" : "3112",
+          "display" : "Técnicos y postsecundarios no universitarios en ingeniería civil, arquitectura, agrimensores y afines"
+        },
+        {
+          "code" : "3113",
+          "display" : "Electrotécnicos"
+        },
+        {
+          "code" : "3114",
+          "display" : "Técnicos y postsecundarios no universitarios en electrónica y telecomunicaciones"
+        },
+        {
+          "code" : "3115",
+          "display" : "Técnicos y postsecundarios no universitarios en mecánica y construcción mecánica"
+        },
+        {
+          "code" : "3116",
+          "display" : "Técnicos y postsecundarios no universitarios en ingeniería  industrial y química industrial"
+        },
+        {
+          "code" : "3117",
+          "display" : "Técnicos y postsecundarios no universitarios en ingeniería de minas y metalurgia"
+        },
+        {
+          "code" : "3118",
+          "display" : "Delineantes y dibujantes técnicos"
+        },
+        {
+          "code" : "3119",
+          "display" : "Técnicos y postsecundarios no universitarios en ciencias físicas, químicas e ingenierías, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "312",
+        "display" : "Técnicos en programación y control informáticos",
+        "concept" : [{
+          "code" : "3121",
+          "display" : "Analistas de sistemas informáticos"
+        },
+        {
+          "code" : "3122",
+          "display" : "Técnicos en programación informática"
+        },
+        {
+          "code" : "3123",
+          "display" : "Técnicos en control de equipos informáticos"
+        },
+        {
+          "code" : "3124",
+          "display" : "Técnicos en control de robots industriales"
+        }]
+      },
+      {
+        "code" : "313",
+        "display" : "Operadores de equipos ópticos y electrónicos",
+        "concept" : [{
+          "code" : "3131",
+          "display" : "Fotógrafos y operadores de equipos de grabación de imagen y sonido"
+        },
+        {
+          "code" : "3132",
+          "display" : "Operadores de equipos de radiodifusión, televisión y telecomunicaciones"
+        },
+        {
+          "code" : "3133",
+          "display" : "Operadores de aparatos de diagnóstico y tratamiento médicos"
+        },
+        {
+          "code" : "3139",
+          "display" : "Operadores de equipos ópticos y electrónicos, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "314",
+        "display" : "Técnicos en navegación marítima y aeronáutica",
+        "concept" : [{
+          "code" : "3141",
+          "display" : "Oficiales maquinistas"
+        },
+        {
+          "code" : "3142",
+          "display" : "Capitanes, oficiales de cubierta y prácticos"
+        },
+        {
+          "code" : "3143",
+          "display" : "Pilotos de aviación y afines"
+        },
+        {
+          "code" : "3144",
+          "display" : "Controladores de tráfico aéreo y marítimo"
+        },
+        {
+          "code" : "3145",
+          "display" : "Técnicos en seguridad aeronáutica"
+        }]
+      },
+      {
+        "code" : "315",
+        "display" : "Inspectores de obras, seguridad y salud y control de calidad",
+        "concept" : [{
+          "code" : "3151",
+          "display" : "Inspectores de edificios y de prevención e investigación de incendios"
+        },
+        {
+          "code" : "3152",
+          "display" : "Inspectores de seguridad y salud y control de calidad"
+        }]
+      }]
+    },
+    {
+      "code" : "32",
+      "display" : "TÉCNICOS Y POSTSECUNDARIOS NO UNIVERSITARIOS DE LAS CIENCIAS BIOLÓGICAS, LA MEDICINA Y LA SALUD",
+      "concept" : [{
+        "code" : "321",
+        "display" : "Técnicos y postsecundarios no universitarios en ciencias biológicas, agronomía, zootecnia y afines",
+        "concept" : [{
+          "code" : "3211",
+          "display" : "Técnicos en ciencias biológicas y afines"
+        },
+        {
+          "code" : "3212",
+          "display" : "Técnicos en agronomía, zootecnia y silvicultura"
+        }]
+      },
+      {
+        "code" : "322",
+        "display" : "Técnicos, postsecundarios no universitarios y asistentes de la medicina moderna y la salud (excepto el personal de partería)",
+        "concept" : [{
+          "code" : "3221",
+          "display" : "Practicantes y asistentes médicos"
+        },
+        {
+          "code" : "3222",
+          "display" : "Higienistas y promotores de salud"
+        },
+        {
+          "code" : "3223",
+          "display" : "Técnicos en optometría y ópticos"
+        },
+        {
+          "code" : "3224",
+          "display" : "Técnicos e higienistas dentales"
+        },
+        {
+          "code" : "3225",
+          "display" : "Técnicos terapeutas, quiroprácticos y afines"
+        },
+        {
+          "code" : "3226",
+          "display" : "Técnicos y asistentes veterinarios"
+        },
+        {
+          "code" : "3227",
+          "display" : "Técnicos y asistentes en farmacia"
+        },
+        {
+          "code" : "3229",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes de la medicina moderna y la salud (excepto el personal de partería), no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "323",
+        "display" : "Practicantes de la medicina tradicional y curanderos",
+        "concept" : [{
+          "code" : "3231",
+          "display" : "Practicantes de la medicina tradicional"
+        },
+        {
+          "code" : "3232",
+          "display" : "Curanderos"
+        },
+        {
+          "code" : "3233",
+          "display" : "Parteras"
+        }]
+      }]
+    },
+    {
+      "code" : "33",
+      "display" : "ASISTENTES DE ENSEÑANZA E INSTRUCTORES DE EDUCACIÓN FORMAL, ESPECIAL Y VOCACIONAL",
+      "concept" : [{
+        "code" : "331",
+        "display" : "Asistentes de enseñanza en educación formal (superior, media, básica y preescolar)",
+        "concept" : [{
+          "code" : "3311",
+          "display" : "Asistentes de enseñanza en educación  superior, secundaria y primaria"
+        },
+        {
+          "code" : "3312",
+          "display" : "Asistentes de enseñanza en educación preescolar"
+        }]
+      },
+      {
+        "code" : "332",
+        "display" : "Asistentes de educación especial",
+        "concept" : [{
+          "code" : "3320",
+          "display" : "Asistentes de educación especial"
+        }]
+      },
+      {
+        "code" : "333",
+        "display" : "Instructores de educación no formal, vocacional y afines",
+        "concept" : [{
+          "code" : "3331",
+          "display" : "Instructores de educación vocacional artística y técnica"
+        },
+        {
+          "code" : "3332",
+          "display" : "Instructores de educación vocacional artesanal"
+        },
+        {
+          "code" : "3333",
+          "display" : "Instructores medios de transporte y afines"
+        }]
+      }]
+    },
+    {
+      "code" : "34",
+      "display" : "OTROS TÉCNICOS, POSTSECUNDARIOS NO UNIVERSITARIOS Y ASISTENTES",
+      "concept" : [{
+        "code" : "341",
+        "display" : "Técnicos, postsecundarios no universitarios y asistentes en operaciones comerciales",
+        "concept" : [{
+          "code" : "3411",
+          "display" : "Agentes de seguros"
+        },
+        {
+          "code" : "3412",
+          "display" : "Agentes inmobiliarios"
+        },
+        {
+          "code" : "3413",
+          "display" : "Agentes de viajes"
+        },
+        {
+          "code" : "3414",
+          "display" : "Representantes comerciales y técnicos de ventas"
+        },
+        {
+          "code" : "3415",
+          "display" : "Compradores"
+        },
+        {
+          "code" : "3416",
+          "display" : "Tasadores y subastadores"
+        },
+        {
+          "code" : "3419",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes en operaciones comerciales, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "342",
+        "display" : "Agentes comerciales y corredores",
+        "concept" : [{
+          "code" : "3421",
+          "display" : "Agentes de compras, intermediarios y consignatarios"
+        },
+        {
+          "code" : "3422",
+          "display" : "Asistentes de comercio exterior"
+        },
+        {
+          "code" : "3423",
+          "display" : "Agentes públicos y privados de colocación y contratistas de mano de obra"
+        },
+        {
+          "code" : "3429",
+          "display" : "Agentes comerciales y corredores, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "343",
+        "display" : "Técnicos, postsecundarios no universitarios y asistentes de servicios de administración",
+        "concept" : [{
+          "code" : "3431",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes de servicios administrativos y afines"
+        },
+        {
+          "code" : "3432",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes del derecho y servicios legales y afines"
+        },
+        {
+          "code" : "3433",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes de servicios financieros, contables y afines"
+        },
+        {
+          "code" : "3434",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes de servicios estadísticos, matemáticos y afines"
+        },
+        {
+          "code" : "3439",
+          "display" : "Técnicos, postsecundarios no universitarios y asistentes de servicios de administración, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "344",
+        "display" : "Agentes de la administración publica en aduanas, impuestos y afines",
+        "concept" : [{
+          "code" : "3441",
+          "display" : "Agentes de aduana e inspectores de fronteras"
+        },
+        {
+          "code" : "3442",
+          "display" : "Funcionarios del fisco"
+        },
+        {
+          "code" : "3443",
+          "display" : "Funcionarios de servicios de seguridad social"
+        },
+        {
+          "code" : "3444",
+          "display" : "Funcionarios de servicios de expedición de licencias y permisos"
+        },
+        {
+          "code" : "3449",
+          "display" : "Agentes de la administración pública en aduanas, impuestos y afines, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "345",
+        "display" : "Inspectores de policía, detectives y afines",
+        "concept" : [{
+          "code" : "3450",
+          "display" : "Inspectores de policía, detectives y afines"
+        }]
+      },
+      {
+        "code" : "346",
+        "display" : "Asistentes en trabajo social y comunitario",
+        "concept" : [{
+          "code" : "3460",
+          "display" : "Asistentes en trabajo social y comunitario"
+        }]
+      },
+      {
+        "code" : "347",
+        "display" : "Técnicos, postsecundarios no universitarios y asistentes de actividades artísticas, espectáculos y deportes",
+        "concept" : [{
+          "code" : "3471",
+          "display" : "Técnicos en diseño y decoradores"
+        },
+        {
+          "code" : "3472",
+          "display" : "Locutores de radio, televisión y afines"
+        },
+        {
+          "code" : "3473",
+          "display" : "Músicos, cantantes y bailarines callejeros, de cabaret y afines"
+        },
+        {
+          "code" : "3474",
+          "display" : "Recreadores, payasos, acróbatas, prestidigitadores y afines"
+        },
+        {
+          "code" : "3475",
+          "display" : "Atletas, deportistas y afines"
+        },
+        {
+          "code" : "3476",
+          "display" : "Asistentes de cine, teatro, televisión y artes escénicas"
+        }]
+      },
+      {
+        "code" : "348",
+        "display" : "Auxiliares laicos de los cultos",
+        "concept" : [{
+          "code" : "3480",
+          "display" : "Auxiliares laicos de los cultos"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "4",
+    "display" : "EMPLEADOS DE OFICINA",
+    "concept" : [{
+      "code" : "41",
+      "display" : "OFICINISTAS",
+      "concept" : [{
+        "code" : "411",
+        "display" : "Secretarios y operadores de máquinas de oficina",
+        "concept" : [{
+          "code" : "4111",
+          "display" : "Mecanógrafos, transcriptores de textos y afines"
+        },
+        {
+          "code" : "4112",
+          "display" : "Operadores de calculadoras y entrada de datos"
+        },
+        {
+          "code" : "4113",
+          "display" : "Secretarios(as)"
+        }]
+      },
+      {
+        "code" : "412",
+        "display" : "Auxiliares contables, estadísticos, administrativos y afines",
+        "concept" : [{
+          "code" : "4121",
+          "display" : "Auxiliares de contabilidad y cálculo de costos"
+        },
+        {
+          "code" : "4122",
+          "display" : "Auxiliares de servicios estadísticos y financieros"
+        },
+        {
+          "code" : "4123",
+          "display" : "Auxiliares administrativos y afines"
+        }]
+      },
+      {
+        "code" : "413",
+        "display" : "Encargados del registro de materiales y de transportes",
+        "concept" : [{
+          "code" : "4131",
+          "display" : "Encargados de control de abastecimientos e inventario"
+        },
+        {
+          "code" : "4132",
+          "display" : "Encargados de servicios de apoyo a la producción"
+        },
+        {
+          "code" : "4133",
+          "display" : "Encargados de servicios de transporte"
+        }]
+      },
+      {
+        "code" : "414",
+        "display" : "Empleados de bibliotecas, servicios de correo y afines",
+        "concept" : [{
+          "code" : "4141",
+          "display" : "Empleados de bibliotecas y archivos"
+        },
+        {
+          "code" : "4142",
+          "display" : "Empleados de servicios de correo"
+        },
+        {
+          "code" : "4143",
+          "display" : "Codificadores de datos, correctores de pruebas de imprenta y afines"
+        },
+        {
+          "code" : "4144",
+          "display" : "Escribientes públicos y afines"
+        }]
+      }]
+    },
+    {
+      "code" : "42",
+      "display" : "EMPLEADOS DE TRATO DIRECTO CON EL PÚBLICO",
+      "concept" : [{
+        "code" : "421",
+        "display" : "Cajeros, taquilleros y afines",
+        "concept" : [{
+          "code" : "4211",
+          "display" : "Cajeros y expendedores de billetes"
+        },
+        {
+          "code" : "4212",
+          "display" : "Taquilleros"
+        },
+        {
+          "code" : "4213",
+          "display" : "Receptores de apuestas y afines"
+        },
+        {
+          "code" : "4214",
+          "display" : "Prestamistas"
+        },
+        {
+          "code" : "4215",
+          "display" : "Cobradores y afines"
+        }]
+      },
+      {
+        "code" : "422",
+        "display" : "Empleados de servicios de información a clientes",
+        "concept" : [{
+          "code" : "4221",
+          "display" : "Empleados de servicios de líneas de viajes aéreas, marítimas y terrestres"
+        },
+        {
+          "code" : "4222",
+          "display" : "Recepcionistas, empleados de información y servicio al cliente"
+        },
+        {
+          "code" : "4223",
+          "display" : "Empleados telefonistas y de servicios de internet"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "5",
+    "display" : "TRABAJADORES DE LOS SERVICIOS Y VENDEDORES",
+    "concept" : [{
+      "code" : "51",
+      "display" : "TRABAJADORES DE LOS SERVICIOS PERSONALES",
+      "concept" : [{
+        "code" : "511",
+        "display" : "Personal al servicio directo de los pasajeros",
+        "concept" : [{
+          "code" : "5111",
+          "display" : "Personal de servicio a pasajeros"
+        },
+        {
+          "code" : "5112",
+          "display" : "Revisores, guardas y cobradores de los servicios de transporte"
+        },
+        {
+          "code" : "5113",
+          "display" : "Guías"
+        }]
+      },
+      {
+        "code" : "512",
+        "display" : "Personal de servicios de restaurantes, alimentos y bebidas",
+        "concept" : [{
+          "code" : "5121",
+          "display" : "Cocineros y afines"
+        },
+        {
+          "code" : "5122",
+          "display" : "Meseros, taberneros y afines"
+        }]
+      },
+      {
+        "code" : "513",
+        "display" : "Trabajadores de los cuidados personales y afines",
+        "concept" : [{
+          "code" : "5131",
+          "display" : "Niñeras y cuidadoras infantiles"
+        },
+        {
+          "code" : "5132",
+          "display" : "Auxiliares de enfermería y odontología"
+        },
+        {
+          "code" : "5139",
+          "display" : "Trabajadores de los cuidados personales y afines, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "514",
+        "display" : "Otros trabajadores de servicios personales a particulares",
+        "concept" : [{
+          "code" : "5141",
+          "display" : "Peluqueros, especialistas en tratamientos de belleza y afines"
+        },
+        {
+          "code" : "5142",
+          "display" : "Acompañantes"
+        },
+        {
+          "code" : "5143",
+          "display" : "Personal de pompas fúnebres y embalsamadores"
+        },
+        {
+          "code" : "5149",
+          "display" : "Otros trabajadores de servicios personales a particulares, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "515",
+        "display" : "Astrólogos, adivinadores, quirománticos y afines",
+        "concept" : [{
+          "code" : "5150",
+          "display" : "Astrólogos, adivinadores, quirománticos y afines"
+        }]
+      }]
+    },
+    {
+      "code" : "52",
+      "display" : "PERSONAL DE LOS SERVICIOS DE PROTECCIÓN Y SEGURIDAD",
+      "concept" : [{
+        "code" : "521",
+        "display" : "Personal de los servicios de protección y seguridad",
+        "concept" : [{
+          "code" : "5211",
+          "display" : "Bomberos y rescatistas"
+        },
+        {
+          "code" : "5212",
+          "display" : "Agentes y policías de transito"
+        },
+        {
+          "code" : "5213",
+          "display" : "Guardianes de prisión"
+        },
+        {
+          "code" : "5219",
+          "display" : "Personal de los servicios de protección y seguridad, no clasificado bajo otros epígrafes"
+        }]
+      }]
+    },
+    {
+      "code" : "53",
+      "display" : "MODELOS, VENDEDORES Y DEMOSTRADORES",
+      "concept" : [{
+        "code" : "531",
+        "display" : "Modelos de modas, arte y publicidad",
+        "concept" : [{
+          "code" : "5310",
+          "display" : "Modelos de modas, arte y publicidad"
+        }]
+      },
+      {
+        "code" : "532",
+        "display" : "Vendedores y demostradores de tiendas, almacenes y afines",
+        "concept" : [{
+          "code" : "5320",
+          "display" : "Vendedores y demostradores de tiendas, almacenes y afines"
+        }]
+      },
+      {
+        "code" : "533",
+        "display" : "Vendedores en quioscos y puestos fijos de mercado",
+        "concept" : [{
+          "code" : "5330",
+          "display" : "Vendedores en quioscos y puestos fijos de mercado"
+        }]
+      },
+      {
+        "code" : "534",
+        "display" : "Vendedores ambulantes, a domicilio y afines",
+        "concept" : [{
+          "code" : "5341",
+          "display" : "Vendedores ambulantes"
+        },
+        {
+          "code" : "5342",
+          "display" : "Vendedores a domicilio y por teléfono"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "6",
+    "display" : "AGRICULTORES, TRABAJADORES Y OBREROS AGROPECUARIOS, FORESTALES Y PESQUEROS",
+    "concept" : [{
+      "code" : "61",
+      "display" : "AGRICULTORES Y TRABAJADORES FORESTALES, PECUARIOS Y PESQUEROS",
+      "concept" : [{
+        "code" : "611",
+        "display" : "Agricultores, trabajadores forestales y agropecuarios",
+        "concept" : [{
+          "code" : "6111",
+          "display" : "Agricultores de cultivos transitorios"
+        },
+        {
+          "code" : "6112",
+          "display" : "Agricultores de cultivos permanentes (plantaciones de árboles y arbustos)"
+        },
+        {
+          "code" : "6113",
+          "display" : "Trabajadores de huertas, invernaderos, viveros y jardines"
+        },
+        {
+          "code" : "6114",
+          "display" : "Trabajadores forestales"
+        },
+        {
+          "code" : "6115",
+          "display" : "Trabajadores agropecuarios"
+        }]
+      },
+      {
+        "code" : "612",
+        "display" : "Trabajadores pecuarios, avicultores, criadores de insectos y afines",
+        "concept" : [{
+          "code" : "6121",
+          "display" : "Criadores de ganado y trabajadores de la cría de animales domésticos diversos"
+        },
+        {
+          "code" : "6122",
+          "display" : "Avicultores"
+        },
+        {
+          "code" : "6123",
+          "display" : "Criadores de insectos, apicultores, sericicultores y afines"
+        },
+        {
+          "code" : "6129",
+          "display" : "Trabajadores pecuarios, avicultores, criadores de insectos y afines, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "613",
+        "display" : "Pescadores, cazadores y tramperos",
+        "concept" : [{
+          "code" : "6131",
+          "display" : "Criadores de especies acuáticas"
+        },
+        {
+          "code" : "6132",
+          "display" : "Pescadores"
+        },
+        {
+          "code" : "6133",
+          "display" : "Cazadores y tramperos"
+        }]
+      }]
+    },
+    {
+      "code" : "62",
+      "display" : "OBREROS Y PEONES AGROPECUARIOS, FORESTALES, PESQUEROS Y AFINES",
+      "concept" : [{
+        "code" : "621",
+        "display" : "Obreros y peones agropecuarios, forestales, pesqueros y afines",
+        "concept" : [{
+          "code" : "6211",
+          "display" : "Obreros y peones agropecuarios de labranza y de invernadero"
+        },
+        {
+          "code" : "6212",
+          "display" : "Obreros forestales"
+        },
+        {
+          "code" : "6213",
+          "display" : "Obreros de pesca, caza y trampa"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "7",
+    "display" : "OFICIALES, OPERARIOS, ARTESANOS Y TRABAJADORES DE LA INDUSTRIA MANUFACTURERA, DE LA CONSTRUCCIÓN Y DE LA MINERÍA",
+    "concept" : [{
+      "code" : "71",
+      "display" : "OFICIALES Y OPERARIOS DE LA INDUSTRIA EXTRACTIVA",
+      "concept" : [{
+        "code" : "711",
+        "display" : "Mineros, canteros, pegadores y labrantes de piedra",
+        "concept" : [{
+          "code" : "7111",
+          "display" : "Mineros y canteros"
+        },
+        {
+          "code" : "7112",
+          "display" : "Pegadores cargas explosivas"
+        },
+        {
+          "code" : "7113",
+          "display" : "Tronzadores, labrantes y grabadores de piedra"
+        }]
+      }]
+    },
+    {
+      "code" : "72",
+      "display" : "OFICIALES Y OPERARIOS DE LA CONSTRUCCIÓN",
+      "concept" : [{
+        "code" : "721",
+        "display" : "Oficiales y operarios de la construcción en obra negra y afines",
+        "concept" : [{
+          "code" : "7211",
+          "display" : "Albañiles, mamposteros y afines"
+        },
+        {
+          "code" : "7212",
+          "display" : "Operarios en cemento armado, enfoscadores y afines"
+        },
+        {
+          "code" : "7213",
+          "display" : "Carpinteros de armar y de blanco"
+        },
+        {
+          "code" : "7219",
+          "display" : "Oficiales y operarios de la construcción en obra negra y afines, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "722",
+        "display" : "Oficiales y operarios de la construcción en trabajos de acabado y afines",
+        "concept" : [{
+          "code" : "7221",
+          "display" : "Techadores"
+        },
+        {
+          "code" : "7222",
+          "display" : "Parqueteros y colocadores de suelos"
+        },
+        {
+          "code" : "7223",
+          "display" : "Instaladores de material aislante y de insonorización"
+        },
+        {
+          "code" : "7224",
+          "display" : "Cristaleros"
+        },
+        {
+          "code" : "7225",
+          "display" : "Fontaneros e instaladores de tuberías"
+        },
+        {
+          "code" : "7226",
+          "display" : "Electricistas de obras y afines"
+        }]
+      },
+      {
+        "code" : "723",
+        "display" : "Revocadores, pintores, limpiadores de fachada y afines",
+        "concept" : [{
+          "code" : "7231",
+          "display" : "Revocadores"
+        },
+        {
+          "code" : "7232",
+          "display" : "Pintores, empapeladores y afines"
+        },
+        {
+          "code" : "7233",
+          "display" : "Limpiadores de fachadas y deshollinadores"
+        }]
+      }]
+    },
+    {
+      "code" : "73",
+      "display" : "OPERARIOS DE LA METALURGIA Y AFINES",
+      "concept" : [{
+        "code" : "731",
+        "display" : "Moldeadores, soldadores, chapistas, caldereros, montadores de estructuras metálicas y afines",
+        "concept" : [{
+          "code" : "7311",
+          "display" : "Moldeadores y macheros"
+        },
+        {
+          "code" : "7312",
+          "display" : "Soldadores y oxicortadores"
+        },
+        {
+          "code" : "7313",
+          "display" : "Chapistas y caldereros"
+        },
+        {
+          "code" : "7314",
+          "display" : "Montadores de estructuras metálicas"
+        },
+        {
+          "code" : "7315",
+          "display" : "Aparejadores y empalmadores de cables"
+        },
+        {
+          "code" : "7316",
+          "display" : "Pintores,  barnizadores y enlacadores de artículos metálicos y afines"
+        }]
+      },
+      {
+        "code" : "732",
+        "display" : "Herreros, herramentistas y afines",
+        "concept" : [{
+          "code" : "7321",
+          "display" : "Herreros y forjadores"
+        },
+        {
+          "code" : "7322",
+          "display" : "Herramentistas y afines"
+        },
+        {
+          "code" : "7323",
+          "display" : "Pulidores de metales y afiladores de herramientas"
+        }]
+      }]
+    },
+    {
+      "code" : "74",
+      "display" : "MECÁNICOS Y AJUSTADORES DE MAQUINAS Y EQUIPOS",
+      "concept" : [{
+        "code" : "741",
+        "display" : "Mecánicos y ajustadores de máquinas",
+        "concept" : [{
+          "code" : "7411",
+          "display" : "Mecánicos y ajustadores de vehículos de motor"
+        },
+        {
+          "code" : "7412",
+          "display" : "Mecánicos y ajustadores de motores de avión"
+        },
+        {
+          "code" : "7413",
+          "display" : "Mecánicos y ajustadores de máquinas agrícolas e industriales"
+        },
+        {
+          "code" : "7414",
+          "display" : "Mecánicos y ajustadores de máquinas herramientas"
+        }]
+      },
+      {
+        "code" : "742",
+        "display" : "Mecánicos y ajustadores de equipos eléctricos y electrónicos",
+        "concept" : [{
+          "code" : "7421",
+          "display" : "Mecánicos y ajustadores eléctricos"
+        },
+        {
+          "code" : "7422",
+          "display" : "Mecánicos, reparadores y ajustadores de aparatos electrónicos"
+        },
+        {
+          "code" : "7423",
+          "display" : "Instaladores y reparadores de telégrafos, teléfonos y líneas electricas"
+        }]
+      }]
+    },
+    {
+      "code" : "75",
+      "display" : "MECÁNICOS DE PRECISIÓN, OPERARIOS DE LAS ARTES GRAFICAS Y AFINES",
+      "concept" : [{
+        "code" : "751",
+        "display" : "Mecánicos de precisión en metales y materiales similares",
+        "concept" : [{
+          "code" : "7511",
+          "display" : "Mecánicos y reparadores de instrumentos de precisión"
+        },
+        {
+          "code" : "7512",
+          "display" : "Fabricantes y afinadores de instrumentos musicales"
+        }]
+      },
+      {
+        "code" : "752",
+        "display" : "Oficiales y operarios de las artes graficas y afines",
+        "concept" : [{
+          "code" : "7521",
+          "display" : "Cajistas, tipógrafos y afines"
+        },
+        {
+          "code" : "7522",
+          "display" : "Estereotipistas y galvanotipistas"
+        },
+        {
+          "code" : "7523",
+          "display" : "Grabadores de imprenta y fotograbadores"
+        },
+        {
+          "code" : "7524",
+          "display" : "Operarios de la fotografía y afines"
+        },
+        {
+          "code" : "7525",
+          "display" : "Encuadernadores y afines"
+        },
+        {
+          "code" : "7526",
+          "display" : "Impresores de sericigrafía y estampadores a la plancha y en textiles"
+        }]
+      }]
+    },
+    {
+      "code" : "76",
+      "display" : "ARTESANOS",
+      "concept" : [{
+        "code" : "761",
+        "display" : "Alfareros, operarios de cristalerías y afines",
+        "concept" : [{
+          "code" : "7611",
+          "display" : "Alfareros y afines (barro, arcilla y abrasivos)"
+        },
+        {
+          "code" : "7612",
+          "display" : "Sopladores, modeladores, laminadores, cortadores y pulidores de vidrio"
+        },
+        {
+          "code" : "7613",
+          "display" : "Grabadores de vidrio"
+        },
+        {
+          "code" : "7614",
+          "display" : "Pintores decoradores de vidrio, cerámica y otros materiales"
+        }]
+      },
+      {
+        "code" : "762",
+        "display" : "Artesanos de la madera",
+        "concept" : [{
+          "code" : "7621",
+          "display" : "Cesteros, bruceros y afines"
+        },
+        {
+          "code" : "7622",
+          "display" : "Artesanos de la madera y materiales similares"
+        }]
+      },
+      {
+        "code" : "763",
+        "display" : "Artesanos de los tejidos y bordadores",
+        "concept" : [{
+          "code" : "7631",
+          "display" : "Artesanos de los tejidos, el cuero y materiales similares"
+        },
+        {
+          "code" : "7632",
+          "display" : "Bordadores y afines"
+        }]
+      },
+      {
+        "code" : "764",
+        "display" : "Otros artesanos",
+        "concept" : [{
+          "code" : "7641",
+          "display" : "Joyeros, orfebres y plateros"
+        },
+        {
+          "code" : "7642",
+          "display" : "Floristas y arreglistas florales"
+        },
+        {
+          "code" : "7649",
+          "display" : "Otros artesanos, no clasificados bajo otros epígrafes"
+        }]
+      }]
+    },
+    {
+      "code" : "77",
+      "display" : "OPERARIOS DE ALIMENTOS, TEXTILES, PIELES, MADERAS Y AFINES",
+      "concept" : [{
+        "code" : "771",
+        "display" : "Operarios del procesamiento de alimentos y afines",
+        "concept" : [{
+          "code" : "7711",
+          "display" : "Carniceros, pescaderos y afines"
+        },
+        {
+          "code" : "7712",
+          "display" : "Panaderos, pasteleros y confiteros"
+        },
+        {
+          "code" : "7713",
+          "display" : "Operarios de la elaboración de productos lácteos"
+        },
+        {
+          "code" : "7714",
+          "display" : "Operarios de la conservación de frutas, legumbres, verduras y afines"
+        },
+        {
+          "code" : "7715",
+          "display" : "Catadores y clasificadores de alimentos y bebidas"
+        },
+        {
+          "code" : "7716",
+          "display" : "Preparadores y elaboradores de tabaco y sus productos"
+        }]
+      },
+      {
+        "code" : "772",
+        "display" : "Operarios de los textiles y de la confección y afines",
+        "concept" : [{
+          "code" : "7721",
+          "display" : "Preparadores de fibras"
+        },
+        {
+          "code" : "7722",
+          "display" : "Tejedores con telares o de tejidos de punto y afines"
+        },
+        {
+          "code" : "7723",
+          "display" : "Sastres, modistos costureros, sombrereros y afines"
+        },
+        {
+          "code" : "7724",
+          "display" : "Peleteros y afines"
+        },
+        {
+          "code" : "7725",
+          "display" : "Tapiceros, colchoneros y afines"
+        }]
+      },
+      {
+        "code" : "773",
+        "display" : "Operarios de pieles, cuero y calzado",
+        "concept" : [{
+          "code" : "7731",
+          "display" : "Apelambradores, pellejeros y curtidores"
+        },
+        {
+          "code" : "7732",
+          "display" : "Zapateros y afines"
+        }]
+      },
+      {
+        "code" : "774",
+        "display" : "Operarios de la madera",
+        "concept" : [{
+          "code" : "7741",
+          "display" : "Operarios del tratamiento de la madera"
+        },
+        {
+          "code" : "7742",
+          "display" : "Ebanistas y afines"
+        },
+        {
+          "code" : "7743",
+          "display" : "Ajustadores y operadores de máquinas de labrar madera"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "8",
+    "display" : "OPERADORES DE INSTALACIONES, DE MÁQUINAS Y ENSAMBLADORES",
+    "concept" : [{
+      "code" : "81",
+      "display" : "OPERADORES DE INSTALACIONES FIJAS Y AFINES",
+      "concept" : [{
+        "code" : "811",
+        "display" : "Operadores de instalaciones mineras y de extracción y procesamiento de minerales",
+        "concept" : [{
+          "code" : "8111",
+          "display" : "Operadores de instalaciones mineras"
+        },
+        {
+          "code" : "8112",
+          "display" : "Operadores de instalaciones de procesamiento de minerales y rocas"
+        },
+        {
+          "code" : "8113",
+          "display" : "Perforadores y sondistas de pozos y afines"
+        }]
+      },
+      {
+        "code" : "812",
+        "display" : "Operadores de instalaciones de procesamiento de metales",
+        "concept" : [{
+          "code" : "8121",
+          "display" : "Operadores de hornos de minerales y de hornos de primera fusión de metales"
+        },
+        {
+          "code" : "8122",
+          "display" : "Operadores de hornos de segunda fusión, máquinas de colar y moldear metales y trenes de laminación"
+        },
+        {
+          "code" : "8123",
+          "display" : "Operadores de instalaciones de tratamiento térmico de metales"
+        },
+        {
+          "code" : "8124",
+          "display" : "Operadores de máquinas trefiladoras y estiradoras de metales"
+        }]
+      },
+      {
+        "code" : "813",
+        "display" : "Operadores de instalaciones de vidriería, cerámica y afines",
+        "concept" : [{
+          "code" : "8131",
+          "display" : "Operadores de mezcladoras, de hornos de vidriería  y máquinas afines"
+        },
+        {
+          "code" : "8132",
+          "display" : "Operadores de mezcladoras, de  hornos de cerámica y máqinas afines"
+        },
+        {
+          "code" : "8139",
+          "display" : "Operadores de instalaciones de vidriería, cerámica y afines, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "814",
+        "display" : "Operadores de instalaciones de procesamiento de la madera y de la fabricación de papel",
+        "concept" : [{
+          "code" : "8141",
+          "display" : "Operadores de instalaciones de procesamiento de la madera"
+        },
+        {
+          "code" : "8142",
+          "display" : "Operadores de instalaciones para la preparación de pasta o pulpa de papel"
+        },
+        {
+          "code" : "8143",
+          "display" : "Operadores de instalaciones para la fabricación de papel"
+        }]
+      },
+      {
+        "code" : "815",
+        "display" : "Operadores de instalaciones de tratamientos químicos",
+        "concept" : [{
+          "code" : "8151",
+          "display" : "Operadores de instalaciones quebrantadoras, trituradoras y mezcladoras de sustancias químicas"
+        },
+        {
+          "code" : "8152",
+          "display" : "Operadores de instalaciones de tratamiento químico térmico"
+        },
+        {
+          "code" : "8153",
+          "display" : "Operadores de equipos de filtración y separación de sustancias químicas"
+        },
+        {
+          "code" : "8154",
+          "display" : "Operadores de equipos de destilación y de reacción química (excepto petróleo y gas natural)"
+        },
+        {
+          "code" : "8155",
+          "display" : "Operadores de instalaciones de refinación de petróleo y gas natural"
+        },
+        {
+          "code" : "8159",
+          "display" : "Operadores de instalaciones de tratamientos químicos, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "816",
+        "display" : "Operadores de instalaciones de producción de energía, incineradores, refrigeración  y afines",
+        "concept" : [{
+          "code" : "8161",
+          "display" : "Operadores de instalaciones de producción de energía"
+        },
+        {
+          "code" : "8162",
+          "display" : "Operadores de máquinas de vapor y calderas"
+        },
+        {
+          "code" : "8163",
+          "display" : "Operadores de incineradores"
+        },
+        {
+          "code" : "8164",
+          "display" : "Operadores de instalaciones de tratamiento de agua y afines"
+        },
+        {
+          "code" : "8165",
+          "display" : "Operadores de instalaciones de refrigeración, calefacción y ventilación"
+        }]
+      },
+      {
+        "code" : "817",
+        "display" : "Operadores de cadenas de montaje automatizadas, instalaciones mecánicas y de robots industriales",
+        "concept" : [{
+          "code" : "8170",
+          "display" : "Operadores de cadenas de montaje automatizadas e instalaciones mecánicas y de robots industriales"
+        }]
+      }]
+    },
+    {
+      "code" : "82",
+      "display" : "OPERADORES DE MÁQUINAS Y ENSAMBLADORES",
+      "concept" : [{
+        "code" : "821",
+        "display" : "Operadores de máquinas para trabajar metales y productos minerales",
+        "concept" : [{
+          "code" : "8211",
+          "display" : "Operadores de máquinas herramientas y afines"
+        },
+        {
+          "code" : "8212",
+          "display" : "Operadores de máquinas para fabricar productos de cemento y otros productos minerales"
+        }]
+      },
+      {
+        "code" : "822",
+        "display" : "Operadores de máquinas para fabricar productos químicos",
+        "concept" : [{
+          "code" : "8221",
+          "display" : "Operadores de máquinas para fabricar productos farmacéuticos y cosméticos"
+        },
+        {
+          "code" : "8222",
+          "display" : "Operadores de máquinas para fabricar municiones y explosivos"
+        },
+        {
+          "code" : "8223",
+          "display" : "Operadores de máquinas pulidoras, galvanizadoras y recubridoras de metales"
+        },
+        {
+          "code" : "8229",
+          "display" : "Operadores de máquinas para fabricar productos químicos, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "823",
+        "display" : "Operadores de máquinas para fabricar productos de caucho y de plástico",
+        "concept" : [{
+          "code" : "8231",
+          "display" : "Operadores de máquinas para fabricar productos de caucho"
+        },
+        {
+          "code" : "8232",
+          "display" : "Operadores de máquinas para fabricar productos de plástico"
+        }]
+      },
+      {
+        "code" : "824",
+        "display" : "Operadores de máquinas para fabricar productos de madera",
+        "concept" : [{
+          "code" : "8240",
+          "display" : "Operadores de máquinas para fabricar productos de madera"
+        }]
+      },
+      {
+        "code" : "825",
+        "display" : "Operadores de máquinas de imprenta, encuadernación y fabricación de productos de papel",
+        "concept" : [{
+          "code" : "8251",
+          "display" : "Operadores de máquinas de imprenta, reproducción fotográfica y afines"
+        },
+        {
+          "code" : "8252",
+          "display" : "Operadores de máquinas de encuadernación"
+        },
+        {
+          "code" : "8253",
+          "display" : "Operadores de máquinas para fabricar productos de papel y afines"
+        }]
+      },
+      {
+        "code" : "826",
+        "display" : "Operadores de máquinas para fabricar productos textiles y artículos de piel y cuero",
+        "concept" : [{
+          "code" : "8261",
+          "display" : "Operadores de máquinas de preparación de fibras, hilado y devanado"
+        },
+        {
+          "code" : "8262",
+          "display" : "Operadores de telares y otras máquinas tejedoras"
+        },
+        {
+          "code" : "8263",
+          "display" : "Operadores de máquinas para coser"
+        },
+        {
+          "code" : "8264",
+          "display" : "Operadores de máquinas de blanqueo, teñido y tintura"
+        },
+        {
+          "code" : "8265",
+          "display" : "Operadores de máquinas de tratamiento de pieles y cueros"
+        },
+        {
+          "code" : "8266",
+          "display" : "Operadores de máquinas para la fabricación de calzado y afines"
+        },
+        {
+          "code" : "8267",
+          "display" : "Patronistas, cortadores de tela, cuero y afines"
+        },
+        {
+          "code" : "8269",
+          "display" : "Operadores de máquinas para fabricar productos textiles y artículos de piel y cuero, no clasificados bajo otros epígrafes"
+        }]
+      },
+      {
+        "code" : "827",
+        "display" : "Operadores de máquinas para elaborar o procesar alimentos y productos afines",
+        "concept" : [{
+          "code" : "8271",
+          "display" : "Operadores de máquinas para procesar carne, pescado y mariscos"
+        },
+        {
+          "code" : "8272",
+          "display" : "Operadores de máquinas para elaborar productos lácteos"
+        },
+        {
+          "code" : "8273",
+          "display" : "Operadores de máquinas para moler cereales y especias"
+        },
+        {
+          "code" : "8274",
+          "display" : "Operadores de máquinas para procesar cereales, productos de panadería, repostería y confitería"
+        },
+        {
+          "code" : "8275",
+          "display" : "Operadores de máquinas para procesar frutos húmedos, secos y hortalizas"
+        },
+        {
+          "code" : "8276",
+          "display" : "Operadores de máquinas para fabricar azúcares"
+        },
+        {
+          "code" : "8277",
+          "display" : "Operadores de máquinas para elaborar té, café y cacao"
+        },
+        {
+          "code" : "8278",
+          "display" : "Operadores de máquinas para elaborar cerveza, vinos y otras bebidas"
+        },
+        {
+          "code" : "8279",
+          "display" : "Operadores de máquinas para elaborar productos del tabaco"
+        }]
+      },
+      {
+        "code" : "828",
+        "display" : "Ensambladores",
+        "concept" : [{
+          "code" : "8281",
+          "display" : "Ensambladores de mecanismos y elementos mecánicos de máquinas"
+        },
+        {
+          "code" : "8282",
+          "display" : "Ensambladores de equipos eléctricos"
+        },
+        {
+          "code" : "8283",
+          "display" : "Ensambladores de equipos electrónicos"
+        },
+        {
+          "code" : "8284",
+          "display" : "Ensambladores de productos metálicos, de caucho y plástico"
+        },
+        {
+          "code" : "8285",
+          "display" : "Ensambladores de productos de madera y materiales afines"
+        },
+        {
+          "code" : "8286",
+          "display" : "Ensambladores de productos de cartón, textiles y materiales afines"
+        }]
+      },
+      {
+        "code" : "829",
+        "display" : "Otros operadores de máquinas y ensambladores",
+        "concept" : [{
+          "code" : "8290",
+          "display" : "Otros operadores de máquinas y ensambladores"
+        }]
+      }]
+    },
+    {
+      "code" : "83",
+      "display" : "CONDUCTORES DE VEHÍCULOS Y OPERADORES DE EQUIPOS PESADOS MÓVILES",
+      "concept" : [{
+        "code" : "831",
+        "display" : "Maquinistas de vehículos por riel y afines",
+        "concept" : [{
+          "code" : "8311",
+          "display" : "Maquinistas de vehículos por riel"
+        },
+        {
+          "code" : "8312",
+          "display" : "Guardafrenos, guardagujas y agentes de maniobras"
+        }]
+      },
+      {
+        "code" : "832",
+        "display" : "Conductores de vehículos de motor",
+        "concept" : [{
+          "code" : "8321",
+          "display" : "Conductores de camionetas y vehículos livianos"
+        },
+        {
+          "code" : "8322",
+          "display" : "Conductores de taxis"
+        },
+        {
+          "code" : "8323",
+          "display" : "Conductores de buses, microbuses y colectivos"
+        },
+        {
+          "code" : "8324",
+          "display" : "Conductores de camiones y vehículos pesados"
+        }]
+      },
+      {
+        "code" : "833",
+        "display" : "Operadores de maquinaria agrícola móvil y de otras máquinas móviles",
+        "concept" : [{
+          "code" : "8331",
+          "display" : "Operadores de maquinaria agrícola y forestal motorizada"
+        },
+        {
+          "code" : "8332",
+          "display" : "Operadores de máquinas de movimiento de tierras, construcción vías y afines"
+        },
+        {
+          "code" : "8333",
+          "display" : "Operadores de grúas, de aparatos elevadores y afines"
+        },
+        {
+          "code" : "8334",
+          "display" : "Operadores de carretillas elevadoras"
+        }]
+      },
+      {
+        "code" : "834",
+        "display" : "Marineros de cubierta y afines",
+        "concept" : [{
+          "code" : "8340",
+          "display" : "Marineros de cubierta y afines"
+        }]
+      }]
+    }]
+  },
+  {
+    "code" : "9",
+    "display" : "TRABAJADORES NO CALIFICADOS",
+    "concept" : [{
+      "code" : "91",
+      "display" : "TRABAJADORES NO CALIFICADOS DE SERVICIOS (EXCEPTO EL PERSONAL DOMÉSTICO Y AFINES)",
+      "concept" : [{
+        "code" : "911",
+        "display" : "Ayudantes de mecánica",
+        "concept" : [{
+          "code" : "9111",
+          "display" : "Ayudante de taller, mecánica, vehículos de motor y afines"
+        },
+        {
+          "code" : "9112",
+          "display" : "Ayudantes en reparación y mecánica en general (excepto vehículos de motor)"
+        }]
+      },
+      {
+        "code" : "912",
+        "display" : "Limpiabotas y otros trabajadores callejeros",
+        "concept" : [{
+          "code" : "9120",
+          "display" : "Limpiabotas y otros trabajadores callejeros"
+        }]
+      },
+      {
+        "code" : "913",
+        "display" : "Mensajeros, porteros, conserjes, vigilantes y afines",
+        "concept" : [{
+          "code" : "9131",
+          "display" : "Mensajeros, porteadores y repartidores"
+        },
+        {
+          "code" : "9132",
+          "display" : "Porteros , conserjes y afines"
+        },
+        {
+          "code" : "9133",
+          "display" : "Vigilantes y celadores"
+        },
+        {
+          "code" : "9134",
+          "display" : "Recolectores y surtidores de aparatos automáticos"
+        },
+        {
+          "code" : "9135",
+          "display" : "Lectores de medidores"
+        }]
+      },
+      {
+        "code" : "914",
+        "display" : "Recolectores de basura y afines",
+        "concept" : [{
+          "code" : "9141",
+          "display" : "Recolectores de basura"
+        },
+        {
+          "code" : "9142",
+          "display" : "Barrenderos y afines"
+        },
+        {
+          "code" : "9143",
+          "display" : "Recolectores de material reciclable"
+        }]
+      }]
+    },
+    {
+      "code" : "92",
+      "display" : "PERSONAL DOMÉSTICO, ASEADORES, LAVANDEROS, PLANCHADORES Y AFINES",
+      "concept" : [{
+        "code" : "921",
+        "display" : "Personal doméstico",
+        "concept" : [{
+          "code" : "9210",
+          "display" : "Personal doméstico"
+        }]
+      },
+      {
+        "code" : "922",
+        "display" : "Aseadores, lavanderos y planchadores",
+        "concept" : [{
+          "code" : "9221",
+          "display" : "Aseadores y fumigadores de oficinas, hoteles y otros establecimientos"
+        },
+        {
+          "code" : "9222",
+          "display" : "Lavanderos y planchadores manuales"
+        },
+        {
+          "code" : "9223",
+          "display" : "Lavadores de vehículos, ventanas y afines"
+        }]
+      }]
+    },
+    {
+      "code" : "93",
+      "display" : "OBREROS DE LA MINERÍA, LA CONSTRUCCIÓN, LA INDUSTRIA MANUFACTURERA Y EL TRANSPORTE",
+      "concept" : [{
+        "code" : "931",
+        "display" : "Obreros de la minería y la construcción",
+        "concept" : [{
+          "code" : "9311",
+          "display" : "Obreros de minas y canteras"
+        },
+        {
+          "code" : "9312",
+          "display" : "Obreros de obras públicas y mantenimiento: carreteras, presas y obras similares"
+        },
+        {
+          "code" : "9313",
+          "display" : "Obreros de la construcción de edificios"
+        }]
+      },
+      {
+        "code" : "932",
+        "display" : "Obreros de la industria manufacturera",
+        "concept" : [{
+          "code" : "9321",
+          "display" : "Obreros de ensamble"
+        },
+        {
+          "code" : "9322",
+          "display" : "Embaladores manuales y otros obreros de la industria manufacturera"
+        }]
+      },
+      {
+        "code" : "933",
+        "display" : "Obreros del transporte",
+        "concept" : [{
+          "code" : "9331",
+          "display" : "Conductores de vehículos accionados a pedal o a brazo"
+        },
+        {
+          "code" : "9332",
+          "display" : "Conductores de vehículos de tracción animal"
+        },
+        {
+          "code" : "9333",
+          "display" : "Obreros de carga"
+        }]
+      }]
+    }]
+  }]
+}

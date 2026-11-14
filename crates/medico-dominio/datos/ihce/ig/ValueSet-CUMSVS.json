@@ -1,0 +1,52 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "CUMSVS",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores CUMSVS</b></p><a name=\"CUMSVS\"> </a><a name=\"hcCUMSVS\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-CUMS.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/CUMS</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/CUMSVS",
+  "version" : "1.0.0",
+  "name" : "CUMSVS",
+  "title" : "Codificacion CUMS",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-01-01T00:00:00-05:00",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de Valores de Codificación CUMS",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CUMS"
+    }]
+  }
+}

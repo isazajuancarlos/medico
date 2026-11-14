@@ -1,0 +1,65 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianGenderGroup",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianGenderGroup</b></p><a name=\"ColombianGenderGroup\"> </a><a name=\"hcColombianGenderGroup\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianGenderGroup</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"ColombianGenderGroup-01\"> </a></td><td>Hombre</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"ColombianGenderGroup-02\"> </a></td><td>Mujer</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"ColombianGenderGroup-03\"> </a></td><td>Indeterminado o Intersexual</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianGenderGroup",
+  "version" : "1.0.0",
+  "name" : "ColombianGenderGroup",
+  "title" : "CodeSystem: Gender Group - Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2025-05-21",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de grupos de género aplicables a conceptos asistenciales (procedimientos, servicios, diagnósticos).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de grupos de género aplicables a conceptos asistenciales (procedimientos, servicios, diagnósticos).",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 3,
+  "concept" : [{
+    "code" : "01",
+    "display" : "Hombre"
+  },
+  {
+    "code" : "02",
+    "display" : "Mujer"
+  },
+  {
+    "code" : "03",
+    "display" : "Indeterminado o Intersexual"
+  }]
+}

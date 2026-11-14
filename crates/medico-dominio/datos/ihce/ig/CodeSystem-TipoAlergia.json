@@ -1,0 +1,77 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "TipoAlergia",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos TipoAlergia</b></p><a name=\"TipoAlergia\"> </a><a name=\"hcTipoAlergia\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/TipoAlergia</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"TipoAlergia-01\"> </a></td><td>Medicamento</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"TipoAlergia-02\"> </a></td><td>Alimento</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"TipoAlergia-03\"> </a></td><td>Sustancia del ambiente</td></tr><tr><td style=\"white-space:nowrap\">04<a name=\"TipoAlergia-04\"> </a></td><td>Sustancia que entran en contacto con la piel</td></tr><tr><td style=\"white-space:nowrap\">05<a name=\"TipoAlergia-05\"> </a></td><td>Picadura de insectos</td></tr><tr><td style=\"white-space:nowrap\">06<a name=\"TipoAlergia-06\"> </a></td><td>Otra</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/TipoAlergia",
+  "version" : "1.0.0",
+  "name" : "TipoAlergia",
+  "title" : "CodeSystem: Tipo Alergia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-08-16",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Código que indica que si la persona tiene alergia",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de tipo de alergia en Colombia.]",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2024+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 6,
+  "concept" : [{
+    "code" : "01",
+    "display" : "Medicamento"
+  },
+  {
+    "code" : "02",
+    "display" : "Alimento"
+  },
+  {
+    "code" : "03",
+    "display" : "Sustancia del ambiente"
+  },
+  {
+    "code" : "04",
+    "display" : "Sustancia que entran en contacto con la piel"
+  },
+  {
+    "code" : "05",
+    "display" : "Picadura de insectos"
+  },
+  {
+    "code" : "06",
+    "display" : "Otra"
+  }]
+}

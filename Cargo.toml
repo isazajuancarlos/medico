@@ -1,0 +1,169 @@
+[workspace]
+members = [
+    "crates/medico-dominio",
+    "crates/medico-datos",
+    "crates/medico-api",
+    "crates/medico-ihce",
+    "crates/medico-muv",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Juan Carlos Isaza <isazajuancarlos@gmail.com>"]
+license = "LicenseRef-Propietario"
+repository = "https://github.com/isazajuancarlos/medico"
+# App propietaria: NUNCA se publica en crates.io. Explícito, para que un
+# `cargo publish` accidental falle y para que cargo-deny la trate como privada.
+publish = false
+
+# Optimizador de buenas prácticas de Rust, por DEFECTO (como los tests y las
+# simulaciones — decisión de Juan el 2026-08-22). clippy lee esta tabla solo; no
+# cambia el comando del CI. Es una PUERTA (deny), no un aviso: el CI corre
+# `-D warnings`, que escala todo `warn` a error (medido), así que aquí solo entra
+# lo que se está dispuesto a BLOQUEAR.
+#
+# NO es «pedantic entero»: eso son ~500 avisos por crate, casi todos estilo (
+# `use_self` 189, `must_use_candidate` 134, `doc_markdown` 36…), y como puerta
+# sería la trampa de las directivas 21/23. Es el subconjunto que la MEDICIÓN del
+# 2026-08-22 (directiva 16) mostró que cumple las dos condiciones de una puerta:
+# casi cero falsos positivos, y `cargo clippy --fix` los limpia a CERO.
+#
+# Los otros útiles NO están aquí a propósito, y por qué: `map_unwrap_or` y
+# `redundant_closure_for_method_calls` dejaron 19 y 33 sitios que clippy marca
+# `MaybeIncorrect` y NO auto-corrige —un lint que clippy mismo no se atreve a
+# reescribir no es puerta—; `match_same_arms` tiene falsos positivos. Los tres
+# van en la PASADA DE TRIAJE (se corren a mano al tocar un crate), no como bloqueo.
+[workspace.lints.clippy]
+redundant_clone = "deny"    # clon innecesario (rendimiento)
+needless_collect = "deny"   # `.collect()` para volver a iterar (rendimiento)
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "migrate",
+    "macros",
+    "chrono",
+    "json",
+] }
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+# La zona horaria del prestador, por nombre IANA. Va la base de datos IANA
+# dentro del binario a propósito: un consultorio sin internet no puede depender
+# de la del sistema, y de hecho el problema que este crate resuelve es
+# justamente haber dependido del reloj de la máquina.
+chrono-tz = "0.10"
+# Protección con Quipu (cifrado en reposo + firma de registros). Repo público.
+# Fijada por COMMIT inmutable, nunca por tag: un tag es mutable, y mover
+# `v0.4.0` a un commit malicioso nos lo traería al construir (la lección del
+# ataque Atomic Arch a AUR). El Cargo.lock ya lo fijaba, esto lo hace explícito.
+# `d786d1c` es hoy el tag v0.4.0. Antes se fijaba `2ffe134`, que es el mismo
+# código —`git diff 2ffe134 d786d1c -- src Cargo.toml` sale vacío— pero un
+# árbol SIN LICENSE: se traía la librería sin el texto de la AGPL que la
+# ampara. Se mueve por eso, no por funcionalidad.
+#
+# 2026-08-05: sube a `23395f3` (9 commits), el mismo rev que fijan tunjo e
+# informes — un solo árbol de guaca en todo el universo. Trae los cinco vectores
+# fijos de compatibilidad y el salto de guaca a quipu 0.11. medico NO depende de
+# quipu directamente, así que aquí basta mover el rev; el control se corre igual
+# —`grep -c '^name = "quipu"$' Cargo.lock` tiene que dar 1— porque «no debería
+# pasar» no es una medición.
+#
+# 2026-08-11: el ORIGEN pasa de GitHub al espejo local. El rev NO se mueve —es
+# el mismo árbol, y el `Cargo.lock` lo comprueba—; lo que cambia es de dónde se
+# trae. El protocolo «solo local» del 2026-08-10 sacó el código de GitHub y
+# puso el origen en `/home/juan/espejos`, pero esta línea se quedó atrás: cada
+# compilación limpia de medico seguía descargando el código de guaca de
+# github.com. NO estaba roto —medido ese día: GitHub sirve todavía el rev por
+# SHA aunque el repositorio esté vaciado, porque acepta `allowAnySHA1InWant`—,
+# y por eso no se había notado: dependía de que GitHub conserve un objeto que
+# ya no alcanza ninguna rama, en un repositorio que la retirada dejó vacío y
+# que 20 de sus hermanos no sobrevivieron. Un respaldo del que no se sabe que
+# se depende.
+#
+# 2026-08-12: sube a `v0.6.0` (`161a687`) para traer `guaca::dosfactores` —el
+# segundo factor TOTP— y `guaca::qr`, que dibuja su enrolamiento (#212). El módulo NO se escribió aquí: nació en informes y
+# subió a guaca el día que medico lo necesitó, que es la regla de la directiva 9
+# —sube lo que YA se repitió en un segundo proyecto—. Informes y tunjo fijan
+# todavía `23395f3` y quedan ordenados para subir al mismo: «un solo árbol de
+# guaca en todo el universo».
+#
+# 2026-09-11: sube a `d501eb3` para acompañar el salto de quipu 0.11→0.15. Es el
+# mismo rev que fija bachué main (`0b3522f`, migrado a quipu 0.15.0), y no es
+# opcional: cargo exige un solo rev por fuente git, y `bachue-password` —que sale
+# de ese mismo espejo main— arrastra guaca `d501eb3`; dejar aquí `f769b12` daría
+# dos revs de guaca irreconciliables. `d501eb3` es v0.7.0 igual que `f769b12`
+# —el mismo número—: sube su requisito de quipu (0.11→0.15) y añade un módulo
+# público `custodia` y el guardián de vectores fijos, pero la API que medico usa
+# (reposo/firma/auditoria/claves/sesion/freno/qr/dosfactores) no cambia y
+# `custodia` medico no lo consume. Informes y tunjo quedan ordenados para el
+# mismo salto.
+guaca = { git = "file:///home/juan/espejos/guaca.git", rev = "d501eb30b5c948ce305051fc45db7ff72f8cff07", features = ["dosfactores"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+# AQUÍ NO VA `[profile.dev.package."*"] opt-level = 3`, y está medido.
+#
+# El estándar de nacimiento lo trae, y en quipu vale 9,8x — pero ese es un repo
+# con Argon2id, donde la EJECUCIÓN de las pruebas son 598 s. El perfil compra
+# ejecución rápida pagando compilación lenta, así que rinde en proporción a lo
+# que pese la ejecución, y aquí pesa **34 s**. Medido en este repositorio el
+# 2026-08-06, job `rust (test + clippy)`:
+#
+#   main, 6 corridas ....................... 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1 min
+#   con el perfil, en frío ................. 9,2 min
+#   con el perfil, EN CALIENTE (relanzado) . 9,0 min
+#
+# El caliente es el dato: no es el peaje de invalidar la caché una vez, es el
+# coste permanente. ~60 % más de minutos en un repositorio PRIVADO, que los
+# factura, a cambio de nada. La directiva 16 dice justo esto: no se le atribuye
+# una mejora sin medirla en ESE repo.
+#
+# Lo que sí rinde aquí es lo otro que trae esta rama —el grupo de concurrencia
+# por commit y los techos—, y eso se queda. Si algún día entra un KDF, se vuelve
+# a medir y se decide otra vez.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# QUIPU SALE DEL ESPEJO LOCAL, NO DE CRATES.IO
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Medido el 2026-08-14: este repositorio compilaba **quipu 0.11.0 desde
+# crates.io**, y esa versión está **YANKED** — la retiramos nosotros el
+# 2026-08-10 con el protocolo «solo local», junto con otras 23.
+#
+# No estaba roto: estaba DESCONECTADO. Funcionaba porque el `Cargo.lock` está
+# commiteado y cargo tolera un yank que ya está bloqueado. La consecuencia real
+# no era el yank sino la DERIVA: el árbol de quipu iba por 0.11.1 más todo lo
+# posterior mientras aquí se compilaba la 0.11.0, así que nueve días de cambios
+# en la librería criptográfica no llegaban. Comprobado comparando
+# `src/aleatorio.rs` del árbol con el vendorizado: eran distintos.
+#
+# Y para un repositorio NUEVO ni siquiera funcionaba: `cargo vendor` fallaba con
+# «version 0.11.0 is yanked», que es exactamente el fallo que abrió este trabajo.
+#
+# `[patch]` SOLO lo honra el paquete RAÍZ del workspace, no una dependencia, así
+# que va aquí y no en guaca — aunque guaca declare el requisito y arrastre a sus
+# consumidores al registro.
+#
+# El rev es el de `estable`, que por definición es lo publicado y no puede estar
+# roja. No se toma «el último por ser el último» (directiva 35).
+#
+# 2026-09-11: sube de `dd23cce1` (0.11.1) a `cd30c1b` (v0.15.0), que es el
+# `estable` de hoy y el que fijan guaca `d501eb3` y bachué main `0b3522f` — un
+# solo árbol de quipu en todo el universo. medico no usa `quipu::` directamente
+# (verificado): el salto llega por guaca (feature `escrow` → `quipu::shamir`) y
+# por `bachue-password` (Argon2). Re-vendorizado con el procedimiento del
+# `.cargo/config.toml` (sin red: las crates de X-Wing —ml-kem, ml-dsa, sha3—
+# ya estaban en `vendor/` y el perfil X-Wing-768 es feature NO-default que este
+# árbol no activa).
+[patch.crates-io]
+quipu = { git = "file:///home/juan/espejos/quipu.git", rev = "cd30c1b0183ab7c68a8122ca4f269ae04e7e2d27" }

@@ -1,0 +1,521 @@
+//! Private module for pixel sample value transformation functions.
+
+use snafu::Snafu;
+
+use crate::attribute::VoiLut;
+
+/// Description of a modality rescale function,
+/// defined by a _rescale slope_ and _rescale intercept_.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Rescale {
+    /// the rescale slope
+    pub slope: f64,
+    /// the rescale intercept
+    pub intercept: f64,
+}
+
+impl Rescale {
+    /// Create a new rescale function.
+    #[inline]
+    pub fn new(slope: f64, intercept: f64) -> Self {
+        Rescale { slope, intercept }
+    }
+
+    /// Apply the rescale function to a value.
+    #[inline]
+    pub fn apply(&self, value: f64) -> f64 {
+        self.slope * value + self.intercept
+    }
+}
+
+/// A known DICOM Value of Interest (VOI) LUT function descriptor.
+#[derive(Debug, Default, Copy, Clone, Eq, Hash, PartialEq)]
+pub enum VoiLutFunction {
+    /// LINEAR
+    #[default]
+    Linear,
+    /// LINEAR_EXACT
+    LinearExact,
+    /// SIGMOID
+    Sigmoid,
+}
+
+/// Unrecognized VOI LUT function name
+#[derive(Debug, Copy, Clone, PartialEq, Snafu)]
+pub struct FromVoiLutFunctionError {
+    _private: (),
+}
+
+impl std::convert::TryFrom<&str> for VoiLutFunction {
+    type Error = FromVoiLutFunctionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s {
+            "LINEAR" => Ok(Self::Linear),
+            "LINEAR_EXACT" => Ok(Self::LinearExact),
+            "SIGMOID" => Ok(Self::Sigmoid),
+            _ => Err(FromVoiLutFunctionError { _private: () }),
+        }
+    }
+}
+
+/// The parameters of a single window level
+/// for a VOI LUT transformation,
+/// comprising the window center and the window width.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct WindowLevel {
+    /// The _Window Width_.
+    ///
+    /// Should be greater than 0
+    pub width: f64,
+    /// The _Window Center_.
+    pub center: f64,
+}
+
+/// A full description of a VOI LUT function transformation
+/// based on a window level.
+#[derive(Debug, PartialEq)]
+pub struct WindowLevelTransform {
+    voi_lut_function: VoiLutFunction,
+    window_level: WindowLevel,
+}
+
+impl WindowLevelTransform {
+    /// Create a new window level transformation.
+    ///
+    /// The width of the given `window_level` is automatically adjusted
+    /// if it is incompatible with the given LUT function:
+    /// it must be `>= 0` if the function is [`LinearExact`](VoiLutFunction::LinearExact),
+    /// and `>= 1` in other functions.
+    ///
+    /// The `LINEAR` function is defined in terms of `width - 1`
+    /// (see [PS3.3 C.11.2.1.2.1][1]),
+    /// so it degenerates into a hard black/white threshold
+    /// once the width is clamped up to 1.
+    /// Objects which describe a window narrower than one unit
+    /// (typically because the modality rescale maps the samples
+    /// onto a small floating point range)
+    /// are therefore rendered with the `LINEAR_EXACT` function instead,
+    /// which is well defined for any non-negative width.
+    ///
+    /// [1]: https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.11.2.html#sect_C.11.2.1.2.1
+    #[inline]
+    pub fn new(voi_lut_function: VoiLutFunction, window_level: WindowLevel) -> Self {
+        let (voi_lut_function, width) = match voi_lut_function {
+            VoiLutFunction::LinearExact => (voi_lut_function, window_level.width.max(0.)),
+            VoiLutFunction::Linear if window_level.width < 1. => {
+                (VoiLutFunction::LinearExact, window_level.width.max(0.))
+            }
+            // clamp width anyway to sanitize width from NaNs
+            VoiLutFunction::Linear => (voi_lut_function, window_level.width.max(1.)),
+            VoiLutFunction::Sigmoid => (voi_lut_function, window_level.width.max(1.)),
+        };
+
+        WindowLevelTransform {
+            voi_lut_function,
+            window_level: WindowLevel {
+                center: window_level.center,
+                width,
+            },
+        }
+    }
+
+    /// Create a new window level transformation
+    /// with the `LINEAR` function.
+    ///
+    /// A width lower than 1 is served by the `LINEAR_EXACT` function,
+    /// as described in [`new`](Self::new).
+    #[inline]
+    pub fn linear(window_level: WindowLevel) -> Self {
+        Self::new(VoiLutFunction::Linear, window_level)
+    }
+
+    /// Apply the window level transformation on a rescaled value,
+    /// into a number between `0` and `y_max`.
+    pub fn apply(&self, value: f64, y_max: f64) -> f64 {
+        match self.voi_lut_function {
+            VoiLutFunction::Linear => window_level_linear(
+                value,
+                self.window_level.width,
+                self.window_level.center,
+                y_max,
+            ),
+            VoiLutFunction::LinearExact => window_level_linear_exact(
+                value,
+                self.window_level.width,
+                self.window_level.center,
+                y_max,
+            ),
+            VoiLutFunction::Sigmoid => window_level_sigmoid(
+                value,
+                self.window_level.width,
+                self.window_level.center,
+                y_max,
+            ),
+        }
+    }
+}
+
+fn window_level_linear(value: f64, window_width: f64, window_center: f64, y_max: f64) -> f64 {
+    let ww = window_width;
+    let wc = window_center;
+    debug_assert!(ww >= 1.);
+
+    // C.11.2.1.2.1
+
+    // c - 0.5 - (w-1) /2)
+    let min = wc - 0.5 - (ww - 1.) / 2.;
+    // c - 0.5 + (w-1) /2)
+    let max = wc - 0.5 + (ww - 1.) / 2.;
+
+    if value <= min {
+        // if (x <= c - (w-1) / 2), then y = ymin
+        0.
+    } else if value > max {
+        // else if (x > c - 0.5 + (w-1) /2), then y = ymax
+        y_max
+    } else {
+        // else y = ((x - (c - 0.5)) / (w-1) + 0.5) * (ymax- ymin) + ymin
+        ((value - (wc - 0.5)) / (ww - 1.) + 0.5) * y_max
+    }
+}
+
+fn window_level_linear_exact(value: f64, window_width: f64, window_center: f64, y_max: f64) -> f64 {
+    let ww = window_width;
+    let wc = window_center;
+    debug_assert!(ww >= 0.);
+
+    // C.11.2.1.3.2
+
+    let min = wc - ww / 2.;
+    let max = wc + ww / 2.;
+
+    if value <= min {
+        // if (x <= c - w/2), then y = ymin
+        0.
+    } else if value > max {
+        // else if (x > c + w/2), then y = ymax
+        y_max
+    } else {
+        // else y = ((x - c) / w + 0.5) * (ymax - ymin) + ymin
+        ((value - wc) / ww + 0.5) * y_max
+    }
+}
+
+fn window_level_sigmoid(value: f64, window_width: f64, window_center: f64, y_max: f64) -> f64 {
+    let ww = window_width;
+    let wc = window_center;
+    assert!(ww >= 1.);
+
+    // C.11.2.1.3.1
+
+    y_max / (1. + f64::exp(-4. * (value - wc) / ww))
+}
+
+/// A full description of a VOI LUT function transformation
+/// based on an explicit LUT.
+pub struct VoiLutTransform<'a> {
+    lut: &'a VoiLut,
+    shift: u32,
+}
+
+/// Number of bits that the entries of `lut` actually span,
+/// which is not always the depth that its _LUT Descriptor_ declares.
+///
+/// The third value of _LUT Descriptor_ is meant to convey the range of the LUT
+/// entry values, but devices have been observed declaring 16 bits per entry for
+/// data which only spans 12 (Agfa CR, for one).
+/// Taking the declared depth at face value maps such a LUT
+/// onto a sixteenth of the output range,
+/// which renders the image almost uniformly flat.
+///
+/// The declared depth still wins when the data exceeds it,
+/// so that entries are never shifted out of the output range,
+/// and when the data is all zeroes, since that says nothing about the depth.
+fn effective_bits_stored(lut: &VoiLut) -> u16 {
+    let declared = lut.bits_stored as u16;
+    let max = lut.data.iter().copied().max().unwrap_or(0);
+    let used = (u16::BITS - max.leading_zeros()) as u16;
+
+    if used == 0 || used > declared {
+        declared
+    } else {
+        used
+    }
+}
+
+impl<'a> VoiLutTransform<'a> {
+    /// Create a new LUT transformation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `lut.data` is empty, or if `bits_stored` is smaller than
+    /// the number of bits that the LUT entries span.
+    pub fn new(lut: &'a VoiLut, bits_stored: u16) -> Self {
+        if lut.data.is_empty() {
+            // we'll do unchecked accesses to the first and last items in apply()
+            panic!("LUT data is empty");
+        }
+
+        let next_pow_bits = bits_stored.next_power_of_two();
+        let lut_bits = effective_bits_stored(lut);
+
+        if next_pow_bits < lut_bits {
+            panic!(
+                "LUT with BitsStored {} cannot be used for an image with BitsStored {}",
+                lut_bits, bits_stored
+            );
+        }
+
+        let shift = (next_pow_bits - lut_bits) as u32;
+
+        VoiLutTransform { lut, shift }
+    }
+
+    /// Apply the LUT transformation on a rescaled value.
+    pub fn apply(&self, value: f64) -> f64 {
+        let value_rounded = value.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32;
+        let y = (*(if value_rounded <= self.lut.min_pixel_value {
+            self.lut.data.first().unwrap()
+        } else {
+            self.lut
+                .data
+                .get((value_rounded - self.lut.min_pixel_value) as usize)
+                .unwrap_or(self.lut.data.last().unwrap())
+        })) << self.shift;
+        y as f64
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Lut;
+
+    use super::*;
+
+    /// Applying a common rescale function to a value
+    /// gives the expected output.
+    #[test]
+    fn modality_lut_baseline() {
+        let rescale = Rescale::new(1., -1024.);
+
+        assert_eq!(rescale.apply(0.), -1024.);
+        assert_eq!(rescale.apply(1.), -1023.);
+        assert_eq!(rescale.apply(2.), -1022.);
+        assert_eq!(rescale.apply(1024.), 0.);
+    }
+
+    /// Applying a linear window level
+    /// as per the example described in the standard
+    /// (C.11.2.1.2.1)
+    /// gives us the expected outcome.
+    #[test]
+    fn window_level_linear_example() {
+        let window_level = WindowLevel {
+            width: 4096.,
+            center: 2048.,
+        };
+        let window_level_transform = WindowLevelTransform::linear(window_level);
+        let y_max = 255.;
+
+        // x <= 0
+        assert_eq!(window_level_transform.apply(-2., y_max), 0.);
+        assert_eq!(window_level_transform.apply(-1., y_max), 0.);
+        assert_eq!(window_level_transform.apply(0., y_max), 0.);
+
+        // x > 4095
+        assert_eq!(window_level_transform.apply(4095.5, y_max), y_max);
+        assert_eq!(window_level_transform.apply(4096., y_max), y_max);
+        assert_eq!(window_level_transform.apply(4097., y_max), y_max);
+
+        // inbetween:  y = ((x - 2047.5) / 4095 + 0.5) * 255
+
+        let x = 1024.;
+        let y = window_level_transform.apply(x, y_max);
+        let expected_y = ((x - 2047.5) / 4095. + 0.5) * 255.;
+
+        assert!((y - expected_y).abs() < 1e-3);
+    }
+
+    /// Applying a linear window level gives us the expected outcome.
+    #[test]
+    fn window_level_linear_1() {
+        let window_level = WindowLevel {
+            width: 300.,
+            center: 50.,
+        };
+        let window_level_transform = WindowLevelTransform::linear(window_level);
+        let y_max = 255.;
+
+        // x <= (50 - 150)
+        let y = window_level_transform.apply(-120., y_max);
+        assert_eq!(y, 0.);
+        let y = window_level_transform.apply(-100.5, y_max);
+        assert_eq!(y, 0.);
+        let y = window_level_transform.apply(-100., y_max);
+        assert_eq!(y, 0.);
+
+        // x >= (50 + 150)
+        let y = window_level_transform.apply(201., y_max);
+        assert_eq!(y, 255.);
+        let y = window_level_transform.apply(200., y_max);
+        assert_eq!(y, 255.);
+
+        // x inbetween
+        let y = window_level_transform.apply(50., y_max);
+        assert!(y > 127. && y < 129.);
+    }
+
+    /// A VOI LUT shaped like the ones Agfa CR devices emit: a ramp spanning
+    /// `data_bits` bits, in a descriptor declaring `declared_bits`.
+    fn ramp_voi_lut(declared_bits: u8, data_bits: u32) -> VoiLut {
+        let entries = 1820u32;
+        let max = (1u32 << data_bits) - 1;
+
+        VoiLut {
+            min_pixel_value: 1358,
+            bits_stored: declared_bits,
+            data: (0..entries)
+                .map(|i| (i * max / (entries - 1)) as u16)
+                .collect(),
+            explanation: Some("E25".to_string()),
+        }
+    }
+
+    /// A LUT whose entries span fewer bits than its descriptor declares
+    /// is still scaled across the whole output range.
+    #[test]
+    fn voi_lut_transform_narrower_than_declared() {
+        let voi = ramp_voi_lut(16, 12);
+        let lut: Lut<u16> = Lut::new_rescale_and_lut(
+            12,
+            false,
+            Rescale::new(1., 0.),
+            VoiLutTransform::new(&voi, 12),
+        )
+        .unwrap();
+
+        assert_eq!(lut.get(1358_u16), 0);
+        assert_eq!(lut.get(3177_u16), 65520);
+
+        let mid: u16 = lut.get(2268_u16);
+        assert!(
+            (32_000..=33_500).contains(&mid),
+            "outcome was {}, expected to be around half scale",
+            mid,
+        );
+    }
+
+    /// A LUT that genuinely uses its declared depth is unaffected.
+    #[test]
+    fn voi_lut_transform_matching_declared() {
+        let voi = ramp_voi_lut(16, 16);
+        let lut: Lut<u16> = Lut::new_rescale_and_lut(
+            12,
+            false,
+            Rescale::new(1., 0.),
+            VoiLutTransform::new(&voi, 12),
+        )
+        .unwrap();
+
+        assert_eq!(lut.get(1358_u16), 0);
+        assert_eq!(lut.get(3177_u16), 65535);
+    }
+
+    /// Entries wider than the declared depth must not be shifted out of range.
+    #[test]
+    fn voi_lut_transform_wider_than_declared() {
+        let voi = ramp_voi_lut(8, 12);
+        assert_eq!(effective_bits_stored(&voi), 8);
+
+        let lut: Lut<u16> = Lut::new_rescale_and_lut(
+            12,
+            false,
+            Rescale::new(1., 0.),
+            VoiLutTransform::new(&voi, 12),
+        )
+        .unwrap();
+
+        assert_eq!(lut.get(3177_u16), 4095 << 8);
+    }
+
+    /// An all-zero LUT says nothing about its depth, so the declaration stands.
+    #[test]
+    fn voi_lut_transform_all_zero_data() {
+        let voi = VoiLut {
+            min_pixel_value: 0,
+            bits_stored: 12,
+            data: vec![0; 16],
+            explanation: None,
+        };
+        assert_eq!(effective_bits_stored(&voi), 12);
+    }
+
+    /// A window narrower than one unit still spreads the values over
+    /// the whole output range instead of collapsing into a threshold.
+    #[test]
+    fn window_level_linear_sub_unit_width() {
+        let window_level_transform = WindowLevelTransform::linear(WindowLevel {
+            width: 0.9130647131,
+            center: 0.4565323565,
+        });
+        let y_max = 255.;
+
+        // x <= 0
+        assert_eq!(window_level_transform.apply(-0.01, y_max), 0.);
+        assert!(window_level_transform.apply(0., y_max) < 1e-6);
+
+        // x > 0.913
+        assert_eq!(window_level_transform.apply(0.92, y_max), y_max);
+        assert_eq!(window_level_transform.apply(1., y_max), y_max);
+
+        // in between: monotonically increasing, centered around y_max / 2
+        let y = window_level_transform.apply(0.4565323565, y_max);
+        assert!(
+            (y - 127.5).abs() < 1e-3,
+            "outcome was {y}, expected the window center to land mid-scale",
+        );
+
+        let y_low = window_level_transform.apply(0.25, y_max);
+        let y_high = window_level_transform.apply(0.75, y_max);
+        assert!(
+            0. < y_low && y_low < y && y < y_high && y_high < y_max,
+            "expected 0 < {y_low} < {y} < {y_high} < {y_max}",
+        );
+    }
+
+    /// A width of exactly 1 keeps the `LINEAR` threshold behavior
+    /// described in the standard.
+    #[test]
+    fn window_level_linear_unit_width() {
+        let window_level_transform = WindowLevelTransform::linear(WindowLevel {
+            width: 1.,
+            center: 2048.,
+        });
+        let y_max = 255.;
+
+        assert_eq!(window_level_transform.apply(2047., y_max), 0.);
+        assert_eq!(window_level_transform.apply(2048., y_max), y_max);
+    }
+
+    #[test]
+    fn voi_lut_transform() {
+        let voi_data = (0..256).map(|x| x * 4).collect();
+        let voi = VoiLut {
+            min_pixel_value: 0,
+            bits_stored: 8,
+            data: voi_data,
+            explanation: None,
+        };
+        let rescale = Rescale::new(1., 0.);
+        let lut: Lut<u16> =
+            Lut::new_rescale_and_lut(8, false, rescale, VoiLutTransform::new(&voi, 8)).unwrap();
+
+        // test some values
+
+        assert_eq!(lut.get(0_u16), 0);
+        assert_eq!(lut.get(1_u16), 4);
+        assert_eq!(lut.get(2_u16), 8);
+        assert_eq!(lut.get(255_u16), 1020);
+    }
+}

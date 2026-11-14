@@ -1,0 +1,14 @@
+-- La talla ideal de la valoración antropométrica (#104).
+--
+-- Es la pareja de `peso_ideal`, que existía desde la fundación. La columna
+-- faltaba porque en el sistema original la talla ideal NUNCA se calculó: el
+-- formulario hace SEEK sobre PESOTALLA, que no tiene columna EDAD ni ese
+-- índice, así que la búsqueda no podía acertar y el campo salía siempre en 0.
+-- No es un dato que el prestador venga reportando: es la tabla PESOTALLA1 que
+-- su producto traía y no llegó a consultar.
+--
+-- Va en METROS, igual que `talla`, y la deriva el SERVIDOR al guardar el examen
+-- físico —nunca el cuerpo de la petición—, buscando en la tabla por edad y sexo.
+-- Nula cuando la tabla no cubre el caso: por encima de 19 años no hay fila, y un
+-- 0 en un campo de talla se leería como una medición.
+ALTER TABLE historia ADD COLUMN talla_ideal REAL;

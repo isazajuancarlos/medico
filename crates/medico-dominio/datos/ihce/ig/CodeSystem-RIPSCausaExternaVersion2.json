@@ -1,0 +1,169 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "RIPSCausaExternaVersion2",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos RIPSCausaExternaVersion2</b></p><a name=\"RIPSCausaExternaVersion2\"> </a><a name=\"hcRIPSCausaExternaVersion2\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/RIPSCausaExternaVersion2</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">21<a name=\"RIPSCausaExternaVersion2-21\"> </a></td><td>ACCIDENTE DE TRABAJO</td></tr><tr><td style=\"white-space:nowrap\">22<a name=\"RIPSCausaExternaVersion2-22\"> </a></td><td>ACCIDENTE EN EL HOGAR</td></tr><tr><td style=\"white-space:nowrap\">23<a name=\"RIPSCausaExternaVersion2-23\"> </a></td><td>ACCIDENTE DE TRANSITO DE ORIGEN COMUN</td></tr><tr><td style=\"white-space:nowrap\">24<a name=\"RIPSCausaExternaVersion2-24\"> </a></td><td>ACCIDENTE DE TRANSITO DE ORIGEN LABORAL</td></tr><tr><td style=\"white-space:nowrap\">25<a name=\"RIPSCausaExternaVersion2-25\"> </a></td><td>ACCIDENTE EN EL ENTORNO EDUCATIVO</td></tr><tr><td style=\"white-space:nowrap\">26<a name=\"RIPSCausaExternaVersion2-26\"> </a></td><td>OTRO TIPO DE ACCIDENTE</td></tr><tr><td style=\"white-space:nowrap\">27<a name=\"RIPSCausaExternaVersion2-27\"> </a></td><td>EVENTO CATASTROFICO DE ORIGEN NATURAL</td></tr><tr><td style=\"white-space:nowrap\">28<a name=\"RIPSCausaExternaVersion2-28\"> </a></td><td>LESION POR AGRESION</td></tr><tr><td style=\"white-space:nowrap\">29<a name=\"RIPSCausaExternaVersion2-29\"> </a></td><td>LESION AUTO INFLIGIDA</td></tr><tr><td style=\"white-space:nowrap\">30<a name=\"RIPSCausaExternaVersion2-30\"> </a></td><td>SOSPECHA DE VIOLENCIA FISICA</td></tr><tr><td style=\"white-space:nowrap\">31<a name=\"RIPSCausaExternaVersion2-31\"> </a></td><td>SOSPECHA DE VIOLENCIA PSICOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">32<a name=\"RIPSCausaExternaVersion2-32\"> </a></td><td>SOSPECHA DE VIOLENCIA SEXUAL</td></tr><tr><td style=\"white-space:nowrap\">33<a name=\"RIPSCausaExternaVersion2-33\"> </a></td><td>SOSPECHA DE NEGLIGENCIA Y ABANDONO</td></tr><tr><td style=\"white-space:nowrap\">34<a name=\"RIPSCausaExternaVersion2-34\"> </a></td><td>IVE RELACIONADO CON PELIGRO A LA SALUD O VIDA DE LA MUJER</td></tr><tr><td style=\"white-space:nowrap\">35<a name=\"RIPSCausaExternaVersion2-35\"> </a></td><td>IVE POR MALFORMACION CONGENITA INCOMPATIBLE CON LA VIDA</td></tr><tr><td style=\"white-space:nowrap\">36<a name=\"RIPSCausaExternaVersion2-36\"> </a></td><td>IVE POR VIOLENCIA SEXUAL, INCESTO O POR INSEMINACION ARTIFICIAL O TRANSFERENCIA DE OVULO FECUNDADO NO CONSENTIDA</td></tr><tr><td style=\"white-space:nowrap\">37<a name=\"RIPSCausaExternaVersion2-37\"> </a></td><td>EVENTO ADVERSO EN SALUD</td></tr><tr><td style=\"white-space:nowrap\">38<a name=\"RIPSCausaExternaVersion2-38\"> </a></td><td>ENFERMEDAD GENERAL</td></tr><tr><td style=\"white-space:nowrap\">39<a name=\"RIPSCausaExternaVersion2-39\"> </a></td><td>ENFERMEDAD LABORAL</td></tr><tr><td style=\"white-space:nowrap\">40<a name=\"RIPSCausaExternaVersion2-40\"> </a></td><td>PROMOCION Y MANTENIMIENTO DE LA SALUD - INTERVENCIONES INDIVIDUALES</td></tr><tr><td style=\"white-space:nowrap\">41<a name=\"RIPSCausaExternaVersion2-41\"> </a></td><td>INTERVENCION COLECTIVA</td></tr><tr><td style=\"white-space:nowrap\">42<a name=\"RIPSCausaExternaVersion2-42\"> </a></td><td>ATENCION DE POBLACION MATERNO PERINATAL</td></tr><tr><td style=\"white-space:nowrap\">43<a name=\"RIPSCausaExternaVersion2-43\"> </a></td><td>RIESGO AMBIENTAL</td></tr><tr><td style=\"white-space:nowrap\">44<a name=\"RIPSCausaExternaVersion2-44\"> </a></td><td>OTROS EVENTOS CATASTROFICOS</td></tr><tr><td style=\"white-space:nowrap\">45<a name=\"RIPSCausaExternaVersion2-45\"> </a></td><td>ACCIDENTE DE MINA ANTIPERSONAL - MAP</td></tr><tr><td style=\"white-space:nowrap\">46<a name=\"RIPSCausaExternaVersion2-46\"> </a></td><td>ACCIDENTE DE ARTEFACTO EXPLOSIVO IMPROVISADO - AEI</td></tr><tr><td style=\"white-space:nowrap\">47<a name=\"RIPSCausaExternaVersion2-47\"> </a></td><td>ACCIDENTE DE MUNICION SIN EXPLOTAR - MUSE</td></tr><tr><td style=\"white-space:nowrap\">48<a name=\"RIPSCausaExternaVersion2-48\"> </a></td><td>OTRA VICTIMA DE CONFLICTO ARMADO COLOMBIANO</td></tr><tr><td style=\"white-space:nowrap\">49<a name=\"RIPSCausaExternaVersion2-49\"> </a></td><td>IVE POR DECISION O MANIFESTACION DE VOLUNTAD DE LA PERSONA GESTANTE HASTA LA SEMANA 24 DE GESTACION</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RIPSCausaExternaVersion2",
+  "version" : "1.0.0",
+  "name" : "RIPSCausaExternaVersion2",
+  "title" : "CodeSystem: External Cause of the Encounter",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-09-12",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Codificación de clasificación de causas que originaron la atención",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de causas que originaron la atención",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 29,
+  "concept" : [{
+    "code" : "21",
+    "display" : "ACCIDENTE DE TRABAJO"
+  },
+  {
+    "code" : "22",
+    "display" : "ACCIDENTE EN EL HOGAR"
+  },
+  {
+    "code" : "23",
+    "display" : "ACCIDENTE DE TRANSITO DE ORIGEN COMUN"
+  },
+  {
+    "code" : "24",
+    "display" : "ACCIDENTE DE TRANSITO DE ORIGEN LABORAL"
+  },
+  {
+    "code" : "25",
+    "display" : "ACCIDENTE EN EL ENTORNO EDUCATIVO"
+  },
+  {
+    "code" : "26",
+    "display" : "OTRO TIPO DE ACCIDENTE"
+  },
+  {
+    "code" : "27",
+    "display" : "EVENTO CATASTROFICO DE ORIGEN NATURAL"
+  },
+  {
+    "code" : "28",
+    "display" : "LESION POR AGRESION"
+  },
+  {
+    "code" : "29",
+    "display" : "LESION AUTO INFLIGIDA"
+  },
+  {
+    "code" : "30",
+    "display" : "SOSPECHA DE VIOLENCIA FISICA"
+  },
+  {
+    "code" : "31",
+    "display" : "SOSPECHA DE VIOLENCIA PSICOLOGICA"
+  },
+  {
+    "code" : "32",
+    "display" : "SOSPECHA DE VIOLENCIA SEXUAL"
+  },
+  {
+    "code" : "33",
+    "display" : "SOSPECHA DE NEGLIGENCIA Y ABANDONO"
+  },
+  {
+    "code" : "34",
+    "display" : "IVE RELACIONADO CON PELIGRO A LA SALUD O VIDA DE LA MUJER"
+  },
+  {
+    "code" : "35",
+    "display" : "IVE POR MALFORMACION CONGENITA INCOMPATIBLE CON LA VIDA"
+  },
+  {
+    "code" : "36",
+    "display" : "IVE POR VIOLENCIA SEXUAL, INCESTO O POR INSEMINACION ARTIFICIAL O TRANSFERENCIA DE OVULO FECUNDADO NO CONSENTIDA"
+  },
+  {
+    "code" : "37",
+    "display" : "EVENTO ADVERSO EN SALUD"
+  },
+  {
+    "code" : "38",
+    "display" : "ENFERMEDAD GENERAL"
+  },
+  {
+    "code" : "39",
+    "display" : "ENFERMEDAD LABORAL"
+  },
+  {
+    "code" : "40",
+    "display" : "PROMOCION Y MANTENIMIENTO DE LA SALUD - INTERVENCIONES INDIVIDUALES"
+  },
+  {
+    "code" : "41",
+    "display" : "INTERVENCION COLECTIVA"
+  },
+  {
+    "code" : "42",
+    "display" : "ATENCION DE POBLACION MATERNO PERINATAL"
+  },
+  {
+    "code" : "43",
+    "display" : "RIESGO AMBIENTAL"
+  },
+  {
+    "code" : "44",
+    "display" : "OTROS EVENTOS CATASTROFICOS"
+  },
+  {
+    "code" : "45",
+    "display" : "ACCIDENTE DE MINA ANTIPERSONAL - MAP"
+  },
+  {
+    "code" : "46",
+    "display" : "ACCIDENTE DE ARTEFACTO EXPLOSIVO IMPROVISADO - AEI"
+  },
+  {
+    "code" : "47",
+    "display" : "ACCIDENTE DE MUNICION SIN EXPLOTAR - MUSE"
+  },
+  {
+    "code" : "48",
+    "display" : "OTRA VICTIMA DE CONFLICTO ARMADO COLOMBIANO"
+  },
+  {
+    "code" : "49",
+    "display" : "IVE POR DECISION O MANIFESTACION DE VOLUNTAD DE LA PERSONA GESTANTE HASTA LA SEMANA 24 DE GESTACION"
+  }]
+}

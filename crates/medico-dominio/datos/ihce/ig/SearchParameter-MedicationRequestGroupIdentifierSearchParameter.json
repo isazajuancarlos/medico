@@ -1,0 +1,54 @@
+{
+  "resourceType" : "SearchParameter",
+  "id" : "MedicationRequestGroupIdentifierSearchParameter",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ParametroDeBusqueda MedicationRequestGroupIdentifierSearchParameter</b></p><a name=\"MedicationRequestGroupIdentifierSearchParameter\"> </a><a name=\"hcMedicationRequestGroupIdentifierSearchParameter\"> </a><h2>MedicationRequestGroupIdentifierSearchParameter</h2><p>Parameter <code>_group-identifier</code>:<code>token</code></p><div><p>Parámetro de búsqueda para localizar prescripciones de medicamentos (MedicationRequest) mediante su identificador externo de orden médica (groupIdentifier). Permite buscar prescripciones utilizando el sistema y valor del identificador externo, facilitando la trazabilidad entre sistemas externos (por ejemplo, MIPRES u otros sistemas del prestador) y el repositorio de prescripciones en Colombia.</p>\n</div><table class=\"grid\"><tr><td>Resource</td><td><a href=\"http://hl7.org/fhir/R4/medicationrequest.html\">MedicationRequest</a></td></tr><tr><td>Expression</td><td><code>MedicationRequest.groupIdentifier</code></td></tr><tr><td>Multiples</td><td><ul><li>multipleAnd: The parameter may repeat in order to specify multiple values that must all be true</li><li>multipleOr: The parameter may have multiple values (separated by comma) where at least one must be true</li></ul></td></tr><tr><td>Comparators</td><td>Allowed: eq</td></tr><tr><td>Modifiers</td><td>Allowed: exact</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/SearchParameter/MedicationRequestGroupIdentifierSearchParameter",
+  "version" : "1.0.0",
+  "name" : "MedicationRequestGroupIdentifierSearchParameter",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-07-17",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Parámetro de búsqueda para localizar prescripciones de medicamentos (MedicationRequest) mediante su identificador externo de orden médica (groupIdentifier). Permite buscar prescripciones utilizando el sistema y valor del identificador externo, facilitando la trazabilidad entre sistemas externos (por ejemplo, MIPRES u otros sistemas del prestador) y el repositorio de prescripciones en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "code" : "_group-identifier",
+  "base" : ["MedicationRequest"],
+  "type" : "token",
+  "expression" : "MedicationRequest.groupIdentifier",
+  "multipleOr" : true,
+  "multipleAnd" : true,
+  "comparator" : ["eq"],
+  "modifier" : ["exact"]
+}

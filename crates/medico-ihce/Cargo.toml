@@ -1,0 +1,36 @@
+[package]
+name = "medico-ihce"
+description = "Transporte y autenticación con el mecanismo IHCE (RDA) del MinSalud: OAuth2 client-credentials y cliente HTTP sobre la API FHIR."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# El vencimiento del token se mide con `std::time::Instant`, no con un reloj de
+# pared: un ajuste de hora no debe dar por vivo ni por muerto un token. Por eso
+# aquí NO entra `chrono`.
+# ESTE COMENTARIO CADUCÓ EL 2026-08-10, y se conserva porque explica el árbol.
+# Decía que aquí NO entra `rustls`/`ring` y que hablar con el endpoint REAL de
+# Azure exigiría una decisión de cadena de suministro aparte. Esa decisión se
+# tomó ese día, en `medico-muv` y por Juan: el backend TLS es `rustls`, e ISC y
+# CDLA-Permissive-2.0 entraron en `deny.toml` con su motivo escrito.
+#
+# Las features de Cargo son UNIÓN, así que este crate comparte ese `reqwest` y
+# **ya tiene TLS disponible** sin haber pedido nada. Gana capacidad, no la
+# pierde: apuntar `api_base` a la URL HTTPS real de Azure ya no falla al
+# conectar. Lo que NO cambia es que el envío real siga sin probarse contra el
+# mecanismo de verdad (hace falta el sandbox de MinSalud).
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+
+[dev-dependencies]
+tokio = { workspace = true }
+axum = { workspace = true }
+
+[lints]
+workspace = true

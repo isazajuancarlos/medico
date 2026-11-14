@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ColombianDisabilityClassificationCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ColombianDisabilityClassificationCodes</b></p><a name=\"ColombianDisabilityClassificationCodes\"> </a><a name=\"hcColombianDisabilityClassificationCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-ColombianDisabilityClassification.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDisabilityClassification</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianDisabilityClassificationCodes",
+  "version" : "1.0.0",
+  "name" : "ColombianDisabilityClassificationCodes",
+  "title" : "ValueSet: Colombian Disability ClassificationCodes",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de clasificación general de discapacidad para pacientes en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores de clasificación general de discapacidad de pacientes en Colombia, se utiliza en una *Extensión del recurso FHIR Patient*. Debido a que esta codificación no ofrece la semántica suficiente, se recomienda el uso del recurso *FHIR Condition* para describir el detalle de la condición de discapacidad de un paciente.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDisabilityClassification"
+    }]
+  }
+}

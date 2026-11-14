@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ColombianLegalNatureTypeCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ColombianLegalNatureTypeCodes</b></p><a name=\"ColombianLegalNatureTypeCodes\"> </a><a name=\"hcColombianLegalNatureTypeCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-ColombianLegalNatureType.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianLegalNatureType</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianLegalNatureTypeCodes",
+  "version" : "1.0.0",
+  "name" : "ColombianLegalNatureType",
+  "title" : "ValueSet: Colombian Legal Nature Type",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de naturaleza jurídica de organizaciones en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza para registrar el tipo de naturaleza jurídica de organizaciones en Colombia (privada, pública, empresa social del estado, mixta), según la información registrada en el REPS.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0, 2024+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianLegalNatureType"
+    }]
+  }
+}

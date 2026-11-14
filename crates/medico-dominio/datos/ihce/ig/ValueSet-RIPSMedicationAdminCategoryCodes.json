@@ -1,0 +1,55 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "RIPSMedicationAdminCategoryCodes",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores RIPSMedicationAdminCategoryCodes</b></p><a name=\"RIPSMedicationAdminCategoryCodes\"> </a><a name=\"hcRIPSMedicationAdminCategoryCodes\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><ul><li>Include all codes defined in <a href=\"CodeSystem-RIPSMedicationAdminCategory.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/RIPSMedicationAdminCategory</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/RIPSMedicationAdminCategoryCodes",
+  "version" : "1.0.0",
+  "name" : "RIPSMedicationAdminCategoryCodes",
+  "title" : "ValueSet: RIPS Medication Administration Category Codes",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-12-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "ValueSet para los códigos de categoría de administración de medicamentos RIPS (PBS | No PBS).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "ValueSet para los códigos de categoría de administración de medicamentos RIPS (PBS | No PBS).",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/RIPSMedicationAdminCategory"
+    }]
+  }
+}

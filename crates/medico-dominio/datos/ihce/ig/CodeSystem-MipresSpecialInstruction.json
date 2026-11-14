@@ -1,0 +1,93 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresSpecialInstruction",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresSpecialInstruction</b></p><a name=\"MipresSpecialInstruction\"> </a><a name=\"hcMipresSpecialInstruction\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresSpecialInstruction</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">1<a name=\"MipresSpecialInstruction-1\"> </a></td><td>Administración en dosis única</td></tr><tr><td style=\"white-space:nowrap\">2<a name=\"MipresSpecialInstruction-2\"> </a></td><td>Administración inmediata</td></tr><tr><td style=\"white-space:nowrap\">3<a name=\"MipresSpecialInstruction-3\"> </a></td><td>Administrar en Bolo</td></tr><tr><td style=\"white-space:nowrap\">4<a name=\"MipresSpecialInstruction-4\"> </a></td><td>Administrar en Goteo</td></tr><tr><td style=\"white-space:nowrap\">5<a name=\"MipresSpecialInstruction-5\"> </a></td><td>Infusión contínua</td></tr><tr><td style=\"white-space:nowrap\">6<a name=\"MipresSpecialInstruction-6\"> </a></td><td>Infusión intermitente</td></tr><tr><td style=\"white-space:nowrap\">7<a name=\"MipresSpecialInstruction-7\"> </a></td><td>Infusión intermitente simultánea con perfusión de otra solución</td></tr><tr><td style=\"white-space:nowrap\">8<a name=\"MipresSpecialInstruction-8\"> </a></td><td>Microgoteo</td></tr><tr><td style=\"white-space:nowrap\">9<a name=\"MipresSpecialInstruction-9\"> </a></td><td>Perfusión</td></tr><tr><td style=\"white-space:nowrap\">10<a name=\"MipresSpecialInstruction-10\"> </a></td><td>Sin indicación Especial</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresSpecialInstruction",
+  "version" : "1.0.0",
+  "name" : "MipresSpecialInstruction",
+  "title" : "CodeSystem: Mipres Special Instruction",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de instrucción especial para la administración de un medicamento.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de instrucción especial para la administración de un medicamento (tomado de la versión 3 de Mipres - Sispro).",
+  "copyright" : "SISPRO, CCBY4.0 2006+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 10,
+  "concept" : [{
+    "code" : "1",
+    "display" : "Administración en dosis única"
+  },
+  {
+    "code" : "2",
+    "display" : "Administración inmediata"
+  },
+  {
+    "code" : "3",
+    "display" : "Administrar en Bolo"
+  },
+  {
+    "code" : "4",
+    "display" : "Administrar en Goteo"
+  },
+  {
+    "code" : "5",
+    "display" : "Infusión contínua"
+  },
+  {
+    "code" : "6",
+    "display" : "Infusión intermitente"
+  },
+  {
+    "code" : "7",
+    "display" : "Infusión intermitente simultánea con perfusión de otra solución"
+  },
+  {
+    "code" : "8",
+    "display" : "Microgoteo"
+  },
+  {
+    "code" : "9",
+    "display" : "Perfusión"
+  },
+  {
+    "code" : "10",
+    "display" : "Sin indicación Especial"
+  }]
+}

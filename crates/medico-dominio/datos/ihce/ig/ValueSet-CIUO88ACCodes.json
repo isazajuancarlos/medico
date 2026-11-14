@@ -1,0 +1,53 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "CIUO88ACCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores CIUO88ACCodes</b></p><a name=\"CIUO88ACCodes\"> </a><a name=\"hcCIUO88ACCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-CIUO88AC.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/CIUO88AC</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/CIUO88ACCodes",
+  "version" : "1.0.0",
+  "name" : "CIUO88AC",
+  "title" : "ValueSet: CIUO88AC Codes",
+  "status" : "active",
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados según la Clasificación Internacional Uniforme de Ocupaciones Adaptada para Colombia (CIUO-88 A.C.).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores de la Clasificación Internacional Uniforme de Ocupaciones (CIUO-88), se utiliza para el registro observaciones (FHIR Observation), de la ocupación del paciente en el momento de la atención o para el registro de información de profesionales (FHIR Practitioner).",
+  "copyright" : "DANE, CC-BY-4.0 2005+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CIUO88AC"
+    }]
+  }
+}

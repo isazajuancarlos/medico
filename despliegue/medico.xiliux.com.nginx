@@ -1,0 +1,171 @@
+# medico.xiliux.com — la demostración pública de medico.
+#
+# Se copia a /etc/nginx/sites-available/ y se enlaza en sites-enabled/. El bloque
+# TLS lo escribe certbot con `certonly --webroot`; las rutas van descomentadas
+# porque este archivo se instala DESPUÉS de que el certificado exista. Es el
+# mismo patrón que informes.xiliux.com, y por la misma razón: si certbot
+# reescribiera este archivo se llevaría por delante el limit_req y las cabeceras.
+#
+#   ./despliegue/publicar-demo.sh debian@192.99.42.108
+
+# Límite de peticiones. La demostración es pública y sus credenciales están
+# publicadas en la propia pantalla de acceso: sin esto, un bucle contra
+# /api/acceso agota CPU en el VPS que también sirve oprf.xiliux.com y el
+# portafolio. La zona es propia de este sitio para que su tope no se reparta.
+#
+# 10r/s con ráfaga de 20 deja navegar de sobra —una pantalla pide entre tres y
+# seis peticiones— y corta el bucle automatizado.
+limit_req_zone $binary_remote_addr zone=medico_demo:10m rate=10r/s;
+
+# Y la ENTRADA aparte, mucho más estrecha (#187, cerrado el 2026-08-11). Con
+# solo la zona general, probar contraseñas contra `POST /api/acceso` admitía 600
+# intentos por minuto desde una IP: para navegar es un tope razonable y para
+# esto no es ninguno.
+#
+# NO sustituye al freno de la aplicación (`medico_datos::freno`), que es por
+# (correo, origen) y responde 429 con `Retry-After` desde el sexto fallo. Hacen
+# falta las dos: aquélla frena a quien insiste contra UNA cuenta; ésta frena el
+# chorro desde UNA IP repartido entre cuantas cuentas quiera probar, que es
+# justo lo que la otra no ve.
+#
+# LA MECÁNICA: la zona se indexa por una clave que sale de un `map`, y **una
+# clave VACÍA desactiva el límite** para esa petición. Así no hacen falta
+# `location` nuevos —que obligarían a repetir el bloque `proxy_*` entero, o a
+# sacarlo a un archivo aparte que también hay que desplegar— y las dos puertas
+# por las que se prueba una contraseña quedan nombradas en un solo sitio. Se usa
+# `$uri`, que es la ruta ya normalizada y SIN la cadena de consulta: con
+# `$request_uri` bastaría añadir `?x=1` para caer fuera del mapa.
+map $uri $medico_entrada_clave {
+    default        "";
+    /api/acceso    $binary_remote_addr;
+    /panel/entrada $binary_remote_addr;
+}
+
+# EL NÚMERO, probado contra el cliente legítimo y no contra el atacante
+# (directiva 21): un consultorio entra por NAT, así que la IP es UNA para toda
+# la sala. 30r/m con ráfaga de 10 sin retardo deja que diez personas entren a la
+# vez a las siete de la mañana y luego admite una cada dos segundos —cinco
+# intentos seguidos de alguien que no recuerda su clave siguen pasando—,
+# mientras el chorro baja de 600 por minuto a 30. Por eso no se copia el 5r/m de
+# chasqui: allí el login es de una persona, aquí es de una sala.
+# Validado el 2026-08-11 con el nginx del VPS —en la máquina de trabajo no hay,
+# y docker está apagado a propósito—: `nginx -t -c` sobre una carpeta de usar y
+# tirar en /home/debian, sin instalar ni recargar nada, y borrada después. Con
+# su control, porque un «syntax is ok» sale igual si el `include` no leyó nada:
+# quitándole la declaración a esta zona el test falla nombrándola.
+limit_req_zone $medico_entrada_clave zone=medico_entrada:10m rate=30r/m;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name medico.xiliux.com;
+
+    # Certbot escribe aquí su reto; el resto va a TLS.
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name medico.xiliux.com;
+
+    ssl_certificate     /etc/letsencrypt/live/medico.xiliux.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/medico.xiliux.com/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Las imágenes diagnósticas se suben por multipart. El binario tiene su
+    # propio tope; aquí se deja algo por encima para que el rechazo lo dé él,
+    # con su mensaje, y no nginx con un 413 mudo.
+    client_max_body_size 32m;
+
+    # HSTS PROPIO, y no heredado: xiliux.com responde HSTS SIN
+    # `includeSubDomains`, así que no cubre a este subdominio. Sin esta línea la
+    # primera visita de cada navegador viaja en claro hasta el 301.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    # Aquí NO van X-Frame-Options, X-Content-Type-Options ni Referrer-Policy:
+    # las pone el binario en TODA respuesta, junto con la CSP. `add_header` no
+    # sustituye lo que llega del proxy_pass: AÑADE, y una cabecera duplicada con
+    # valores distintos puede acabar descartada por el navegador.
+
+    # La demostración NO debe indexarse: sus credenciales son públicas y una
+    # búsqueda de «historia clínica» no debe llevar a una base que cualquiera
+    # puede escribir.
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    location / {
+        limit_req zone=medico_demo burst=20 nodelay;
+        # La segunda zona solo muerde donde el `map` da clave: en las dos rutas
+        # de entrada. En todo lo demás la clave es vacía y esta línea no hace
+        # nada. nginx aplica las dos y gana la más estrecha.
+        limit_req zone=medico_entrada burst=10 nodelay;
+        # 429 y no el 503 que nginx pone por defecto: un 503 se lee como «el
+        # consultorio se cayó» y lo que ha pasado es «vas muy rápido». La
+        # aplicación ya devuelve 429 para su propio freno (`medico_datos::freno`,
+        # con `Retry-After`), así que las dos capas decían cosas distintas sobre
+        # el mismo hecho. Lo señaló la auditoría del 2026-08-17.
+        #
+        # VA AQUÍ Y NO EN `http{}`, Y EL MOTIVO QUE DECÍA ESTA LÍNEA ERA FALSO.
+        # Decía que al nivel de arriba «lo declaran varios vhosts y nginx aborta
+        # con directive is duplicate». Medido el 2026-08-18 con su pareja sobre
+        # un `nginx -t -c` de usar y tirar: declararla en `http{}` y afinarla en
+        # un `server` da sintaxis VÁLIDA —se hereda—; lo que aborta es
+        # declararla DOS VECES EN EL MISMO NIVEL. La colocación es correcta
+        # igual, por otra razón: `http{}` vive en nginx.conf, que no pertenece a
+        # ningún repositorio, y este archivo sí.
+        limit_req_status 429;
+
+        # Y con `Retry-After`, que hasta hoy no llevaba: un 429 sin él deja al
+        # cliente adivinando cuánto espera. Son DOS segundos y no uno porque en
+        # este `location` mandan dos zonas y la estrecha es la de entrada, a
+        # 30 r/m: una ranura tarda 2 s en liberarse. Con 1 se estaría invitando
+        # a un reintento que vuelve a chocar.
+        error_page 429 = @frenado;
+
+        # Explícito y no por defecto: con `proxy_intercept_errors on` el
+        # `error_page` de arriba se tragaría también los 429 que devuelve la
+        # aplicación —que trae su propio freno, con su propio `Retry-After`— y
+        # las dos capas volverían a ser indistinguibles.
+        proxy_intercept_errors off;
+
+        # `Secure` en la cookie de sesión lo pone AQUÍ, no el binario:
+        # `sesion.rs` la deja sin esa marca a propósito para que la instalación
+        # de consultorio —HTTP en localhost— pueda guardarla. El TLS termina en
+        # nginx, y solo aquí se sabe que se puede prometer.
+        proxy_cookie_flags ~ secure;
+
+        proxy_pass http://127.0.0.1:8010;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        # MEDICO_TRAS_PROXY=true hace que el freno al ensayo de contraseñas lea
+        # ESTA cabecera. Se escribe con $remote_addr, que PISA lo que mande el
+        # cliente; X-Forwarded-For se añade para el resto del mundo pero el
+        # binario no la mira, porque su primer salto lo elige quien llama.
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    # El 429 de ESTA capa. Se responde aquí y no en la aplicación, así que la
+    # aplicación no lo ve y sus cabeceras no llegan.
+    #
+    # LAS DOS CABECERAS SE REPITEN A PROPÓSITO: `add_header` NO se hereda hacia
+    # un nivel que declara los suyos, así que sin repetirlas esta respuesta —y
+    # solo ésta— saldría sin HSTS y sin `X-Robots-Tag`. Es la clase de regresión
+    # que no se ve, porque solo aparece cuando alguien va demasiado rápido.
+    location @frenado {
+        add_header Retry-After 2 always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+        default_type text/plain;
+        return 429 "vas muy rapido; reintenta en 2 segundos\n";
+    }
+}

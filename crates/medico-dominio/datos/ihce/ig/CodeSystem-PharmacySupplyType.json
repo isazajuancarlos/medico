@@ -1,0 +1,73 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "PharmacySupplyType",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos PharmacySupplyType</b></p><a name=\"PharmacySupplyType\"> </a><a name=\"hcPharmacySupplyType\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/PharmacySupplyType</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">ENTREGA_COMPLETA<a name=\"PharmacySupplyType-ENTREGA_COMPLETA\"> </a></td><td>Entrega Completa</td><td>Se entregó la totalidad de la cantidad prescrita para esa interacción</td></tr><tr><td style=\"white-space:nowrap\">ENTREGA_PARCIAL<a name=\"PharmacySupplyType-ENTREGA_PARCIAL\"> </a></td><td>Entrega Parcial</td><td>Se entregó únicamente una parte de la cantidad prescrita, generándose un pendiente por la cantidad restante</td></tr><tr><td style=\"white-space:nowrap\">PENDIENTE<a name=\"PharmacySupplyType-PENDIENTE\"> </a></td><td>Pendiente</td><td>No fue posible realizar la entrega y la cantidad quedó pendiente de suministro</td></tr><tr><td style=\"white-space:nowrap\">PENDIENTE_ENTREGADO<a name=\"PharmacySupplyType-PENDIENTE_ENTREGADO\"> </a></td><td>Pendiente Entregado</td><td>Corresponde a una entrega realizada sobre una cantidad que había quedado previamente registrada como pendiente</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/PharmacySupplyType",
+  "version" : "1.0.0",
+  "name" : "PharmacySupplyType",
+  "title" : "CodeSystem: Tipo de suministro farmacéutico MIPRES",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-07-23",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación para clasificar el resultado de la entrega (dispensación) de un medicamento en el contexto de la Gestión Farmacéutica en Colombia: entrega completa, entrega parcial, pendiente de suministro o entrega de un pendiente previamente registrado.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Clasificar el tipo de entrega en el proceso de dispensación de medicamentos MIPRES.",
+  "copyright" : "Ministerio de Salud y Protección Social, CC BY-NC-SA 4.0, 2025+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 4,
+  "concept" : [{
+    "code" : "ENTREGA_COMPLETA",
+    "display" : "Entrega Completa",
+    "definition" : "Se entregó la totalidad de la cantidad prescrita para esa interacción"
+  },
+  {
+    "code" : "ENTREGA_PARCIAL",
+    "display" : "Entrega Parcial",
+    "definition" : "Se entregó únicamente una parte de la cantidad prescrita, generándose un pendiente por la cantidad restante"
+  },
+  {
+    "code" : "PENDIENTE",
+    "display" : "Pendiente",
+    "definition" : "No fue posible realizar la entrega y la cantidad quedó pendiente de suministro"
+  },
+  {
+    "code" : "PENDIENTE_ENTREGADO",
+    "display" : "Pendiente Entregado",
+    "definition" : "Corresponde a una entrega realizada sobre una cantidad que había quedado previamente registrada como pendiente"
+  }]
+}

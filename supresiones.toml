@@ -1,0 +1,19 @@
+# Supresiones de cargo-deny justificadas — biyección con `deny.toml`
+# `[advisories].ignore`, exigida por `guardia-supresiones` (pata de cierre del
+# concilio). Toda supresión lleva motivo + `hasta` (fecha de REVISIÓN, no de permiso
+# eterno) + rastreo. Si cargo-deny deja de marcar un ID, la guardia lo señala como
+# inerte y hay que quitarlo de los dos sitios.
+
+[[supresion]]
+id = "RUSTSEC-2021-0153"
+motivo = """
+`encoding` SIN MANTENIMIENTO (no es vulnerabilidad). Entra por dicom-parser/
+dicom-encoding para decodificar el Specific Character Set de los textos DICOM (el
+módulo de píxeles). Es una crate de TABLAS de charset, Rust puro, sin red y sin fix
+aguas arriba (el repo está archivado). No hay forma de quitarla sin perder el soporte
+de charsets del parser DICOM; cargo-audit ya la tolera como warning. Se ignora el ID
+EXACTO, nunca la categoría `unmaintained` entera (D23: una excepción abierta se lo
+traga todo).
+"""
+hasta = "2027-05-03"
+rastreo = "Depende de dicom-rs (dicom-parser/dicom-encoding → `encoding`, archivada). Revisar al actualizar dicom-rs: si migra a otra crate de charset, quitar este ignore. RUSTSEC-2021-0153 no tiene versión con arreglo."

@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "REPShealthcareServiceCodes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores REPShealthcareServiceCodes</b></p><a name=\"REPShealthcareServiceCodes\"> </a><a name=\"hcREPShealthcareServiceCodes\"> </a><ul><li>Include all codes defined in <a href=\"CodeSystem-REPShealthcareServices.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/REPShealthcareServices</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/REPShealthcareServiceCodes",
+  "version" : "1.0.0",
+  "name" : "REPShealthcareServices",
+  "title" : "ValueSet: REPS Healthcare Services",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de servicios de atención en salud habilitados - Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza como nomenclador de servicios de atención en salud habilitados - Colombia (tomado de la versión 3 de Mipres - Sispro).",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/REPShealthcareServices"
+    }]
+  }
+}

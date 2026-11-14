@@ -1,0 +1,116 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresCausasNoDireccionamiento",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresCausasNoDireccionamiento</b></p><a name=\"MipresCausasNoDireccionamiento\"> </a><a name=\"hcMipresCausasNoDireccionamiento\"> </a><p>This  code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresCausasNoDireccionamiento</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">ND01<a name=\"MipresCausasNoDireccionamiento-ND01\"> </a></td><td>Misma solicitud en otra prescripción</td><td>Se verifica que el mismo medicamento, para el mismo paciente y periodo de tratamiento, se encuentra incluido en otra prescripción vigente cuyo ciclo de suministro continuará. Debe registrarse el identificador de la prescripción asociada.</td></tr><tr><td style=\"white-space:nowrap\">ND02<a name=\"MipresCausasNoDireccionamiento-ND02\"> </a></td><td>Riesgo clínico por interacción, contraindicación o reacción adversa</td><td>Existe evidencia clínicamente validada de una interacción medicamentosa, contraindicación, antecedente de reacción adversa u otra condición de seguridad que impide continuar con el medicamento prescrito por representar un riesgo para el paciente. La situación debe ser informada al prescriptor para revisión, aclaración, suspensión o sustitución de la orden.</td></tr><tr><td style=\"white-space:nowrap\">ND03<a name=\"MipresCausasNoDireccionamiento-ND03\"> </a></td><td>Prescripción con inconsistencias que impiden la identificación segura del medicamento</td><td>La prescripción presenta errores, omisiones o contradicciones en datos esenciales que impiden identificar de manera unívoca el medicamento o establecer con seguridad las condiciones para su suministro, generando un riesgo para el paciente. Debe solicitarse al prescriptor su aclaración, corrección o sustitución.</td></tr><tr><td style=\"white-space:nowrap\">ND04<a name=\"MipresCausasNoDireccionamiento-ND04\"> </a></td><td>Indicación no autorizada por la autoridad competente</td><td>La indicación para la cual fue prescrito el medicamento no se encuentra autorizada en el registro sanitario ni incluida en el listado de Usos No Incluidos en el Registro Sanitario —UNIRS— vigente, cuando resulte aplicable.</td></tr><tr><td style=\"white-space:nowrap\">ND05<a name=\"MipresCausasNoDireccionamiento-ND05\"> </a></td><td>Usuario afiliado a otra EAPB</td><td>Se confirma, mediante la fuente oficial de afiliación, que para la fecha en que corresponde gestionar el suministro el usuario se encuentra afiliado a una EAPB diferente, responsable de garantizar la atención. No aplica ante inconsistencias o novedades pendientes de actualización.</td></tr><tr><td style=\"white-space:nowrap\">ND06<a name=\"MipresCausasNoDireccionamiento-ND06\"> </a></td><td>Paciente fallecido</td><td>Se confirma el fallecimiento del paciente antes de efectuar el direccionamiento, mediante una fuente válida de información.</td></tr><tr><td style=\"white-space:nowrap\">ND07<a name=\"MipresCausasNoDireccionamiento-ND07\"> </a></td><td>Prescripción anulada o sustituida</td><td>La prescripción fue anulada o reemplazada válidamente por una nueva orden antes del direccionamiento. Cuando exista una prescripción sustituta, debe registrarse su identificador.</td></tr><tr><td style=\"white-space:nowrap\">ND08<a name=\"MipresCausasNoDireccionamiento-ND08\"> </a></td><td>Tratamiento suspendido o modificado por el prescriptor</td><td>El profesional tratante determina y documenta que el medicamento ya no debe suministrarse por suspensión, cambio de tratamiento, contraindicación sobreviniente o modificación de la condición clínica.</td></tr><tr><td style=\"white-space:nowrap\">ND09<a name=\"MipresCausasNoDireccionamiento-ND09\"> </a></td><td>Medicamento no financiado con recursos de la UPC</td><td>El medicamento prescrito no se encuentra financiado con recursos de la UPC y, por tanto, su ciclo de suministro no debe registrarse mediante el mecanismo dispuesto para medicamentos UPC. Debe continuar su gestión a través de MIPRES, conforme con la normativa aplicable.</td></tr><tr><td style=\"white-space:nowrap\">ND10<a name=\"MipresCausasNoDireccionamiento-ND10\"> </a></td><td>Medicamento sujeto a monitoreo mediante MIPRES</td><td>El medicamento se encuentra sometido a registro, seguimiento o monitoreo obligatorio mediante MIPRES, por lo que no procede registrar su ciclo de suministro en el mecanismo dispuesto para medicamentos UPC.</td></tr><tr><td style=\"white-space:nowrap\">ND11<a name=\"MipresCausasNoDireccionamiento-ND11\"> </a></td><td>Retiro o suspensión sanitaria del medicamento</td><td>La autoridad sanitaria competente ordenó el retiro, suspensión o prohibición de comercialización del medicamento, de manera que no resulta jurídicamente posible continuar su suministro. Debe gestionarse una alternativa terapéutica.</td></tr><tr><td style=\"white-space:nowrap\">ND12<a name=\"MipresCausasNoDireccionamiento-ND12\"> </a></td><td>Autorización sanitaria requerida para MVND no otorgada</td><td>La autoridad sanitaria competente negó o no otorgó la autorización de importación requerida para el medicamento vital no disponible, en la modalidad aplicable al caso, impidiendo jurídicamente su suministro.</td></tr><tr><td style=\"white-space:nowrap\">ND13<a name=\"MipresCausasNoDireccionamiento-ND13\"> </a></td><td>Medicamento o uso excluido de financiación con recursos públicos</td><td>El medicamento o el uso prescrito se encuentra expresamente excluido de financiación con recursos públicos asignados a la salud, de acuerdo con la normativa vigente.</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresCausasNoDireccionamiento",
+  "version" : "1.0.0",
+  "name" : "MipresCausasNoDireccionamiento",
+  "title" : "CodeSystem: Causas de no direccionamiento",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-07-23",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados que representa las causas por las cuales no se pudo realizar el direccionamiento de la prescripción de un medicamento en el marco de la Gestión Farmacéutica.\n\n**Nota sobre desabastecimiento o falta de disponibilidad:** el desabastecimiento, el riesgo de desabastecimiento o la falta de disponibilidad del medicamento en la red no constituyen, por sí mismos, una causal para finalizar la gestión de la prescripción o interrumpir el tratamiento. En estos casos, la Entidad Responsable de Pago deberá coordinar con el prestador de servicios de salud, el gestor farmacéutico y los demás actores involucrados las acciones necesarias para garantizar la continuidad de la atención. Cuando no sea posible suministrar el medicamento prescrito, deberá gestionarse oportunamente la valoración por el médico tratante, quien analizará las alternativas terapéuticas disponibles y adecuadas para las condiciones particulares del paciente. La alternativa que sea prescrita deberá gestionarse y suministrarse sin trasladar al usuario cargas administrativas adicionales.\n\nLo anterior, en concordancia con el Auto 559 de 2025 de la Corte Constitucional, según el cual el desabastecimiento no habilita la interrupción del suministro y deben adelantarse las actuaciones necesarias para asegurar la reformulación y entrega efectiva del medicamento sustituto definido por el médico tratante.\n\n**Importante:** las causales de no direccionamiento y no entrega deben registrar situaciones efectivamente verificadas y no pueden utilizarse para trasladar al paciente las dificultades administrativas, contractuales, logísticas o de disponibilidad que corresponda resolver a los actores del sistema. Su registro no extingue las obligaciones relacionadas con la continuidad del tratamiento, la gestión del medicamento pendiente ni la adopción de las medidas necesarias para garantizar el acceso efectivo del usuario.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Causas de no direccionamiento de medicamentos en el marco de la Gestión Farmacéutica.",
+  "copyright" : "Ministerio de Salud y Protección Social, CCBY4.0 2006+",
+  "content" : "complete",
+  "count" : 13,
+  "concept" : [{
+    "code" : "ND01",
+    "display" : "Misma solicitud en otra prescripción",
+    "definition" : "Se verifica que el mismo medicamento, para el mismo paciente y periodo de tratamiento, se encuentra incluido en otra prescripción vigente cuyo ciclo de suministro continuará. Debe registrarse el identificador de la prescripción asociada."
+  },
+  {
+    "code" : "ND02",
+    "display" : "Riesgo clínico por interacción, contraindicación o reacción adversa",
+    "definition" : "Existe evidencia clínicamente validada de una interacción medicamentosa, contraindicación, antecedente de reacción adversa u otra condición de seguridad que impide continuar con el medicamento prescrito por representar un riesgo para el paciente. La situación debe ser informada al prescriptor para revisión, aclaración, suspensión o sustitución de la orden."
+  },
+  {
+    "code" : "ND03",
+    "display" : "Prescripción con inconsistencias que impiden la identificación segura del medicamento",
+    "definition" : "La prescripción presenta errores, omisiones o contradicciones en datos esenciales que impiden identificar de manera unívoca el medicamento o establecer con seguridad las condiciones para su suministro, generando un riesgo para el paciente. Debe solicitarse al prescriptor su aclaración, corrección o sustitución."
+  },
+  {
+    "code" : "ND04",
+    "display" : "Indicación no autorizada por la autoridad competente",
+    "definition" : "La indicación para la cual fue prescrito el medicamento no se encuentra autorizada en el registro sanitario ni incluida en el listado de Usos No Incluidos en el Registro Sanitario —UNIRS— vigente, cuando resulte aplicable."
+  },
+  {
+    "code" : "ND05",
+    "display" : "Usuario afiliado a otra EAPB",
+    "definition" : "Se confirma, mediante la fuente oficial de afiliación, que para la fecha en que corresponde gestionar el suministro el usuario se encuentra afiliado a una EAPB diferente, responsable de garantizar la atención. No aplica ante inconsistencias o novedades pendientes de actualización."
+  },
+  {
+    "code" : "ND06",
+    "display" : "Paciente fallecido",
+    "definition" : "Se confirma el fallecimiento del paciente antes de efectuar el direccionamiento, mediante una fuente válida de información."
+  },
+  {
+    "code" : "ND07",
+    "display" : "Prescripción anulada o sustituida",
+    "definition" : "La prescripción fue anulada o reemplazada válidamente por una nueva orden antes del direccionamiento. Cuando exista una prescripción sustituta, debe registrarse su identificador."
+  },
+  {
+    "code" : "ND08",
+    "display" : "Tratamiento suspendido o modificado por el prescriptor",
+    "definition" : "El profesional tratante determina y documenta que el medicamento ya no debe suministrarse por suspensión, cambio de tratamiento, contraindicación sobreviniente o modificación de la condición clínica."
+  },
+  {
+    "code" : "ND09",
+    "display" : "Medicamento no financiado con recursos de la UPC",
+    "definition" : "El medicamento prescrito no se encuentra financiado con recursos de la UPC y, por tanto, su ciclo de suministro no debe registrarse mediante el mecanismo dispuesto para medicamentos UPC. Debe continuar su gestión a través de MIPRES, conforme con la normativa aplicable."
+  },
+  {
+    "code" : "ND10",
+    "display" : "Medicamento sujeto a monitoreo mediante MIPRES",
+    "definition" : "El medicamento se encuentra sometido a registro, seguimiento o monitoreo obligatorio mediante MIPRES, por lo que no procede registrar su ciclo de suministro en el mecanismo dispuesto para medicamentos UPC."
+  },
+  {
+    "code" : "ND11",
+    "display" : "Retiro o suspensión sanitaria del medicamento",
+    "definition" : "La autoridad sanitaria competente ordenó el retiro, suspensión o prohibición de comercialización del medicamento, de manera que no resulta jurídicamente posible continuar su suministro. Debe gestionarse una alternativa terapéutica."
+  },
+  {
+    "code" : "ND12",
+    "display" : "Autorización sanitaria requerida para MVND no otorgada",
+    "definition" : "La autoridad sanitaria competente negó o no otorgó la autorización de importación requerida para el medicamento vital no disponible, en la modalidad aplicable al caso, impidiendo jurídicamente su suministro."
+  },
+  {
+    "code" : "ND13",
+    "display" : "Medicamento o uso excluido de financiación con recursos públicos",
+    "definition" : "El medicamento o el uso prescrito se encuentra expresamente excluido de financiación con recursos públicos asignados a la salud, de acuerdo con la normativa vigente."
+  }]
+}

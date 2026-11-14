@@ -1,0 +1,1788 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "CUPS",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos CUPS</b></p><a name=\"CUPS\"> </a><a name=\"hcCUPS\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/CUPS</code> provides <b>a fragment</b> that includes following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">2372<a name=\"CUPS-2372\"> </a></td><td>TERAPIAS REGENERATIVAS EN ENDODONCIA</td></tr><tr><td style=\"white-space:nowrap\">2470<a name=\"CUPS-2470\"> </a></td><td>COLOCACION DE ANCLAJE ESQUELETICO</td></tr><tr><td style=\"white-space:nowrap\">3800<a name=\"CUPS-3800\"> </a></td><td>TROMBECTOMIA DE VASOS VIA PERCUTANEA (ENDOVASCULAR)</td></tr><tr><td style=\"white-space:nowrap\">3995<a name=\"CUPS-3995\"> </a></td><td>TERAPIAS DIALITICAS INTERMITENTES</td></tr><tr><td style=\"white-space:nowrap\">6090<a name=\"CUPS-6090\"> </a></td><td>OTROS PROCEDIMIENTOS PERIPROSTATICOS</td></tr><tr><td style=\"white-space:nowrap\">9220<a name=\"CUPS-9220\"> </a></td><td>INSERCION O IMPLANTACION DE DISPOSITIVOS DE MARCACION PARA RADIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">9970<a name=\"CUPS-9970\"> </a></td><td>PROCEDIMIENTOS DE HIGIENE ORAL</td></tr><tr><td style=\"white-space:nowrap\">209608<a name=\"CUPS-209608\"> </a></td><td>IMPLANTACION O SUSTITUCION DE DISPOSITIVO AUDITIVO DE TALLO O TRONCO CEREBRAL</td></tr><tr><td style=\"white-space:nowrap\">233201<a name=\"CUPS-233201\"> </a></td><td>RESTAURACION DE DIENTES MEDIANTE INCRUSTACION NO METALICA</td></tr><tr><td style=\"white-space:nowrap\">234106<a name=\"CUPS-234106\"> </a></td><td>COLOCACION O APLICACION DE CORONA PROVISIONAL</td></tr><tr><td style=\"white-space:nowrap\">890<a name=\"CUPS-890\"> </a></td><td>ENTREVISTA, CONSULTA Y EVALUACION [VALORACION]</td></tr><tr><td style=\"white-space:nowrap\">8901<a name=\"CUPS-8901\"> </a></td><td>ENTREVISTA, CONSULTA Y EVALUACION (VISITA) DOMICILIARIA O AL SITIO DE TRABAJO</td></tr><tr><td style=\"white-space:nowrap\">890101<a name=\"CUPS-890101\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890102<a name=\"CUPS-890102\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR MEDICINA ESPECIALIZADA</td></tr><tr><td style=\"white-space:nowrap\">890103<a name=\"CUPS-890103\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR ODONTOLOGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890105<a name=\"CUPS-890105\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA</td></tr><tr><td style=\"white-space:nowrap\">890106<a name=\"CUPS-890106\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR NUTRICION Y DIETETICA</td></tr><tr><td style=\"white-space:nowrap\">890108<a name=\"CUPS-890108\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890109<a name=\"CUPS-890109\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR TRABAJO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">890110<a name=\"CUPS-890110\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890111<a name=\"CUPS-890111\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890112<a name=\"CUPS-890112\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR TERAPIA RESPIRATORIA</td></tr><tr><td style=\"white-space:nowrap\">890113<a name=\"CUPS-890113\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR TERAPIA OCUPACIONAL</td></tr><tr><td style=\"white-space:nowrap\">890114<a name=\"CUPS-890114\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR PROMOTOR DE LA SALUD</td></tr><tr><td style=\"white-space:nowrap\">890115<a name=\"CUPS-890115\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA, POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td style=\"white-space:nowrap\">890116<a name=\"CUPS-890116\"> </a></td><td>ATENCION (VISITA) DOMICILIARIA POR OTRO PROFESIONAL DE LA SALUD</td></tr><tr><td style=\"white-space:nowrap\">890120<a name=\"CUPS-890120\"> </a></td><td>ATENCION (VISITA) AL SITIO DE TRABAJO, POR TERAPIA (OCUPACIONAL O FISICA)</td></tr><tr><td style=\"white-space:nowrap\">890125<a name=\"CUPS-890125\"> </a></td><td>ATENCION (VISITA) AL SITIO DE TRABAJO, POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td style=\"white-space:nowrap\">8902<a name=\"CUPS-8902\"> </a></td><td>CONSULTA DESCRITA COMO GLOBAL O DE PRIMERA VEZ</td></tr><tr><td style=\"white-space:nowrap\">890201<a name=\"CUPS-890201\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890202<a name=\"CUPS-890202\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES MEDICAS</td></tr><tr><td style=\"white-space:nowrap\">890203<a name=\"CUPS-890203\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ODONTOLOGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890204<a name=\"CUPS-890204\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES EN ODONTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890205<a name=\"CUPS-890205\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ENFERMERIA</td></tr><tr><td style=\"white-space:nowrap\">890206<a name=\"CUPS-890206\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR NUTRICION Y DIETETICA</td></tr><tr><td style=\"white-space:nowrap\">890207<a name=\"CUPS-890207\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR OPTOMETRIA</td></tr><tr><td style=\"white-space:nowrap\">890208<a name=\"CUPS-890208\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890209<a name=\"CUPS-890209\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR TRABAJO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">890210<a name=\"CUPS-890210\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR FONOAUDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890211<a name=\"CUPS-890211\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR FISIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890212<a name=\"CUPS-890212\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR TERAPIA RESPIRATORIA</td></tr><tr><td style=\"white-space:nowrap\">890213<a name=\"CUPS-890213\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR TERAPIA OCUPACIONAL</td></tr><tr><td style=\"white-space:nowrap\">890214<a name=\"CUPS-890214\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR TERAPIAS ALTERNATIVAS</td></tr><tr><td style=\"white-space:nowrap\">890215<a name=\"CUPS-890215\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td style=\"white-space:nowrap\">890216<a name=\"CUPS-890216\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA</td></tr><tr><td style=\"white-space:nowrap\">890217<a name=\"CUPS-890217\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">890218<a name=\"CUPS-890218\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890219<a name=\"CUPS-890219\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">890220<a name=\"CUPS-890220\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ODONTOPEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890221<a name=\"CUPS-890221\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PERIODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890222<a name=\"CUPS-890222\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890223<a name=\"CUPS-890223\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">890224<a name=\"CUPS-890224\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REHABILITACION ORAL</td></tr><tr><td style=\"white-space:nowrap\">890225<a name=\"CUPS-890225\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ALERGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890226<a name=\"CUPS-890226\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890227<a name=\"CUPS-890227\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890228<a name=\"CUPS-890228\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890229<a name=\"CUPS-890229\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890230<a name=\"CUPS-890230\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890231<a name=\"CUPS-890231\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td style=\"white-space:nowrap\">890232<a name=\"CUPS-890232\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS</td></tr><tr><td style=\"white-space:nowrap\">890233<a name=\"CUPS-890233\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE TORAX</td></tr><tr><td style=\"white-space:nowrap\">890234<a name=\"CUPS-890234\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL</td></tr><tr><td style=\"white-space:nowrap\">890235<a name=\"CUPS-890235\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890236<a name=\"CUPS-890236\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">890237<a name=\"CUPS-890237\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">890238<a name=\"CUPS-890238\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890239<a name=\"CUPS-890239\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA</td></tr><tr><td style=\"white-space:nowrap\">890240<a name=\"CUPS-890240\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA VASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890241<a name=\"CUPS-890241\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN COLOPROCTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890242<a name=\"CUPS-890242\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DERMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890243<a name=\"CUPS-890243\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS</td></tr><tr><td style=\"white-space:nowrap\">890244<a name=\"CUPS-890244\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890245<a name=\"CUPS-890245\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890246<a name=\"CUPS-890246\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890247<a name=\"CUPS-890247\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890248<a name=\"CUPS-890248\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GENETICA MEDICA</td></tr><tr><td style=\"white-space:nowrap\">890249<a name=\"CUPS-890249\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GERIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890250<a name=\"CUPS-890250\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA</td></tr><tr><td style=\"white-space:nowrap\">890251<a name=\"CUPS-890251\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890252<a name=\"CUPS-890252\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890253<a name=\"CUPS-890253\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEPATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890254<a name=\"CUPS-890254\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN INFECTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890255<a name=\"CUPS-890255\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MASTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890256<a name=\"CUPS-890256\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA AEROESPACIAL</td></tr><tr><td style=\"white-space:nowrap\">890257<a name=\"CUPS-890257\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)</td></tr><tr><td style=\"white-space:nowrap\">890258<a name=\"CUPS-890258\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)</td></tr><tr><td style=\"white-space:nowrap\">890259<a name=\"CUPS-890259\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)</td></tr><tr><td style=\"white-space:nowrap\">890260<a name=\"CUPS-890260\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)</td></tr><tr><td style=\"white-space:nowrap\">890261<a name=\"CUPS-890261\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL DEPORTE</td></tr><tr><td style=\"white-space:nowrap\">890262<a name=\"CUPS-890262\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO</td></tr><tr><td style=\"white-space:nowrap\">890263<a name=\"CUPS-890263\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FAMILIAR</td></tr><tr><td style=\"white-space:nowrap\">890264<a name=\"CUPS-890264\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION</td></tr><tr><td style=\"white-space:nowrap\">890265<a name=\"CUPS-890265\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FORENSE</td></tr><tr><td style=\"white-space:nowrap\">890266<a name=\"CUPS-890266\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA INTERNA</td></tr><tr><td style=\"white-space:nowrap\">890267<a name=\"CUPS-890267\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA NUCLEAR</td></tr><tr><td style=\"white-space:nowrap\">890268<a name=\"CUPS-890268\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890269<a name=\"CUPS-890269\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890270<a name=\"CUPS-890270\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEONATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890271<a name=\"CUPS-890271\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890272<a name=\"CUPS-890272\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890273<a name=\"CUPS-890273\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROCIRUGIA</td></tr><tr><td style=\"white-space:nowrap\">890274<a name=\"CUPS-890274\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890275<a name=\"CUPS-890275\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890276<a name=\"CUPS-890276\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OFTALMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890277<a name=\"CUPS-890277\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890278<a name=\"CUPS-890278\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890279<a name=\"CUPS-890279\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890280<a name=\"CUPS-890280\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890281<a name=\"CUPS-890281\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890282<a name=\"CUPS-890282\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OTORRINOLARINGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890283<a name=\"CUPS-890283\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890284<a name=\"CUPS-890284\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890285<a name=\"CUPS-890285\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890286<a name=\"CUPS-890286\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS</td></tr><tr><td style=\"white-space:nowrap\">890287<a name=\"CUPS-890287\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890288<a name=\"CUPS-890288\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890289<a name=\"CUPS-890289\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890290<a name=\"CUPS-890290\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SEXOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">890291<a name=\"CUPS-890291\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TOXICOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">890292<a name=\"CUPS-890292\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TRASPLANTES</td></tr><tr><td style=\"white-space:nowrap\">890294<a name=\"CUPS-890294\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN UROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890295<a name=\"CUPS-890295\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)</td></tr><tr><td style=\"white-space:nowrap\">890296<a name=\"CUPS-890296\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)</td></tr><tr><td style=\"white-space:nowrap\">890297<a name=\"CUPS-890297\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES DE PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890298<a name=\"CUPS-890298\"> </a></td><td>CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ESTETICA</td></tr><tr><td style=\"white-space:nowrap\">8903<a name=\"CUPS-8903\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO</td></tr><tr><td style=\"white-space:nowrap\">890301<a name=\"CUPS-890301\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890302<a name=\"CUPS-890302\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES MEDICAS</td></tr><tr><td style=\"white-space:nowrap\">890303<a name=\"CUPS-890303\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ODONTOLOGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890304<a name=\"CUPS-890304\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES EN ODONTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890305<a name=\"CUPS-890305\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ENFERMERIA</td></tr><tr><td style=\"white-space:nowrap\">890306<a name=\"CUPS-890306\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR NUTRICION Y DIETETICA</td></tr><tr><td style=\"white-space:nowrap\">890307<a name=\"CUPS-890307\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OPTOMETRIA</td></tr><tr><td style=\"white-space:nowrap\">890308<a name=\"CUPS-890308\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890309<a name=\"CUPS-890309\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TRABAJO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">890310<a name=\"CUPS-890310\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR FONOAUDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890311<a name=\"CUPS-890311\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR FISIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890312<a name=\"CUPS-890312\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA RESPIRATORIA</td></tr><tr><td style=\"white-space:nowrap\">890313<a name=\"CUPS-890313\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA OCUPACIONAL</td></tr><tr><td style=\"white-space:nowrap\">890314<a name=\"CUPS-890314\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIAS ALTERNATIVAS</td></tr><tr><td style=\"white-space:nowrap\">890315<a name=\"CUPS-890315\"> </a></td><td>CONSULTA INTEGRAL DE CONTROL O DE SEGUIMIENTO POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td style=\"white-space:nowrap\">890316<a name=\"CUPS-890316\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA</td></tr><tr><td style=\"white-space:nowrap\">890317<a name=\"CUPS-890317\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">890318<a name=\"CUPS-890318\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890319<a name=\"CUPS-890319\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">890320<a name=\"CUPS-890320\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ODONTOPEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890321<a name=\"CUPS-890321\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PERIODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890322<a name=\"CUPS-890322\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890323<a name=\"CUPS-890323\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">890324<a name=\"CUPS-890324\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REHABILITACION ORAL</td></tr><tr><td style=\"white-space:nowrap\">890325<a name=\"CUPS-890325\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ALERGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890326<a name=\"CUPS-890326\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890327<a name=\"CUPS-890327\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890328<a name=\"CUPS-890328\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890329<a name=\"CUPS-890329\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890330<a name=\"CUPS-890330\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890331<a name=\"CUPS-890331\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td style=\"white-space:nowrap\">890332<a name=\"CUPS-890332\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS</td></tr><tr><td style=\"white-space:nowrap\">890333<a name=\"CUPS-890333\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE TORAX</td></tr><tr><td style=\"white-space:nowrap\">890334<a name=\"CUPS-890334\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL</td></tr><tr><td style=\"white-space:nowrap\">890335<a name=\"CUPS-890335\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890336<a name=\"CUPS-890336\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">890337<a name=\"CUPS-890337\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">890338<a name=\"CUPS-890338\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890339<a name=\"CUPS-890339\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA</td></tr><tr><td style=\"white-space:nowrap\">890340<a name=\"CUPS-890340\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA VASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890341<a name=\"CUPS-890341\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN COLOPROCTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890342<a name=\"CUPS-890342\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DERMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890343<a name=\"CUPS-890343\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS</td></tr><tr><td style=\"white-space:nowrap\">890344<a name=\"CUPS-890344\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890345<a name=\"CUPS-890345\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890346<a name=\"CUPS-890346\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890347<a name=\"CUPS-890347\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890348<a name=\"CUPS-890348\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GENETICA MEDICA</td></tr><tr><td style=\"white-space:nowrap\">890349<a name=\"CUPS-890349\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GERIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890350<a name=\"CUPS-890350\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA</td></tr><tr><td style=\"white-space:nowrap\">890351<a name=\"CUPS-890351\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890352<a name=\"CUPS-890352\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890353<a name=\"CUPS-890353\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEPATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890354<a name=\"CUPS-890354\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN INFECTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890355<a name=\"CUPS-890355\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MASTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890356<a name=\"CUPS-890356\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA AEROESPACIAL</td></tr><tr><td style=\"white-space:nowrap\">890357<a name=\"CUPS-890357\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)</td></tr><tr><td style=\"white-space:nowrap\">890358<a name=\"CUPS-890358\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)</td></tr><tr><td style=\"white-space:nowrap\">890359<a name=\"CUPS-890359\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)</td></tr><tr><td style=\"white-space:nowrap\">890360<a name=\"CUPS-890360\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)</td></tr><tr><td style=\"white-space:nowrap\">890361<a name=\"CUPS-890361\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL DEPORTE</td></tr><tr><td style=\"white-space:nowrap\">890362<a name=\"CUPS-890362\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO</td></tr><tr><td style=\"white-space:nowrap\">890363<a name=\"CUPS-890363\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FAMILIAR</td></tr><tr><td style=\"white-space:nowrap\">890364<a name=\"CUPS-890364\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION</td></tr><tr><td style=\"white-space:nowrap\">890365<a name=\"CUPS-890365\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FORENSE</td></tr><tr><td style=\"white-space:nowrap\">890366<a name=\"CUPS-890366\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA INTERNA</td></tr><tr><td style=\"white-space:nowrap\">890367<a name=\"CUPS-890367\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA NUCLEAR</td></tr><tr><td style=\"white-space:nowrap\">890368<a name=\"CUPS-890368\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890369<a name=\"CUPS-890369\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890370<a name=\"CUPS-890370\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEONATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890371<a name=\"CUPS-890371\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890372<a name=\"CUPS-890372\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890373<a name=\"CUPS-890373\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROCIRUGIA</td></tr><tr><td style=\"white-space:nowrap\">890374<a name=\"CUPS-890374\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890375<a name=\"CUPS-890375\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890376<a name=\"CUPS-890376\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OFTALMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890377<a name=\"CUPS-890377\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890378<a name=\"CUPS-890378\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890379<a name=\"CUPS-890379\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890380<a name=\"CUPS-890380\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890381<a name=\"CUPS-890381\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890382<a name=\"CUPS-890382\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OTORRINOLARINGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890383<a name=\"CUPS-890383\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890384<a name=\"CUPS-890384\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890385<a name=\"CUPS-890385\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890386<a name=\"CUPS-890386\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS</td></tr><tr><td style=\"white-space:nowrap\">890387<a name=\"CUPS-890387\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890388<a name=\"CUPS-890388\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890389<a name=\"CUPS-890389\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890390<a name=\"CUPS-890390\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SEXOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">890391<a name=\"CUPS-890391\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TOXICOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">890392<a name=\"CUPS-890392\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TRASPLANTES</td></tr><tr><td style=\"white-space:nowrap\">890394<a name=\"CUPS-890394\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN UROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890395<a name=\"CUPS-890395\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)</td></tr><tr><td style=\"white-space:nowrap\">890396<a name=\"CUPS-890396\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)</td></tr><tr><td style=\"white-space:nowrap\">890397<a name=\"CUPS-890397\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES DE PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890398<a name=\"CUPS-890398\"> </a></td><td>CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ESTETICA</td></tr><tr><td style=\"white-space:nowrap\">8904<a name=\"CUPS-8904\"> </a></td><td>INTERCONSULTA</td></tr><tr><td style=\"white-space:nowrap\">890401<a name=\"CUPS-890401\"> </a></td><td>INTERCONSULTA POR MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890402<a name=\"CUPS-890402\"> </a></td><td>INTERCONSULTA POR OTRAS ESPECIALIDADES MEDICAS</td></tr><tr><td style=\"white-space:nowrap\">890403<a name=\"CUPS-890403\"> </a></td><td>INTERCONSULTA POR ODONTOLOGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890404<a name=\"CUPS-890404\"> </a></td><td>INTERCONSULTA POR OTRAS ESPECIALIDADES EN ODONTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890405<a name=\"CUPS-890405\"> </a></td><td>INTERCONSULTA POR ENFERMERIA</td></tr><tr><td style=\"white-space:nowrap\">890406<a name=\"CUPS-890406\"> </a></td><td>INTERCONSULTA POR NUTRICION Y DIETETICA</td></tr><tr><td style=\"white-space:nowrap\">890408<a name=\"CUPS-890408\"> </a></td><td>INTERCONSULTA POR PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890409<a name=\"CUPS-890409\"> </a></td><td>INTERCONSULTA POR TRABAJO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">890410<a name=\"CUPS-890410\"> </a></td><td>INTERCONSULTA POR FONOAUDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890411<a name=\"CUPS-890411\"> </a></td><td>INTERCONSULTA POR FISIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890412<a name=\"CUPS-890412\"> </a></td><td>INTERCONSULTA POR TERAPIA RESPIRATORIA</td></tr><tr><td style=\"white-space:nowrap\">890413<a name=\"CUPS-890413\"> </a></td><td>INTERCONSULTA POR TERAPIA OCUPACIONAL</td></tr><tr><td style=\"white-space:nowrap\">890416<a name=\"CUPS-890416\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA</td></tr><tr><td style=\"white-space:nowrap\">890417<a name=\"CUPS-890417\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">890418<a name=\"CUPS-890418\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ENDODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890419<a name=\"CUPS-890419\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL</td></tr><tr><td style=\"white-space:nowrap\">890420<a name=\"CUPS-890420\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ODONTOPEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890421<a name=\"CUPS-890421\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN PERIODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890422<a name=\"CUPS-890422\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ORTODONCIA</td></tr><tr><td style=\"white-space:nowrap\">890423<a name=\"CUPS-890423\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">890424<a name=\"CUPS-890424\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN REHABILITACION ORAL</td></tr><tr><td style=\"white-space:nowrap\">890425<a name=\"CUPS-890425\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ALERGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890426<a name=\"CUPS-890426\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ANESTESIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890427<a name=\"CUPS-890427\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890428<a name=\"CUPS-890428\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CARDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890429<a name=\"CUPS-890429\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890430<a name=\"CUPS-890430\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890431<a name=\"CUPS-890431\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO</td></tr><tr><td style=\"white-space:nowrap\">890432<a name=\"CUPS-890432\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS</td></tr><tr><td style=\"white-space:nowrap\">890433<a name=\"CUPS-890433\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA DE TORAX</td></tr><tr><td style=\"white-space:nowrap\">890434<a name=\"CUPS-890434\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL</td></tr><tr><td style=\"white-space:nowrap\">890435<a name=\"CUPS-890435\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890436<a name=\"CUPS-890436\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL</td></tr><tr><td style=\"white-space:nowrap\">890437<a name=\"CUPS-890437\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA ONCOLOGICA</td></tr><tr><td style=\"white-space:nowrap\">890438<a name=\"CUPS-890438\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890439<a name=\"CUPS-890439\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA</td></tr><tr><td style=\"white-space:nowrap\">890440<a name=\"CUPS-890440\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN CIRUGIA VASCULAR</td></tr><tr><td style=\"white-space:nowrap\">890441<a name=\"CUPS-890441\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN COLOPROCTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890442<a name=\"CUPS-890442\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN DERMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890443<a name=\"CUPS-890443\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS</td></tr><tr><td style=\"white-space:nowrap\">890444<a name=\"CUPS-890444\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ENDOCRINOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890445<a name=\"CUPS-890445\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890446<a name=\"CUPS-890446\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN GASTROENTEROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890447<a name=\"CUPS-890447\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890448<a name=\"CUPS-890448\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN GENETICA MEDICA</td></tr><tr><td style=\"white-space:nowrap\">890449<a name=\"CUPS-890449\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN GERIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890450<a name=\"CUPS-890450\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA</td></tr><tr><td style=\"white-space:nowrap\">890451<a name=\"CUPS-890451\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN HEMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890452<a name=\"CUPS-890452\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890453<a name=\"CUPS-890453\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN HEPATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890454<a name=\"CUPS-890454\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN INFECTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890455<a name=\"CUPS-890455\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MASTOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890456<a name=\"CUPS-890456\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA AEROESPACIAL</td></tr><tr><td style=\"white-space:nowrap\">890457<a name=\"CUPS-890457\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)</td></tr><tr><td style=\"white-space:nowrap\">890458<a name=\"CUPS-890458\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)</td></tr><tr><td style=\"white-space:nowrap\">890459<a name=\"CUPS-890459\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)</td></tr><tr><td style=\"white-space:nowrap\">890460<a name=\"CUPS-890460\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)</td></tr><tr><td style=\"white-space:nowrap\">890461<a name=\"CUPS-890461\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA DEL DEPORTE</td></tr><tr><td style=\"white-space:nowrap\">890462<a name=\"CUPS-890462\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO</td></tr><tr><td style=\"white-space:nowrap\">890463<a name=\"CUPS-890463\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA FAMILIAR</td></tr><tr><td style=\"white-space:nowrap\">890464<a name=\"CUPS-890464\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION</td></tr><tr><td style=\"white-space:nowrap\">890465<a name=\"CUPS-890465\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA FORENSE</td></tr><tr><td style=\"white-space:nowrap\">890466<a name=\"CUPS-890466\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA INTERNA</td></tr><tr><td style=\"white-space:nowrap\">890467<a name=\"CUPS-890467\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA NUCLEAR</td></tr><tr><td style=\"white-space:nowrap\">890468<a name=\"CUPS-890468\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEFROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890469<a name=\"CUPS-890469\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890470<a name=\"CUPS-890470\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEONATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890471<a name=\"CUPS-890471\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEUMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890472<a name=\"CUPS-890472\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890473<a name=\"CUPS-890473\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEUROCIRUGIA</td></tr><tr><td style=\"white-space:nowrap\">890474<a name=\"CUPS-890474\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEUROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890475<a name=\"CUPS-890475\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890476<a name=\"CUPS-890476\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN OFTALMOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890477<a name=\"CUPS-890477\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890478<a name=\"CUPS-890478\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ONCOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890479<a name=\"CUPS-890479\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890480<a name=\"CUPS-890480\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890481<a name=\"CUPS-890481\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890482<a name=\"CUPS-890482\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN OTORRINOLARINGOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890483<a name=\"CUPS-890483\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN PEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890484<a name=\"CUPS-890484\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN PSIQUIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890485<a name=\"CUPS-890485\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890486<a name=\"CUPS-890486\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS</td></tr><tr><td style=\"white-space:nowrap\">890487<a name=\"CUPS-890487\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN RADIOTERAPIA</td></tr><tr><td style=\"white-space:nowrap\">890488<a name=\"CUPS-890488\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN REUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890489<a name=\"CUPS-890489\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890490<a name=\"CUPS-890490\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN SEXOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">890491<a name=\"CUPS-890491\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN TOXICOLOGIA CLINICA</td></tr><tr><td style=\"white-space:nowrap\">890492<a name=\"CUPS-890492\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN TRASPLANTES</td></tr><tr><td style=\"white-space:nowrap\">890494<a name=\"CUPS-890494\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN UROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890495<a name=\"CUPS-890495\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)</td></tr><tr><td style=\"white-space:nowrap\">890496<a name=\"CUPS-890496\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)</td></tr><tr><td style=\"white-space:nowrap\">890497<a name=\"CUPS-890497\"> </a></td><td>INTERCONSULTA POR ESPECIALISTA EN MEDICINA ESTETICA</td></tr><tr><td style=\"white-space:nowrap\">8905<a name=\"CUPS-8905\"> </a></td><td>JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO</td></tr><tr><td style=\"white-space:nowrap\">890501<a name=\"CUPS-890501\"> </a></td><td>PARTICIPACION EN JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO POR MEDICINA GENERAL Y CASO (PACIENTE)</td></tr><tr><td style=\"white-space:nowrap\">890502<a name=\"CUPS-890502\"> </a></td><td>PARTICIPACION EN JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO POR MEDICINA ESPECIALIZADA Y CASO (PACIENTE)</td></tr><tr><td style=\"white-space:nowrap\">890503<a name=\"CUPS-890503\"> </a></td><td>PARTICIPACION EN JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO POR OTRO PROFESIONAL DE LA SALUD Y CASO (PACIENTE)</td></tr><tr><td style=\"white-space:nowrap\">8906<a name=\"CUPS-8906\"> </a></td><td>CUIDADO (MANEJO) Y ASISTENCIA INTRAHOSPITALARIA</td></tr><tr><td style=\"white-space:nowrap\">890601<a name=\"CUPS-890601\"> </a></td><td>CUIDADO (MANEJO) INTRAHOSPITALARIO POR MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890602<a name=\"CUPS-890602\"> </a></td><td>CUIDADO (MANEJO) INTRAHOSPITALARIO POR MEDICINA ESPECIALIZADA</td></tr><tr><td style=\"white-space:nowrap\">890603<a name=\"CUPS-890603\"> </a></td><td>DETECCION, VALORACION Y ATENCION INTRAHOSPITALARIA DE DONANTE DE ORGANOS Y TEJIDOS</td></tr><tr><td style=\"white-space:nowrap\">890604<a name=\"CUPS-890604\"> </a></td><td>CUIDADO (MANEJO) INTRAHOSPITALARIO POR ODONTOLOGIA ESPECIALIZADA</td></tr><tr><td style=\"white-space:nowrap\">890605<a name=\"CUPS-890605\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR ENFERMERIA</td></tr><tr><td style=\"white-space:nowrap\">890606<a name=\"CUPS-890606\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR NUTRICION Y DIETETICA</td></tr><tr><td style=\"white-space:nowrap\">890608<a name=\"CUPS-890608\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR PSICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890609<a name=\"CUPS-890609\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR TRABAJO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">890610<a name=\"CUPS-890610\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR TERAPIA FONIATRIA Y FONOAUDIOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890611<a name=\"CUPS-890611\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR TERAPIA FISICA</td></tr><tr><td style=\"white-space:nowrap\">890612<a name=\"CUPS-890612\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR TERAPIA RESPIRATORIA</td></tr><tr><td style=\"white-space:nowrap\">890613<a name=\"CUPS-890613\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR TERAPIA OCUPACIONAL</td></tr><tr><td style=\"white-space:nowrap\">890615<a name=\"CUPS-890615\"> </a></td><td>ASISTENCIA INTRAHOSPITALARIA POR EQUIPO INTERDISCIPLINARIO</td></tr><tr><td style=\"white-space:nowrap\">8907<a name=\"CUPS-8907\"> </a></td><td>CONSULTA DE URGENCIAS</td></tr><tr><td style=\"white-space:nowrap\">890701<a name=\"CUPS-890701\"> </a></td><td>CONSULTA DE URGENCIAS POR MEDICINA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890702<a name=\"CUPS-890702\"> </a></td><td>CONSULTA DE URGENCIAS POR OTRAS ESPECIALIDADES MEDICAS</td></tr><tr><td style=\"white-space:nowrap\">890703<a name=\"CUPS-890703\"> </a></td><td>CONSULTA DE URGENCIAS POR ODONTOLOGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890704<a name=\"CUPS-890704\"> </a></td><td>CONSULTA DE URGENCIAS POR ODONTOLOGIA ESPECIALIZADA</td></tr><tr><td style=\"white-space:nowrap\">890735<a name=\"CUPS-890735\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN CIRUGIA GENERAL</td></tr><tr><td style=\"white-space:nowrap\">890750<a name=\"CUPS-890750\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA</td></tr><tr><td style=\"white-space:nowrap\">890763<a name=\"CUPS-890763\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN MEDICINA FAMILIAR</td></tr><tr><td style=\"white-space:nowrap\">890780<a name=\"CUPS-890780\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">890781<a name=\"CUPS-890781\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA</td></tr><tr><td style=\"white-space:nowrap\">890783<a name=\"CUPS-890783\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN PEDIATRIA</td></tr><tr><td style=\"white-space:nowrap\">890793<a name=\"CUPS-890793\"> </a></td><td>CONSULTA DE URGENCIAS, POR ESPECIALISTA EN URGENCIAS O EMERGENCIAS</td></tr><tr><td style=\"white-space:nowrap\">902077<a name=\"CUPS-902077\"> </a></td><td>INHIBIDOR DE FACTOR VON WILLEBRAND</td></tr><tr><td style=\"white-space:nowrap\">902078<a name=\"CUPS-902078\"> </a></td><td>INHIBIDOR DE FACTOR XIII</td></tr><tr><td style=\"white-space:nowrap\">902124<a name=\"CUPS-902124\"> </a></td><td>MICROSCOPIA ELECTRONICA PLAQUETARIA</td></tr><tr><td style=\"white-space:nowrap\">903612<a name=\"CUPS-903612\"> </a></td><td>ELECTROLITOS EN SUDOR [IONTOFORESIS] MEDICION DIRECTA</td></tr><tr><td style=\"white-space:nowrap\">903613<a name=\"CUPS-903613\"> </a></td><td>ELECTROLITOS EN SUDOR [IONTOFORESIS] MEDICION INDIRECTA</td></tr><tr><td style=\"white-space:nowrap\">904916<a name=\"CUPS-904916\"> </a></td><td>TIROXINA LIBRE PRE Y POST LEVOTIROXINA</td></tr><tr><td style=\"white-space:nowrap\">905104<a name=\"CUPS-905104\"> </a></td><td>NIVEL DE INHIBIDORES DIRECTOS DEL FACTOR Xa</td></tr><tr><td style=\"white-space:nowrap\">905105<a name=\"CUPS-905105\"> </a></td><td>NIVEL DE INHIBIDORES DIRECTOS DE LA TROMBINA</td></tr><tr><td style=\"white-space:nowrap\">905106<a name=\"CUPS-905106\"> </a></td><td>NIVEL DE INHIBIDORES INDIRECTOS DEL FACTOR Xa (HEPARINA DE BAJO PESO MOLECULAR)</td></tr><tr><td style=\"white-space:nowrap\">906856<a name=\"CUPS-906856\"> </a></td><td>INMUNOGLOBULINAS CADENAS PESADAS SEMIAUTOMATIZADO O AUTOMATIZADO</td></tr><tr><td style=\"white-space:nowrap\">906857<a name=\"CUPS-906857\"> </a></td><td>FACTOR DE CRECIMIENTO ENDOTELIAL</td></tr><tr><td style=\"white-space:nowrap\">906858<a name=\"CUPS-906858\"> </a></td><td>HEMOGLOBINAS (ESPECIFICO) CUALITATIVA O CUANTITATIVA</td></tr><tr><td style=\"white-space:nowrap\">908860<a name=\"CUPS-908860\"> </a></td><td>Plasmodium especies IDENTIFICACION POR PRUEBAS MOLECULARES</td></tr><tr><td style=\"white-space:nowrap\">908890<a name=\"CUPS-908890\"> </a></td><td>DETECCION Virus del Papiloma Humano POR PRUEBAS MOLECULARES (ESPECIFICO)</td></tr><tr><td style=\"white-space:nowrap\">90<a name=\"CUPS-90\"> </a></td><td>LABORATORIO CLINICO</td></tr><tr><td style=\"white-space:nowrap\">901<a name=\"CUPS-901\"> </a></td><td>MICROBIOLOGIA (BACTERIOLOGIA, PARASITOLOGIA, MICOLOGIA Y VIROLOGIA)</td></tr><tr><td style=\"white-space:nowrap\">9010<a name=\"CUPS-9010\"> </a></td><td>ANTIBIOGRAMA Y PRUEBAS DE SENSIBILIDAD</td></tr><tr><td style=\"white-space:nowrap\">9011<a name=\"CUPS-9011\"> </a></td><td>COLORACION</td></tr><tr><td style=\"white-space:nowrap\">9012<a name=\"CUPS-9012\"> </a></td><td>CULTIVOS (AISLAMIENTO Y PRUEBAS DE IDENTIFICACION)</td></tr><tr><td style=\"white-space:nowrap\">9013<a name=\"CUPS-9013\"> </a></td><td>IDENTIFICACION DE MICROORGANISMOS</td></tr><tr><td style=\"white-space:nowrap\">9015<a name=\"CUPS-9015\"> </a></td><td>OTRAS PRUEBAS MICROBIOLOGICAS</td></tr><tr><td style=\"white-space:nowrap\">901501<a name=\"CUPS-901501\"> </a></td><td>PRUEBA DE CONCENTRACION BACTERICIDA EN SUERO O LCR U OTROS</td></tr><tr><td style=\"white-space:nowrap\">901502<a name=\"CUPS-901502\"> </a></td><td>Clostridium TOXINA</td></tr><tr><td style=\"white-space:nowrap\">902<a name=\"CUPS-902\"> </a></td><td>HEMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">9020<a name=\"CUPS-9020\"> </a></td><td>PRUEBAS DE COAGULACION</td></tr><tr><td style=\"white-space:nowrap\">9021<a name=\"CUPS-9021\"> </a></td><td>PRUEBAS HEMATOLOGICAS NO RUTINARIAS</td></tr><tr><td style=\"white-space:nowrap\">9022<a name=\"CUPS-9022\"> </a></td><td>PRUEBAS HEMATOLOGICAS RUTINARIAS</td></tr><tr><td style=\"white-space:nowrap\">902204<a name=\"CUPS-902204\"> </a></td><td>ERITROSEDIMENTACION [VELOCIDAD SEDIMENTACION GLOBULAR - VSG] MANUAL</td></tr><tr><td style=\"white-space:nowrap\">902205<a name=\"CUPS-902205\"> </a></td><td>ERITROSEDIMENTACION [VELOCIDAD SEDIMENTACION GLOBULAR - VSG] AUTOMATIZADA</td></tr><tr><td style=\"white-space:nowrap\">902206<a name=\"CUPS-902206\"> </a></td><td>EXTENDIDO DE SANGRE PERIFERICA ESTUDIO DE MORFOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">902207<a name=\"CUPS-902207\"> </a></td><td>HEMOGRAMA I (HEMOGLOBINA HEMATOCRITO Y LEUCOGRAMA) MANUAL</td></tr><tr><td style=\"white-space:nowrap\">902208<a name=\"CUPS-902208\"> </a></td><td>HEMOGRAMA II (HEMOGLOBINA HEMATOCRITO RECUENTO DE ERITROCITOS INDICES ERITROCITARIOS LEUCOGRAMA RECUENTO DE PLAQUETAS E INDICES PLAQUETARIOS) SEMIAUTOMATIZADO</td></tr><tr><td style=\"white-space:nowrap\">902209<a name=\"CUPS-902209\"> </a></td><td>HEMOGRAMA III (HEMOGLOBINA HEMATOCRITO RECUENTO DE ERITROCITOS INDICES ERITROCITARIOS LEUCOGRAMA RECUENTO DE PLAQUETAS INDICES PLAQUETARIOS Y MORFOLOGIA ELECTRONICA) AUTOMATIZADO</td></tr><tr><td style=\"white-space:nowrap\">902210<a name=\"CUPS-902210\"> </a></td><td>HEMOGRAMA IV (HEMOGLOBINA HEMATOCRITO RECUENTO DE ERITROCITOS INDICES ERITROCITARIOS LEUCOGRAMA RECUENTO DE PLAQUETAS INDICES PLAQUETARIOS Y MORFOLOGIA ELECTRONICA E HISTOGRAMA) AUTOMATIZADO</td></tr><tr><td style=\"white-space:nowrap\">902211<a name=\"CUPS-902211\"> </a></td><td>HEMATOCRITO</td></tr><tr><td style=\"white-space:nowrap\">902213<a name=\"CUPS-902213\"> </a></td><td>HEMOGLOBINA</td></tr><tr><td style=\"white-space:nowrap\">902214<a name=\"CUPS-902214\"> </a></td><td>HEMOPARASITOS EXTENDIDO DE GOTA GRUESA</td></tr><tr><td style=\"white-space:nowrap\">902215<a name=\"CUPS-902215\"> </a></td><td>HEMOPARASITOS EXTENDIDO DE SANGRE PERIFERICA</td></tr><tr><td style=\"white-space:nowrap\">902216<a name=\"CUPS-902216\"> </a></td><td>LEUCOGRAMA (RECUENTO TOTAL Y DIFERENCIAL)</td></tr><tr><td style=\"white-space:nowrap\">902217<a name=\"CUPS-902217\"> </a></td><td>PRUEBA DE TORNIQUETE [FRAGILIDAD CAPILAR]</td></tr><tr><td style=\"white-space:nowrap\">902218<a name=\"CUPS-902218\"> </a></td><td>RECUENTO DE EOSINOFILO EN CUALQUIER MUESTRA</td></tr><tr><td style=\"white-space:nowrap\">902219<a name=\"CUPS-902219\"> </a></td><td>EOSINOFILOS EN MOCO NASAL</td></tr><tr><td style=\"white-space:nowrap\">902220<a name=\"CUPS-902220\"> </a></td><td>RECUENTO DE PLAQUETAS AUTOMATIZADO</td></tr><tr><td style=\"white-space:nowrap\">902221<a name=\"CUPS-902221\"> </a></td><td>RECUENTO DE PLAQUETAS MANUAL</td></tr><tr><td style=\"white-space:nowrap\">902223<a name=\"CUPS-902223\"> </a></td><td>RECUENTO DE RETICULOCITOS METODO MANUAL</td></tr><tr><td style=\"white-space:nowrap\">902224<a name=\"CUPS-902224\"> </a></td><td>RECUENTO DE RETICULOCITOS AUTOMATIZADO</td></tr><tr><td style=\"white-space:nowrap\">902225<a name=\"CUPS-902225\"> </a></td><td>TITULO ANTI D</td></tr><tr><td style=\"white-space:nowrap\">902226<a name=\"CUPS-902226\"> </a></td><td>PRUEBA DE SUCROSA EN ERITROCITOS [TEST DE HARTMAN]</td></tr><tr><td style=\"white-space:nowrap\">903<a name=\"CUPS-903\"> </a></td><td>QUIMICA SANGUINEA Y DE OTROS FLUIDOS CORPORALES</td></tr><tr><td style=\"white-space:nowrap\">9030<a name=\"CUPS-9030\"> </a></td><td>PRUEBAS NO RUTINARIAS</td></tr><tr><td style=\"white-space:nowrap\">904<a name=\"CUPS-904\"> </a></td><td>ENDOCRINOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">905<a name=\"CUPS-905\"> </a></td><td>MONITOREO DE MEDICAMENTOS Y TOXICOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">9050<a name=\"CUPS-9050\"> </a></td><td>MONITOREO ANESTESICO</td></tr><tr><td style=\"white-space:nowrap\">9051<a name=\"CUPS-9051\"> </a></td><td>MONITOREO ANTICOAGULANTES</td></tr><tr><td style=\"white-space:nowrap\">9052<a name=\"CUPS-9052\"> </a></td><td>MONITOREO ANTICONVULSIVANTES</td></tr><tr><td style=\"white-space:nowrap\">9053<a name=\"CUPS-9053\"> </a></td><td>MONITOREO ANTIDEPRESIVOS, ANTIMANIATICOS Y NEUROLEPTICOS</td></tr><tr><td style=\"white-space:nowrap\">9054<a name=\"CUPS-9054\"> </a></td><td>MONITOREO ANTIMICROBIANOS</td></tr><tr><td style=\"white-space:nowrap\">9055<a name=\"CUPS-9055\"> </a></td><td>MONITOREO DE CITOSTATICOS</td></tr><tr><td style=\"white-space:nowrap\">9056<a name=\"CUPS-9056\"> </a></td><td>MONITOREO DIGITALICOS, CARDIOVASCULARES Y BRONCODILATADOR</td></tr><tr><td style=\"white-space:nowrap\">9057<a name=\"CUPS-9057\"> </a></td><td>NIVELES TOXICOLOGICOS</td></tr><tr><td style=\"white-space:nowrap\">9058<a name=\"CUPS-9058\"> </a></td><td>NIVELES DE OTRAS SUSTANCIAS TERAPEUTICAS</td></tr><tr><td style=\"white-space:nowrap\">906<a name=\"CUPS-906\"> </a></td><td>INMUNOLOGIA Y MARCADORES TUMORALES</td></tr><tr><td style=\"white-space:nowrap\">9060<a name=\"CUPS-9060\"> </a></td><td>DETERMINACION DE ANTICUERPOS BACTERIANOS</td></tr><tr><td style=\"white-space:nowrap\">9061<a name=\"CUPS-9061\"> </a></td><td>DETERMINACION DE ANTICUERPOS CONTRA HONGOS Y PARASITOS</td></tr><tr><td style=\"white-space:nowrap\">9062<a name=\"CUPS-9062\"> </a></td><td>DETERMINACION DE ANTICUERPOS CONTRA VIRUS</td></tr><tr><td style=\"white-space:nowrap\">9063<a name=\"CUPS-9063\"> </a></td><td>DETERMINACION DE ANTIGENOS MICROBIOLOGICOS</td></tr><tr><td style=\"white-space:nowrap\">9064<a name=\"CUPS-9064\"> </a></td><td>DETERMINACION DE ANTICUERPOS ESPECIFICOS</td></tr><tr><td style=\"white-space:nowrap\">9065<a name=\"CUPS-9065\"> </a></td><td>PRUEBAS DE HISTOCOMPATIBILIDAD</td></tr><tr><td style=\"white-space:nowrap\">9066<a name=\"CUPS-9066\"> </a></td><td>MARCADORES TUMORALES</td></tr><tr><td style=\"white-space:nowrap\">9067<a name=\"CUPS-9067\"> </a></td><td>DETERMINACION DE POBLACIONES CELULARES</td></tr><tr><td style=\"white-space:nowrap\">9068<a name=\"CUPS-9068\"> </a></td><td>PRUEBAS ESPECIALES</td></tr><tr><td style=\"white-space:nowrap\">9069<a name=\"CUPS-9069\"> </a></td><td>PRUEBAS RUTINARIAS</td></tr><tr><td style=\"white-space:nowrap\">907<a name=\"CUPS-907\"> </a></td><td>MICROSCOPIA</td></tr><tr><td style=\"white-space:nowrap\">9070<a name=\"CUPS-9070\"> </a></td><td>PRUEBAS DE COPROLOGIA</td></tr><tr><td style=\"white-space:nowrap\">9071<a name=\"CUPS-9071\"> </a></td><td>PRUEBAS EN ORINA</td></tr><tr><td style=\"white-space:nowrap\">9072<a name=\"CUPS-9072\"> </a></td><td>OTRAS PRUEBAS</td></tr><tr><td style=\"white-space:nowrap\">908<a name=\"CUPS-908\"> </a></td><td>GENETICA Y ERRORES METABOLICOS</td></tr><tr><td style=\"white-space:nowrap\">9083<a name=\"CUPS-9083\"> </a></td><td>PRUEBAS PARA ERRORES METABOLICOS</td></tr><tr><td style=\"white-space:nowrap\">9084<a name=\"CUPS-9084\"> </a></td><td>PRUEBAS PARA GENETICA</td></tr><tr><td style=\"white-space:nowrap\">9086<a name=\"CUPS-9086\"> </a></td><td>OTRAS PRUEBAS PARA ERRORES INNATOS DEL METABOLISMO</td></tr><tr><td style=\"white-space:nowrap\">9088<a name=\"CUPS-9088\"> </a></td><td>OTRAS PRUEBAS MOLECULARES PARA MICROORGANISMOS</td></tr><tr><td style=\"white-space:nowrap\">911<a name=\"CUPS-911\"> </a></td><td>BANCO DE SANGRE</td></tr><tr><td style=\"white-space:nowrap\">9110<a name=\"CUPS-9110\"> </a></td><td>INMUNOHEMATOLOGIA</td></tr><tr><td style=\"white-space:nowrap\">9111<a name=\"CUPS-9111\"> </a></td><td>SEPARACION DE COMPONENTES</td></tr><tr><td style=\"white-space:nowrap\">9112<a name=\"CUPS-9112\"> </a></td><td>AFERESIS DE DONANTE</td></tr><tr><td style=\"white-space:nowrap\">9113<a name=\"CUPS-9113\"> </a></td><td>AFERESIS TERAPEUTICA</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CUPS",
+  "version" : "1.0.0",
+  "name" : "CUPS",
+  "title" : "CodeSystem: Unified Classification of Health Procedures - Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Clasificación Única de Procedimientos en Salud",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador único de procedimientos de salud en Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "fragment",
+  "concept" : [{
+    "code" : "2372",
+    "display" : "TERAPIAS REGENERATIVAS EN ENDODONCIA"
+  },
+  {
+    "code" : "2470",
+    "display" : "COLOCACION DE ANCLAJE ESQUELETICO"
+  },
+  {
+    "code" : "3800",
+    "display" : "TROMBECTOMIA DE VASOS VIA PERCUTANEA (ENDOVASCULAR)"
+  },
+  {
+    "code" : "3995",
+    "display" : "TERAPIAS DIALITICAS INTERMITENTES"
+  },
+  {
+    "code" : "6090",
+    "display" : "OTROS PROCEDIMIENTOS PERIPROSTATICOS"
+  },
+  {
+    "code" : "9220",
+    "display" : "INSERCION O IMPLANTACION DE DISPOSITIVOS DE MARCACION PARA RADIOTERAPIA"
+  },
+  {
+    "code" : "9970",
+    "display" : "PROCEDIMIENTOS DE HIGIENE ORAL"
+  },
+  {
+    "code" : "209608",
+    "display" : "IMPLANTACION O SUSTITUCION DE DISPOSITIVO AUDITIVO DE TALLO O TRONCO CEREBRAL"
+  },
+  {
+    "code" : "233201",
+    "display" : "RESTAURACION DE DIENTES MEDIANTE INCRUSTACION NO METALICA"
+  },
+  {
+    "code" : "234106",
+    "display" : "COLOCACION O APLICACION DE CORONA PROVISIONAL"
+  },
+  {
+    "code" : "890",
+    "display" : "ENTREVISTA, CONSULTA Y EVALUACION [VALORACION]"
+  },
+  {
+    "code" : "8901",
+    "display" : "ENTREVISTA, CONSULTA Y EVALUACION (VISITA) DOMICILIARIA O AL SITIO DE TRABAJO"
+  },
+  {
+    "code" : "890101",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR MEDICINA GENERAL"
+  },
+  {
+    "code" : "890102",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR MEDICINA ESPECIALIZADA"
+  },
+  {
+    "code" : "890103",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR ODONTOLOGIA GENERAL"
+  },
+  {
+    "code" : "890105",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA"
+  },
+  {
+    "code" : "890106",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR NUTRICION Y DIETETICA"
+  },
+  {
+    "code" : "890108",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA"
+  },
+  {
+    "code" : "890109",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR TRABAJO SOCIAL"
+  },
+  {
+    "code" : "890110",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA"
+  },
+  {
+    "code" : "890111",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPIA"
+  },
+  {
+    "code" : "890112",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA RESPIRATORIA"
+  },
+  {
+    "code" : "890113",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA OCUPACIONAL"
+  },
+  {
+    "code" : "890114",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR PROMOTOR DE LA SALUD"
+  },
+  {
+    "code" : "890115",
+    "display" : "ATENCION (VISITA) DOMICILIARIA, POR EQUIPO INTERDISCIPLINARIO"
+  },
+  {
+    "code" : "890116",
+    "display" : "ATENCION (VISITA) DOMICILIARIA POR OTRO PROFESIONAL DE LA SALUD"
+  },
+  {
+    "code" : "890120",
+    "display" : "ATENCION (VISITA) AL SITIO DE TRABAJO, POR TERAPIA (OCUPACIONAL O FISICA)"
+  },
+  {
+    "code" : "890125",
+    "display" : "ATENCION (VISITA) AL SITIO DE TRABAJO, POR EQUIPO INTERDISCIPLINARIO"
+  },
+  {
+    "code" : "8902",
+    "display" : "CONSULTA DESCRITA COMO GLOBAL O DE PRIMERA VEZ"
+  },
+  {
+    "code" : "890201",
+    "display" : "CONSULTA DE PRIMERA VEZ POR MEDICINA GENERAL"
+  },
+  {
+    "code" : "890202",
+    "display" : "CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES MEDICAS"
+  },
+  {
+    "code" : "890203",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ODONTOLOGIA GENERAL"
+  },
+  {
+    "code" : "890204",
+    "display" : "CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES EN ODONTOLOGIA"
+  },
+  {
+    "code" : "890205",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ENFERMERIA"
+  },
+  {
+    "code" : "890206",
+    "display" : "CONSULTA DE PRIMERA VEZ POR NUTRICION Y DIETETICA"
+  },
+  {
+    "code" : "890207",
+    "display" : "CONSULTA DE PRIMERA VEZ POR OPTOMETRIA"
+  },
+  {
+    "code" : "890208",
+    "display" : "CONSULTA DE PRIMERA VEZ POR PSICOLOGIA"
+  },
+  {
+    "code" : "890209",
+    "display" : "CONSULTA DE PRIMERA VEZ POR TRABAJO SOCIAL"
+  },
+  {
+    "code" : "890210",
+    "display" : "CONSULTA DE PRIMERA VEZ POR FONOAUDIOLOGIA"
+  },
+  {
+    "code" : "890211",
+    "display" : "CONSULTA DE PRIMERA VEZ POR FISIOTERAPIA"
+  },
+  {
+    "code" : "890212",
+    "display" : "CONSULTA DE PRIMERA VEZ POR TERAPIA RESPIRATORIA"
+  },
+  {
+    "code" : "890213",
+    "display" : "CONSULTA DE PRIMERA VEZ POR TERAPIA OCUPACIONAL"
+  },
+  {
+    "code" : "890214",
+    "display" : "CONSULTA DE PRIMERA VEZ POR TERAPIAS ALTERNATIVAS"
+  },
+  {
+    "code" : "890215",
+    "display" : "CONSULTA DE PRIMERA VEZ POR EQUIPO INTERDISCIPLINARIO"
+  },
+  {
+    "code" : "890216",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA"
+  },
+  {
+    "code" : "890217",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ORAL"
+  },
+  {
+    "code" : "890218",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDODONCIA"
+  },
+  {
+    "code" : "890219",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL"
+  },
+  {
+    "code" : "890220",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ODONTOPEDIATRIA"
+  },
+  {
+    "code" : "890221",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PERIODONCIA"
+  },
+  {
+    "code" : "890222",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTODONCIA"
+  },
+  {
+    "code" : "890223",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL"
+  },
+  {
+    "code" : "890224",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REHABILITACION ORAL"
+  },
+  {
+    "code" : "890225",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ALERGOLOGIA"
+  },
+  {
+    "code" : "890226",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA"
+  },
+  {
+    "code" : "890227",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "890228",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA"
+  },
+  {
+    "code" : "890229",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890230",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "890231",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO"
+  },
+  {
+    "code" : "890232",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS"
+  },
+  {
+    "code" : "890233",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA DE TORAX"
+  },
+  {
+    "code" : "890234",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL"
+  },
+  {
+    "code" : "890235",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA GENERAL"
+  },
+  {
+    "code" : "890236",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL"
+  },
+  {
+    "code" : "890237",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA ONCOLOGICA"
+  },
+  {
+    "code" : "890238",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PEDIATRICA"
+  },
+  {
+    "code" : "890239",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA"
+  },
+  {
+    "code" : "890240",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN CIRUGIA VASCULAR"
+  },
+  {
+    "code" : "890241",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN COLOPROCTOLOGIA"
+  },
+  {
+    "code" : "890242",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DERMATOLOGIA"
+  },
+  {
+    "code" : "890243",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS"
+  },
+  {
+    "code" : "890244",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA"
+  },
+  {
+    "code" : "890245",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890246",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA"
+  },
+  {
+    "code" : "890247",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890248",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GENETICA MEDICA"
+  },
+  {
+    "code" : "890249",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GERIATRIA"
+  },
+  {
+    "code" : "890250",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA"
+  },
+  {
+    "code" : "890251",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA"
+  },
+  {
+    "code" : "890252",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890253",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN HEPATOLOGIA"
+  },
+  {
+    "code" : "890254",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN INFECTOLOGIA"
+  },
+  {
+    "code" : "890255",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MASTOLOGIA"
+  },
+  {
+    "code" : "890256",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA AEROESPACIAL"
+  },
+  {
+    "code" : "890257",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)"
+  },
+  {
+    "code" : "890258",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)"
+  },
+  {
+    "code" : "890259",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)"
+  },
+  {
+    "code" : "890260",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)"
+  },
+  {
+    "code" : "890261",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL DEPORTE"
+  },
+  {
+    "code" : "890262",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO"
+  },
+  {
+    "code" : "890263",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FAMILIAR"
+  },
+  {
+    "code" : "890264",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION"
+  },
+  {
+    "code" : "890265",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA FORENSE"
+  },
+  {
+    "code" : "890266",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA INTERNA"
+  },
+  {
+    "code" : "890267",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA NUCLEAR"
+  },
+  {
+    "code" : "890268",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA"
+  },
+  {
+    "code" : "890269",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890270",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEONATOLOGIA"
+  },
+  {
+    "code" : "890271",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA"
+  },
+  {
+    "code" : "890272",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890273",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROCIRUGIA"
+  },
+  {
+    "code" : "890274",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA"
+  },
+  {
+    "code" : "890275",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890276",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OFTALMOLOGIA"
+  },
+  {
+    "code" : "890277",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890278",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA"
+  },
+  {
+    "code" : "890279",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890280",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA"
+  },
+  {
+    "code" : "890281",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890282",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN OTORRINOLARINGOLOGIA"
+  },
+  {
+    "code" : "890283",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PEDIATRIA"
+  },
+  {
+    "code" : "890284",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA"
+  },
+  {
+    "code" : "890285",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA"
+  },
+  {
+    "code" : "890286",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS"
+  },
+  {
+    "code" : "890287",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN RADIOTERAPIA"
+  },
+  {
+    "code" : "890288",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA"
+  },
+  {
+    "code" : "890289",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890290",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN SEXOLOGIA CLINICA"
+  },
+  {
+    "code" : "890291",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TOXICOLOGIA CLINICA"
+  },
+  {
+    "code" : "890292",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN TRASPLANTES"
+  },
+  {
+    "code" : "890294",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN UROLOGIA"
+  },
+  {
+    "code" : "890295",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)"
+  },
+  {
+    "code" : "890296",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)"
+  },
+  {
+    "code" : "890297",
+    "display" : "CONSULTA DE PRIMERA VEZ POR OTRAS ESPECIALIDADES DE PSICOLOGIA"
+  },
+  {
+    "code" : "890298",
+    "display" : "CONSULTA DE PRIMERA VEZ POR ESPECIALISTA EN MEDICINA ESTETICA"
+  },
+  {
+    "code" : "8903",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO"
+  },
+  {
+    "code" : "890301",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR MEDICINA GENERAL"
+  },
+  {
+    "code" : "890302",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES MEDICAS"
+  },
+  {
+    "code" : "890303",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ODONTOLOGIA GENERAL"
+  },
+  {
+    "code" : "890304",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES EN ODONTOLOGIA"
+  },
+  {
+    "code" : "890305",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ENFERMERIA"
+  },
+  {
+    "code" : "890306",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR NUTRICION Y DIETETICA"
+  },
+  {
+    "code" : "890307",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OPTOMETRIA"
+  },
+  {
+    "code" : "890308",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR PSICOLOGIA"
+  },
+  {
+    "code" : "890309",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TRABAJO SOCIAL"
+  },
+  {
+    "code" : "890310",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR FONOAUDIOLOGIA"
+  },
+  {
+    "code" : "890311",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR FISIOTERAPIA"
+  },
+  {
+    "code" : "890312",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA RESPIRATORIA"
+  },
+  {
+    "code" : "890313",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIA OCUPACIONAL"
+  },
+  {
+    "code" : "890314",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR TERAPIAS ALTERNATIVAS"
+  },
+  {
+    "code" : "890315",
+    "display" : "CONSULTA INTEGRAL DE CONTROL O DE SEGUIMIENTO POR EQUIPO INTERDISCIPLINARIO"
+  },
+  {
+    "code" : "890316",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA"
+  },
+  {
+    "code" : "890317",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ORAL"
+  },
+  {
+    "code" : "890318",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDODONCIA"
+  },
+  {
+    "code" : "890319",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL"
+  },
+  {
+    "code" : "890320",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ODONTOPEDIATRIA"
+  },
+  {
+    "code" : "890321",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PERIODONCIA"
+  },
+  {
+    "code" : "890322",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTODONCIA"
+  },
+  {
+    "code" : "890323",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL"
+  },
+  {
+    "code" : "890324",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REHABILITACION ORAL"
+  },
+  {
+    "code" : "890325",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ALERGOLOGIA"
+  },
+  {
+    "code" : "890326",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA"
+  },
+  {
+    "code" : "890327",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "890328",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA"
+  },
+  {
+    "code" : "890329",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890330",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "890331",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO"
+  },
+  {
+    "code" : "890332",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS"
+  },
+  {
+    "code" : "890333",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA DE TORAX"
+  },
+  {
+    "code" : "890334",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL"
+  },
+  {
+    "code" : "890335",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA GENERAL"
+  },
+  {
+    "code" : "890336",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL"
+  },
+  {
+    "code" : "890337",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA ONCOLOGICA"
+  },
+  {
+    "code" : "890338",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PEDIATRICA"
+  },
+  {
+    "code" : "890339",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA"
+  },
+  {
+    "code" : "890340",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN CIRUGIA VASCULAR"
+  },
+  {
+    "code" : "890341",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN COLOPROCTOLOGIA"
+  },
+  {
+    "code" : "890342",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DERMATOLOGIA"
+  },
+  {
+    "code" : "890343",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS"
+  },
+  {
+    "code" : "890344",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA"
+  },
+  {
+    "code" : "890345",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890346",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA"
+  },
+  {
+    "code" : "890347",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890348",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GENETICA MEDICA"
+  },
+  {
+    "code" : "890349",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GERIATRIA"
+  },
+  {
+    "code" : "890350",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA"
+  },
+  {
+    "code" : "890351",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA"
+  },
+  {
+    "code" : "890352",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890353",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN HEPATOLOGIA"
+  },
+  {
+    "code" : "890354",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN INFECTOLOGIA"
+  },
+  {
+    "code" : "890355",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MASTOLOGIA"
+  },
+  {
+    "code" : "890356",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA AEROESPACIAL"
+  },
+  {
+    "code" : "890357",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)"
+  },
+  {
+    "code" : "890358",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)"
+  },
+  {
+    "code" : "890359",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)"
+  },
+  {
+    "code" : "890360",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)"
+  },
+  {
+    "code" : "890361",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL DEPORTE"
+  },
+  {
+    "code" : "890362",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO"
+  },
+  {
+    "code" : "890363",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FAMILIAR"
+  },
+  {
+    "code" : "890364",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION"
+  },
+  {
+    "code" : "890365",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA FORENSE"
+  },
+  {
+    "code" : "890366",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA INTERNA"
+  },
+  {
+    "code" : "890367",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA NUCLEAR"
+  },
+  {
+    "code" : "890368",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA"
+  },
+  {
+    "code" : "890369",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890370",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEONATOLOGIA"
+  },
+  {
+    "code" : "890371",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA"
+  },
+  {
+    "code" : "890372",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890373",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROCIRUGIA"
+  },
+  {
+    "code" : "890374",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA"
+  },
+  {
+    "code" : "890375",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890376",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OFTALMOLOGIA"
+  },
+  {
+    "code" : "890377",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890378",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA"
+  },
+  {
+    "code" : "890379",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890380",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA"
+  },
+  {
+    "code" : "890381",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890382",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN OTORRINOLARINGOLOGIA"
+  },
+  {
+    "code" : "890383",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PEDIATRIA"
+  },
+  {
+    "code" : "890384",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA"
+  },
+  {
+    "code" : "890385",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA"
+  },
+  {
+    "code" : "890386",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS"
+  },
+  {
+    "code" : "890387",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN RADIOTERAPIA"
+  },
+  {
+    "code" : "890388",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA"
+  },
+  {
+    "code" : "890389",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890390",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN SEXOLOGIA CLINICA"
+  },
+  {
+    "code" : "890391",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TOXICOLOGIA CLINICA"
+  },
+  {
+    "code" : "890392",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN TRASPLANTES"
+  },
+  {
+    "code" : "890394",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN UROLOGIA"
+  },
+  {
+    "code" : "890395",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)"
+  },
+  {
+    "code" : "890396",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)"
+  },
+  {
+    "code" : "890397",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR OTRAS ESPECIALIDADES DE PSICOLOGIA"
+  },
+  {
+    "code" : "890398",
+    "display" : "CONSULTA DE CONTROL O DE SEGUIMIENTO POR ESPECIALISTA EN MEDICINA ESTETICA"
+  },
+  {
+    "code" : "8904",
+    "display" : "INTERCONSULTA"
+  },
+  {
+    "code" : "890401",
+    "display" : "INTERCONSULTA POR MEDICINA GENERAL"
+  },
+  {
+    "code" : "890402",
+    "display" : "INTERCONSULTA POR OTRAS ESPECIALIDADES MEDICAS"
+  },
+  {
+    "code" : "890403",
+    "display" : "INTERCONSULTA POR ODONTOLOGIA GENERAL"
+  },
+  {
+    "code" : "890404",
+    "display" : "INTERCONSULTA POR OTRAS ESPECIALIDADES EN ODONTOLOGIA"
+  },
+  {
+    "code" : "890405",
+    "display" : "INTERCONSULTA POR ENFERMERIA"
+  },
+  {
+    "code" : "890406",
+    "display" : "INTERCONSULTA POR NUTRICION Y DIETETICA"
+  },
+  {
+    "code" : "890408",
+    "display" : "INTERCONSULTA POR PSICOLOGIA"
+  },
+  {
+    "code" : "890409",
+    "display" : "INTERCONSULTA POR TRABAJO SOCIAL"
+  },
+  {
+    "code" : "890410",
+    "display" : "INTERCONSULTA POR FONOAUDIOLOGIA"
+  },
+  {
+    "code" : "890411",
+    "display" : "INTERCONSULTA POR FISIOTERAPIA"
+  },
+  {
+    "code" : "890412",
+    "display" : "INTERCONSULTA POR TERAPIA RESPIRATORIA"
+  },
+  {
+    "code" : "890413",
+    "display" : "INTERCONSULTA POR TERAPIA OCUPACIONAL"
+  },
+  {
+    "code" : "890416",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN SALUD FAMILIAR Y COMUNITARIA"
+  },
+  {
+    "code" : "890417",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA ORAL"
+  },
+  {
+    "code" : "890418",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ENDODONCIA"
+  },
+  {
+    "code" : "890419",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ESTOMATOLOGIA Y CIRUGIA ORAL"
+  },
+  {
+    "code" : "890420",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ODONTOPEDIATRIA"
+  },
+  {
+    "code" : "890421",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN PERIODONCIA"
+  },
+  {
+    "code" : "890422",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ORTODONCIA"
+  },
+  {
+    "code" : "890423",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN RADIOLOGIA ORAL Y MAXILOFACIAL"
+  },
+  {
+    "code" : "890424",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN REHABILITACION ORAL"
+  },
+  {
+    "code" : "890425",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ALERGOLOGIA"
+  },
+  {
+    "code" : "890426",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ANESTESIOLOGIA"
+  },
+  {
+    "code" : "890427",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ANESTESIOLOGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "890428",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CARDIOLOGIA"
+  },
+  {
+    "code" : "890429",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CARDIOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890430",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA CARDIOVASCULAR"
+  },
+  {
+    "code" : "890431",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA DE CABEZA Y CUELLO"
+  },
+  {
+    "code" : "890432",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA DE MAMA Y TUMORES DE TEJIDOS BLANDOS"
+  },
+  {
+    "code" : "890433",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA DE TORAX"
+  },
+  {
+    "code" : "890434",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA GASTROINTESTINAL"
+  },
+  {
+    "code" : "890435",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA GENERAL"
+  },
+  {
+    "code" : "890436",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA MAXILOFACIAL"
+  },
+  {
+    "code" : "890437",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA ONCOLOGICA"
+  },
+  {
+    "code" : "890438",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA PEDIATRICA"
+  },
+  {
+    "code" : "890439",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA PLASTICA, ESTETICA Y RECONSTRUCTIVA"
+  },
+  {
+    "code" : "890440",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN CIRUGIA VASCULAR"
+  },
+  {
+    "code" : "890441",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN COLOPROCTOLOGIA"
+  },
+  {
+    "code" : "890442",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN DERMATOLOGIA"
+  },
+  {
+    "code" : "890443",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN DOLOR Y CUIDADOS PALIATIVOS"
+  },
+  {
+    "code" : "890444",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ENDOCRINOLOGIA"
+  },
+  {
+    "code" : "890445",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ENDOCRINOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890446",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN GASTROENTEROLOGIA"
+  },
+  {
+    "code" : "890447",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN GASTROENTEROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890448",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN GENETICA MEDICA"
+  },
+  {
+    "code" : "890449",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN GERIATRIA"
+  },
+  {
+    "code" : "890450",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA"
+  },
+  {
+    "code" : "890451",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN HEMATOLOGIA"
+  },
+  {
+    "code" : "890452",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN HEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890453",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN HEPATOLOGIA"
+  },
+  {
+    "code" : "890454",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN INFECTOLOGIA"
+  },
+  {
+    "code" : "890455",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MASTOLOGIA"
+  },
+  {
+    "code" : "890456",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA AEROESPACIAL"
+  },
+  {
+    "code" : "890457",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (AYURVEDA)"
+  },
+  {
+    "code" : "890458",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (HOMEOPATICA)"
+  },
+  {
+    "code" : "890459",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (MEDICINA TRADICIONAL CHINA)"
+  },
+  {
+    "code" : "890460",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NATUROPATIA)"
+  },
+  {
+    "code" : "890461",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA DEL DEPORTE"
+  },
+  {
+    "code" : "890462",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA DEL TRABAJO O SEGURIDAD Y SALUD EN EL TRABAJO"
+  },
+  {
+    "code" : "890463",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA FAMILIAR"
+  },
+  {
+    "code" : "890464",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA FISICA Y REHABILITACION"
+  },
+  {
+    "code" : "890465",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA FORENSE"
+  },
+  {
+    "code" : "890466",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA INTERNA"
+  },
+  {
+    "code" : "890467",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA NUCLEAR"
+  },
+  {
+    "code" : "890468",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEFROLOGIA"
+  },
+  {
+    "code" : "890469",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEFROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890470",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEONATOLOGIA"
+  },
+  {
+    "code" : "890471",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEUMOLOGIA"
+  },
+  {
+    "code" : "890472",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEUMOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890473",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEUROCIRUGIA"
+  },
+  {
+    "code" : "890474",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEUROLOGIA"
+  },
+  {
+    "code" : "890475",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN NEUROLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890476",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN OFTALMOLOGIA"
+  },
+  {
+    "code" : "890477",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ONCOHEMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890478",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ONCOLOGIA"
+  },
+  {
+    "code" : "890479",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ONCOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890480",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA"
+  },
+  {
+    "code" : "890481",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890482",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN OTORRINOLARINGOLOGIA"
+  },
+  {
+    "code" : "890483",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN PEDIATRIA"
+  },
+  {
+    "code" : "890484",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN PSIQUIATRIA"
+  },
+  {
+    "code" : "890485",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN PSIQUIATRIA PEDIATRICA"
+  },
+  {
+    "code" : "890486",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN RADIOLOGIA E IMAGENES DIAGNOSTICAS"
+  },
+  {
+    "code" : "890487",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN RADIOTERAPIA"
+  },
+  {
+    "code" : "890488",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN REUMATOLOGIA"
+  },
+  {
+    "code" : "890489",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN REUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890490",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN SEXOLOGIA CLINICA"
+  },
+  {
+    "code" : "890491",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN TOXICOLOGIA CLINICA"
+  },
+  {
+    "code" : "890492",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN TRASPLANTES"
+  },
+  {
+    "code" : "890494",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN UROLOGIA"
+  },
+  {
+    "code" : "890495",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (OSTEOPATICA)"
+  },
+  {
+    "code" : "890496",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ALTERNATIVA (NEURALTERAPEUTICA)"
+  },
+  {
+    "code" : "890497",
+    "display" : "INTERCONSULTA POR ESPECIALISTA EN MEDICINA ESTETICA"
+  },
+  {
+    "code" : "8905",
+    "display" : "JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO"
+  },
+  {
+    "code" : "890501",
+    "display" : "PARTICIPACION EN JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO POR MEDICINA GENERAL Y CASO (PACIENTE)"
+  },
+  {
+    "code" : "890502",
+    "display" : "PARTICIPACION EN JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO POR MEDICINA ESPECIALIZADA Y CASO (PACIENTE)"
+  },
+  {
+    "code" : "890503",
+    "display" : "PARTICIPACION EN JUNTA MEDICA O EQUIPO INTERDISCIPLINARIO POR OTRO PROFESIONAL DE LA SALUD Y CASO (PACIENTE)"
+  },
+  {
+    "code" : "8906",
+    "display" : "CUIDADO (MANEJO) Y ASISTENCIA INTRAHOSPITALARIA"
+  },
+  {
+    "code" : "890601",
+    "display" : "CUIDADO (MANEJO) INTRAHOSPITALARIO POR MEDICINA GENERAL"
+  },
+  {
+    "code" : "890602",
+    "display" : "CUIDADO (MANEJO) INTRAHOSPITALARIO POR MEDICINA ESPECIALIZADA"
+  },
+  {
+    "code" : "890603",
+    "display" : "DETECCION, VALORACION Y ATENCION INTRAHOSPITALARIA DE DONANTE DE ORGANOS Y TEJIDOS"
+  },
+  {
+    "code" : "890604",
+    "display" : "CUIDADO (MANEJO) INTRAHOSPITALARIO POR ODONTOLOGIA ESPECIALIZADA"
+  },
+  {
+    "code" : "890605",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR ENFERMERIA"
+  },
+  {
+    "code" : "890606",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR NUTRICION Y DIETETICA"
+  },
+  {
+    "code" : "890608",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR PSICOLOGIA"
+  },
+  {
+    "code" : "890609",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR TRABAJO SOCIAL"
+  },
+  {
+    "code" : "890610",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR TERAPIA FONIATRIA Y FONOAUDIOLOGIA"
+  },
+  {
+    "code" : "890611",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR TERAPIA FISICA"
+  },
+  {
+    "code" : "890612",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR TERAPIA RESPIRATORIA"
+  },
+  {
+    "code" : "890613",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR TERAPIA OCUPACIONAL"
+  },
+  {
+    "code" : "890615",
+    "display" : "ASISTENCIA INTRAHOSPITALARIA POR EQUIPO INTERDISCIPLINARIO"
+  },
+  {
+    "code" : "8907",
+    "display" : "CONSULTA DE URGENCIAS"
+  },
+  {
+    "code" : "890701",
+    "display" : "CONSULTA DE URGENCIAS POR MEDICINA GENERAL"
+  },
+  {
+    "code" : "890702",
+    "display" : "CONSULTA DE URGENCIAS POR OTRAS ESPECIALIDADES MEDICAS"
+  },
+  {
+    "code" : "890703",
+    "display" : "CONSULTA DE URGENCIAS POR ODONTOLOGIA GENERAL"
+  },
+  {
+    "code" : "890704",
+    "display" : "CONSULTA DE URGENCIAS POR ODONTOLOGIA ESPECIALIZADA"
+  },
+  {
+    "code" : "890735",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN CIRUGIA GENERAL"
+  },
+  {
+    "code" : "890750",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN GINECOLOGIA Y OBSTETRICIA"
+  },
+  {
+    "code" : "890763",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN MEDICINA FAMILIAR"
+  },
+  {
+    "code" : "890780",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA"
+  },
+  {
+    "code" : "890781",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN ORTOPEDIA Y TRAUMATOLOGIA PEDIATRICA"
+  },
+  {
+    "code" : "890783",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN PEDIATRIA"
+  },
+  {
+    "code" : "890793",
+    "display" : "CONSULTA DE URGENCIAS, POR ESPECIALISTA EN URGENCIAS O EMERGENCIAS"
+  },
+  {
+    "code" : "902077",
+    "display" : "INHIBIDOR DE FACTOR VON WILLEBRAND"
+  },
+  {
+    "code" : "902078",
+    "display" : "INHIBIDOR DE FACTOR XIII"
+  },
+  {
+    "code" : "902124",
+    "display" : "MICROSCOPIA ELECTRONICA PLAQUETARIA"
+  },
+  {
+    "code" : "903612",
+    "display" : "ELECTROLITOS EN SUDOR [IONTOFORESIS] MEDICION DIRECTA"
+  },
+  {
+    "code" : "903613",
+    "display" : "ELECTROLITOS EN SUDOR [IONTOFORESIS] MEDICION INDIRECTA"
+  },
+  {
+    "code" : "904916",
+    "display" : "TIROXINA LIBRE PRE Y POST LEVOTIROXINA"
+  },
+  {
+    "code" : "905104",
+    "display" : "NIVEL DE INHIBIDORES DIRECTOS DEL FACTOR Xa"
+  },
+  {
+    "code" : "905105",
+    "display" : "NIVEL DE INHIBIDORES DIRECTOS DE LA TROMBINA"
+  },
+  {
+    "code" : "905106",
+    "display" : "NIVEL DE INHIBIDORES INDIRECTOS DEL FACTOR Xa (HEPARINA DE BAJO PESO MOLECULAR)"
+  },
+  {
+    "code" : "906856",
+    "display" : "INMUNOGLOBULINAS CADENAS PESADAS SEMIAUTOMATIZADO O AUTOMATIZADO"
+  },
+  {
+    "code" : "906857",
+    "display" : "FACTOR DE CRECIMIENTO ENDOTELIAL"
+  },
+  {
+    "code" : "906858",
+    "display" : "HEMOGLOBINAS (ESPECIFICO) CUALITATIVA O CUANTITATIVA"
+  },
+  {
+    "code" : "908860",
+    "display" : "Plasmodium especies IDENTIFICACION POR PRUEBAS MOLECULARES"
+  },
+  {
+    "code" : "908890",
+    "display" : "DETECCION Virus del Papiloma Humano POR PRUEBAS MOLECULARES (ESPECIFICO)"
+  },
+  {
+    "code" : "90",
+    "display" : "LABORATORIO CLINICO"
+  },
+  {
+    "code" : "901",
+    "display" : "MICROBIOLOGIA (BACTERIOLOGIA, PARASITOLOGIA, MICOLOGIA Y VIROLOGIA)"
+  },
+  {
+    "code" : "9010",
+    "display" : "ANTIBIOGRAMA Y PRUEBAS DE SENSIBILIDAD"
+  },
+  {
+    "code" : "9011",
+    "display" : "COLORACION"
+  },
+  {
+    "code" : "9012",
+    "display" : "CULTIVOS (AISLAMIENTO Y PRUEBAS DE IDENTIFICACION)"
+  },
+  {
+    "code" : "9013",
+    "display" : "IDENTIFICACION DE MICROORGANISMOS"
+  },
+  {
+    "code" : "9015",
+    "display" : "OTRAS PRUEBAS MICROBIOLOGICAS"
+  },
+  {
+    "code" : "901501",
+    "display" : "PRUEBA DE CONCENTRACION BACTERICIDA EN SUERO O LCR U OTROS"
+  },
+  {
+    "code" : "901502",
+    "display" : "Clostridium TOXINA"
+  },
+  {
+    "code" : "902",
+    "display" : "HEMATOLOGIA"
+  },
+  {
+    "code" : "9020",
+    "display" : "PRUEBAS DE COAGULACION"
+  },
+  {
+    "code" : "9021",
+    "display" : "PRUEBAS HEMATOLOGICAS NO RUTINARIAS"
+  },
+  {
+    "code" : "9022",
+    "display" : "PRUEBAS HEMATOLOGICAS RUTINARIAS"
+  },
+  {
+    "code" : "902204",
+    "display" : "ERITROSEDIMENTACION [VELOCIDAD SEDIMENTACION GLOBULAR - VSG] MANUAL"
+  },
+  {
+    "code" : "902205",
+    "display" : "ERITROSEDIMENTACION [VELOCIDAD SEDIMENTACION GLOBULAR - VSG] AUTOMATIZADA"
+  },
+  {
+    "code" : "902206",
+    "display" : "EXTENDIDO DE SANGRE PERIFERICA ESTUDIO DE MORFOLOGIA"
+  },
+  {
+    "code" : "902207",
+    "display" : "HEMOGRAMA I (HEMOGLOBINA HEMATOCRITO Y LEUCOGRAMA) MANUAL"
+  },
+  {
+    "code" : "902208",
+    "display" : "HEMOGRAMA II (HEMOGLOBINA HEMATOCRITO RECUENTO DE ERITROCITOS INDICES ERITROCITARIOS LEUCOGRAMA RECUENTO DE PLAQUETAS E INDICES PLAQUETARIOS) SEMIAUTOMATIZADO"
+  },
+  {
+    "code" : "902209",
+    "display" : "HEMOGRAMA III (HEMOGLOBINA HEMATOCRITO RECUENTO DE ERITROCITOS INDICES ERITROCITARIOS LEUCOGRAMA RECUENTO DE PLAQUETAS INDICES PLAQUETARIOS Y MORFOLOGIA ELECTRONICA) AUTOMATIZADO"
+  },
+  {
+    "code" : "902210",
+    "display" : "HEMOGRAMA IV (HEMOGLOBINA HEMATOCRITO RECUENTO DE ERITROCITOS INDICES ERITROCITARIOS LEUCOGRAMA RECUENTO DE PLAQUETAS INDICES PLAQUETARIOS Y MORFOLOGIA ELECTRONICA E HISTOGRAMA) AUTOMATIZADO"
+  },
+  {
+    "code" : "902211",
+    "display" : "HEMATOCRITO"
+  },
+  {
+    "code" : "902213",
+    "display" : "HEMOGLOBINA"
+  },
+  {
+    "code" : "902214",
+    "display" : "HEMOPARASITOS EXTENDIDO DE GOTA GRUESA"
+  },
+  {
+    "code" : "902215",
+    "display" : "HEMOPARASITOS EXTENDIDO DE SANGRE PERIFERICA"
+  },
+  {
+    "code" : "902216",
+    "display" : "LEUCOGRAMA (RECUENTO TOTAL Y DIFERENCIAL)"
+  },
+  {
+    "code" : "902217",
+    "display" : "PRUEBA DE TORNIQUETE [FRAGILIDAD CAPILAR]"
+  },
+  {
+    "code" : "902218",
+    "display" : "RECUENTO DE EOSINOFILO EN CUALQUIER MUESTRA"
+  },
+  {
+    "code" : "902219",
+    "display" : "EOSINOFILOS EN MOCO NASAL"
+  },
+  {
+    "code" : "902220",
+    "display" : "RECUENTO DE PLAQUETAS AUTOMATIZADO"
+  },
+  {
+    "code" : "902221",
+    "display" : "RECUENTO DE PLAQUETAS MANUAL"
+  },
+  {
+    "code" : "902223",
+    "display" : "RECUENTO DE RETICULOCITOS METODO MANUAL"
+  },
+  {
+    "code" : "902224",
+    "display" : "RECUENTO DE RETICULOCITOS AUTOMATIZADO"
+  },
+  {
+    "code" : "902225",
+    "display" : "TITULO ANTI D"
+  },
+  {
+    "code" : "902226",
+    "display" : "PRUEBA DE SUCROSA EN ERITROCITOS [TEST DE HARTMAN]"
+  },
+  {
+    "code" : "903",
+    "display" : "QUIMICA SANGUINEA Y DE OTROS FLUIDOS CORPORALES"
+  },
+  {
+    "code" : "9030",
+    "display" : "PRUEBAS NO RUTINARIAS"
+  },
+  {
+    "code" : "904",
+    "display" : "ENDOCRINOLOGIA"
+  },
+  {
+    "code" : "905",
+    "display" : "MONITOREO DE MEDICAMENTOS Y TOXICOLOGIA"
+  },
+  {
+    "code" : "9050",
+    "display" : "MONITOREO ANESTESICO"
+  },
+  {
+    "code" : "9051",
+    "display" : "MONITOREO ANTICOAGULANTES"
+  },
+  {
+    "code" : "9052",
+    "display" : "MONITOREO ANTICONVULSIVANTES"
+  },
+  {
+    "code" : "9053",
+    "display" : "MONITOREO ANTIDEPRESIVOS, ANTIMANIATICOS Y NEUROLEPTICOS"
+  },
+  {
+    "code" : "9054",
+    "display" : "MONITOREO ANTIMICROBIANOS"
+  },
+  {
+    "code" : "9055",
+    "display" : "MONITOREO DE CITOSTATICOS"
+  },
+  {
+    "code" : "9056",
+    "display" : "MONITOREO DIGITALICOS, CARDIOVASCULARES Y BRONCODILATADOR"
+  },
+  {
+    "code" : "9057",
+    "display" : "NIVELES TOXICOLOGICOS"
+  },
+  {
+    "code" : "9058",
+    "display" : "NIVELES DE OTRAS SUSTANCIAS TERAPEUTICAS"
+  },
+  {
+    "code" : "906",
+    "display" : "INMUNOLOGIA Y MARCADORES TUMORALES"
+  },
+  {
+    "code" : "9060",
+    "display" : "DETERMINACION DE ANTICUERPOS BACTERIANOS"
+  },
+  {
+    "code" : "9061",
+    "display" : "DETERMINACION DE ANTICUERPOS CONTRA HONGOS Y PARASITOS"
+  },
+  {
+    "code" : "9062",
+    "display" : "DETERMINACION DE ANTICUERPOS CONTRA VIRUS"
+  },
+  {
+    "code" : "9063",
+    "display" : "DETERMINACION DE ANTIGENOS MICROBIOLOGICOS"
+  },
+  {
+    "code" : "9064",
+    "display" : "DETERMINACION DE ANTICUERPOS ESPECIFICOS"
+  },
+  {
+    "code" : "9065",
+    "display" : "PRUEBAS DE HISTOCOMPATIBILIDAD"
+  },
+  {
+    "code" : "9066",
+    "display" : "MARCADORES TUMORALES"
+  },
+  {
+    "code" : "9067",
+    "display" : "DETERMINACION DE POBLACIONES CELULARES"
+  },
+  {
+    "code" : "9068",
+    "display" : "PRUEBAS ESPECIALES"
+  },
+  {
+    "code" : "9069",
+    "display" : "PRUEBAS RUTINARIAS"
+  },
+  {
+    "code" : "907",
+    "display" : "MICROSCOPIA"
+  },
+  {
+    "code" : "9070",
+    "display" : "PRUEBAS DE COPROLOGIA"
+  },
+  {
+    "code" : "9071",
+    "display" : "PRUEBAS EN ORINA"
+  },
+  {
+    "code" : "9072",
+    "display" : "OTRAS PRUEBAS"
+  },
+  {
+    "code" : "908",
+    "display" : "GENETICA Y ERRORES METABOLICOS"
+  },
+  {
+    "code" : "9083",
+    "display" : "PRUEBAS PARA ERRORES METABOLICOS"
+  },
+  {
+    "code" : "9084",
+    "display" : "PRUEBAS PARA GENETICA"
+  },
+  {
+    "code" : "9086",
+    "display" : "OTRAS PRUEBAS PARA ERRORES INNATOS DEL METABOLISMO"
+  },
+  {
+    "code" : "9088",
+    "display" : "OTRAS PRUEBAS MOLECULARES PARA MICROORGANISMOS"
+  },
+  {
+    "code" : "911",
+    "display" : "BANCO DE SANGRE"
+  },
+  {
+    "code" : "9110",
+    "display" : "INMUNOHEMATOLOGIA"
+  },
+  {
+    "code" : "9111",
+    "display" : "SEPARACION DE COMPONENTES"
+  },
+  {
+    "code" : "9112",
+    "display" : "AFERESIS DE DONANTE"
+  },
+  {
+    "code" : "9113",
+    "display" : "AFERESIS TERAPEUTICA"
+  }]
+}

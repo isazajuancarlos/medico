@@ -1,0 +1,126 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresCausasNoDispensacion",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresCausasNoDispensacion</b></p><a name=\"MipresCausasNoDispensacion\"> </a><a name=\"hcMipresCausasNoDispensacion\"> </a><p>This  code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresCausasNoDispensacion</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">NE01<a name=\"MipresCausasNoDispensacion-NE01\"> </a></td><td>Misma solicitud suministrada mediante otra prescripción</td><td>Se verifica que el medicamento correspondiente al mismo paciente y periodo de tratamiento ya fue suministrado mediante otra prescripción o entrega válida. Debe registrarse el identificador asociado.</td></tr><tr><td style=\"white-space:nowrap\">NE02<a name=\"MipresCausasNoDispensacion-NE02\"> </a></td><td>Riesgo clínico por interacción, contraindicación o reacción adversa</td><td>Durante la validación previa a la dispensación se identifica evidencia clínicamente relevante de interacción, contraindicación, reacción adversa u otra condición que hace insegura la entrega. Debe informarse a la EAPB y al prescriptor para la revisión de la orden.</td></tr><tr><td style=\"white-space:nowrap\">NE03<a name=\"MipresCausasNoDispensacion-NE03\"> </a></td><td>Prescripción con inconsistencias que impiden la identificación segura del medicamento</td><td>Durante la validación previa a la dispensación se identifican errores, omisiones o contradicciones que impiden confirmar de manera unívoca el medicamento o efectuar su entrega en condiciones seguras. Debe solicitarse la aclaración, corrección o sustitución de la prescripción.</td></tr><tr><td style=\"white-space:nowrap\">NE04<a name=\"MipresCausasNoDispensacion-NE04\"> </a></td><td>Indicación no autorizada por la autoridad competente</td><td>Durante la validación se identifica que la indicación prescrita no se encuentra autorizada en el registro sanitario ni incluida en el listado UNIRS vigente, cuando resulte aplicable.</td></tr><tr><td style=\"white-space:nowrap\">NE05<a name=\"MipresCausasNoDispensacion-NE05\"> </a></td><td>Paciente fallecido</td><td>Se confirma el fallecimiento del paciente antes de efectuar la entrega, mediante una fuente válida de información.</td></tr><tr><td style=\"white-space:nowrap\">NE06<a name=\"MipresCausasNoDispensacion-NE06\"> </a></td><td>Prescripción anulada o sustituida antes de la entrega</td><td>La prescripción fue anulada o reemplazada válidamente después del direccionamiento o programación y antes del suministro. Cuando exista una nueva prescripción, debe registrarse su identificador.</td></tr><tr><td style=\"white-space:nowrap\">NE07<a name=\"MipresCausasNoDispensacion-NE07\"> </a></td><td>Tratamiento suspendido o modificado por el prescriptor</td><td>Antes de la entrega, el profesional tratante suspende o modifica el tratamiento y deja sin efecto la prescripción correspondiente.</td></tr><tr><td style=\"white-space:nowrap\">NE08<a name=\"MipresCausasNoDispensacion-NE08\"> </a></td><td>Rechazo informado del paciente</td><td>El paciente o su representante manifiesta de manera expresa que no acepta recibir el medicamento, después de haber recibido información suficiente sobre la entrega y las posibles implicaciones de su decisión. Deberá conservarse evidencia verificable del rechazo, la fecha en que se produjo, la identidad de quien lo manifestó y el medio mediante el cual fue comunicado. Este soporte no se carga en la IHCE, pero deberá estar disponible para las actuaciones de inspección, vigilancia y control, auditoría o verificación.</td></tr><tr><td style=\"white-space:nowrap\">NE09<a name=\"MipresCausasNoDispensacion-NE09\"> </a></td><td>Paciente no localizado o no se presenta a la entrega</td><td>No fue posible efectuar la entrega porque el paciente o la persona autorizada no acudió en la fecha y lugar previamente informados, o porque, después de realizar intentos razonables de contacto mediante diferentes canales y en distintos momentos, no fue posible localizarlo o coordinar la entrega. La entidad responsable deberá conservar evidencia verificable de las gestiones realizadas, incluyendo, según corresponda, las fechas, horas, canales utilizados, datos de contacto empleados y resultado de cada intento. Estos soportes no hacen parte del reporte interoperable ni deben cargarse en la IHCE; sin embargo, deberán permanecer disponibles para su consulta en el marco de las actuaciones de inspección, vigilancia y control, auditoría o verificación que adelanten las autoridades competentes. Esta causal no podrá utilizarse cuando no se hayan efectuado y documentado previamente las gestiones razonables de contacto, ni cuando los datos utilizados se encuentren incompletos, desactualizados o no correspondan a los suministrados por el usuario.</td></tr><tr><td style=\"white-space:nowrap\">NE10<a name=\"MipresCausasNoDispensacion-NE10\"> </a></td><td>Identidad o autorización del receptor no verificable</td><td>No es posible verificar la identidad del paciente o la autorización de la persona que pretende recibir el medicamento, después de aplicar los mecanismos establecidos para dicha validación.</td></tr><tr><td style=\"white-space:nowrap\">NE11<a name=\"MipresCausasNoDispensacion-NE11\"> </a></td><td>Retiro o suspensión sanitaria del medicamento</td><td>Antes de la entrega se identifica que el medicamento o lote está sometido a una orden de retiro, suspensión, inmovilización o prohibición expedida por la autoridad competente.</td></tr><tr><td style=\"white-space:nowrap\">NE12<a name=\"MipresCausasNoDispensacion-NE12\"> </a></td><td>Autorización sanitaria requerida para MVND no otorgada</td><td>Se verifica que la autorización de importación requerida para el medicamento vital no disponible fue negada o no fue otorgada por la autoridad competente, impidiendo jurídicamente su entrega.</td></tr><tr><td style=\"white-space:nowrap\">NE13<a name=\"MipresCausasNoDispensacion-NE13\"> </a></td><td>Medicamento no financiado con recursos de la UPC</td><td>Se identifica que el medicamento no corresponde al mecanismo de suministro de medicamentos UPC y debe gestionarse a través de MIPRES.</td></tr><tr><td style=\"white-space:nowrap\">NE14<a name=\"MipresCausasNoDispensacion-NE14\"> </a></td><td>Medicamento sujeto a monitoreo mediante MIPRES</td><td>Se identifica que el medicamento debe ser registrado y monitoreado mediante MIPRES, por lo que no procede completar su ciclo a través del mecanismo dispuesto para medicamentos UPC.</td></tr><tr><td style=\"white-space:nowrap\">NE15<a name=\"MipresCausasNoDispensacion-NE15\"> </a></td><td>Medicamento o uso excluido de financiación con recursos públicos</td><td>El medicamento o uso prescrito se encuentra expresamente excluido de financiación con recursos públicos, conforme con la normativa vigente.</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresCausasNoDispensacion",
+  "version" : "1.0.0",
+  "name" : "MipresCausasNoDispensacion",
+  "title" : "CodeSystem: Causas de no entrega (no dispensación)",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2026-07-23",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados que representa las causas por las cuales no se pudo realizar la entrega (dispensación) de un medicamento en el marco de la Gestión Farmacéutica.\n\n**Nota sobre desabastecimiento o falta de disponibilidad:** la inexistencia temporal de inventario en el punto de dispensación, la falta de disponibilidad en la red, el riesgo de desabastecimiento o el desabastecimiento confirmado no deben registrarse como una causal que finalice la gestión de la entrega. Estas situaciones deben activar las acciones de coordinación entre la Entidad Responsable de Pago, el prestador de servicios de salud, el gestor farmacéutico y los demás actores involucrados para garantizar la continuidad del tratamiento. Cuando sea necesario modificar el medicamento prescrito, deberá gestionarse oportunamente la valoración del paciente por el médico tratante, quien determinará la alternativa terapéutica apropiada. El resultado deberá registrarse como medicamento pendiente hasta que se materialice la entrega correspondiente.\n\n**Importante:** las causales de no direccionamiento y no entrega deben registrar situaciones efectivamente verificadas y no pueden utilizarse para trasladar al paciente las dificultades administrativas, contractuales, logísticas o de disponibilidad que corresponda resolver a los actores del sistema. Su registro no extingue las obligaciones relacionadas con la continuidad del tratamiento, la gestión del medicamento pendiente ni la adopción de las medidas necesarias para garantizar el acceso efectivo del usuario.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Causas de no entrega (no dispensación) de medicamentos en el marco de la Gestión Farmacéutica.",
+  "copyright" : "Ministerio de Salud y Protección Social, CCBY4.0 2006+",
+  "content" : "complete",
+  "count" : 15,
+  "concept" : [{
+    "code" : "NE01",
+    "display" : "Misma solicitud suministrada mediante otra prescripción",
+    "definition" : "Se verifica que el medicamento correspondiente al mismo paciente y periodo de tratamiento ya fue suministrado mediante otra prescripción o entrega válida. Debe registrarse el identificador asociado."
+  },
+  {
+    "code" : "NE02",
+    "display" : "Riesgo clínico por interacción, contraindicación o reacción adversa",
+    "definition" : "Durante la validación previa a la dispensación se identifica evidencia clínicamente relevante de interacción, contraindicación, reacción adversa u otra condición que hace insegura la entrega. Debe informarse a la EAPB y al prescriptor para la revisión de la orden."
+  },
+  {
+    "code" : "NE03",
+    "display" : "Prescripción con inconsistencias que impiden la identificación segura del medicamento",
+    "definition" : "Durante la validación previa a la dispensación se identifican errores, omisiones o contradicciones que impiden confirmar de manera unívoca el medicamento o efectuar su entrega en condiciones seguras. Debe solicitarse la aclaración, corrección o sustitución de la prescripción."
+  },
+  {
+    "code" : "NE04",
+    "display" : "Indicación no autorizada por la autoridad competente",
+    "definition" : "Durante la validación se identifica que la indicación prescrita no se encuentra autorizada en el registro sanitario ni incluida en el listado UNIRS vigente, cuando resulte aplicable."
+  },
+  {
+    "code" : "NE05",
+    "display" : "Paciente fallecido",
+    "definition" : "Se confirma el fallecimiento del paciente antes de efectuar la entrega, mediante una fuente válida de información."
+  },
+  {
+    "code" : "NE06",
+    "display" : "Prescripción anulada o sustituida antes de la entrega",
+    "definition" : "La prescripción fue anulada o reemplazada válidamente después del direccionamiento o programación y antes del suministro. Cuando exista una nueva prescripción, debe registrarse su identificador."
+  },
+  {
+    "code" : "NE07",
+    "display" : "Tratamiento suspendido o modificado por el prescriptor",
+    "definition" : "Antes de la entrega, el profesional tratante suspende o modifica el tratamiento y deja sin efecto la prescripción correspondiente."
+  },
+  {
+    "code" : "NE08",
+    "display" : "Rechazo informado del paciente",
+    "definition" : "El paciente o su representante manifiesta de manera expresa que no acepta recibir el medicamento, después de haber recibido información suficiente sobre la entrega y las posibles implicaciones de su decisión. Deberá conservarse evidencia verificable del rechazo, la fecha en que se produjo, la identidad de quien lo manifestó y el medio mediante el cual fue comunicado. Este soporte no se carga en la IHCE, pero deberá estar disponible para las actuaciones de inspección, vigilancia y control, auditoría o verificación."
+  },
+  {
+    "code" : "NE09",
+    "display" : "Paciente no localizado o no se presenta a la entrega",
+    "definition" : "No fue posible efectuar la entrega porque el paciente o la persona autorizada no acudió en la fecha y lugar previamente informados, o porque, después de realizar intentos razonables de contacto mediante diferentes canales y en distintos momentos, no fue posible localizarlo o coordinar la entrega. La entidad responsable deberá conservar evidencia verificable de las gestiones realizadas, incluyendo, según corresponda, las fechas, horas, canales utilizados, datos de contacto empleados y resultado de cada intento. Estos soportes no hacen parte del reporte interoperable ni deben cargarse en la IHCE; sin embargo, deberán permanecer disponibles para su consulta en el marco de las actuaciones de inspección, vigilancia y control, auditoría o verificación que adelanten las autoridades competentes. Esta causal no podrá utilizarse cuando no se hayan efectuado y documentado previamente las gestiones razonables de contacto, ni cuando los datos utilizados se encuentren incompletos, desactualizados o no correspondan a los suministrados por el usuario."
+  },
+  {
+    "code" : "NE10",
+    "display" : "Identidad o autorización del receptor no verificable",
+    "definition" : "No es posible verificar la identidad del paciente o la autorización de la persona que pretende recibir el medicamento, después de aplicar los mecanismos establecidos para dicha validación."
+  },
+  {
+    "code" : "NE11",
+    "display" : "Retiro o suspensión sanitaria del medicamento",
+    "definition" : "Antes de la entrega se identifica que el medicamento o lote está sometido a una orden de retiro, suspensión, inmovilización o prohibición expedida por la autoridad competente."
+  },
+  {
+    "code" : "NE12",
+    "display" : "Autorización sanitaria requerida para MVND no otorgada",
+    "definition" : "Se verifica que la autorización de importación requerida para el medicamento vital no disponible fue negada o no fue otorgada por la autoridad competente, impidiendo jurídicamente su entrega."
+  },
+  {
+    "code" : "NE13",
+    "display" : "Medicamento no financiado con recursos de la UPC",
+    "definition" : "Se identifica que el medicamento no corresponde al mecanismo de suministro de medicamentos UPC y debe gestionarse a través de MIPRES."
+  },
+  {
+    "code" : "NE14",
+    "display" : "Medicamento sujeto a monitoreo mediante MIPRES",
+    "definition" : "Se identifica que el medicamento debe ser registrado y monitoreado mediante MIPRES, por lo que no procede completar su ciclo a través del mecanismo dispuesto para medicamentos UPC."
+  },
+  {
+    "code" : "NE15",
+    "display" : "Medicamento o uso excluido de financiación con recursos públicos",
+    "definition" : "El medicamento o uso prescrito se encuentra expresamente excluido de financiación con recursos públicos, conforme con la normativa vigente."
+  }]
+}

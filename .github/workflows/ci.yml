@@ -1,0 +1,215 @@
+# CI de medico. El producto es el binario Rust (`crates/`), y desde el
+# 2026-08-09 el FEV-RIPS de Rust está probado byte a byte de extremo a extremo
+# contra el Python (#598), que es la condición del ADR para apagarlo. Con eso se
+# retiraron `main.py`, los `routers/` y el job `backend (pytest)`.
+#
+# **El job `backend (pytest)` se fue el 2026-08-09** con la API Python, y VOLVIÓ
+# el 2026-08-11 acotado a lo que quedó: la cadena RIPS/FEV-RIPS, que se conserva
+# como módulos —oráculo de las pruebas de paridad de Rust y herramienta de
+# validación contra el MUV—. Se fue porque «cuando el cupo vuelva» era la
+# condición, y esa condición murió con el protocolo solo-local: no vuelve el
+# cupo, no vuelve GitHub, y el runner pasó a ser `verde_local.py` de forma
+# PERMANENTE. Con ese runner el job corre hoy, así que esperar a septiembre era
+# esperar a nada (#610).
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ESTE ARCHIVO YA NO LO EJECUTA GITHUB, Y NO ES UN DESCUIDO.
+#
+# Desde el 2026-08-10 el origen del código es `/home/juan/espejos/medico.git` y
+# Actions está apagado en la cuenta entera. Lo que este `ci.yml` es HOY es la
+# ESPECIFICACIÓN del verde local: `python3 /mnt/data/conocimiento/cupo/
+# verde_local.py medico` lo abre, saca los `run:` en orden y los ejecuta con el
+# mismo `bash -eo pipefail` que usaba GitHub. Por eso sigue vivo y por eso se
+# edita con cuidado — cambiar un paso aquí cambia lo que se mide.
+#
+# Consecuencia al leerlo: los `uses:` (checkout, toolchain, caché) NO se
+# reproducen, y el guion lo dice en cada corrida en vez de callarlo.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# **El trabajo `frontend` se fue el 2026-08-08 con Angular** (`ng build` +
+# vitest): `maud` compila las plantillas con `rustc`, así que lo que probaba ese
+# job ahora lo prueba `cargo test`.
+name: CI
+
+# CADA COMMIT SE PRUEBA UNA VEZ, no dos.
+#
+# Antes esto decía `push: branches: ["**"]` junto a `pull_request`, y una rama
+# con PR abierto disparaba LOS DOS eventos sobre el mismo commit: los cinco
+# checks corrían por duplicado. Se veía en `gh pr checks`, con dos identificadores
+# de ejecución por check y el mismo resultado. En un repositorio PRIVADO eso no es
+# solo ruido — los minutos de Actions se facturan, y el trabajo de Rust son entre
+# 3 y 4½ minutos por corrida.
+#
+# `push` se queda SOLO en `main`, que es lo que verifica el commit de fusión —el
+# resultado de un squash no lo ha probado nadie hasta que existe—. Las ramas de
+# trabajo las cubre `pull_request`, que además vuelve a correr en cada empuje a la
+# rama mientras el PR está abierto (`synchronize`).
+#
+# LO QUE ESTO DEJA FUERA, dicho para que no sorprenda: una rama empujada SIN PR ya
+# no tiene CI. Es deliberado — el flujo de este repositorio es rama → PR → merge,
+# y la protección de `main` exige el PR de todos modos, así que no hay camino por
+# el que un commit llegue a `main` sin haber pasado por aquí.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Un empuje nuevo CANCELA la corrida anterior de la misma referencia. Sin esto,
+# corregir un PR tres veces seguidas deja tres corridas compitiendo y solo la
+# última importa. En `main` no se cancela: cada commit de esa rama es un estado
+# publicado y su resultado tiene que quedar registrado.
+concurrency:
+  # El `-{sha}` en `main` NO es adorno: `cancel-in-progress: false` solo salva a
+  # la corrida EN CURSO — GitHub cancela las ENCOLADAS del mismo grupo. Con dos
+  # merges dentro de una ventana de CI, el commit de en medio no se medía jamás
+  # y la rama se veía verde por la corrida siguiente.
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  # Menor privilegio (supply-chain #203): este CI solo prueba, con checkout de
+  # solo lectura. Sin este bloque el GITHUB_TOKEN hereda permisos amplios.
+  contents: read
+
+jobs:
+  rust:
+    name: rust (test + clippy)
+    runs-on: ubuntu-latest
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cabeceras de SQLite
+        # CORREGIDO EL 2026-08-14: esto decía «enlaza el SQLite del sistema, no
+        # bundled», y es FALSO. La cadena de features lo activa —`sqlx/sqlite`
+        # -> `sqlx-sqlite/bundled` -> `libsqlite3-sys/bundled`— y `cargo tree
+        # -f '{p} {f}'` lo confirma: `libsqlite3-sys v0.30.1 bundled,
+        # bundled_bindings,cc,...`. O sea que SQLite se compila desde
+        # `vendor/libsqlite3-sys/sqlite3/sqlite3.c`, **257 673 líneas de C**, y
+        # este `apt-get` no cambia la resolución: no hace falta.
+        #
+        # Se deja puesto —no estorba y el runner Ubuntu no es esta máquina—,
+        # pero el comentario tenía que decir la verdad: lo destaparon las dos
+        # revisiones de seguridad del vendorizado, por separado. Un comentario
+        # falso sobre de dónde sale el motor de la base es peor que ninguno.
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy (el CI usa -D warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Pruebas del workspace
+        run: cargo test --workspace --all-targets
+      # `enviar-rips` vive tras la bandera `cli` para que `tokio` no entre en
+      # `medico-muv` por el camino normal, y eso lo deja FUERA de los dos pasos
+      # de arriba: `--all-targets` salta los binarios con `required-features`
+      # que no están activas. Medido el 2026-08-11 con su control — se le metió
+      # un error de tipos y el clippy del workspace pasó con CERO errores,
+      # mientras con la bandera daban tres. Un binario que nadie compila se
+      # pudre sin decir nada, y éste es el que se usa para radicar a mano.
+      - name: La herramienta de envío (tras la bandera `cli`)
+        run: cargo clippy -p medico-muv --features cli --all-targets -- -D warnings
+
+  auditoria-deps:
+    name: cargo-audit (RustSec)
+    runs-on: ubuntu-latest
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # RustSec: falla si alguna dependencia tiene un CVE publicado. El único
+      # ignore vive en .cargo/audit.toml, preciso y justificado. Cierra OWASP
+      # A03 (Software Supply Chain Failures). La lección de Ubuntu Forums (2016):
+      # el hueco entró por un componente de terceros sin parchear.
+      - name: cargo-audit
+        run: |
+          # VERSIÓN FIJADA (2026-08-14). `cargo install` NO pasa por `vendor/`:
+          # ignora la sustitución de fuentes —medido con su pareja, el mismo
+          # error dentro y fuera del repo—, así que baja de crates.io y compila
+          # los `build.rs` de su propio árbol, sin vendorizar y sin vigilar. Sin
+          # `--version` eso es «lo último publicado el día que se corra», que es
+          # justo la forma de los ataques que motivaron vendorizar. Y `--locked`
+          # NO lo cubre: fija el lock INTERNO de la herramienta, no cuál se
+          # instala. Lo cazó la revisión de seguridad del vendorizado.
+          cargo install cargo-audit --locked --version 0.22.2
+          cargo audit
+
+  cadena-suministro:
+    name: cargo-deny (supply chain)
+    runs-on: ubuntu-latest
+    # El techo, no la duración esperada. Máximos medidos por JOB
+    # sobre las 6 últimas corridas de `main` (2026-08-06): rust 6,1 min
+    # —el reparto entero es 4,4 · 5,5 · 5,6 · 5,6 · 5,8 · 6,1—, pytest 3,
+    # front 1, audit y deny 0. 20 deja 3,3x de margen en el más pesado:
+    # holgura de sobra para que no salte por operación normal
+    # (directiva 21) y estrechez suficiente para ver una deriva.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # cargo-deny endurece la cadena de suministro más allá de los CVEs: exige
+      # que TODA dependencia venga de una fuente autorizada (crates.io o nuestro
+      # git), prohíbe comodines de versión externos y controla licencias. Es la
+      # defensa contra que una dep se traiga desde una fuente inesperada — el
+      # vector del ataque Atomic Arch a AUR. Config en deny.toml.
+      - name: cargo-deny
+        run: |
+          # VERSIÓN FIJADA (2026-08-14). `cargo install` NO pasa por `vendor/`:
+          # ignora la sustitución de fuentes —medido con su pareja, el mismo
+          # error dentro y fuera del repo—, así que baja de crates.io y compila
+          # los `build.rs` de su propio árbol, sin vendorizar y sin vigilar. Sin
+          # `--version` eso es «lo último publicado el día que se corra», que es
+          # justo la forma de los ataques que motivaron vendorizar. Y `--locked`
+          # NO lo cubre: fija el lock INTERNO de la herramienta, no cuál se
+          # instala. Lo cazó la revisión de seguridad del vendorizado.
+          cargo install cargo-deny --locked --version 0.20.2
+          cargo deny check
+
+      # LA PUERTA DEL RE-VENDORIZADO: con el árbol congelado dentro del
+      # repositorio, el único momento en que puede entrar un script de
+      # construcción envenenado es al re-vendorizar — que es exactamente como
+      # entraron los gusanos de npm y del AUR: no un paquete nuevo, una VERSIÓN
+      # nueva de uno que ya usabas. Se reconstruye la herramienta en el paso para
+      # que un binario viejo junto a una fuente nueva no pase por vigilante al
+      # día (directiva 38).
+      - name: Lo que corre al compilar sigue siendo lo aceptado
+        run: |
+          cargo build --release --quiet --manifest-path /mnt/data/conocimiento/lo-que-corre-al-compilar/Cargo.toml
+          /mnt/data/conocimiento/lo-que-corre-al-compilar/target/release/lo-que-corre-al-compilar "$PWD"
+
+  cadena-rips-python:
+    name: cadena RIPS/FEV (pytest)
+    runs-on: ubuntu-latest
+    # Medido el 2026-08-11 en esta máquina: 499 pruebas en 17 s. El techo es el
+    # techo, no la duración esperada.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cadena RIPS/FEV del Python
+        working-directory: backend
+        # Se usa el intérprete del `.venv` del repositorio, que es donde están
+        # `pytest` y las dependencias del *freeze* que funciona
+        # (`requirements-recuperado.txt`, en la RAÍZ; `backend/requirements.txt`
+        # no trae pytest). Si falta, se PARA en vez de caer al python del
+        # sistema: allí `pytest` no está, la colección devolvería cero pruebas y
+        # un cero se ve igual que un verde (directivas 20 y 30).
+        run: |
+          test -x .venv/bin/python || {
+            echo "falta backend/.venv — sin él este job no mide nada"; exit 1;
+          }
+          .venv/bin/python -m pytest tests/ -q

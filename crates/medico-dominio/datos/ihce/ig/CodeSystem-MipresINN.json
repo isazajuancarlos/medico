@@ -1,0 +1,334 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "MipresINN",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos MipresINN</b></p><a name=\"MipresINN\"> </a><a name=\"hcMipresINN\"> </a><p>This  code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/MipresINN</code> provides <b>a fragment</b> that includes following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">1<a name=\"MipresINN-1\"> </a></td><td>HIDRALAZINA</td></tr><tr><td style=\"white-space:nowrap\">2<a name=\"MipresINN-2\"> </a></td><td>METARBITAL</td></tr><tr><td style=\"white-space:nowrap\">3<a name=\"MipresINN-3\"> </a></td><td>ACIDO IOPANOICO</td></tr><tr><td style=\"white-space:nowrap\">4<a name=\"MipresINN-4\"> </a></td><td>FENILBUTAZONA</td></tr><tr><td style=\"white-space:nowrap\">6<a name=\"MipresINN-6\"> </a></td><td>TALBUTAL</td></tr><tr><td style=\"white-space:nowrap\">7<a name=\"MipresINN-7\"> </a></td><td>BUTALBITAL</td></tr><tr><td style=\"white-space:nowrap\">8<a name=\"MipresINN-8\"> </a></td><td>BRALOBARBITAL</td></tr><tr><td style=\"white-space:nowrap\">10<a name=\"MipresINN-10\"> </a></td><td>HEPTABARBO</td></tr><tr><td style=\"white-space:nowrap\">14<a name=\"MipresINN-14\"> </a></td><td>TIALBARBITAL</td></tr><tr><td style=\"white-space:nowrap\">15<a name=\"MipresINN-15\"> </a></td><td>PAROXIPROPIONA</td></tr><tr><td style=\"white-space:nowrap\">16<a name=\"MipresINN-16\"> </a></td><td>GLICOBIARSOL</td></tr><tr><td style=\"white-space:nowrap\">17<a name=\"MipresINN-17\"> </a></td><td>CANFOTAMIDA</td></tr><tr><td style=\"white-space:nowrap\">18<a name=\"MipresINN-18\"> </a></td><td>PARETOXICAINA</td></tr><tr><td style=\"white-space:nowrap\">19<a name=\"MipresINN-19\"> </a></td><td>IPRONIAZIDA</td></tr><tr><td style=\"white-space:nowrap\">20<a name=\"MipresINN-20\"> </a></td><td>BROMURO DE OXIFENONIO</td></tr><tr><td style=\"white-space:nowrap\">335<a name=\"MipresINN-335\"> </a></td><td>FOSFATO DE ADENOSINA</td></tr><tr><td style=\"white-space:nowrap\">336<a name=\"MipresINN-336\"> </a></td><td>BROMAZINA</td></tr><tr><td style=\"white-space:nowrap\">337<a name=\"MipresINN-337\"> </a></td><td>LUCANTONA</td></tr><tr><td style=\"white-space:nowrap\">338<a name=\"MipresINN-338\"> </a></td><td>SUSPENSION DE INSULINA CINC (AMORFA)</td></tr><tr><td style=\"white-space:nowrap\">339<a name=\"MipresINN-339\"> </a></td><td>SUSPENSION DE INSULINA CINC (CRISTAL.)</td></tr><tr><td style=\"white-space:nowrap\">340<a name=\"MipresINN-340\"> </a></td><td>CETOMACROGOL 1000</td></tr><tr><td style=\"white-space:nowrap\">341<a name=\"MipresINN-341\"> </a></td><td>WARFARINA</td></tr><tr><td style=\"white-space:nowrap\">626<a name=\"MipresINN-626\"> </a></td><td>PARACETAMOL</td></tr><tr><td style=\"white-space:nowrap\">738<a name=\"MipresINN-738\"> </a></td><td>DIATIMOSULFONA</td></tr><tr><td style=\"white-space:nowrap\">776<a name=\"MipresINN-776\"> </a></td><td>METOCARBAMOL</td></tr><tr><td style=\"white-space:nowrap\">793<a name=\"MipresINN-793\"> </a></td><td>IMIPRAMINA</td></tr><tr><td style=\"white-space:nowrap\">1535<a name=\"MipresINN-1535\"> </a></td><td>ACETILCISTEINA</td></tr><tr><td style=\"white-space:nowrap\">1700<a name=\"MipresINN-1700\"> </a></td><td>HIDROCODONA</td></tr><tr><td style=\"white-space:nowrap\">1701<a name=\"MipresINN-1701\"> </a></td><td>OXICODONA</td></tr><tr><td style=\"white-space:nowrap\">2118<a name=\"MipresINN-2118\"> </a></td><td>IBUPROFENO</td></tr><tr><td style=\"white-space:nowrap\">2517<a name=\"MipresINN-2517\"> </a></td><td>MEDAZEPAM</td></tr><tr><td style=\"white-space:nowrap\">2518<a name=\"MipresINN-2518\"> </a></td><td>ACIDO IOBUTOICO</td></tr><tr><td style=\"white-space:nowrap\">2519<a name=\"MipresINN-2519\"> </a></td><td>ACIDO METIAZINICO</td></tr><tr><td style=\"white-space:nowrap\">2722<a name=\"MipresINN-2722\"> </a></td><td>TRAMADOL</td></tr><tr><td style=\"white-space:nowrap\">2935<a name=\"MipresINN-2935\"> </a></td><td>DEMEGESTONA</td></tr><tr><td style=\"white-space:nowrap\">2936<a name=\"MipresINN-2936\"> </a></td><td>FLOCTAFENINA</td></tr><tr><td style=\"white-space:nowrap\">2937<a name=\"MipresINN-2937\"> </a></td><td>PROXIFEZONA</td></tr><tr><td style=\"white-space:nowrap\">2938<a name=\"MipresINN-2938\"> </a></td><td>RAFOXANIDA</td></tr><tr><td style=\"white-space:nowrap\">2940<a name=\"MipresINN-2940\"> </a></td><td>DELFANTRINA</td></tr><tr><td style=\"white-space:nowrap\">2941<a name=\"MipresINN-2941\"> </a></td><td>TILORONA</td></tr><tr><td style=\"white-space:nowrap\">2942<a name=\"MipresINN-2942\"> </a></td><td>MEBENDAZOL</td></tr><tr><td style=\"white-space:nowrap\">2943<a name=\"MipresINN-2943\"> </a></td><td>BUMETANIDA</td></tr><tr><td style=\"white-space:nowrap\">2944<a name=\"MipresINN-2944\"> </a></td><td>ACIDO IOZOMICO</td></tr><tr><td style=\"white-space:nowrap\">2945<a name=\"MipresINN-2945\"> </a></td><td>PROXIBUTENO</td></tr><tr><td style=\"white-space:nowrap\">2947<a name=\"MipresINN-2947\"> </a></td><td>CLOBENOSIDO</td></tr><tr><td style=\"white-space:nowrap\">2979<a name=\"MipresINN-2979\"> </a></td><td>NAPROXENO</td></tr><tr><td style=\"white-space:nowrap\">3001<a name=\"MipresINN-3001\"> </a></td><td>CLORURO DE TROSPIO</td></tr><tr><td style=\"white-space:nowrap\">3002<a name=\"MipresINN-3002\"> </a></td><td>AZAPROCINA</td></tr><tr><td style=\"white-space:nowrap\">3230<a name=\"MipresINN-3230\"> </a></td><td>AMOXICILINA</td></tr><tr><td style=\"white-space:nowrap\">3309<a name=\"MipresINN-3309\"> </a></td><td>PENTOXIFILINA</td></tr><tr><td style=\"white-space:nowrap\">9769<a name=\"MipresINN-9769\"> </a></td><td>TOPSALISINA</td></tr><tr><td style=\"white-space:nowrap\">9770<a name=\"MipresINN-9770\"> </a></td><td>ASTODRIMERO</td></tr><tr><td style=\"white-space:nowrap\">9771<a name=\"MipresINN-9771\"> </a></td><td>FILANESIB</td></tr><tr><td style=\"white-space:nowrap\">9772<a name=\"MipresINN-9772\"> </a></td><td>CERALIFIMOD</td></tr><tr><td style=\"white-space:nowrap\">9773<a name=\"MipresINN-9773\"> </a></td><td>PEGBOVIGRASTIM</td></tr><tr><td style=\"white-space:nowrap\">50000<a name=\"MipresINN-50000\"> </a></td><td>ACIDO ACETICO</td></tr><tr><td style=\"white-space:nowrap\">50001<a name=\"MipresINN-50001\"> </a></td><td>ACIDO ACETIL SALICILICO</td></tr><tr><td style=\"white-space:nowrap\">50043<a name=\"MipresINN-50043\"> </a></td><td>BUTILESCOPOLAMINA</td></tr><tr><td style=\"white-space:nowrap\">50044<a name=\"MipresINN-50044\"> </a></td><td>CARBON ACTIVADO</td></tr><tr><td style=\"white-space:nowrap\">50050<a name=\"MipresINN-50050\"> </a></td><td>CILOSTAZOL</td></tr><tr><td style=\"white-space:nowrap\">50055<a name=\"MipresINN-50055\"> </a></td><td>CODEINA</td></tr><tr><td style=\"white-space:nowrap\">50689<a name=\"MipresINN-50689\"> </a></td><td>ALERGENO DETERMINANTE DE AMOXICILINA - AMOXICILINA SODICA</td></tr><tr><td style=\"white-space:nowrap\">50690<a name=\"MipresINN-50690\"> </a></td><td>ALERGENO DETERMINANTE MAYOR DE PENICILINA PPL - PENICILOIL POLILISINA</td></tr><tr><td style=\"white-space:nowrap\">50691<a name=\"MipresINN-50691\"> </a></td><td>ALERGENO DETERMINANTES MENORES DE PENICILINA MDM</td></tr><tr><td style=\"white-space:nowrap\">50697<a name=\"MipresINN-50697\"> </a></td><td>ALERGENO DISOLVENTE PARA PRUEBA CON DETERMINANTES DE AMOXICILINA</td></tr><tr><td style=\"white-space:nowrap\">50995<a name=\"MipresINN-50995\"> </a></td><td>TAFASITAMAB</td></tr><tr><td style=\"white-space:nowrap\">50996<a name=\"MipresINN-50996\"> </a></td><td>PEMIGATINIB</td></tr><tr><td style=\"white-space:nowrap\">50997<a name=\"MipresINN-50997\"> </a></td><td>BEROTRALSTAT</td></tr><tr><td style=\"white-space:nowrap\">50998<a name=\"MipresINN-50998\"> </a></td><td>ESPESOLIMAB</td></tr><tr><td style=\"white-space:nowrap\">50999<a name=\"MipresINN-50999\"> </a></td><td>MARALIXIBAT</td></tr><tr><td style=\"white-space:nowrap\">51000<a name=\"MipresINN-51000\"> </a></td><td>DEUCRAVACITINIB</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/MipresINN",
+  "version" : "1.0.0",
+  "name" : "MipresINN",
+  "title" : "CodeSystem: Denominación Común Internacional (DCI) de substancias farmacéuticas - Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-07-30",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de denominaciones comunes internacionales (DCI) de substancias farmacéuticas.  \n\n[Recuerde que terminología vigente se encuentra disponible en la tabla SISPRO - DCI:](https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx?Code=DCI)",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de denominaciones comunes internacionales (DCI) de substancias farmacéuticas (tomado de la versión 3 de Mipres - Sispro).",
+  "copyright" : "WHO, CCBY4.0 2006+",
+  "content" : "fragment",
+  "concept" : [{
+    "code" : "1",
+    "display" : "HIDRALAZINA"
+  },
+  {
+    "code" : "2",
+    "display" : "METARBITAL"
+  },
+  {
+    "code" : "3",
+    "display" : "ACIDO IOPANOICO"
+  },
+  {
+    "code" : "4",
+    "display" : "FENILBUTAZONA"
+  },
+  {
+    "code" : "6",
+    "display" : "TALBUTAL"
+  },
+  {
+    "code" : "7",
+    "display" : "BUTALBITAL"
+  },
+  {
+    "code" : "8",
+    "display" : "BRALOBARBITAL"
+  },
+  {
+    "code" : "10",
+    "display" : "HEPTABARBO"
+  },
+  {
+    "code" : "14",
+    "display" : "TIALBARBITAL"
+  },
+  {
+    "code" : "15",
+    "display" : "PAROXIPROPIONA"
+  },
+  {
+    "code" : "16",
+    "display" : "GLICOBIARSOL"
+  },
+  {
+    "code" : "17",
+    "display" : "CANFOTAMIDA"
+  },
+  {
+    "code" : "18",
+    "display" : "PARETOXICAINA"
+  },
+  {
+    "code" : "19",
+    "display" : "IPRONIAZIDA"
+  },
+  {
+    "code" : "20",
+    "display" : "BROMURO DE OXIFENONIO"
+  },
+  {
+    "code" : "335",
+    "display" : "FOSFATO DE ADENOSINA"
+  },
+  {
+    "code" : "336",
+    "display" : "BROMAZINA"
+  },
+  {
+    "code" : "337",
+    "display" : "LUCANTONA"
+  },
+  {
+    "code" : "338",
+    "display" : "SUSPENSION DE INSULINA CINC (AMORFA)"
+  },
+  {
+    "code" : "339",
+    "display" : "SUSPENSION DE INSULINA CINC (CRISTAL.)"
+  },
+  {
+    "code" : "340",
+    "display" : "CETOMACROGOL 1000"
+  },
+  {
+    "code" : "341",
+    "display" : "WARFARINA"
+  },
+  {
+    "code" : "626",
+    "display" : "PARACETAMOL"
+  },
+  {
+    "code" : "738",
+    "display" : "DIATIMOSULFONA"
+  },
+  {
+    "code" : "776",
+    "display" : "METOCARBAMOL"
+  },
+  {
+    "code" : "793",
+    "display" : "IMIPRAMINA"
+  },
+  {
+    "code" : "1535",
+    "display" : "ACETILCISTEINA"
+  },
+  {
+    "code" : "1700",
+    "display" : "HIDROCODONA"
+  },
+  {
+    "code" : "1701",
+    "display" : "OXICODONA"
+  },
+  {
+    "code" : "2118",
+    "display" : "IBUPROFENO"
+  },
+  {
+    "code" : "2517",
+    "display" : "MEDAZEPAM"
+  },
+  {
+    "code" : "2518",
+    "display" : "ACIDO IOBUTOICO"
+  },
+  {
+    "code" : "2519",
+    "display" : "ACIDO METIAZINICO"
+  },
+  {
+    "code" : "2722",
+    "display" : "TRAMADOL"
+  },
+  {
+    "code" : "2935",
+    "display" : "DEMEGESTONA"
+  },
+  {
+    "code" : "2936",
+    "display" : "FLOCTAFENINA"
+  },
+  {
+    "code" : "2937",
+    "display" : "PROXIFEZONA"
+  },
+  {
+    "code" : "2938",
+    "display" : "RAFOXANIDA"
+  },
+  {
+    "code" : "2940",
+    "display" : "DELFANTRINA"
+  },
+  {
+    "code" : "2941",
+    "display" : "TILORONA"
+  },
+  {
+    "code" : "2942",
+    "display" : "MEBENDAZOL"
+  },
+  {
+    "code" : "2943",
+    "display" : "BUMETANIDA"
+  },
+  {
+    "code" : "2944",
+    "display" : "ACIDO IOZOMICO"
+  },
+  {
+    "code" : "2945",
+    "display" : "PROXIBUTENO"
+  },
+  {
+    "code" : "2947",
+    "display" : "CLOBENOSIDO"
+  },
+  {
+    "code" : "2979",
+    "display" : "NAPROXENO"
+  },
+  {
+    "code" : "3001",
+    "display" : "CLORURO DE TROSPIO"
+  },
+  {
+    "code" : "3002",
+    "display" : "AZAPROCINA"
+  },
+  {
+    "code" : "3230",
+    "display" : "AMOXICILINA"
+  },
+  {
+    "code" : "3309",
+    "display" : "PENTOXIFILINA"
+  },
+  {
+    "code" : "9769",
+    "display" : "TOPSALISINA"
+  },
+  {
+    "code" : "9770",
+    "display" : "ASTODRIMERO"
+  },
+  {
+    "code" : "9771",
+    "display" : "FILANESIB"
+  },
+  {
+    "code" : "9772",
+    "display" : "CERALIFIMOD"
+  },
+  {
+    "code" : "9773",
+    "display" : "PEGBOVIGRASTIM"
+  },
+  {
+    "code" : "50000",
+    "display" : "ACIDO ACETICO"
+  },
+  {
+    "code" : "50001",
+    "display" : "ACIDO ACETIL SALICILICO"
+  },
+  {
+    "code" : "50043",
+    "display" : "BUTILESCOPOLAMINA"
+  },
+  {
+    "code" : "50044",
+    "display" : "CARBON ACTIVADO"
+  },
+  {
+    "code" : "50050",
+    "display" : "CILOSTAZOL"
+  },
+  {
+    "code" : "50055",
+    "display" : "CODEINA"
+  },
+  {
+    "code" : "50689",
+    "display" : "ALERGENO DETERMINANTE DE AMOXICILINA - AMOXICILINA SODICA"
+  },
+  {
+    "code" : "50690",
+    "display" : "ALERGENO DETERMINANTE MAYOR DE PENICILINA PPL - PENICILOIL POLILISINA"
+  },
+  {
+    "code" : "50691",
+    "display" : "ALERGENO DETERMINANTES MENORES DE PENICILINA MDM"
+  },
+  {
+    "code" : "50697",
+    "display" : "ALERGENO DISOLVENTE PARA PRUEBA CON DETERMINANTES DE AMOXICILINA"
+  },
+  {
+    "code" : "50995",
+    "display" : "TAFASITAMAB"
+  },
+  {
+    "code" : "50996",
+    "display" : "PEMIGATINIB"
+  },
+  {
+    "code" : "50997",
+    "display" : "BEROTRALSTAT"
+  },
+  {
+    "code" : "50998",
+    "display" : "ESPESOLIMAB"
+  },
+  {
+    "code" : "50999",
+    "display" : "MARALIXIBAT"
+  },
+  {
+    "code" : "51000",
+    "display" : "DEUCRAVACITINIB"
+  }]
+}

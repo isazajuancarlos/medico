@@ -1,0 +1,85 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "CondicionyDestinoUsuarioEgreso",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos CondicionyDestinoUsuarioEgreso</b></p><a name=\"CondicionyDestinoUsuarioEgreso\"> </a><a name=\"hcCondicionyDestinoUsuarioEgreso\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/CondicionyDestinoUsuarioEgreso</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"CondicionyDestinoUsuarioEgreso-01\"> </a></td><td>PACIENTE CON DESTINO A SU DOMICILIO</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"CondicionyDestinoUsuarioEgreso-02\"> </a></td><td>PACIENTE MUERTO</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"CondicionyDestinoUsuarioEgreso-03\"> </a></td><td>PACIENTE DERIVADO A OTRO SERVICIO</td></tr><tr><td style=\"white-space:nowrap\">04<a name=\"CondicionyDestinoUsuarioEgreso-04\"> </a></td><td>REFERIDO A OTRA INSTITUCION</td></tr><tr><td style=\"white-space:nowrap\">05<a name=\"CondicionyDestinoUsuarioEgreso-05\"> </a></td><td>CONTRAREFERIDO A OTRA INSTITUCION</td></tr><tr><td style=\"white-space:nowrap\">06<a name=\"CondicionyDestinoUsuarioEgreso-06\"> </a></td><td>DERIVADO O REFERIDO A HOSPITALIZACION DOMICILIRIA</td></tr><tr><td style=\"white-space:nowrap\">07<a name=\"CondicionyDestinoUsuarioEgreso-07\"> </a></td><td>DERIVADO A SERVICIO SOCIAL</td></tr><tr><td style=\"white-space:nowrap\">08<a name=\"CondicionyDestinoUsuarioEgreso-08\"> </a></td><td>PACIENTE CONTINUA EN EL SERVICIO (CORTE FACTURACION)</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/CondicionyDestinoUsuarioEgreso",
+  "version" : "1.0.0",
+  "name" : "CondicionyDestinoUsuarioEgreso",
+  "title" : "CodeSystem: Patient Status and Discharge Disposition",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Condición y Destino del Usuario al Egreso",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de condición y destino del usuario al egreso de una atención en Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 8,
+  "concept" : [{
+    "code" : "01",
+    "display" : "PACIENTE CON DESTINO A SU DOMICILIO"
+  },
+  {
+    "code" : "02",
+    "display" : "PACIENTE MUERTO"
+  },
+  {
+    "code" : "03",
+    "display" : "PACIENTE DERIVADO A OTRO SERVICIO"
+  },
+  {
+    "code" : "04",
+    "display" : "REFERIDO A OTRA INSTITUCION"
+  },
+  {
+    "code" : "05",
+    "display" : "CONTRAREFERIDO A OTRA INSTITUCION"
+  },
+  {
+    "code" : "06",
+    "display" : "DERIVADO O REFERIDO A HOSPITALIZACION DOMICILIRIA"
+  },
+  {
+    "code" : "07",
+    "display" : "DERIVADO A SERVICIO SOCIAL"
+  },
+  {
+    "code" : "08",
+    "display" : "PACIENTE CONTINUA EN EL SERVICIO (CORTE FACTURACION)"
+  }]
+}

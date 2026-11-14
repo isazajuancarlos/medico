@@ -1,0 +1,55 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "MemoryDisorderCodes",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores MemoryDisorderCodes</b></p><a name=\"MemoryDisorderCodes\"> </a><a name=\"hcMemoryDisorderCodes\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><ul><li>Include all codes defined in <a href=\"CodeSystem-MemoryDisorder.html\"><code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianMemoryDisorder</code></a></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ColombianMemoryDisorderCodes",
+  "version" : "1.0.0",
+  "name" : "MemoryDisorderCodes",
+  "title" : "ValueSet: Trastornos de memoria indicados en una incapacidad retroactiva.",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2021-09-21",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Código de clasificación de trastornos de memoria indicados en una incapacidad retroactiva.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de trastornos de memoria.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2024+",
+  "compose" : {
+    "include" : [{
+      "system" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianMemoryDisorder"
+    }]
+  }
+}

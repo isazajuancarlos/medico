@@ -1,0 +1,24 @@
+[package]
+name = "medico-datos"
+description = "Acceso a la base de medico. Nadie de aquí para arriba escribe SQL."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+medico-dominio = { path = "../medico-dominio" }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+guaca = { workspace = true }
+
+[dev-dependencies]
+# `time` para el timeout de la prueba de concurrencia (directiva #8).
+tokio = { workspace = true, features = ["time"] }
+
+[lints]
+workspace = true

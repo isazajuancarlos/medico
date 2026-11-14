@@ -1,0 +1,126 @@
+# cargo-deny — control de cadena de suministro (lección Atomic Arch, #143).
+# Complementa a cargo-audit: además de CVEs conocidos, exige que TODA dependencia
+# venga de una fuente autorizada (crates.io o nuestros repos git), prohíbe
+# comodines de versión y controla licencias. No es cargo-vet (revisión al
+# cambiar): es el baseline correcto para una app interna (ver
+# conocimiento/cargo_vet_reconsiderado.md).
+
+[advisories]
+version = 2
+# rsa/Marvin (RUSTSEC-2023-0071): cargo-deny NO lo marca con la advisory-db actual;
+# cargo-audit sí, y allí se ignora en .cargo/audit.toml con justificación (entra por
+# sqlx-macros-core para el macro migrate!, inalcanzable con SQLite). Si cargo-deny
+# empezara a marcarlo, se añade el ignore aquí también.
+#
+# RUSTSEC-2021-0153 — `encoding` SIN MANTENIMIENTO (no es vulnerabilidad). Entra por
+#   `dicom-parser`/`dicom-encoding` para decodificar el Specific Character Set de los
+#   textos DICOM (el módulo de píxeles). Es una crate de TABLAS de charset, Rust puro,
+#   sin red ni fix aguas arriba (está archivada). No hay forma de quitarla sin perder
+#   el soporte de charsets del parser. `cargo-audit` ya la tolera como warning; aquí
+#   se ignora el ID EXACTO —nunca la categoría `unmaintained` entera (D23: una
+#   excepción abierta se la traga todo)—. Revisar si dicom-rs migra a otra crate.
+ignore = ["RUSTSEC-2021-0153"]
+
+[licenses]
+version = 2
+# Allowlist AJUSTADA al árbol real (directiva 23): una licencia NUEVA en un bump
+# = rojo, y se decide a mano si entra. No se pre-aprueban licencias ausentes.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-1-Clause",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+    # ENTRARON EL 2026-08-10 con el backend TLS de `medico-muv` (decisión de Juan,
+    # con la medición delante). El contenedor del MUV habla HTTPS, así que había
+    # que elegir backend, y los tres candidatos se midieron contra esta política:
+    #
+    #   rustls-tls .............. pedía ISC y CDLA-Permissive-2.0  <- este
+    #   rustls-tls-native-roots .. pedía ISC
+    #   native-tls ............... pasaba, pero exige libssl-dev en TODA máquina
+    #                              que compile y aleja al binario del «un archivo»
+    #
+    # Se eligió rustls porque es Rust puro —memoria segura, en un binario que
+    # maneja historia clínica— y porque el producto se entrega como UN archivo,
+    # sin depender de bibliotecas del sistema del cliente.
+    #
+    # Las dos son permisivas y no contaminan: ISC es equivalente a BSD-2-Clause,
+    # que ya estaba en esta lista, y CDLA-Permissive-2.0 cubre DATOS (el juego de
+    # CAs raíz de `webpki-roots`), no código.
+    "ISC",                  # ring, rustls-webpki, untrusted
+    "CDLA-Permissive-2.0",  # webpki-roots — los certificados raíz, que son datos
+    # ENTRARON con el MÓDULO DE PÍXELES (dicom-rs, decodificar placas DICOM a PNG).
+    # Las dos son PERMISIVAS y aptas para un producto propietario que las USA:
+    #   CC0-1.0 — dedicación al dominio público. La traen las TABLAS de índice de
+    #     charset (`encoding-index-*`) que usa el parser DICOM para el Specific
+    #     Character Set de los textos. Datos (tablas), no lógica.
+    #   IJG — Independent JPEG Group, la licencia clásica y permisiva de la librería
+    #     JPEG. La trae `jpeg-encoder`, del códec JPEG nativo (Rust puro) de dicom-rs.
+    "CC0-1.0",
+    "IJG",
+    # Nuestras propias librerías (guaca, quipu, quipu-nucleo) y los crates del
+    # workspace (medico-*). AGPL es de casa; hay licencia comercial aparte.
+    "AGPL-3.0-or-later",
+    "LicenseRef-Propietario",
+    # bachué (bachue-password/bachue-clave, la cadena de contraseñas del login):
+    # también librería PROPIA, con su propia etiqueta propietaria. Es la misma
+    # familia que `LicenseRef-Propietario` de arriba —Xiliux, cerrada, licencia
+    # comercial aparte—; declara la ref con el prefijo `Xiliux` y por eso hay que
+    # nombrarla explícitamente (una `LicenseRef-*` no es SPDX, no casa por patrón).
+    "LicenseRef-Xiliux-Propietario",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"   # avisa de versiones duplicadas (superficie + peso)
+wildcards = "deny"           # prohíbe version = "*" en deps EXTERNAS
+allow-wildcard-paths = true  # …pero no en los deps internos por `path` (son nuestros)
+
+[sources]
+# El corazón anti-Atomic-Arch: una dep desde una fuente inesperada = rojo.
+unknown-registry = "deny"
+unknown-git = "deny"
+# 2026-08-11: el origen es el ESPEJO LOCAL, no GitHub (protocolo «solo local»
+# del 2026-08-10). Se sustituye, no se añade: dejar las dos entradas volvería a
+# autorizar a github.com y esta lista es justamente lo que impide que una dep
+# cambie de sitio sin que nadie lo decida.
+# `mirilla` entra el 2026-08-13 con la migración del arnés de navegador, que
+# hasta ese día vivía COPIADO en `tests/comun/mod.rs`. Es `dev-dependency` —no
+# viaja en el binario que se instala en el consultorio— pero `cargo deny check
+# sources` mira el `Cargo.lock` entero, y hace bien: una dependencia de pruebas
+# ejecuta código en la máquina de quien compila.
+allow-git = [
+    "file:///home/juan/espejos/guaca.git",
+    "file:///home/juan/espejos/mirilla.git",
+    # bachué: la CADENA de contraseñas del login (`bachue-password`, y su
+    # dependencia interna `bachue-clave`) — la absorción de tumbaga, fase 2
+    # (2026-09-02). Trae guaca por el MISMO `rev` que ya usa medico, así que no
+    # añade un segundo árbol de guaca; solo esta fuente nueva. Espejo local, misma
+    # familia que las de arriba.
+    "file:///home/juan/espejos/bachue.git",
+    # quipu NO se declara aquí porque medico lo pida —no lo pide—: llega
+    # TRANSITIVAMENTE por guaca (`guaca → quipu → quipu-nucleo → padme-frame`,
+    # y `quipu-voprf`). Faltaba, y por eso `cargo deny check sources` llevaba
+    # rojo en `main`: cuatro `source-not-allowed`, uno por crate de la familia.
+    #
+    # Se descubrió corriendo el verde local completo antes de integrar la rama
+    # de #249, y **no lo trajo esa rama** — `deny.toml` y `Cargo.lock` son
+    # idénticos a los de `main`—.
+    #
+    # **La causa tiene fecha y es UNA sola** (corregida el 2026-08-16 midiendo,
+    # porque esta nota decía «2026-08-11» y era falso): el commit del
+    # **2026-08-14** «quipu sale del ESPEJO, no de crates.io» mudó la fuente de
+    # quipu en CINCO repositorios de una pasada —medico, informes, chasqui,
+    # guaca y tunjo— y no tocó `allow-git` en ninguno. No fue el protocolo «solo
+    # local» del 08-10 ni la mudanza de guaca del 08-11: esos dos declararon lo
+    # que movían. Comprobado con `git log -S` sobre el `Cargo.lock` de los
+    # cinco, no deducido — que es como se coló la fecha equivocada.
+    #
+    # Es el MISMO espejo local que los dos de arriba, no una fuente nueva.
+    "file:///home/juan/espejos/quipu.git",
+]

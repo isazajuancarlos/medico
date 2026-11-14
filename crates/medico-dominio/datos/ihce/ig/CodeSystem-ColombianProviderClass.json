@@ -1,0 +1,73 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianProviderClass",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianProviderClass</b></p><a name=\"ColombianProviderClass\"> </a><a name=\"hcColombianProviderClass\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianProviderClass</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">IPS<a name=\"ColombianProviderClass-IPS\"> </a></td><td>Institución Prestadora de Servicios de Salud</td></tr><tr><td style=\"white-space:nowrap\">TEP<a name=\"ColombianProviderClass-TEP\"> </a></td><td>Transporte Especial de Pacientes</td></tr><tr><td style=\"white-space:nowrap\">OTHER<a name=\"ColombianProviderClass-OTHER\"> </a></td><td>Objeto social diferente a la prestación de servicios de salud</td></tr><tr><td style=\"white-space:nowrap\">GFA<a name=\"ColombianProviderClass-GFA\"> </a></td><td>Gestor Farmacéutico</td></tr><tr><td style=\"white-space:nowrap\">IND<a name=\"ColombianProviderClass-IND\"> </a></td><td>Profesional Independiente</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianProviderClass",
+  "version" : "1.0.0",
+  "name" : "ColombianProviderClass",
+  "title" : "CodeSystem: Colombian Provider Class",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Sistema de codificación de clases de organizaciones prestadoras de salud en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de tipos de organizaciones prestadoras de servicios de salud en Colombia, según la información registrada en el REPS.",
+  "copyright" : "HL7 Colombia, CC-BY-4.0 2023+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 5,
+  "concept" : [{
+    "code" : "IPS",
+    "display" : "Institución Prestadora de Servicios de Salud"
+  },
+  {
+    "code" : "TEP",
+    "display" : "Transporte Especial de Pacientes"
+  },
+  {
+    "code" : "OTHER",
+    "display" : "Objeto social diferente a la prestación de servicios de salud"
+  },
+  {
+    "code" : "GFA",
+    "display" : "Gestor Farmacéutico"
+  },
+  {
+    "code" : "IND",
+    "display" : "Profesional Independiente"
+  }]
+}

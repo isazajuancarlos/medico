@@ -1,0 +1,77 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianDiagnosisRole",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianDiagnosisRole</b></p><a name=\"ColombianDiagnosisRole\"> </a><a name=\"hcColombianDiagnosisRole\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDiagnosisRole</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">8319008<a name=\"ColombianDiagnosisRole-8319008\"> </a></td><td>diagnóstico primario</td></tr><tr><td style=\"white-space:nowrap\">398192003<a name=\"ColombianDiagnosisRole-398192003\"> </a></td><td>comorbilidades</td></tr><tr><td style=\"white-space:nowrap\">89100005<a name=\"ColombianDiagnosisRole-89100005\"> </a></td><td>diagnóstico final (alta)</td></tr><tr><td style=\"white-space:nowrap\">16100001<a name=\"ColombianDiagnosisRole-16100001\"> </a></td><td>diagnóstico de la causa de muerte</td></tr><tr><td style=\"white-space:nowrap\">52870002<a name=\"ColombianDiagnosisRole-52870002\"> </a></td><td>diagnóstico de ingreso</td></tr><tr><td style=\"white-space:nowrap\">263718001<a name=\"ColombianDiagnosisRole-263718001\"> </a></td><td>complicación</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDiagnosisRole",
+  "version" : "1.0.0",
+  "name" : "ColombianDiagnosisRole",
+  "title" : "CodeSystem: Colombian Diagnosis Role",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Código de clasificación del diagnóstico durante un encuentro en Colombia (principal, comorbilidades, etc).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de finalidad de la consulta de encuentros de atención en Colombia.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 6,
+  "concept" : [{
+    "code" : "8319008",
+    "display" : "diagnóstico primario"
+  },
+  {
+    "code" : "398192003",
+    "display" : "comorbilidades"
+  },
+  {
+    "code" : "89100005",
+    "display" : "diagnóstico final (alta)"
+  },
+  {
+    "code" : "16100001",
+    "display" : "diagnóstico de la causa de muerte"
+  },
+  {
+    "code" : "52870002",
+    "display" : "diagnóstico de ingreso"
+  },
+  {
+    "code" : "263718001",
+    "display" : "complicación"
+  }]
+}

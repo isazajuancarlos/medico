@@ -1,0 +1,85 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "ColombianDisabilityClassification",
+  "language" : "es",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xml:lang=\"es\" xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"es\"><p class=\"res-header-id\"><b>Generated Narrative: SistemaDeCodigos ColombianDisabilityClassification</b></p><a name=\"ColombianDisabilityClassification\"> </a><a name=\"hcColombianDisabilityClassification\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Language: es</p></div><p>This case-sensitive code system <code>https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDisabilityClassification</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td style=\"white-space:nowrap\">01<a name=\"ColombianDisabilityClassification-01\"> </a></td><td>Discapacidad física</td></tr><tr><td style=\"white-space:nowrap\">02<a name=\"ColombianDisabilityClassification-02\"> </a></td><td>Discapacidad visual</td></tr><tr><td style=\"white-space:nowrap\">03<a name=\"ColombianDisabilityClassification-03\"> </a></td><td>Discapacidad auditiva</td></tr><tr><td style=\"white-space:nowrap\">04<a name=\"ColombianDisabilityClassification-04\"> </a></td><td>Discapacidad intelectual</td></tr><tr><td style=\"white-space:nowrap\">05<a name=\"ColombianDisabilityClassification-05\"> </a></td><td>Discapacidad sicosocial</td></tr><tr><td style=\"white-space:nowrap\">06<a name=\"ColombianDisabilityClassification-06\"> </a></td><td>Sordoceguera</td></tr><tr><td style=\"white-space:nowrap\">07<a name=\"ColombianDisabilityClassification-07\"> </a></td><td>Discapacidad múltiple</td></tr><tr><td style=\"white-space:nowrap\">08<a name=\"ColombianDisabilityClassification-08\"> </a></td><td>Sin discapacidad</td></tr></table></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/CodeSystem/ColombianDisabilityClassification",
+  "version" : "1.0.0",
+  "name" : "ColombianDisabilityClassification",
+  "title" : "CodeSystem: Colombian Disability Classification",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Codificación de clasificación general de discapacidad para pacientes en Colombia.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este sistema de codificación se utiliza como nomenclador de clasificación general de discapacidad de pacientes en Colombia, utilizado en una *Extensión del recurso FHIR Patient*. Debido a que esta codificación no ofrece la semántica suficiente, se recomienda el uso del recurso *FHIR Condition* para describir el detalle de la condición de discapacidad de un paciente.",
+  "copyright" : "MinSalud Colombia, CC-BY-4.0 2021+",
+  "caseSensitive" : true,
+  "content" : "complete",
+  "count" : 8,
+  "concept" : [{
+    "code" : "01",
+    "display" : "Discapacidad física"
+  },
+  {
+    "code" : "02",
+    "display" : "Discapacidad visual"
+  },
+  {
+    "code" : "03",
+    "display" : "Discapacidad auditiva"
+  },
+  {
+    "code" : "04",
+    "display" : "Discapacidad intelectual"
+  },
+  {
+    "code" : "05",
+    "display" : "Discapacidad sicosocial"
+  },
+  {
+    "code" : "06",
+    "display" : "Sordoceguera"
+  },
+  {
+    "code" : "07",
+    "display" : "Discapacidad múltiple"
+  },
+  {
+    "code" : "08",
+    "display" : "Sin discapacidad"
+  }]
+}

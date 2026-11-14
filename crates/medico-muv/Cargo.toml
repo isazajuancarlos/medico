@@ -1,0 +1,56 @@
+[package]
+name = "medico-muv"
+description = "Cliente del Mecanismo Único de Validación (MUV) de MinSalud: login SISPRO, carga del FEV-RIPS y CUV."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# El manual (FEVRM001 v2.0, §carga) exige el cuerpo COMPRIMIDO en los métodos de
+# carga, así que hace falta un compresor. `rust_backend` es `miniz_oxide`, Rust
+# puro: no entra `zlib` de C en el árbol de un binario clínico.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+# EL BACKEND TLS ES `rustls`, y la elección está MEDIDA (2026-08-10, decisión de
+# Juan). El contenedor del MUV se sirve por HTTPS, así que sin TLS este cliente no
+# habla con lo único que existe. Los tres candidatos, contra `cargo deny`:
+#
+#   rustls-tls .............. pedía ISC y CDLA-Permissive-2.0   <- elegido
+#   rustls-tls-native-roots .. pedía ISC
+#   native-tls ............... pasaba la política sin tocarla, pero NO COMPILA sin
+#                              `libssl-dev` en cada máquina que compile
+#
+# Se eligió rustls porque es Rust puro —memoria segura, en un binario que maneja
+# historia clínica— y porque el producto se entrega como UN ARCHIVO: depender de
+# la OpenSSL del sistema del cliente rompe justo eso. Las dos licencias entraron
+# en `deny.toml` con su motivo; son permisivas y una de ellas cubre datos, no
+# código.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+
+# La herramienta de línea de órdenes. Va detrás de una feature para que la
+# LIBRERÍA no arrastre `tokio` al binario del producto, que ya trae el suyo:
+#   cargo run -p medico-muv --features cli --bin enviar-rips -- ARCHIVO.json
+[features]
+cli = ["dep:tokio"]
+
+[[bin]]
+name = "enviar-rips"
+path = "src/bin/enviar_rips.rs"
+required-features = ["cli"]
+
+[dependencies.tokio]
+workspace = true
+optional = true
+
+[dev-dependencies]
+tokio = { workspace = true }
+axum = { workspace = true }
+
+[lints]
+workspace = true

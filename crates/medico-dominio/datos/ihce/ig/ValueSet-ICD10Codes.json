@@ -1,0 +1,1634 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "ICD10Codes",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConjuntoValores / ConjuntoDeValores ICD10Codes</b></p><a name=\"ICD10Codes\"> </a><a name=\"hcICD10Codes\"> </a><ul><li>Include these codes as defined in <a href=\"CodeSystem-ICD10CO.html\"><code>http://hl7.org/fhir/sid/icd-10</code></a><table class=\"none\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A000\">A000</a></td><td>Colera debido a Vibrio cholerae 01, biotipo cholerae</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A001\">A001</a></td><td>Colera debido a Vibrio cholerae 01, biotipo el Tor</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A009\">A009</a></td><td>Colera, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A010\">A010</a></td><td>Fiebre tifoidea</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A011\">A011</a></td><td>Fiebre paratifoidea A</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A012\">A012</a></td><td>Fiebre paratifoidea B</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A013\">A013</a></td><td>Fiebre paratifoidea C</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A014\">A014</a></td><td>Fiebre paratifoidea, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A020\">A020</a></td><td>Enteritis debida a Salmonella</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A021\">A021</a></td><td>Sepsis debida a Salmonella</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A022\">A022</a></td><td>Infecciones localizadas debidas a Salmonella</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A028\">A028</a></td><td>Otras infecciones especificadas como debidas a Salmonella</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A029\">A029</a></td><td>Infeccion debida a Salmonella, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A030\">A030</a></td><td>Shigelosis debida a Shigella dysenteriae</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A031\">A031</a></td><td>Shigelosis debida a Shigella flexneri</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A032\">A032</a></td><td>Shigelosis debida a Shigella boydii</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A033\">A033</a></td><td>Shigelosis debida a Shigella sonnei</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A038\">A038</a></td><td>Otras shigelosis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A039\">A039</a></td><td>Shigelosis de tipo no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A040\">A040</a></td><td>Infeccion debida a Escherichia coli enteropatogena</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A041\">A041</a></td><td>Infeccion debida a Escherichia coli enterotoxigena</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A042\">A042</a></td><td>Infeccion debida a Escherichia coli enteroinvasiva</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A043\">A043</a></td><td>Infeccion debida a Escherichia coli enterohemorragica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A044\">A044</a></td><td>Otras infecciones intestinales debidas a Escherichia coli</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A045\">A045</a></td><td>Enteritis debida a Campylobacter</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A046\">A046</a></td><td>Enteritis debida a Yersinia enterocolitica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A047\">A047</a></td><td>Enterocolitis debida a Clostridium difficile</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A048\">A048</a></td><td>Otras infecciones intestinales bacterianas especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A049\">A049</a></td><td>Infeccion intestinal bacteriana, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A050\">A050</a></td><td>Intoxicacion alimentaria estafilococica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A051\">A051</a></td><td>Botulismo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A052\">A052</a></td><td>Intoxicacion alimentaria debida a Clostridium perfringens [Clostridium welchii]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A053\">A053</a></td><td>Intoxicacion alimentaria debida a Vibrio parahaemolyticus</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A054\">A054</a></td><td>Intoxicacion alimentaria debida a Bacillus cereus</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A058\">A058</a></td><td>Otras intoxicaciones alimentarias debidas a bacterias especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A059\">A059</a></td><td>Intoxicacion alimentaria bacteriana, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A060\">A060</a></td><td>Disenteria amebiana aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A061\">A061</a></td><td>Amebiasis intestinal cronica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A062\">A062</a></td><td>Colitis amebiana no disenterica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A063\">A063</a></td><td>Ameboma intestinal</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A064\">A064</a></td><td>Absceso amebiano del higado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A065\">A065</a></td><td>Absceso amebiano del pulmon</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A066\">A066</a></td><td>Absceso amebiano del cerebro</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A067\">A067</a></td><td>Amebiasis cutanea</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A068\">A068</a></td><td>Infeccion amebiana de otras localizaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A069\">A069</a></td><td>Amebiasis, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A070\">A070</a></td><td>Balantidiasis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A071\">A071</a></td><td>Giardiasis [lambliasis]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A072\">A072</a></td><td>Criptosporidiosis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A073\">A073</a></td><td>Isosporiasis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A078\">A078</a></td><td>Otras enfermedades intestinales especificadas debidas a protozoarios</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A079\">A079</a></td><td>Enfermedad intestinal debida a protozoarios, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A080\">A080</a></td><td>Enteritis debida a rotavirus</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A081\">A081</a></td><td>Gastroenteropatia aguda debida al agente de Norwalk</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A082\">A082</a></td><td>Enteritis debida a adenovirus</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A083\">A083</a></td><td>Otras enteritis virales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A084\">A084</a></td><td>Infeccion intestinal viral, sin otra especificacion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A085\">A085</a></td><td>Otras infecciones intestinales especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A090\">A090</a></td><td>Otras gastroenteritis y colitis de origen infeccioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A099\">A099</a></td><td>Gastroenteritis y colitis de origen no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A09X\">A09X</a></td><td>Diarrea y gastroenteritis de presunto origen infeccioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A150\">A150</a></td><td>Tuberculosis del pulmon, confirmada por hallazgo microscopico del bacilo tuberculoso en esputo, con o sin cultivo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A151\">A151</a></td><td>Tuberculosis del pulmon, confirmada unicamente por cultivo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A152\">A152</a></td><td>Tuberculosis del pulmon, confirmada histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A153\">A153</a></td><td>Tuberculosis del pulmon, confirmada por medios no especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A154\">A154</a></td><td>Tuberculosis de ganglios linfaticos intratoracicos, confirmada bacteriologica e histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A155\">A155</a></td><td>Tuberculosis de laringe, traquea y bronquios, confirmada bacteriologica e histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A156\">A156</a></td><td>Pleuresia tuberculosa, confirmada bacteriologica e histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A157\">A157</a></td><td>Tuberculosis respiratoria primaria, confirmada bacteriologica e histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A158\">A158</a></td><td>Otras tuberculosis respiratorias, confirmadas bacteriologica e histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A159\">A159</a></td><td>Tuberculosis respiratoria no especificada, confirmada bacteriologica e histologicamente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A160\">A160</a></td><td>Tuberculosis del pulmon, con examen bacteriologico e histologico negativos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A161\">A161</a></td><td>Tuberculosis de pulmon, sin examen bacteriologico e histologico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A162\">A162</a></td><td>Tuberculosis de pulmon, sin mencion de confirmacion bacteriologica o histologica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A163\">A163</a></td><td>Tuberculosis de ganglios linfaticos intratoracicos, sin mencion de confirmacion bacteriologica o histologica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A164\">A164</a></td><td>Tuberculosis de laringe, traquea y bronquios, sin mencion de confirmacion bacteriologica o histologica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A165\">A165</a></td><td>Pleuresia tuberculosa, sin mencion de confirmacion bacteriologica o histologica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A167\">A167</a></td><td>Tuberculosis respiratoria primaria, sin mencion de confirmacion bacteriologica o histologica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A168\">A168</a></td><td>Otras tuberculosis respiratorias, sin mencion de confirmacion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A169\">A169</a></td><td>Tuberculosis respiratoria no especificada, sin mencion de confirmacion bacteriologica o histologica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A170\">A170</a></td><td>Meningitis tuberculosa</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A171\">A171</a></td><td>Tuberculoma meningeo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A178\">A178</a></td><td>Otras tuberculosis del sistema nervioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A179\">A179</a></td><td>Tuberculosis del sistema nervioso, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A180\">A180</a></td><td>Tuberculosis de huesos y articulaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A181\">A181</a></td><td>Tuberculosis del aparato genitourinario</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A182\">A182</a></td><td>Linfadenopatia periferica tuberculosa</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A183\">A183</a></td><td>Tuberculosis de los intestinos, el peritoneo y los ganglios mesentericos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A184\">A184</a></td><td>Tuberculosis de la piel y el tejido subcutaneo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A185\">A185</a></td><td>Tuberculosis del ojo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A186\">A186</a></td><td>Tuberculosis del oido</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A187\">A187</a></td><td>Tuberculosis de glandulas suprarrenales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A188\">A188</a></td><td>Tuberculosis de otros organos especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A190\">A190</a></td><td>Tuberculosis miliar aguda de un solo sitio especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A191\">A191</a></td><td>Tuberculosis miliar aguda de sitios multiples</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A192\">A192</a></td><td>Tuberculosis miliar aguda, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A198\">A198</a></td><td>Otras tuberculosis miliares</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A199\">A199</a></td><td>Tuberculosis miliar, sin otra especificacion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A200\">A200</a></td><td>Peste bubonica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A201\">A201</a></td><td>Peste celulocutanea</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A202\">A202</a></td><td>Peste neumonica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A203\">A203</a></td><td>Meningitis por peste</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A207\">A207</a></td><td>Peste septicemica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A208\">A208</a></td><td>Otras formas de peste</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A209\">A209</a></td><td>Peste, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A210\">A210</a></td><td>Tularemia ulceroglandular</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A211\">A211</a></td><td>Tularemia oculoglandular</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A212\">A212</a></td><td>Tularemia pulmonar</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-A213\">A213</a></td><td>Tularemia gastrointestinal</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B000\">B000</a></td><td>Eczema herpetico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B001\">B001</a></td><td>Dermatitis vesicular herpetica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B002\">B002</a></td><td>Gingivoestomatitis y faringoamigdalitis herpetica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B003\">B003</a></td><td>Meningitis herpetica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B004\">B004</a></td><td>Encefalitis herpetica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B005\">B005</a></td><td>Oculopatia herpetica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B007\">B007</a></td><td>Enfermedad herpetica diseminada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B008\">B008</a></td><td>Otras formas de infecciones herpeticas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B009\">B009</a></td><td>Infeccion debida al virus del herpes, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B010\">B010</a></td><td>Meningitis debida a varicela</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B011\">B011</a></td><td>Encefalitis debida a varicela</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B012\">B012</a></td><td>Neumonia debida a varicela</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B018\">B018</a></td><td>Varicela con otras complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B019\">B019</a></td><td>Varicela sin complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B020\">B020</a></td><td>Encefalitis debida a herpes zoster</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B021\">B021</a></td><td>Meningitis debida a herpes zoster</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B022\">B022</a></td><td>Herpes zoster con otros compromisos del sistema nervioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B023\">B023</a></td><td>Herpes zoster ocular</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B027\">B027</a></td><td>Herpes zoster diseminado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B028\">B028</a></td><td>Herpes zoster con otras complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B029\">B029</a></td><td>Herpes zoster sin complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B03X\">B03X</a></td><td>Viruela</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B04X\">B04X</a></td><td>Viruela de los monos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B050\">B050</a></td><td>Sarampion complicado con encefalitis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B051\">B051</a></td><td>Sarampion complicado con meningitis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B052\">B052</a></td><td>Sarampion complicado con neumonia</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B053\">B053</a></td><td>Sarampion complicado con otitis media</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B054\">B054</a></td><td>Sarampion con complicaciones intestinales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B058\">B058</a></td><td>Sarampion con otras complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B059\">B059</a></td><td>Sarampion sin complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B060\">B060</a></td><td>Rubeola con complicaciones neurologicas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B068\">B068</a></td><td>Rubeola con otras complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B069\">B069</a></td><td>Rubeola sin complicaciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B07X\">B07X</a></td><td>Verrugas viricas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B080\">B080</a></td><td>Otras infecciones debidas a ortopoxvirus</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B081\">B081</a></td><td>Molusco contagioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B082\">B082</a></td><td>Exantema subito [sexta enfermedad]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B083\">B083</a></td><td>Eritema infeccioso [quinta enfermedad]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B084\">B084</a></td><td>Estomatitis vesicular enteroviral con exantema</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B085\">B085</a></td><td>Faringitis vesicular enterovirica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B088\">B088</a></td><td>Otras infecciones virales especificadas, caracterizadas por lesiones de la piel y de las membranas mucosas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B09X\">B09X</a></td><td>Infeccion viral no especificada, caracterizada por lesiones de la piel y de las membranas mucosas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B150\">B150</a></td><td>Hepatitis aguda tipo A, con coma hepatico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B159\">B159</a></td><td>Hepatitis aguda tipo A, sin coma hepatico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B160\">B160</a></td><td>Hepatitis aguda tipo B, con agente delta (coinfeccion), con coma hepatico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B161\">B161</a></td><td>Hepatitis aguda tipo B, con agente delta (coinfeccion), sin coma hepatico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B162\">B162</a></td><td>Hepatitis aguda tipo B, sin agente delta, con coma hepatico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-B99X\">B99X</a></td><td>Otras enfermedades infecciosas y las no especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C000\">C000</a></td><td>Tumor maligno del labio superior, cara externa</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C001\">C001</a></td><td>Tumor maligno del labio inferior, cara externa</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C002\">C002</a></td><td>Tumor maligno del labio, cara externa, sin otra especificacion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C003\">C003</a></td><td>Tumor maligno del labio superior, cara interna</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C004\">C004</a></td><td>Tumor maligno del labio inferior, cara interna</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C005\">C005</a></td><td>Tumor maligno del labio, cara interna, sin otra especificacion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C006\">C006</a></td><td>Tumor maligno de la comisura labial</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C008\">C008</a></td><td>Lesion de sitios contiguos del labio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C009\">C009</a></td><td>Tumor maligno del labio, parte no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C01X\">C01X</a></td><td>Tumor maligno de la base de la lengua</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C020\">C020</a></td><td>Tumor maligno de la cara dorsal de la lengua</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C021\">C021</a></td><td>Tumor maligno del borde de la lengua</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C022\">C022</a></td><td>Tumor maligno de la cara ventral de la lengua</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C023\">C023</a></td><td>Tumor maligno de los dos tercios anteriores de la lengua, parte no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C024\">C024</a></td><td>Tumor maligno de la amigdala lingual</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C028\">C028</a></td><td>Lesion de sitios contiguos de la lengua</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C029\">C029</a></td><td>Tumor maligno de la lengua, parte no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C030\">C030</a></td><td>Tumor maligno de la encia superior</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C031\">C031</a></td><td>Tumor maligno de la encia inferior</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C039\">C039</a></td><td>Tumor maligno de la encia, parte no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C040\">C040</a></td><td>Tumor maligno de la parte anterior del piso de la boca</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C041\">C041</a></td><td>Tumor maligno de la parte lateral del piso de la boca</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C048\">C048</a></td><td>Lesion de sitios contiguos del piso de la boca</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C049\">C049</a></td><td>Tumor maligno del piso de la boca, parte no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C050\">C050</a></td><td>Tumor maligno del paladar duro</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-C97X\">C97X</a></td><td>Tumores malignos (primarios) de sitios multiples independientes</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D000\">D000</a></td><td>Carcinoma in situ del labio, de la cavidad bucal y de la faringe</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D001\">D001</a></td><td>Carcinoma in situ del esofago</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D002\">D002</a></td><td>Carcinoma in situ del estomago</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D010\">D010</a></td><td>Carcinoma in situ del colon</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D011\">D011</a></td><td>Carcinoma in situ de la union rectosigmoidea</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D012\">D012</a></td><td>Carcinoma in situ del recto</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D013\">D013</a></td><td>Carcinoma in situ del ano y del conducto anal</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D014\">D014</a></td><td>Carcinoma in situ de otras partes y de las no especificadas del intestino</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D015\">D015</a></td><td>Carcinoma in situ del higado, de la vesicula biliar y del conducto biliar</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D017\">D017</a></td><td>Carcinoma in situ de otras partes especificadas de organos digestivos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D019\">D019</a></td><td>Carcinoma in situ de organos digestivos no especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D020\">D020</a></td><td>Carcinoma in situ de la laringe</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D021\">D021</a></td><td>Carcinoma in situ de la traquea</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D022\">D022</a></td><td>Carcinoma in situ del bronquio y del pulmon</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D023\">D023</a></td><td>Carcinoma in situ de otras partes del sistema respiratorio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D024\">D024</a></td><td>Carcinoma in situ de organos respiratorios no especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D030\">D030</a></td><td>Melanoma in situ del labio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D031\">D031</a></td><td>Melanoma in situ del parpado y de la comisura palpebral</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D032\">D032</a></td><td>Melanoma in situ de la oreja y del conducto auditivo externo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D033\">D033</a></td><td>Melanoma in situ de otras partes y de las no especificadas de la cara</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D034\">D034</a></td><td>Melanoma in situ del cuero cabelludo y del cuello</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D035\">D035</a></td><td>Melanoma in situ del tronco</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D036\">D036</a></td><td>Melanoma in situ del miembro superior, incluido el hombro</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D037\">D037</a></td><td>Melanoma in situ del miembro inferior, incluida la cadera</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D038\">D038</a></td><td>Melanoma in situ de otros sitios</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D039\">D039</a></td><td>Melanoma in situ, sitio no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D040\">D040</a></td><td>Carcinoma in situ de la piel del labio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D041\">D041</a></td><td>Carcinoma in situ de la piel del parpado y de la comisura palpebral</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D042\">D042</a></td><td>Carcinoma in situ de la piel de la oreja y del conducto auditivo externo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D043\">D043</a></td><td>Carcinoma in situ de la piel de otras partes y de las no especificadas de la cara</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D044\">D044</a></td><td>Carcinoma in situ de la piel del cuero cabelludo y cuello</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D045\">D045</a></td><td>Carcinoma in situ de la piel del tronco</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D046\">D046</a></td><td>Carcinoma in situ de la piel del miembro superior, incluido el hombro</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D047\">D047</a></td><td>Carcinoma in situ de la piel del miembro inferior, incluida la cadera</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D048\">D048</a></td><td>Carcinoma in situ de la piel de otros sitios especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D049\">D049</a></td><td>Carcinoma in situ de la piel, sitio no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D898\">D898</a></td><td>Otros trastornos especificados que afectan el mecanismo de la inmunidad, no clasificados en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-D899\">D899</a></td><td>Trastorno que afecta al mecanismo de la inmunidad, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E000\">E000</a></td><td>Sindrome congenito de deficiencia de yodo, tipo neurologico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E001\">E001</a></td><td>Sindrome de deficiencia congenita de yodo, tipo mixedematoso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E002\">E002</a></td><td>Sindrome congenito de deficiencia de yodo, tipo mixto</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E009\">E009</a></td><td>Sindrome congenito de deficiencia de yodo, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E010\">E010</a></td><td>Bocio difuso (endemico) relacionado con deficiencia de yodo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E011\">E011</a></td><td>Bocio multinodular (endemico) relacionado con deficiencia de yodo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E012\">E012</a></td><td>Bocio (endemico) relacionado con deficiencia de yodo, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E018\">E018</a></td><td>Otros trastornos de la tiroides relacionados con deficiencia de yodo y afecciones similares</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E02X\">E02X</a></td><td>Hipotiroidismo subclinico por deficiencia de yodo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E030\">E030</a></td><td>Hipotiroidismo congenito con bocio difuso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E031\">E031</a></td><td>Hipotiroidismo congenito sin bocio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E032\">E032</a></td><td>Hipotiroidismo debido a medicamentos y a otras sustancias exogenas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E033\">E033</a></td><td>Hipotiroidismo postinfeccioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E034\">E034</a></td><td>Atrofia de tiroides (adquirida)</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E035\">E035</a></td><td>Coma mixedematoso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E038\">E038</a></td><td>Otros hipotiroidismos especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E039\">E039</a></td><td>Hipotiroidismo, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E040\">E040</a></td><td>Bocio difuso no toxico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E041\">E041</a></td><td>Nodulo tiroideo solitario no toxico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E042\">E042</a></td><td>Bocio multinodular no toxico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E048\">E048</a></td><td>Otros bocios no toxicos especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E049\">E049</a></td><td>Bocio no toxico, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-E90X\">E90X</a></td><td>Trastornos nutricionales y metabolicos en enfermedades clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F000\">F000</a></td><td>Demencia  en la enfermedad de Alzheimer, de comienzo temprano</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F001\">F001</a></td><td>Demencia  en la enfermedad de Alzheimer, de comienzo tardio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F002\">F002</a></td><td>Demencia  en la enfermedad de Alzheimer, atipica o de tipo mixto</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F009\">F009</a></td><td>Demencia  en la enfermedad de Alzheimer, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F010\">F010</a></td><td>Demencia  vascular de comienzo agudo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F011\">F011</a></td><td>Demencia  vascular por infartos multiples</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F012\">F012</a></td><td>Demencia  vascular subcortical</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F013\">F013</a></td><td>Demencia  vascular mixta, cortical y subcortical</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F018\">F018</a></td><td>Otras demencia vasculares</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F019\">F019</a></td><td>Demencia  vascular, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F020\">F020</a></td><td>Demencia  en la enfermedad de Pick</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F021\">F021</a></td><td>Demencia  en la enfermedad de Creutzfeldt-Jakob</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F022\">F022</a></td><td>Demencia  en la enfermedad de Huntington</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F023\">F023</a></td><td>Demencia  en la enfermedad de Parkinson</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F024\">F024</a></td><td>Demencia  en la enfermedad por virus de la inmunodeficiencia humana [VIH]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F028\">F028</a></td><td>Demencia  en otras enfermedades especificadas clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F03X\">F03X</a></td><td>Demencia , no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F04X\">F04X</a></td><td>Sindrome amnesico organico, no inducido por alcohol o por otras sustancias psicoactivas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-F99X\">F99X</a></td><td>Trastorno mental, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G000\">G000</a></td><td>Meningitis por hemofilos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G001\">G001</a></td><td>Meningitis  neumococica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G002\">G002</a></td><td>Meningitis estreptococica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G003\">G003</a></td><td>Meningitis estafilococica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G008\">G008</a></td><td>Otras meningitis bacterianas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G009\">G009</a></td><td>Meningitis bacteriana, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G01X\">G01X</a></td><td>Meningitis en enfermedades bacterianas clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G020\">G020</a></td><td>Meningitis en enfermedades virales clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G021\">G021</a></td><td>Meningitis en micosis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G028\">G028</a></td><td>Meningitis en otras enfermedades infecciosas y parasitarias especificadas clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G030\">G030</a></td><td>Meningitis apiogena</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G031\">G031</a></td><td>Meningitis cronica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G032\">G032</a></td><td>Meningitis recurrente benigna [Mollaret]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G038\">G038</a></td><td>Meningitis debidas a otras causas especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G039\">G039</a></td><td>Meningitis, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G040\">G040</a></td><td>Encefalitis aguda diseminada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G041\">G041</a></td><td>Mielopatia asociada al virus linfotropico de celulas T humanas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G042\">G042</a></td><td>Meningoencefalitis y meningomielitis bacterianas, no clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G048\">G048</a></td><td>Otras encefalitis, mielitis y encefalomielitis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G049\">G049</a></td><td>Encefalitis, mielitis y encefalomielitis, no especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-G998\">G998</a></td><td>Otros trastornos especificados del sistema nervioso en enfermedades clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H000\">H000</a></td><td>Orzuelo y otras inflamaciones profundas del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H001\">H001</a></td><td>Calacio [chalazion]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H010\">H010</a></td><td>Blefaritis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H011\">H011</a></td><td>Dermatosis no infecciosa del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H018\">H018</a></td><td>Otras inflamaciones especificadas del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H019\">H019</a></td><td>Inflamacion del parpado, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H020\">H020</a></td><td>Entropion y triquiasis palpebral</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H021\">H021</a></td><td>Ectropion del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H022\">H022</a></td><td>Lagoftalmos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H023\">H023</a></td><td>Blefarocalasia</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H024\">H024</a></td><td>Blefaroptosis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H025\">H025</a></td><td>Otros trastornos funcionales del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H026\">H026</a></td><td>Xantelasma del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H027\">H027</a></td><td>Otros trastornos degenerativos del parpado y del area periocular</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H028\">H028</a></td><td>Otros trastornos especificados del parpado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H029\">H029</a></td><td>Trastorno del parpado, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H030\">H030</a></td><td>Infeccion o infestacion parasitaria del parpado en enfermedades clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H031\">H031</a></td><td>Compromiso del parpado en enfermedades infecciosas clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H038\">H038</a></td><td>Compromiso del parpado en enfermedades clasificadas en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H040\">H040</a></td><td>Dacrioadenitis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H041\">H041</a></td><td>Otros trastornos de la glandula lagrimal</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H042\">H042</a></td><td>Epifora</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H043\">H043</a></td><td>Inflamacion aguda y la no especificada de las vias lagrimales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H044\">H044</a></td><td>Inflamacion cronica de las vias lagrimales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H045\">H045</a></td><td>Estenosis e insuficiencia de las vias lagrimales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H046\">H046</a></td><td>Otros cambios de las vias lagrimales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H048\">H048</a></td><td>Otros trastornos especificados del aparato lagrimal</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H049\">H049</a></td><td>Trastorno del aparato lagrimal, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H050\">H050</a></td><td>Inflamacion aguda de la orbita</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-H959\">H959</a></td><td>Trastornos no especificados del oido y de la apofisis mastoides, consecutivos a procedimientos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I00X\">I00X</a></td><td>Fiebre reumatica sin mencion de complicacion cardiaca</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I010\">I010</a></td><td>Pericarditis reumatica aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I011\">I011</a></td><td>Endocarditis reumatica aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I012\">I012</a></td><td>Miocarditis reumatica aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I018\">I018</a></td><td>Otras enfermedades reumaticas agudas del corazon</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I019\">I019</a></td><td>Enfermedad reumatica aguda del corazon, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I020\">I020</a></td><td>Corea reumatica con complicacion cardiaca</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I029\">I029</a></td><td>Corea reumatica sin mencion de complicacion cardiaca</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-I99X\">I99X</a></td><td>Otros trastornos y los no especificados del sistema circulatorio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J00X\">J00X</a></td><td>Rinofaringitis aguda [resfriado comun]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J010\">J010</a></td><td>Sinusitis maxilar aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J011\">J011</a></td><td>Sinusitis frontal aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J012\">J012</a></td><td>Sinusitis etmoidal aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J013\">J013</a></td><td>Sinusitis esfenoidal aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J014\">J014</a></td><td>Pansinusitis aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J018\">J018</a></td><td>Otras sinusitis agudas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J019\">J019</a></td><td>Sinusitis aguda, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J020\">J020</a></td><td>Faringitis estreptococica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J028\">J028</a></td><td>Faringitis aguda debida a otros microorganismos especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J029\">J029</a></td><td>Faringitis aguda, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J030\">J030</a></td><td>Amigdalitis estreptococica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J038\">J038</a></td><td>Amigdalitis aguda debida a otros microorganismos especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J039\">J039</a></td><td>Amigdalitis aguda, no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J040\">J040</a></td><td>Laringitis aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J041\">J041</a></td><td>Traqueitis aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J042\">J042</a></td><td>Laringotraqueitis aguda</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-J050\">J050</a></td><td>Laringitis obstructiva, aguda [crup]</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Y98X\">Y98X</a></td><td>Afeccion relacionada con el estilo de vida</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z000\">Z000</a></td><td>Examen medico general</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z001\">Z001</a></td><td>Control de salud de rutina del nino</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z002\">Z002</a></td><td>Examen durante el periodo de crecimiento rapido en la infancia</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z003\">Z003</a></td><td>Examen del estado de desarrollo del adolescente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z004\">Z004</a></td><td>Examen psiquiatrico general, no clasificado en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z005\">Z005</a></td><td>Examen de donante potencial de organo o tejido</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z006\">Z006</a></td><td>Examen para comparacion y control normales en programa de investigacion clinica</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z008\">Z008</a></td><td>Otros examenes generales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z010\">Z010</a></td><td>Examen de ojos y de la vision</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z011\">Z011</a></td><td>Examen de oidos y de la audicion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z012\">Z012</a></td><td>Examen odontologico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z013\">Z013</a></td><td>Examen de la presion sanguinea</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z014\">Z014</a></td><td>Examen ginecologico (general) (de rutina)</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z015\">Z015</a></td><td>Pruebas de sensibilizacion y diagnostico cutaneo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z016\">Z016</a></td><td>Examen radiologico, no clasificado en otra parte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z017\">Z017</a></td><td>Examen de laboratorio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z018\">Z018</a></td><td>Otros examenes especiales especificados</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z019\">Z019</a></td><td>Examen especial no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z020\">Z020</a></td><td>Examen para admision a instituciones educativas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z021\">Z021</a></td><td>Examen preempleo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z022\">Z022</a></td><td>Examen para admision a instituciones residenciales</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z023\">Z023</a></td><td>Examen para reclutamiento en las fuerzas armadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z024\">Z024</a></td><td>Examen para obtencion de licencia de conducir</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z025\">Z025</a></td><td>Examen para participacion en competencias deportivas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z026\">Z026</a></td><td>Examen para fines de seguros</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z027\">Z027</a></td><td>Extension de certificado medico</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z028\">Z028</a></td><td>Otros examenes para fines administrativos</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z029\">Z029</a></td><td>Examen para fines administrativos, no especificado</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z030\">Z030</a></td><td>Observacion por sospecha de tuberculosis</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z031\">Z031</a></td><td>Observacion por sospecha de tumor maligno</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z032\">Z032</a></td><td>Observacion por sospecha de trastorno mental y del comportamiento</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z033\">Z033</a></td><td>Observacion por sospecha de trastorno del sistema nervioso</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z034\">Z034</a></td><td>Observacion por sospecha de infarto de miocardio</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z035\">Z035</a></td><td>Observacion por sospecha de otras enfermedades cardiovasculares</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z036\">Z036</a></td><td>Observacion por sospecha de efectos toxicos de sustancias ingeridas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z038\">Z038</a></td><td>Observacion por sospecha de otras enfermedades y afecciones</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z039\">Z039</a></td><td>Observacion por sospecha de enfermedad o afeccion no especificada</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z040\">Z040</a></td><td>Prueba de alcohol o drogas en la sangre</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z041\">Z041</a></td><td>Examen y observacion consecutivos a accidente de transporte</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z042\">Z042</a></td><td>Examen y observacion consecutivos a accidente de trabajo</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z043\">Z043</a></td><td>Examen y observacion consecutivos a otro accidente</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z044\">Z044</a></td><td>Examen y observacion consecutivos a denuncia de violacion y seduccion</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z045\">Z045</a></td><td>Examen y observacion consecutivos a otra lesion infligida</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z046\">Z046</a></td><td>Examen psiquiatrico general, solicitado por una autoridad</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z048\">Z048</a></td><td>Examen y observacion por otras razones especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z049\">Z049</a></td><td>Examen y observacion por razones no especificadas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z990\">Z990</a></td><td>Dependencia de aspirador</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z991\">Z991</a></td><td>Dependencia de respirador</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z992\">Z992</a></td><td>Dependencia de dialisis renal</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z993\">Z993</a></td><td>Dependencia de silla de ruedas</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z994\">Z994</a></td><td>Dependencia de corazón artificial</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z998\">Z998</a></td><td>Dependencia de otras maquinas y dispositivos capacitantes</td></tr><tr><td><a href=\"CodeSystem-ICD10CO.html#ICD10CO-Z999\">Z999</a></td><td>Dependencia de maquina y dispositivo capacitante, no especificada</td></tr></table></li></ul></div>"
+  },
+  "url" : "https://fhir.minsalud.gov.co/rda/ValueSet/ICD10Codes",
+  "version" : "1.0.0",
+  "name" : "ICD10CO",
+  "title" : "ValueSet: ICD 10 Colombia",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-19",
+  "publisher" : "Ministerio de Salud y Protección Social de Colombia",
+  "contact" : [{
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co"
+    }]
+  },
+  {
+    "name" : "Ministerio de Salud y Protección Social de Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "https://www.minsalud.gov.co",
+      "use" : "work"
+    }]
+  },
+  {
+    "name" : "HL7 Colombia",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7co.org",
+      "use" : "work"
+    }]
+  }],
+  "description" : "Conjunto de valores codificados de clasificación internacional enfermedades y causa final de muerte (CIE-10).",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "urn:iso:std:iso:3166:-2",
+      "code" : "CO",
+      "display" : "Colombia"
+    }]
+  }],
+  "purpose" : "Este conjunto de valores codificados se utiliza como nomenclatura de clasificación internacional enfermedades y causa final de muerte (CIE-10).",
+  "copyright" : "HL7 Colombia, CC-BY-4.0 2023+",
+  "compose" : {
+    "include" : [{
+      "system" : "http://hl7.org/fhir/sid/icd-10",
+      "concept" : [{
+        "code" : "A000",
+        "display" : "Colera debido a Vibrio cholerae 01, biotipo cholerae"
+      },
+      {
+        "code" : "A001",
+        "display" : "Colera debido a Vibrio cholerae 01, biotipo el Tor"
+      },
+      {
+        "code" : "A009",
+        "display" : "Colera, no especificado"
+      },
+      {
+        "code" : "A010",
+        "display" : "Fiebre tifoidea"
+      },
+      {
+        "code" : "A011",
+        "display" : "Fiebre paratifoidea A"
+      },
+      {
+        "code" : "A012",
+        "display" : "Fiebre paratifoidea B"
+      },
+      {
+        "code" : "A013",
+        "display" : "Fiebre paratifoidea C"
+      },
+      {
+        "code" : "A014",
+        "display" : "Fiebre paratifoidea, no especificada"
+      },
+      {
+        "code" : "A020",
+        "display" : "Enteritis debida a Salmonella"
+      },
+      {
+        "code" : "A021",
+        "display" : "Sepsis debida a Salmonella"
+      },
+      {
+        "code" : "A022",
+        "display" : "Infecciones localizadas debidas a Salmonella"
+      },
+      {
+        "code" : "A028",
+        "display" : "Otras infecciones especificadas como debidas a Salmonella"
+      },
+      {
+        "code" : "A029",
+        "display" : "Infeccion debida a Salmonella, no especificada"
+      },
+      {
+        "code" : "A030",
+        "display" : "Shigelosis debida a Shigella dysenteriae"
+      },
+      {
+        "code" : "A031",
+        "display" : "Shigelosis debida a Shigella flexneri"
+      },
+      {
+        "code" : "A032",
+        "display" : "Shigelosis debida a Shigella boydii"
+      },
+      {
+        "code" : "A033",
+        "display" : "Shigelosis debida a Shigella sonnei"
+      },
+      {
+        "code" : "A038",
+        "display" : "Otras shigelosis"
+      },
+      {
+        "code" : "A039",
+        "display" : "Shigelosis de tipo no especificado"
+      },
+      {
+        "code" : "A040",
+        "display" : "Infeccion debida a Escherichia coli enteropatogena"
+      },
+      {
+        "code" : "A041",
+        "display" : "Infeccion debida a Escherichia coli enterotoxigena"
+      },
+      {
+        "code" : "A042",
+        "display" : "Infeccion debida a Escherichia coli enteroinvasiva"
+      },
+      {
+        "code" : "A043",
+        "display" : "Infeccion debida a Escherichia coli enterohemorragica"
+      },
+      {
+        "code" : "A044",
+        "display" : "Otras infecciones intestinales debidas a Escherichia coli"
+      },
+      {
+        "code" : "A045",
+        "display" : "Enteritis debida a Campylobacter"
+      },
+      {
+        "code" : "A046",
+        "display" : "Enteritis debida a Yersinia enterocolitica"
+      },
+      {
+        "code" : "A047",
+        "display" : "Enterocolitis debida a Clostridium difficile"
+      },
+      {
+        "code" : "A048",
+        "display" : "Otras infecciones intestinales bacterianas especificadas"
+      },
+      {
+        "code" : "A049",
+        "display" : "Infeccion intestinal bacteriana, no especificada"
+      },
+      {
+        "code" : "A050",
+        "display" : "Intoxicacion alimentaria estafilococica"
+      },
+      {
+        "code" : "A051",
+        "display" : "Botulismo"
+      },
+      {
+        "code" : "A052",
+        "display" : "Intoxicacion alimentaria debida a Clostridium perfringens [Clostridium welchii]"
+      },
+      {
+        "code" : "A053",
+        "display" : "Intoxicacion alimentaria debida a Vibrio parahaemolyticus"
+      },
+      {
+        "code" : "A054",
+        "display" : "Intoxicacion alimentaria debida a Bacillus cereus"
+      },
+      {
+        "code" : "A058",
+        "display" : "Otras intoxicaciones alimentarias debidas a bacterias especificadas"
+      },
+      {
+        "code" : "A059",
+        "display" : "Intoxicacion alimentaria bacteriana, no especificada"
+      },
+      {
+        "code" : "A060",
+        "display" : "Disenteria amebiana aguda"
+      },
+      {
+        "code" : "A061",
+        "display" : "Amebiasis intestinal cronica"
+      },
+      {
+        "code" : "A062",
+        "display" : "Colitis amebiana no disenterica"
+      },
+      {
+        "code" : "A063",
+        "display" : "Ameboma intestinal"
+      },
+      {
+        "code" : "A064",
+        "display" : "Absceso amebiano del higado"
+      },
+      {
+        "code" : "A065",
+        "display" : "Absceso amebiano del pulmon"
+      },
+      {
+        "code" : "A066",
+        "display" : "Absceso amebiano del cerebro"
+      },
+      {
+        "code" : "A067",
+        "display" : "Amebiasis cutanea"
+      },
+      {
+        "code" : "A068",
+        "display" : "Infeccion amebiana de otras localizaciones"
+      },
+      {
+        "code" : "A069",
+        "display" : "Amebiasis, no especificada"
+      },
+      {
+        "code" : "A070",
+        "display" : "Balantidiasis"
+      },
+      {
+        "code" : "A071",
+        "display" : "Giardiasis [lambliasis]"
+      },
+      {
+        "code" : "A072",
+        "display" : "Criptosporidiosis"
+      },
+      {
+        "code" : "A073",
+        "display" : "Isosporiasis"
+      },
+      {
+        "code" : "A078",
+        "display" : "Otras enfermedades intestinales especificadas debidas a protozoarios"
+      },
+      {
+        "code" : "A079",
+        "display" : "Enfermedad intestinal debida a protozoarios, no especificada"
+      },
+      {
+        "code" : "A080",
+        "display" : "Enteritis debida a rotavirus"
+      },
+      {
+        "code" : "A081",
+        "display" : "Gastroenteropatia aguda debida al agente de Norwalk"
+      },
+      {
+        "code" : "A082",
+        "display" : "Enteritis debida a adenovirus"
+      },
+      {
+        "code" : "A083",
+        "display" : "Otras enteritis virales"
+      },
+      {
+        "code" : "A084",
+        "display" : "Infeccion intestinal viral, sin otra especificacion"
+      },
+      {
+        "code" : "A085",
+        "display" : "Otras infecciones intestinales especificadas"
+      },
+      {
+        "code" : "A090",
+        "display" : "Otras gastroenteritis y colitis de origen infeccioso"
+      },
+      {
+        "code" : "A099",
+        "display" : "Gastroenteritis y colitis de origen no especificado"
+      },
+      {
+        "code" : "A09X",
+        "display" : "Diarrea y gastroenteritis de presunto origen infeccioso"
+      },
+      {
+        "code" : "A150",
+        "display" : "Tuberculosis del pulmon, confirmada por hallazgo microscopico del bacilo tuberculoso en esputo, con o sin cultivo"
+      },
+      {
+        "code" : "A151",
+        "display" : "Tuberculosis del pulmon, confirmada unicamente por cultivo"
+      },
+      {
+        "code" : "A152",
+        "display" : "Tuberculosis del pulmon, confirmada histologicamente"
+      },
+      {
+        "code" : "A153",
+        "display" : "Tuberculosis del pulmon, confirmada por medios no especificados"
+      },
+      {
+        "code" : "A154",
+        "display" : "Tuberculosis de ganglios linfaticos intratoracicos, confirmada bacteriologica e histologicamente"
+      },
+      {
+        "code" : "A155",
+        "display" : "Tuberculosis de laringe, traquea y bronquios, confirmada bacteriologica e histologicamente"
+      },
+      {
+        "code" : "A156",
+        "display" : "Pleuresia tuberculosa, confirmada bacteriologica e histologicamente"
+      },
+      {
+        "code" : "A157",
+        "display" : "Tuberculosis respiratoria primaria, confirmada bacteriologica e histologicamente"
+      },
+      {
+        "code" : "A158",
+        "display" : "Otras tuberculosis respiratorias, confirmadas bacteriologica e histologicamente"
+      },
+      {
+        "code" : "A159",
+        "display" : "Tuberculosis respiratoria no especificada, confirmada bacteriologica e histologicamente"
+      },
+      {
+        "code" : "A160",
+        "display" : "Tuberculosis del pulmon, con examen bacteriologico e histologico negativos"
+      },
+      {
+        "code" : "A161",
+        "display" : "Tuberculosis de pulmon, sin examen bacteriologico e histologico"
+      },
+      {
+        "code" : "A162",
+        "display" : "Tuberculosis de pulmon, sin mencion de confirmacion bacteriologica o histologica"
+      },
+      {
+        "code" : "A163",
+        "display" : "Tuberculosis de ganglios linfaticos intratoracicos, sin mencion de confirmacion bacteriologica o histologica"
+      },
+      {
+        "code" : "A164",
+        "display" : "Tuberculosis de laringe, traquea y bronquios, sin mencion de confirmacion bacteriologica o histologica"
+      },
+      {
+        "code" : "A165",
+        "display" : "Pleuresia tuberculosa, sin mencion de confirmacion bacteriologica o histologica"
+      },
+      {
+        "code" : "A167",
+        "display" : "Tuberculosis respiratoria primaria, sin mencion de confirmacion bacteriologica o histologica"
+      },
+      {
+        "code" : "A168",
+        "display" : "Otras tuberculosis respiratorias, sin mencion de confirmacion"
+      },
+      {
+        "code" : "A169",
+        "display" : "Tuberculosis respiratoria no especificada, sin mencion de confirmacion bacteriologica o histologica"
+      },
+      {
+        "code" : "A170",
+        "display" : "Meningitis tuberculosa"
+      },
+      {
+        "code" : "A171",
+        "display" : "Tuberculoma meningeo"
+      },
+      {
+        "code" : "A178",
+        "display" : "Otras tuberculosis del sistema nervioso"
+      },
+      {
+        "code" : "A179",
+        "display" : "Tuberculosis del sistema nervioso, no especificada"
+      },
+      {
+        "code" : "A180",
+        "display" : "Tuberculosis de huesos y articulaciones"
+      },
+      {
+        "code" : "A181",
+        "display" : "Tuberculosis del aparato genitourinario"
+      },
+      {
+        "code" : "A182",
+        "display" : "Linfadenopatia periferica tuberculosa"
+      },
+      {
+        "code" : "A183",
+        "display" : "Tuberculosis de los intestinos, el peritoneo y los ganglios mesentericos"
+      },
+      {
+        "code" : "A184",
+        "display" : "Tuberculosis de la piel y el tejido subcutaneo"
+      },
+      {
+        "code" : "A185",
+        "display" : "Tuberculosis del ojo"
+      },
+      {
+        "code" : "A186",
+        "display" : "Tuberculosis del oido"
+      },
+      {
+        "code" : "A187",
+        "display" : "Tuberculosis de glandulas suprarrenales"
+      },
+      {
+        "code" : "A188",
+        "display" : "Tuberculosis de otros organos especificados"
+      },
+      {
+        "code" : "A190",
+        "display" : "Tuberculosis miliar aguda de un solo sitio especificado"
+      },
+      {
+        "code" : "A191",
+        "display" : "Tuberculosis miliar aguda de sitios multiples"
+      },
+      {
+        "code" : "A192",
+        "display" : "Tuberculosis miliar aguda, no especificada"
+      },
+      {
+        "code" : "A198",
+        "display" : "Otras tuberculosis miliares"
+      },
+      {
+        "code" : "A199",
+        "display" : "Tuberculosis miliar, sin otra especificacion"
+      },
+      {
+        "code" : "A200",
+        "display" : "Peste bubonica"
+      },
+      {
+        "code" : "A201",
+        "display" : "Peste celulocutanea"
+      },
+      {
+        "code" : "A202",
+        "display" : "Peste neumonica"
+      },
+      {
+        "code" : "A203",
+        "display" : "Meningitis por peste"
+      },
+      {
+        "code" : "A207",
+        "display" : "Peste septicemica"
+      },
+      {
+        "code" : "A208",
+        "display" : "Otras formas de peste"
+      },
+      {
+        "code" : "A209",
+        "display" : "Peste, no especificada"
+      },
+      {
+        "code" : "A210",
+        "display" : "Tularemia ulceroglandular"
+      },
+      {
+        "code" : "A211",
+        "display" : "Tularemia oculoglandular"
+      },
+      {
+        "code" : "A212",
+        "display" : "Tularemia pulmonar"
+      },
+      {
+        "code" : "A213",
+        "display" : "Tularemia gastrointestinal"
+      },
+      {
+        "code" : "B000",
+        "display" : "Eczema herpetico"
+      },
+      {
+        "code" : "B001",
+        "display" : "Dermatitis vesicular herpetica"
+      },
+      {
+        "code" : "B002",
+        "display" : "Gingivoestomatitis y faringoamigdalitis herpetica"
+      },
+      {
+        "code" : "B003",
+        "display" : "Meningitis herpetica"
+      },
+      {
+        "code" : "B004",
+        "display" : "Encefalitis herpetica"
+      },
+      {
+        "code" : "B005",
+        "display" : "Oculopatia herpetica"
+      },
+      {
+        "code" : "B007",
+        "display" : "Enfermedad herpetica diseminada"
+      },
+      {
+        "code" : "B008",
+        "display" : "Otras formas de infecciones herpeticas"
+      },
+      {
+        "code" : "B009",
+        "display" : "Infeccion debida al virus del herpes, no especificada"
+      },
+      {
+        "code" : "B010",
+        "display" : "Meningitis debida a varicela"
+      },
+      {
+        "code" : "B011",
+        "display" : "Encefalitis debida a varicela"
+      },
+      {
+        "code" : "B012",
+        "display" : "Neumonia debida a varicela"
+      },
+      {
+        "code" : "B018",
+        "display" : "Varicela con otras complicaciones"
+      },
+      {
+        "code" : "B019",
+        "display" : "Varicela sin complicaciones"
+      },
+      {
+        "code" : "B020",
+        "display" : "Encefalitis debida a herpes zoster"
+      },
+      {
+        "code" : "B021",
+        "display" : "Meningitis debida a herpes zoster"
+      },
+      {
+        "code" : "B022",
+        "display" : "Herpes zoster con otros compromisos del sistema nervioso"
+      },
+      {
+        "code" : "B023",
+        "display" : "Herpes zoster ocular"
+      },
+      {
+        "code" : "B027",
+        "display" : "Herpes zoster diseminado"
+      },
+      {
+        "code" : "B028",
+        "display" : "Herpes zoster con otras complicaciones"
+      },
+      {
+        "code" : "B029",
+        "display" : "Herpes zoster sin complicaciones"
+      },
+      {
+        "code" : "B03X",
+        "display" : "Viruela"
+      },
+      {
+        "code" : "B04X",
+        "display" : "Viruela de los monos"
+      },
+      {
+        "code" : "B050",
+        "display" : "Sarampion complicado con encefalitis"
+      },
+      {
+        "code" : "B051",
+        "display" : "Sarampion complicado con meningitis"
+      },
+      {
+        "code" : "B052",
+        "display" : "Sarampion complicado con neumonia"
+      },
+      {
+        "code" : "B053",
+        "display" : "Sarampion complicado con otitis media"
+      },
+      {
+        "code" : "B054",
+        "display" : "Sarampion con complicaciones intestinales"
+      },
+      {
+        "code" : "B058",
+        "display" : "Sarampion con otras complicaciones"
+      },
+      {
+        "code" : "B059",
+        "display" : "Sarampion sin complicaciones"
+      },
+      {
+        "code" : "B060",
+        "display" : "Rubeola con complicaciones neurologicas"
+      },
+      {
+        "code" : "B068",
+        "display" : "Rubeola con otras complicaciones"
+      },
+      {
+        "code" : "B069",
+        "display" : "Rubeola sin complicaciones"
+      },
+      {
+        "code" : "B07X",
+        "display" : "Verrugas viricas"
+      },
+      {
+        "code" : "B080",
+        "display" : "Otras infecciones debidas a ortopoxvirus"
+      },
+      {
+        "code" : "B081",
+        "display" : "Molusco contagioso"
+      },
+      {
+        "code" : "B082",
+        "display" : "Exantema subito [sexta enfermedad]"
+      },
+      {
+        "code" : "B083",
+        "display" : "Eritema infeccioso [quinta enfermedad]"
+      },
+      {
+        "code" : "B084",
+        "display" : "Estomatitis vesicular enteroviral con exantema"
+      },
+      {
+        "code" : "B085",
+        "display" : "Faringitis vesicular enterovirica"
+      },
+      {
+        "code" : "B088",
+        "display" : "Otras infecciones virales especificadas, caracterizadas por lesiones de la piel y de las membranas mucosas"
+      },
+      {
+        "code" : "B09X",
+        "display" : "Infeccion viral no especificada, caracterizada por lesiones de la piel y de las membranas mucosas"
+      },
+      {
+        "code" : "B150",
+        "display" : "Hepatitis aguda tipo A, con coma hepatico"
+      },
+      {
+        "code" : "B159",
+        "display" : "Hepatitis aguda tipo A, sin coma hepatico"
+      },
+      {
+        "code" : "B160",
+        "display" : "Hepatitis aguda tipo B, con agente delta (coinfeccion), con coma hepatico"
+      },
+      {
+        "code" : "B161",
+        "display" : "Hepatitis aguda tipo B, con agente delta (coinfeccion), sin coma hepatico"
+      },
+      {
+        "code" : "B162",
+        "display" : "Hepatitis aguda tipo B, sin agente delta, con coma hepatico"
+      },
+      {
+        "code" : "B99X",
+        "display" : "Otras enfermedades infecciosas y las no especificadas"
+      },
+      {
+        "code" : "C000",
+        "display" : "Tumor maligno del labio superior, cara externa"
+      },
+      {
+        "code" : "C001",
+        "display" : "Tumor maligno del labio inferior, cara externa"
+      },
+      {
+        "code" : "C002",
+        "display" : "Tumor maligno del labio, cara externa, sin otra especificacion"
+      },
+      {
+        "code" : "C003",
+        "display" : "Tumor maligno del labio superior, cara interna"
+      },
+      {
+        "code" : "C004",
+        "display" : "Tumor maligno del labio inferior, cara interna"
+      },
+      {
+        "code" : "C005",
+        "display" : "Tumor maligno del labio, cara interna, sin otra especificacion"
+      },
+      {
+        "code" : "C006",
+        "display" : "Tumor maligno de la comisura labial"
+      },
+      {
+        "code" : "C008",
+        "display" : "Lesion de sitios contiguos del labio"
+      },
+      {
+        "code" : "C009",
+        "display" : "Tumor maligno del labio, parte no especificada"
+      },
+      {
+        "code" : "C01X",
+        "display" : "Tumor maligno de la base de la lengua"
+      },
+      {
+        "code" : "C020",
+        "display" : "Tumor maligno de la cara dorsal de la lengua"
+      },
+      {
+        "code" : "C021",
+        "display" : "Tumor maligno del borde de la lengua"
+      },
+      {
+        "code" : "C022",
+        "display" : "Tumor maligno de la cara ventral de la lengua"
+      },
+      {
+        "code" : "C023",
+        "display" : "Tumor maligno de los dos tercios anteriores de la lengua, parte no especificada"
+      },
+      {
+        "code" : "C024",
+        "display" : "Tumor maligno de la amigdala lingual"
+      },
+      {
+        "code" : "C028",
+        "display" : "Lesion de sitios contiguos de la lengua"
+      },
+      {
+        "code" : "C029",
+        "display" : "Tumor maligno de la lengua, parte no especificada"
+      },
+      {
+        "code" : "C030",
+        "display" : "Tumor maligno de la encia superior"
+      },
+      {
+        "code" : "C031",
+        "display" : "Tumor maligno de la encia inferior"
+      },
+      {
+        "code" : "C039",
+        "display" : "Tumor maligno de la encia, parte no especificada"
+      },
+      {
+        "code" : "C040",
+        "display" : "Tumor maligno de la parte anterior del piso de la boca"
+      },
+      {
+        "code" : "C041",
+        "display" : "Tumor maligno de la parte lateral del piso de la boca"
+      },
+      {
+        "code" : "C048",
+        "display" : "Lesion de sitios contiguos del piso de la boca"
+      },
+      {
+        "code" : "C049",
+        "display" : "Tumor maligno del piso de la boca, parte no especificada"
+      },
+      {
+        "code" : "C050",
+        "display" : "Tumor maligno del paladar duro"
+      },
+      {
+        "code" : "C97X",
+        "display" : "Tumores malignos (primarios) de sitios multiples independientes"
+      },
+      {
+        "code" : "D000",
+        "display" : "Carcinoma in situ del labio, de la cavidad bucal y de la faringe"
+      },
+      {
+        "code" : "D001",
+        "display" : "Carcinoma in situ del esofago"
+      },
+      {
+        "code" : "D002",
+        "display" : "Carcinoma in situ del estomago"
+      },
+      {
+        "code" : "D010",
+        "display" : "Carcinoma in situ del colon"
+      },
+      {
+        "code" : "D011",
+        "display" : "Carcinoma in situ de la union rectosigmoidea"
+      },
+      {
+        "code" : "D012",
+        "display" : "Carcinoma in situ del recto"
+      },
+      {
+        "code" : "D013",
+        "display" : "Carcinoma in situ del ano y del conducto anal"
+      },
+      {
+        "code" : "D014",
+        "display" : "Carcinoma in situ de otras partes y de las no especificadas del intestino"
+      },
+      {
+        "code" : "D015",
+        "display" : "Carcinoma in situ del higado, de la vesicula biliar y del conducto biliar"
+      },
+      {
+        "code" : "D017",
+        "display" : "Carcinoma in situ de otras partes especificadas de organos digestivos"
+      },
+      {
+        "code" : "D019",
+        "display" : "Carcinoma in situ de organos digestivos no especificados"
+      },
+      {
+        "code" : "D020",
+        "display" : "Carcinoma in situ de la laringe"
+      },
+      {
+        "code" : "D021",
+        "display" : "Carcinoma in situ de la traquea"
+      },
+      {
+        "code" : "D022",
+        "display" : "Carcinoma in situ del bronquio y del pulmon"
+      },
+      {
+        "code" : "D023",
+        "display" : "Carcinoma in situ de otras partes del sistema respiratorio"
+      },
+      {
+        "code" : "D024",
+        "display" : "Carcinoma in situ de organos respiratorios no especificados"
+      },
+      {
+        "code" : "D030",
+        "display" : "Melanoma in situ del labio"
+      },
+      {
+        "code" : "D031",
+        "display" : "Melanoma in situ del parpado y de la comisura palpebral"
+      },
+      {
+        "code" : "D032",
+        "display" : "Melanoma in situ de la oreja y del conducto auditivo externo"
+      },
+      {
+        "code" : "D033",
+        "display" : "Melanoma in situ de otras partes y de las no especificadas de la cara"
+      },
+      {
+        "code" : "D034",
+        "display" : "Melanoma in situ del cuero cabelludo y del cuello"
+      },
+      {
+        "code" : "D035",
+        "display" : "Melanoma in situ del tronco"
+      },
+      {
+        "code" : "D036",
+        "display" : "Melanoma in situ del miembro superior, incluido el hombro"
+      },
+      {
+        "code" : "D037",
+        "display" : "Melanoma in situ del miembro inferior, incluida la cadera"
+      },
+      {
+        "code" : "D038",
+        "display" : "Melanoma in situ de otros sitios"
+      },
+      {
+        "code" : "D039",
+        "display" : "Melanoma in situ, sitio no especificado"
+      },
+      {
+        "code" : "D040",
+        "display" : "Carcinoma in situ de la piel del labio"
+      },
+      {
+        "code" : "D041",
+        "display" : "Carcinoma in situ de la piel del parpado y de la comisura palpebral"
+      },
+      {
+        "code" : "D042",
+        "display" : "Carcinoma in situ de la piel de la oreja y del conducto auditivo externo"
+      },
+      {
+        "code" : "D043",
+        "display" : "Carcinoma in situ de la piel de otras partes y de las no especificadas de la cara"
+      },
+      {
+        "code" : "D044",
+        "display" : "Carcinoma in situ de la piel del cuero cabelludo y cuello"
+      },
+      {
+        "code" : "D045",
+        "display" : "Carcinoma in situ de la piel del tronco"
+      },
+      {
+        "code" : "D046",
+        "display" : "Carcinoma in situ de la piel del miembro superior, incluido el hombro"
+      },
+      {
+        "code" : "D047",
+        "display" : "Carcinoma in situ de la piel del miembro inferior, incluida la cadera"
+      },
+      {
+        "code" : "D048",
+        "display" : "Carcinoma in situ de la piel de otros sitios especificados"
+      },
+      {
+        "code" : "D049",
+        "display" : "Carcinoma in situ de la piel, sitio no especificado"
+      },
+      {
+        "code" : "D898",
+        "display" : "Otros trastornos especificados que afectan el mecanismo de la inmunidad, no clasificados en otra parte"
+      },
+      {
+        "code" : "D899",
+        "display" : "Trastorno que afecta al mecanismo de la inmunidad, no especificado"
+      },
+      {
+        "code" : "E000",
+        "display" : "Sindrome congenito de deficiencia de yodo, tipo neurologico"
+      },
+      {
+        "code" : "E001",
+        "display" : "Sindrome de deficiencia congenita de yodo, tipo mixedematoso"
+      },
+      {
+        "code" : "E002",
+        "display" : "Sindrome congenito de deficiencia de yodo, tipo mixto"
+      },
+      {
+        "code" : "E009",
+        "display" : "Sindrome congenito de deficiencia de yodo, no especificado"
+      },
+      {
+        "code" : "E010",
+        "display" : "Bocio difuso (endemico) relacionado con deficiencia de yodo"
+      },
+      {
+        "code" : "E011",
+        "display" : "Bocio multinodular (endemico) relacionado con deficiencia de yodo"
+      },
+      {
+        "code" : "E012",
+        "display" : "Bocio (endemico) relacionado con deficiencia de yodo, no especificado"
+      },
+      {
+        "code" : "E018",
+        "display" : "Otros trastornos de la tiroides relacionados con deficiencia de yodo y afecciones similares"
+      },
+      {
+        "code" : "E02X",
+        "display" : "Hipotiroidismo subclinico por deficiencia de yodo"
+      },
+      {
+        "code" : "E030",
+        "display" : "Hipotiroidismo congenito con bocio difuso"
+      },
+      {
+        "code" : "E031",
+        "display" : "Hipotiroidismo congenito sin bocio"
+      },
+      {
+        "code" : "E032",
+        "display" : "Hipotiroidismo debido a medicamentos y a otras sustancias exogenas"
+      },
+      {
+        "code" : "E033",
+        "display" : "Hipotiroidismo postinfeccioso"
+      },
+      {
+        "code" : "E034",
+        "display" : "Atrofia de tiroides (adquirida)"
+      },
+      {
+        "code" : "E035",
+        "display" : "Coma mixedematoso"
+      },
+      {
+        "code" : "E038",
+        "display" : "Otros hipotiroidismos especificados"
+      },
+      {
+        "code" : "E039",
+        "display" : "Hipotiroidismo, no especificado"
+      },
+      {
+        "code" : "E040",
+        "display" : "Bocio difuso no toxico"
+      },
+      {
+        "code" : "E041",
+        "display" : "Nodulo tiroideo solitario no toxico"
+      },
+      {
+        "code" : "E042",
+        "display" : "Bocio multinodular no toxico"
+      },
+      {
+        "code" : "E048",
+        "display" : "Otros bocios no toxicos especificados"
+      },
+      {
+        "code" : "E049",
+        "display" : "Bocio no toxico, no especificado"
+      },
+      {
+        "code" : "E90X",
+        "display" : "Trastornos nutricionales y metabolicos en enfermedades clasificadas en otra parte"
+      },
+      {
+        "code" : "F000",
+        "display" : "Demencia  en la enfermedad de Alzheimer, de comienzo temprano"
+      },
+      {
+        "code" : "F001",
+        "display" : "Demencia  en la enfermedad de Alzheimer, de comienzo tardio"
+      },
+      {
+        "code" : "F002",
+        "display" : "Demencia  en la enfermedad de Alzheimer, atipica o de tipo mixto"
+      },
+      {
+        "code" : "F009",
+        "display" : "Demencia  en la enfermedad de Alzheimer, no especificada"
+      },
+      {
+        "code" : "F010",
+        "display" : "Demencia  vascular de comienzo agudo"
+      },
+      {
+        "code" : "F011",
+        "display" : "Demencia  vascular por infartos multiples"
+      },
+      {
+        "code" : "F012",
+        "display" : "Demencia  vascular subcortical"
+      },
+      {
+        "code" : "F013",
+        "display" : "Demencia  vascular mixta, cortical y subcortical"
+      },
+      {
+        "code" : "F018",
+        "display" : "Otras demencia vasculares"
+      },
+      {
+        "code" : "F019",
+        "display" : "Demencia  vascular, no especificada"
+      },
+      {
+        "code" : "F020",
+        "display" : "Demencia  en la enfermedad de Pick"
+      },
+      {
+        "code" : "F021",
+        "display" : "Demencia  en la enfermedad de Creutzfeldt-Jakob"
+      },
+      {
+        "code" : "F022",
+        "display" : "Demencia  en la enfermedad de Huntington"
+      },
+      {
+        "code" : "F023",
+        "display" : "Demencia  en la enfermedad de Parkinson"
+      },
+      {
+        "code" : "F024",
+        "display" : "Demencia  en la enfermedad por virus de la inmunodeficiencia humana [VIH]"
+      },
+      {
+        "code" : "F028",
+        "display" : "Demencia  en otras enfermedades especificadas clasificadas en otra parte"
+      },
+      {
+        "code" : "F03X",
+        "display" : "Demencia , no especificada"
+      },
+      {
+        "code" : "F04X",
+        "display" : "Sindrome amnesico organico, no inducido por alcohol o por otras sustancias psicoactivas"
+      },
+      {
+        "code" : "F99X",
+        "display" : "Trastorno mental, no especificado"
+      },
+      {
+        "code" : "G000",
+        "display" : "Meningitis por hemofilos"
+      },
+      {
+        "code" : "G001",
+        "display" : "Meningitis  neumococica"
+      },
+      {
+        "code" : "G002",
+        "display" : "Meningitis estreptococica"
+      },
+      {
+        "code" : "G003",
+        "display" : "Meningitis estafilococica"
+      },
+      {
+        "code" : "G008",
+        "display" : "Otras meningitis bacterianas"
+      },
+      {
+        "code" : "G009",
+        "display" : "Meningitis bacteriana, no especificada"
+      },
+      {
+        "code" : "G01X",
+        "display" : "Meningitis en enfermedades bacterianas clasificadas en otra parte"
+      },
+      {
+        "code" : "G020",
+        "display" : "Meningitis en enfermedades virales clasificadas en otra parte"
+      },
+      {
+        "code" : "G021",
+        "display" : "Meningitis en micosis"
+      },
+      {
+        "code" : "G028",
+        "display" : "Meningitis en otras enfermedades infecciosas y parasitarias especificadas clasificadas en otra parte"
+      },
+      {
+        "code" : "G030",
+        "display" : "Meningitis apiogena"
+      },
+      {
+        "code" : "G031",
+        "display" : "Meningitis cronica"
+      },
+      {
+        "code" : "G032",
+        "display" : "Meningitis recurrente benigna [Mollaret]"
+      },
+      {
+        "code" : "G038",
+        "display" : "Meningitis debidas a otras causas especificadas"
+      },
+      {
+        "code" : "G039",
+        "display" : "Meningitis, no especificada"
+      },
+      {
+        "code" : "G040",
+        "display" : "Encefalitis aguda diseminada"
+      },
+      {
+        "code" : "G041",
+        "display" : "Mielopatia asociada al virus linfotropico de celulas T humanas"
+      },
+      {
+        "code" : "G042",
+        "display" : "Meningoencefalitis y meningomielitis bacterianas, no clasificadas en otra parte"
+      },
+      {
+        "code" : "G048",
+        "display" : "Otras encefalitis, mielitis y encefalomielitis"
+      },
+      {
+        "code" : "G049",
+        "display" : "Encefalitis, mielitis y encefalomielitis, no especificadas"
+      },
+      {
+        "code" : "G998",
+        "display" : "Otros trastornos especificados del sistema nervioso en enfermedades clasificadas en otra parte"
+      },
+      {
+        "code" : "H000",
+        "display" : "Orzuelo y otras inflamaciones profundas del parpado"
+      },
+      {
+        "code" : "H001",
+        "display" : "Calacio [chalazion]"
+      },
+      {
+        "code" : "H010",
+        "display" : "Blefaritis"
+      },
+      {
+        "code" : "H011",
+        "display" : "Dermatosis no infecciosa del parpado"
+      },
+      {
+        "code" : "H018",
+        "display" : "Otras inflamaciones especificadas del parpado"
+      },
+      {
+        "code" : "H019",
+        "display" : "Inflamacion del parpado, no especificada"
+      },
+      {
+        "code" : "H020",
+        "display" : "Entropion y triquiasis palpebral"
+      },
+      {
+        "code" : "H021",
+        "display" : "Ectropion del parpado"
+      },
+      {
+        "code" : "H022",
+        "display" : "Lagoftalmos"
+      },
+      {
+        "code" : "H023",
+        "display" : "Blefarocalasia"
+      },
+      {
+        "code" : "H024",
+        "display" : "Blefaroptosis"
+      },
+      {
+        "code" : "H025",
+        "display" : "Otros trastornos funcionales del parpado"
+      },
+      {
+        "code" : "H026",
+        "display" : "Xantelasma del parpado"
+      },
+      {
+        "code" : "H027",
+        "display" : "Otros trastornos degenerativos del parpado y del area periocular"
+      },
+      {
+        "code" : "H028",
+        "display" : "Otros trastornos especificados del parpado"
+      },
+      {
+        "code" : "H029",
+        "display" : "Trastorno del parpado, no especificado"
+      },
+      {
+        "code" : "H030",
+        "display" : "Infeccion o infestacion parasitaria del parpado en enfermedades clasificadas en otra parte"
+      },
+      {
+        "code" : "H031",
+        "display" : "Compromiso del parpado en enfermedades infecciosas clasificadas en otra parte"
+      },
+      {
+        "code" : "H038",
+        "display" : "Compromiso del parpado en enfermedades clasificadas en otra parte"
+      },
+      {
+        "code" : "H040",
+        "display" : "Dacrioadenitis"
+      },
+      {
+        "code" : "H041",
+        "display" : "Otros trastornos de la glandula lagrimal"
+      },
+      {
+        "code" : "H042",
+        "display" : "Epifora"
+      },
+      {
+        "code" : "H043",
+        "display" : "Inflamacion aguda y la no especificada de las vias lagrimales"
+      },
+      {
+        "code" : "H044",
+        "display" : "Inflamacion cronica de las vias lagrimales"
+      },
+      {
+        "code" : "H045",
+        "display" : "Estenosis e insuficiencia de las vias lagrimales"
+      },
+      {
+        "code" : "H046",
+        "display" : "Otros cambios de las vias lagrimales"
+      },
+      {
+        "code" : "H048",
+        "display" : "Otros trastornos especificados del aparato lagrimal"
+      },
+      {
+        "code" : "H049",
+        "display" : "Trastorno del aparato lagrimal, no especificado"
+      },
+      {
+        "code" : "H050",
+        "display" : "Inflamacion aguda de la orbita"
+      },
+      {
+        "code" : "H959",
+        "display" : "Trastornos no especificados del oido y de la apofisis mastoides, consecutivos a procedimientos"
+      },
+      {
+        "code" : "I00X",
+        "display" : "Fiebre reumatica sin mencion de complicacion cardiaca"
+      },
+      {
+        "code" : "I010",
+        "display" : "Pericarditis reumatica aguda"
+      },
+      {
+        "code" : "I011",
+        "display" : "Endocarditis reumatica aguda"
+      },
+      {
+        "code" : "I012",
+        "display" : "Miocarditis reumatica aguda"
+      },
+      {
+        "code" : "I018",
+        "display" : "Otras enfermedades reumaticas agudas del corazon"
+      },
+      {
+        "code" : "I019",
+        "display" : "Enfermedad reumatica aguda del corazon, no especificada"
+      },
+      {
+        "code" : "I020",
+        "display" : "Corea reumatica con complicacion cardiaca"
+      },
+      {
+        "code" : "I029",
+        "display" : "Corea reumatica sin mencion de complicacion cardiaca"
+      },
+      {
+        "code" : "I99X",
+        "display" : "Otros trastornos y los no especificados del sistema circulatorio"
+      },
+      {
+        "code" : "J00X",
+        "display" : "Rinofaringitis aguda [resfriado comun]"
+      },
+      {
+        "code" : "J010",
+        "display" : "Sinusitis maxilar aguda"
+      },
+      {
+        "code" : "J011",
+        "display" : "Sinusitis frontal aguda"
+      },
+      {
+        "code" : "J012",
+        "display" : "Sinusitis etmoidal aguda"
+      },
+      {
+        "code" : "J013",
+        "display" : "Sinusitis esfenoidal aguda"
+      },
+      {
+        "code" : "J014",
+        "display" : "Pansinusitis aguda"
+      },
+      {
+        "code" : "J018",
+        "display" : "Otras sinusitis agudas"
+      },
+      {
+        "code" : "J019",
+        "display" : "Sinusitis aguda, no especificada"
+      },
+      {
+        "code" : "J020",
+        "display" : "Faringitis estreptococica"
+      },
+      {
+        "code" : "J028",
+        "display" : "Faringitis aguda debida a otros microorganismos especificados"
+      },
+      {
+        "code" : "J029",
+        "display" : "Faringitis aguda, no especificada"
+      },
+      {
+        "code" : "J030",
+        "display" : "Amigdalitis estreptococica"
+      },
+      {
+        "code" : "J038",
+        "display" : "Amigdalitis aguda debida a otros microorganismos especificados"
+      },
+      {
+        "code" : "J039",
+        "display" : "Amigdalitis aguda, no especificada"
+      },
+      {
+        "code" : "J040",
+        "display" : "Laringitis aguda"
+      },
+      {
+        "code" : "J041",
+        "display" : "Traqueitis aguda"
+      },
+      {
+        "code" : "J042",
+        "display" : "Laringotraqueitis aguda"
+      },
+      {
+        "code" : "J050",
+        "display" : "Laringitis obstructiva, aguda [crup]"
+      },
+      {
+        "code" : "Y98X",
+        "display" : "Afeccion relacionada con el estilo de vida"
+      },
+      {
+        "code" : "Z000",
+        "display" : "Examen medico general"
+      },
+      {
+        "code" : "Z001",
+        "display" : "Control de salud de rutina del nino"
+      },
+      {
+        "code" : "Z002",
+        "display" : "Examen durante el periodo de crecimiento rapido en la infancia"
+      },
+      {
+        "code" : "Z003",
+        "display" : "Examen del estado de desarrollo del adolescente"
+      },
+      {
+        "code" : "Z004",
+        "display" : "Examen psiquiatrico general, no clasificado en otra parte"
+      },
+      {
+        "code" : "Z005",
+        "display" : "Examen de donante potencial de organo o tejido"
+      },
+      {
+        "code" : "Z006",
+        "display" : "Examen para comparacion y control normales en programa de investigacion clinica"
+      },
+      {
+        "code" : "Z008",
+        "display" : "Otros examenes generales"
+      },
+      {
+        "code" : "Z010",
+        "display" : "Examen de ojos y de la vision"
+      },
+      {
+        "code" : "Z011",
+        "display" : "Examen de oidos y de la audicion"
+      },
+      {
+        "code" : "Z012",
+        "display" : "Examen odontologico"
+      },
+      {
+        "code" : "Z013",
+        "display" : "Examen de la presion sanguinea"
+      },
+      {
+        "code" : "Z014",
+        "display" : "Examen ginecologico (general) (de rutina)"
+      },
+      {
+        "code" : "Z015",
+        "display" : "Pruebas de sensibilizacion y diagnostico cutaneo"
+      },
+      {
+        "code" : "Z016",
+        "display" : "Examen radiologico, no clasificado en otra parte"
+      },
+      {
+        "code" : "Z017",
+        "display" : "Examen de laboratorio"
+      },
+      {
+        "code" : "Z018",
+        "display" : "Otros examenes especiales especificados"
+      },
+      {
+        "code" : "Z019",
+        "display" : "Examen especial no especificado"
+      },
+      {
+        "code" : "Z020",
+        "display" : "Examen para admision a instituciones educativas"
+      },
+      {
+        "code" : "Z021",
+        "display" : "Examen preempleo"
+      },
+      {
+        "code" : "Z022",
+        "display" : "Examen para admision a instituciones residenciales"
+      },
+      {
+        "code" : "Z023",
+        "display" : "Examen para reclutamiento en las fuerzas armadas"
+      },
+      {
+        "code" : "Z024",
+        "display" : "Examen para obtencion de licencia de conducir"
+      },
+      {
+        "code" : "Z025",
+        "display" : "Examen para participacion en competencias deportivas"
+      },
+      {
+        "code" : "Z026",
+        "display" : "Examen para fines de seguros"
+      },
+      {
+        "code" : "Z027",
+        "display" : "Extension de certificado medico"
+      },
+      {
+        "code" : "Z028",
+        "display" : "Otros examenes para fines administrativos"
+      },
+      {
+        "code" : "Z029",
+        "display" : "Examen para fines administrativos, no especificado"
+      },
+      {
+        "code" : "Z030",
+        "display" : "Observacion por sospecha de tuberculosis"
+      },
+      {
+        "code" : "Z031",
+        "display" : "Observacion por sospecha de tumor maligno"
+      },
+      {
+        "code" : "Z032",
+        "display" : "Observacion por sospecha de trastorno mental y del comportamiento"
+      },
+      {
+        "code" : "Z033",
+        "display" : "Observacion por sospecha de trastorno del sistema nervioso"
+      },
+      {
+        "code" : "Z034",
+        "display" : "Observacion por sospecha de infarto de miocardio"
+      },
+      {
+        "code" : "Z035",
+        "display" : "Observacion por sospecha de otras enfermedades cardiovasculares"
+      },
+      {
+        "code" : "Z036",
+        "display" : "Observacion por sospecha de efectos toxicos de sustancias ingeridas"
+      },
+      {
+        "code" : "Z038",
+        "display" : "Observacion por sospecha de otras enfermedades y afecciones"
+      },
+      {
+        "code" : "Z039",
+        "display" : "Observacion por sospecha de enfermedad o afeccion no especificada"
+      },
+      {
+        "code" : "Z040",
+        "display" : "Prueba de alcohol o drogas en la sangre"
+      },
+      {
+        "code" : "Z041",
+        "display" : "Examen y observacion consecutivos a accidente de transporte"
+      },
+      {
+        "code" : "Z042",
+        "display" : "Examen y observacion consecutivos a accidente de trabajo"
+      },
+      {
+        "code" : "Z043",
+        "display" : "Examen y observacion consecutivos a otro accidente"
+      },
+      {
+        "code" : "Z044",
+        "display" : "Examen y observacion consecutivos a denuncia de violacion y seduccion"
+      },
+      {
+        "code" : "Z045",
+        "display" : "Examen y observacion consecutivos a otra lesion infligida"
+      },
+      {
+        "code" : "Z046",
+        "display" : "Examen psiquiatrico general, solicitado por una autoridad"
+      },
+      {
+        "code" : "Z048",
+        "display" : "Examen y observacion por otras razones especificadas"
+      },
+      {
+        "code" : "Z049",
+        "display" : "Examen y observacion por razones no especificadas"
+      },
+      {
+        "code" : "Z990",
+        "display" : "Dependencia de aspirador"
+      },
+      {
+        "code" : "Z991",
+        "display" : "Dependencia de respirador"
+      },
+      {
+        "code" : "Z992",
+        "display" : "Dependencia de dialisis renal"
+      },
+      {
+        "code" : "Z993",
+        "display" : "Dependencia de silla de ruedas"
+      },
+      {
+        "code" : "Z994",
+        "display" : "Dependencia de corazón artificial"
+      },
+      {
+        "code" : "Z998",
+        "display" : "Dependencia de otras maquinas y dispositivos capacitantes"
+      },
+      {
+        "code" : "Z999",
+        "display" : "Dependencia de maquina y dispositivo capacitante, no especificada"
+      }]
+    }]
+  }
+}
